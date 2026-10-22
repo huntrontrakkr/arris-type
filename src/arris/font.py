@@ -45,6 +45,7 @@ def glyph_contours(name: str, p: Params, tune=None):
 # deep into a side's white the eye counts it (fraction of the zone height).
 SPACE = 0.27
 DEPTH = 0.2
+PUNCT_SIDE = 0.9   # punctuation bearings, as a share of the letters' light
 
 
 def light(p: Params) -> float:
@@ -63,6 +64,11 @@ def place(name: str, p: Params, tune=None):
     if spec.kind == 'fig':
         adv = p.fig_adv
         dx = (adv - g.W) / 2
+    elif isinstance(spec.kind, tuple) and spec.kind[0] == 'punct':
+        xs = [x for r in rings for x, _ in r] or [0.0, g.W]
+        side = PUNCT_SIDE * light(p) * spec.kind[1]
+        dx = side - min(xs)
+        adv = side + (max(xs) - min(xs)) + side
     else:
         zone = (0.0, p.xh) if spec.kind == 'lower' else (0.0, p.cap)
         lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * (zone[1] - zone[0]),

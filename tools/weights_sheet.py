@@ -6,6 +6,7 @@ from PIL import Image
 import arris.glyphs.figures  # noqa: F401
 import arris.glyphs.caps  # noqa: F401
 import arris.glyphs.lower  # noqa: F401
+import arris.glyphs.punct  # noqa: F401
 from arris.font import place
 from arris.instances import STEMS, params
 from arris.proof import render_svg

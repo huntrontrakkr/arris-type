@@ -8,6 +8,7 @@ import shapely
 import arris.glyphs.figures  # noqa: F401
 import arris.glyphs.caps  # noqa: F401
 import arris.glyphs.lower  # noqa: F401
+import arris.glyphs.punct  # noqa: F401
 from arris import heritage
 from arris.draw import draw
 from arris.geom import rings_to_shapely
