@@ -11,12 +11,24 @@ the line height in pixels. A text '\\n' starts a new row in the same
 block; consecutive arguments are separate blocks with a little paper
 between them. A label after a second '::' is written to the left. A SOURCE
 ending in '+grid' draws each cell's box in grey behind the ink (and puts a
-cell of paper between glyphs, '+grid+gap').
+cell of paper between glyphs, '+grid+gap'). In a text, '{25A0-25FF/16}'
+stands for those code points in rows of 16, and '{E0B0}' for one.
 """
 from __future__ import annotations
 
 import io
+import re
 import sys
+
+
+def expand(text):
+    def rng(m):
+        a = int(m.group(1), 16)
+        b = int(m.group(2), 16) if m.group(2) else a
+        n = int(m.group(3)) if m.group(3) else b - a + 1
+        cps = list(range(a, b + 1))
+        return '\\n'.join(''.join(chr(c) for c in cps[i:i + n]) for i in range(0, len(cps), n))
+    return re.sub(r'\{([0-9A-Fa-f]{4,5})(?:-([0-9A-Fa-f]{4,5}))?(?:/(\d+))?\}', rng, text)
 
 import cairosvg
 from PIL import Image, ImageDraw
@@ -72,7 +84,7 @@ def block_svg(source, text, px):
     source = source.replace('+grid', '').replace('+gap', '')
     glyph, asc, desc, kind = _font(source) if source.endswith('.ttf') else _engine(source)
     k = px / (asc - desc)
-    rows = text.split('\\n')
+    rows = expand(text).split('\\n')
     if spaced:                                               # a row of paper between rows, too
         rows = [r for row in rows for r in (row, '')][:-1]
     paths, boxes, width = [], [], 0.0

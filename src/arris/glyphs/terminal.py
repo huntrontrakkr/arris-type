@@ -30,7 +30,9 @@ import unicodedata
 
 from shapely.geometry import Polygon, box
 
-from ..draw import B, glyph
+from fontTools import agl
+
+from ..draw import B, REGISTRY, glyph
 from ..font import Metrics
 
 _MET = Metrics()
@@ -44,7 +46,14 @@ def cell_width(p):
     return p.fig_adv
 
 
-def cell_glyph(name, char, solid=False):
+def gname(cp: int) -> str:
+    """A glyph's name: its AGL name where it has one, else uniXXXX."""
+    return agl.UV2AGL.get(cp, f'uni{cp:04X}' if cp <= 0xFFFF else f'u{cp:05X}')
+
+
+def cell_glyph(char, solid=False):
+    name = gname(ord(char))
+    assert name not in REGISTRY, name
     return glyph(name, char, cell_width, kind='fig', solid=solid, cell=True)
 
 
@@ -252,7 +261,6 @@ def _register_box():
     for cp in range(0x2500, 0x2580):
         ch = chr(cp)
         nm = unicodedata.name(ch)
-        gname = f'uni{cp:04X}'
         body = nm.replace('BOX DRAWINGS ', '')
         if 'DASH' in body:
             toks = body.split()
@@ -276,8 +284,8 @@ def _register_box():
                 fn = (lambda g, a=arms: _mixed(g, a))
             else:
                 fn = (lambda g, a=arms: _junction(g, a))
-        BOX[gname] = ch
-        cell_glyph(gname, ch)(fn)
+        BOX[gname(cp)] = ch
+        cell_glyph(ch)(fn)
 
 
 _register_box()
@@ -310,7 +318,7 @@ for cp, qs in {0x2596: 'll', 0x2597: 'lr', 0x2598: 'ul', 0x2599: 'ul ll lr', 0x2
                0x259F: 'ur ll lr'}.items():
     BLOCKS[cp] = [QUAD[q] for q in qs.split()]
 for cp, parts in BLOCKS.items():
-    cell_glyph(f'uni{cp:04X}', chr(cp), solid=True)(_block(*parts))
+    cell_glyph(chr(cp), solid=True)(_block(*parts))
 
 
 # Shades: one lattice of chamfered squares, two to a cell across and four
@@ -344,7 +352,7 @@ def _shade(g):
     return cell(g)[0]
 
 
-@cell_glyph('uni2591', '░', solid=True)
+@cell_glyph('░', solid=True)
 def shade_light(g):
     W = _shade(g)
     for x, y, dx, dy in _shade_places(W):
@@ -352,7 +360,7 @@ def shade_light(g):
         rect(g, x - s / 2, y - s / 2, x + s / 2, y + s / 2)
 
 
-@cell_glyph('uni2592', '▒', solid=True)
+@cell_glyph('▒', solid=True)
 def shade_medium(g):
     W = _shade(g)
     e = 1.0                                                 # (corners never quite touch)
@@ -360,7 +368,7 @@ def shade_medium(g):
         rect(g, x - dx / 2 + e, y - dy / 2 + e, x + dx / 2 - e, y + dy / 2 - e)
 
 
-@cell_glyph('uni2593', '▓', solid=True)
+@cell_glyph('▓', solid=True)
 def shade_dark(g):
     """The light shade's negative: its squares are holes in a full cell, and
     the corner rule fills their corners as it does a counter's."""
@@ -396,19 +404,19 @@ def _braille(bits):
 
 
 for bits in range(256):
-    cell_glyph(f'uni{0x2800 + bits:04X}', chr(0x2800 + bits))(_braille(bits))
+    cell_glyph(chr(0x2800 + bits))(_braille(bits))
 
 
 # --- Powerline -------------------------------------------------------------------
 
-@cell_glyph('uniE0B0', '', solid=True)
+@cell_glyph('\ue0b0', solid=True)
 def pl_right_solid(g):
     """The full cell's height narrowing to a point on its right edge."""
     W, cx, cy = cell(g)
     g.extra.append(Polygon([(0, BOTTOM), (W, cy), (0, TOP)]))
 
 
-@cell_glyph('uniE0B2', '', solid=True)
+@cell_glyph('\ue0b2', solid=True)
 def pl_left_solid(g):
     W, cx, cy = cell(g)
     g.extra.append(Polygon([(W, BOTTOM), (W, TOP), (0, cy)]))
@@ -430,11 +438,28 @@ def _pl_chevron(g, right):
     g.stroke(*pts)
 
 
-@cell_glyph('uniE0B1', '')
+@cell_glyph('\ue0b1')
 def pl_right_line(g):
     _pl_chevron(g, True)
 
 
-@cell_glyph('uniE0B3', '')
+@cell_glyph('\ue0b3')
 def pl_left_line(g):
     _pl_chevron(g, False)
+
+
+# The geometric shapes' black corner triangles are drawn as terminal fonts
+# draw them: the cell's diagonal half, joining blocks and Powerline arrows.
+CORNER_TRIANGLES = {0x25E2: ((0, 0), (1, 0), (1, 1)), 0x25E3: ((0, 0), (1, 0), (0, 1)),
+                    0x25E4: ((0, 1), (1, 1), (0, 0)), 0x25E5: ((1, 1), (0, 1), (1, 0))}
+
+
+def _corner_triangle(pts):
+    def fn(g):
+        W, cx, cy = cell(g)
+        g.extra.append(Polygon([(x * W, BOTTOM + y * HEIGHT) for x, y in pts]))
+    return fn
+
+
+for cp, pts in CORNER_TRIANGLES.items():
+    cell_glyph(chr(cp), solid=True)(_corner_triangle(pts))
