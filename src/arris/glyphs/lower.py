@@ -339,7 +339,12 @@ def z(g):
     step = min(J, g.sh)
     y0, y1 = f.Y(8), f.Y(1)
     xl = f.X(1)
-    g.stroke((y0 + a_up, y0), (yj + a_up, yj, step), (yj + a_lo, yj), (xl, xl - a_lo), (xl, y1), start='h')
+    # Where the diagonal reaches the left edge; in a narrow cell it meets the
+    # bottom bar first, and lands on it there (running on inside the bar)
+    # rather than below it: the same points either way, so the masters vary.
+    ye = xl - a_lo
+    g.stroke((y0 + a_up, y0), (yj + a_up, yj, step), (yj + a_lo, yj), (max(xl, y1 + a_lo), max(ye, y1)),
+             (xl, y1), start='h')
 
 
 @glyph('dotlessi', '\u0131', lambda p: p.sv, kind='lower')
