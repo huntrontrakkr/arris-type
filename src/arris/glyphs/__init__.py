@@ -11,4 +11,5 @@ BASES = {chr(spec.unicode): name for name, spec in marks.REGISTRY.items() if spe
 BASES.update({chr(cp): name for cp, name in ALIASES.items()})
 ACCENTED = marks.compose(CHARS, BASES)
 
+from . import arrows  # noqa: E402,F401  (arrows, operators, technical symbols)
 from . import features  # noqa: E402,F401  (variants of everything above)
