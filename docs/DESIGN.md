@@ -522,7 +522,7 @@ proves each against its characters on the cell grid):
   both points, the dollar's stem crossing it.
 * **`#[` `#(` `#{`**: # and the bracket each in its cell, the bars of #
   running on at their full weight to the bracket's spine; # centres on the
-  brace's small beak, so the beak sits between its bars. In `#_` the left
+  brace's point, so the point sits between its bars. In `#_` the left
   stem of # runs down into the underscore.
 * **Equality**: `==` `===` run the bars of = through, at ='s own white;
   `!=` `/=` `!==` `=/=` strike them; `:=` `=:` `::=` raise the colon onto
@@ -540,8 +540,10 @@ signs' bars through. Sequences that would only be drawn closer together
 The signs underneath agree with each other: < and > are 2:1 chevrons
 filling the operator box, as tall as + (and ≤ ≥ ≮ ≶ ≺ build on the same
 chevron); the bars of = stand 1.6 bars apart, the white every stacked sign
-keeps; the brace has long straight spines and a small sharp 2:1 beak half
-a stem deep. In the monospaced cut, dots (. , : ; and the tittles) are half
+keeps; the brace is told from ( by a square bracket's ends (flat arms,
+square corners, as long as the bracket's) and from [ by a point at its
+waist, a stem deep on the shallow 2:1, where ( has only its 45° ends. In
+the monospaced cut, dots (. , : ; and the tittles) are half
 as big again as the stem at Regular, easing to a fifth more at Black: a dot
 looks lighter than a stroke of its width, and code turns on them.
 

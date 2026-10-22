@@ -220,6 +220,13 @@ def parenright(g):
     _paren(g, f, mirror=True)
 
 
+def bracket_width(p):
+    """Four modules and a stem, but at heavy weights arms as long as the
+    brace's (a stem and a half from the spine's centre): shorter, the arm's
+    end chamfer and its inside corner's nearly meet."""
+    return max(letter_width(4, 1)(p), p.sv / 2 + 1.5 * p.sv)
+
+
 def _bracket(g, mirror=False):
     p = g.p
     W = g.W
@@ -230,26 +237,27 @@ def _bracket(g, mirror=False):
     g.clip = (0, bot, W, top)
 
 
-@punct('bracketleft', '[', 4, 1)
+@punct('bracketleft', '[', 4, 1, width=bracket_width)
 def bracketleft(g):
     _bracket(g)
 
 
-@punct('bracketright', ']', 4, 1)
+@punct('bracketright', ']', 4, 1, width=bracket_width)
 def bracketright(g):
     _bracket(g, mirror=True)
 
 
-BEAK = 0.5        # the brace's beak: its centreline depth, in stems
+BEAK = 1.0        # the brace's point: its centreline depth, in stems (a module and a half at least)
 
 
 def _brace_parts(p, sh):
-    """(hook, beak depth, point ink) of the brace: hooks a stem and a half
-    from the spine's centre, a beak half a stem deep whose 2:1 point runs
-    on past it by its stroke's own reach."""
+    """(arm, point depth, point ink) of the brace: arms a stem and a half
+    from the spine's centre (two and a half modules at least, so a light
+    brace keeps them), a point a stem deep on the shallow 2:1, whose ink
+    runs on past it by its stroke's own reach."""
     from ..draw import _thickness
     t = _thickness(p, sh)((2, 1))
-    return 1.5 * p.sv, max(BEAK * p.sv, 2 * p.floor), t / (2 * math.sin(SLOPE))
+    return max(1.5 * p.sv, 2.5 * p.m), max(BEAK * p.sv, 1.5 * p.m), t / (2 * math.sin(SLOPE))
 
 
 def brace_width(p):
@@ -259,18 +267,19 @@ def brace_width(p):
 
 
 def _brace(g, mirror=False):
-    """Hooks at the ends, long straight spines, and a small sharp beak at
-    the middle on the shallow 2:1: a brace, distinct from ( and from <."""
+    """A square bracket's ends (flat arms, square corners) on a spine that
+    breaks at the middle into a point on the shallow 2:1: a brace, told
+    from ( by its flat arms, from [ by its point, from < by its spine."""
     p = g.p
     W = g.W
     top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
     mid = (top + bot) / 2
     hook, d, tip = _brace_parts(p, g.sh)
-    xs = max(W - hook, tip + d)                             # the spine (the hook gives way in a narrow cell)
-    xp = xs - d                                             # the beak's point
+    xs = max(W - hook, tip + d)                             # the spine (the arm gives way in a narrow cell)
+    xp = xs - d                                             # the point
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
-    g.stroke(T(W, top - g.sh / 2), B(*T(xs, top - g.sh / 2)), T(xs, mid + d / 2), T(xp, mid),
-             T(xs, mid - d / 2), B(*T(xs, bot + g.sh / 2)), T(W, bot + g.sh / 2))
+    g.stroke(T(W, top - g.sh / 2), T(xs, top - g.sh / 2), T(xs, mid + d / 2), T(xp, mid),
+             T(xs, mid - d / 2), T(xs, bot + g.sh / 2), T(W, bot + g.sh / 2))
     g.clip = (0, bot, W, top)
 
 
