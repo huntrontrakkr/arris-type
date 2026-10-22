@@ -176,7 +176,7 @@ def compose(chars, base_names):
         if bname is None or bname not in REGISTRY:
             continue
         name = _name(ch)
-        if name in REGISTRY:
+        if name in REGISTRY or any(sp.unicode == ord(ch) for sp in REGISTRY.values()):
             continue
         _register(name, ch, bname, base, marks)
         made.append(name)
