@@ -621,4 +621,26 @@ _space('uni2008', ' ', _period_advance)
 
 # --- Case forms ---------------------------------------------------------------------
 
-CASE = ['uni2023', 'uni2043', 'uni2045', 'uni2046', 'uni2053']
+# Raised for capitals as the features module raises the dashes, bullets and
+# brackets (features._case_shift): bullets and dashes to the capitals'
+# middle, brackets by half the descender.
+CASE = {'uni2023': 'mid', 'uni2043': 'mid', 'uni2053': 'mid', 'uni2045': 'bracket', 'uni2046': 'bracket'}
+
+
+def _case(name, how):
+    spec = REGISTRY[name]
+
+    def fn(g):
+        p = g.p
+        dy = p.desc / 2 - 0.25 * p.m if how == 'bracket' else (p.cap - p.xh) / 2
+        g.add_glyph(draw(name, p), 0, dy)
+    glyph(f'{name}.case', None, spec.width, kind=spec.kind, solid=spec.solid)(fn)
+
+
+def register_case():
+    """The case forms, and their rules in the ``case`` feature (called once
+    the features module, which holds the rules, is loaded)."""
+    from .features import MORE
+    for n, how in CASE.items():
+        _case(n, how)
+        MORE.setdefault('case', []).append((n, f'{n}.case'))

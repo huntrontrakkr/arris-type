@@ -8,8 +8,8 @@ subscripts, currency, letterlike symbols, number forms).
 * ``set_tight``: letters set as one sign (Roman numerals, TEL, Pts, Rs):
   each pair as close as half the light the spacing gives a letter's side,
   measured by area as ``arris.spacing`` measures it, and never closer than
-  three quarters of a stem (the pilcrow's rule), so the white between them
-  holds at Black. In a monospaced cell the whole group is condensed, module
+  0.55 of a stem, so the white between them stays readable at Black (and
+  still tighter than the letters' own spacing there). In a monospaced cell the whole group is condensed, module
   and strokes alike, until it fits.
 * ``small_all``: the small figures' parameters (``features.small``) with
   the x-height, ascender and descender scaled too, for small letters and
@@ -76,7 +76,7 @@ def ink_x(sub):
 # --- Letters set as one sign --------------------------------------------------
 
 TIGHT = 0.5         # of a letter side's light, each side
-TIGHT_MIN = 0.75    # of a stem: the least white between two letters of one sign
+TIGHT_MIN = 0.55    # of a stem: the least white between two letters of one sign
 
 
 def _condensed(p, k):

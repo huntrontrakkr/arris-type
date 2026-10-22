@@ -11,6 +11,6 @@ BASES = {chr(spec.unicode): name for name, spec in marks.REGISTRY.items() if spe
 BASES.update({chr(cp): name for cp, name in ALIASES.items()})
 ACCENTED = marks.compose(CHARS, BASES)
 
-from . import genpunct, supsubs  # noqa: E402,F401  (symbol blocks: docs/coverage/symbols-plus.md)
-ALIASES.update(genpunct.ALIASES)
+from . import genpunct, supsubs, currency, letterlike, numberforms  # noqa: E402,F401  (docs/coverage/symbols-plus.md)
+ALIASES.update(genpunct.ALIASES | letterlike.ALIASES | numberforms.ALIASES)
 from . import features  # noqa: E402,F401  (variants of everything above)

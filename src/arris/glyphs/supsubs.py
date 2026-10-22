@@ -74,6 +74,9 @@ def schwainferior(g):
 
 # --- Features: + − = ( ) and the letters reach their small forms ----------------
 
+from . import genpunct  # noqa: E402  (its case forms register here, beside the features they use)
+genpunct.register_case()
+
 _SIGN_SRC = {'plus': 'plus', 'minus': 'minus', 'equal': 'equal', 'parenleft': 'parenleft',
              'parenright': 'parenright'}
 for _tag, _signs, _letters in (('sups', SUP_SIGNS, SUP_LETTERS), ('subs', SUB_SIGNS, SUB_LETTERS),
