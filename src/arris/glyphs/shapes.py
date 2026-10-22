@@ -297,8 +297,8 @@ def _hatch(g, horizontal=False, vertical=False, down=False, up=False, n=3):
             lines.append([(u, y0 - S, t), (u, y1 + S)])
     # diagonals: 2n + 1 lines, the outermost through the counter's corners
     # (where they meet the outline), so no sliver of white is left in a corner
-    m = n
-    k = (inner + tv) / (2 * m)                                           # along x, from line to line
+    m = n - 1 if (down and up) else n                                     # (a crosshatch: fewer, larger cells)
+    k = inner / m                                                        # along x, from line to line
     td = min(t, k / SQRT2 / 2)                                           # (as heavy as the white between)
     for i in range(-m, m + 1):
         c = i * k
