@@ -282,8 +282,9 @@ def _erase(g, right):
         pts = [(W - x, y) for x, y in pts]
     g.stroke(*pts, closed=True)
     # the x: in the square part, clear of the walls by half a stem
-    room = h - g.sh / 2 - max(0.5 * p.sv, 0.75 * p.m)
-    t = max(room - k / 2, 0.75 * p.sv)
+    gap = max(0.5 * p.sv, 0.75 * p.m)
+    e = p.sd / (2 * SQRT2)                                   # a diagonal's flat end reaches this far past it
+    t = min(h - g.sh / 2 - gap - e, (x_back - x0) / 2 - p.sv / 2 - gap - e)
     cx = (x0 + x_back) / 2
     if not right:
         cx = W - cx
@@ -320,7 +321,18 @@ def xinbox(g):
     g.stroke((c - r, a + r), (c + r, a - r))
 
 
-@tech(u(0x2328), '⌨', letter_width(14, 2))
+KEYS = 5
+
+
+def _kbd_w(p):
+    """⌨'s body: five keys, half a stem or more of white between them."""
+    q = _light(p)
+    s = max(q.dot() * 0.8, q.sv)
+    gap = max(0.6 * s, 0.75 * q.m)
+    return max(letter_width(14, 2)(p), KEYS * s + (KEYS + 1) * gap + 2 * q.sv)
+
+
+@tech(u(0x2328), '⌨', _kbd_w)
 def keyboard(g):
     """A frame with two rows of keys and a space bar."""
     lighten(g)
@@ -336,7 +348,7 @@ def keyboard(g):
     leg = min(p.leg, 0.25 * H)
     g.stroke(B(x0, y0, leg), B(x1, y0, leg), B(x1, y1, leg), B(x0, y1, leg), closed=True)
     inner0, inner1 = x0 + p.sv / 2 + gap, x1 - p.sv / 2 - gap
-    n = max(3, int((inner1 - inner0 + gap) / (s + gap)))
+    n = KEYS                                                # the same at every weight
     step = (inner1 - inner0 - s) / (n - 1)
     ytop = y1 - g.sh / 2 - gap - s / 2
     for row in range(2):
@@ -382,14 +394,16 @@ def escape(g):
     r = (W - p.sv) / 2
     c = W / 2
     leg = 0.586 * r
-    # the ring, open across its upper left chamfer
-    g.stroke((c - r, a + r - leg - 0.6 * leg), B(c - r, a - r, leg), B(c + r, a - r, leg), B(c + r, a + r, leg),
-             (c - r + leg + 0.6 * leg, a + r))
     ctx = Ctx(p, g.sh, Turn(0))
     h = reach(ctx, design=False)
     L = h * SQRT2
     t = r - leg / 2 + 0.25 * leg                             # the tip, just past the chamfer's line
     tip = (c - t, a + t)
+    # the ring, open across its upper left chamfer, clear of the head's barbs
+    white = max(0.75 * p.sv, p.m)
+    y_end = min(a + r - leg - 0.6 * leg, tip[1] - L - p.sv / 2 - white)
+    x_end = max(c - r + leg + 0.6 * leg, tip[0] + L + p.sv / 2 + white)
+    g.stroke((c - r, y_end), B(c - r, a - r, leg), B(c + r, a - r, leg), B(c + r, a + r, leg), (x_end, a + r))
     g.stroke((c + 0.15 * r, a - 0.15 * r), (tip[0] + 0.01, tip[1] - 0.01))
     g.stroke((tip[0] + L, tip[1]), tip, (tip[0], tip[1] - L))
 
@@ -859,10 +873,9 @@ def _hourglass(g, sand):
     hh = min(0.4 * dy, (W / 2 - lower(base)) * 2 - p.sv)
     solid(g, [(lower(base), base), (W - lower(base), base), (W - lower(base + hh), base + hh),
               (lower(base + hh), base + hh)])
-    y1 = yn + 2 * (gh - neck + p.sv / 2)
-    y2 = min(y1 + 0.35 * dy, yt - g.sh / 2 - gap)
-    if y2 > y1 + 0.5 * p.sv:
-        solid(g, [(upper(y1), y1), (W - upper(y1), y1), (W - upper(y2), y2), (upper(y2), y2)])
+    y1 = yn + 2 * (gh - neck + p.sv / 4)
+    y2 = max(min(y1 + 0.35 * dy, yt - g.sh / 2 - gap), y1 + 0.4 * p.sv)
+    solid(g, [(upper(y1), y1), (W - upper(y1), y1), (W - upper(y2), y2), (upper(y2), y2)])
 
 
 @tech(u(0x231B), '⌛', _hg_w)

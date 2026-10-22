@@ -204,14 +204,26 @@ def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
             each = (room / len(flex) - 2 * kd(p)) / 2
             for c in flex:
                 c.h_fit = max(each, 1.5 * p.sv)
-        total = sum(_h(c, g) for c in comps) + gapf() * (len(comps) - 1)
+        ext = [_extent(c, g) for c in comps]
+        total = sum(y1 - y0 for y0, y1 in ext) + gapf() * (len(comps) - 1)
         if total <= limit:
             break
     y = centre + total / 2
-    for c in comps:
-        hc = _h(c, g)
-        _draw(c, g, y - hc / 2)
-        y -= hc + gapf()
+    for c, (y0, y1) in zip(comps, ext):
+        _draw(c, g, y - y1)
+        y -= (y1 - y0) + gapf()
+
+
+def _extent(c, g):
+    """(bottom, top) of a component's ink drawn at 0: measured, so the
+    white between stacked parts is exactly the stack's."""
+    from ..draw import Glyph, _thickness
+    from ..geom import stroke_polygon
+    tmp = Glyph(g.p, W=g.W, sh_k=g.sh_k, sh_auto=g.sh_auto)
+    _draw(c, tmp, 0.0)
+    th = _thickness(tmp.p, tmp.sh)
+    polys = [stroke_polygon(s, th, tmp.p.c) for s in tmp.strokes] + list(tmp.extra)
+    return min(q.bounds[1] for q in polys), max(q.bounds[3] for q in polys)
 
 
 def _h(c, g):
@@ -727,7 +739,7 @@ def SetShape(fn):
     return Shape(lambda g: 2 * box_r(g) + g.sh, fn)
 
 
-def _set(g, fn, below=None, neg=False, bars=2):
+def _set(g, fn, below=None, neg=False, bars=2, right=False):
     """A set sign in its box (as tall as it is wide), alone or over a bar
     (or a bar with a stroke); with a negation across. The element signs
     stack three bars in the box, and thin them as tight stacks do."""
@@ -746,7 +758,17 @@ def _set(g, fn, below=None, neg=False, bars=2):
         fn(g, top - g.sh / 2 - r, r)
         below.draw(g, top - 2 * r - g.sh - eq_gap(g) - hb / 2)
     if neg:
-        negate(g, half=_neg_half(g))
+        # (the element signs: crossing their bays where each keeps a pocket
+        # half a stem wide, between the stem and the stroke)
+        x = None
+        if bars == 3:
+            p = g.p
+            w = p.ss / STEEP[1]
+            r = box_r(g, g.W)
+            x = max(g.W / 2, 1.5 * p.sv + r / 4 + w / 2)
+            if right:
+                x = g.W - x
+        negate(g, half=_neg_half(g), x=x)
 
 
 SETS = [
@@ -777,7 +799,7 @@ ELEMENTS = {0x2208, 0x2209, 0x220B, 0x220C}
 for cp, nm, fn, below, neg in SETS:
     def make(g, fn=fn, below=below, neg=neg, cp=cp):
         b = {None: None, 'bar': Bar(), 'nbar': _bar_with_stroke(g)}[below]
-        _set(g, fn, b, neg, bars=3 if cp in ELEMENTS else 2)
+        _set(g, fn, b, neg, bars=3 if cp in ELEMENTS else 2, right=cp in (0x220B, 0x220C))
     op(nm, chr(cp), width=SETW)(make)
 
 
@@ -958,16 +980,26 @@ def dblvertdbl(g):
     tack(g, 'right', n_v=2, n_h=2)
 
 
-@op(u(0x22AC), '⊬')
+def _tack_strike(g, half):
+    """A negation across a turnstile's bars, half way from the stem to their
+    ends, the turnstile widened so it keeps clear of the stem."""
+    p = g.p
+    negate(g, half=half, x=(p.sv + g.W) / 2)
+
+
+NOTW = growing_width(9, 1, 2.5)
+
+
+@op(u(0x22AC), '⊬', width=NOTW)
 def notproves(g):
     tack(g, 'right')
-    negate(g, half=_neg_half(g), x=0.6 * g.W)
+    _tack_strike(g, g.sh / 2 + max(1.5 * g.p.m, 0.75 * g.p.sv))
 
 
-@op(u(0x22AD), '⊭')
+@op(u(0x22AD), '⊭', width=NOTW)
 def nottrue(g):
     tack(g, 'right', n_h=2)
-    negate(g, half=_neg_half(g), x=0.6 * g.W)
+    _tack_strike(g, (g.sh + eq_gap(g)) / 2 + g.sh / 2 + max(1.5 * g.p.m, 0.75 * g.p.sv))
 
 
 # --- Triangles and the bowtie ------------------------------------------------------------
@@ -1095,11 +1127,15 @@ def _circled(g, inner, square=False):
     inner(g, cx, cy, r, leg)
 
 
-def _free(g, r):
-    """How far a part inside a ring reaches (its centreline) when it keeps
-    clear of it: half a stem, or three quarters of a module, of white."""
+def _free(g, r, y=0.0, L=None):
+    """How far a bar inside a ring reaches (its centreline), at y from the
+    centre, when it keeps clear of the ring's inside (its upright side, or
+    its chamfer) by half a stem, or three quarters of a module, of white."""
     p = g.p
-    return r - p.sv / 2 - max(0.5 * p.sv, 0.75 * p.m) - g.sh / 2
+    L = 0.586 * r if L is None else L
+    k = p.sd / SQRT2
+    inner = min(r - p.sv / 2, 2 * r - L - k - (abs(y) + g.sh / 2))
+    return inner - max(0.5 * p.sv, 0.75 * p.m) - g.sh / 2
 
 
 CIRCLED = {
@@ -1110,9 +1146,9 @@ CIRCLED = {
     0x2298: (u(0x2298), lambda g, x, y, r, L: g.stroke((x - (r - L / 2), y - (r - L / 2)), (x + r - L / 2, y + r - L / 2))),
     0x2299: (u(0x2299), lambda g, x, y, r, L: cdot(g, x, y)),
     0x229A: (u(0x229A), lambda g, x, y, r, L: _inner_ring(g, x, y, r)),
-    0x229B: (u(0x229B), lambda g, x, y, r, L: _inner_asterisk(g, x, y, _free(g, r) + g.sh / 2)),
-    0x229C: (u(0x229C), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r) + g.sh / 2, 2)),
-    0x229D: (u(0x229D), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r) + g.sh / 2, 1)),
+    0x229B: (u(0x229B), lambda g, x, y, r, L: _inner_asterisk(g, x, y, _free(g, r, L=L) + g.sh / 2)),
+    0x229C: (u(0x229C), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r, (g.sh + eq_gap(g)) / 2, L) + g.sh / 2, 2, r)),
+    0x229D: (u(0x229D), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r, 0.0, L) + g.sh / 2, 1)),
 }
 SQUARED = {
     0x229E: (u(0x229E), CIRCLED[0x2295][1]),
@@ -1130,11 +1166,21 @@ def _inner_ring(g, x, y, r):
     _ring(g, x - ri, y - ri, x + ri, y + ri, w=w, leg=0.45 * ri)
 
 
-def _inner_bars(g, x, y, half, n):
-    off = (g.sh + eq_gap(g)) / 2
+def _inner_bars(g, x, y, half, n, r=None):
+    """One bar, or the equal sign's two, inside a ring of centreline half
+    size r: two bars that would not fit with half a stem of white above
+    and below thin, and close up, as a tight stack does."""
+    p = g.p
+    t, gap = g.sh, eq_gap(g)
+    if n == 2 and r is not None:
+        room = r - g.sh / 2 - max(0.5 * p.sv, 0.75 * p.m)     # from the centre to the white's edge
+        if t + gap / 2 > room:
+            t = max(room / 1.4, p.floor)
+            gap = max(0.8 * t, 2 * (room - t))
+    off = (t + gap) / 2
     ys = [y] if n == 1 else [y - off, y + off]
     for yy in ys:
-        g.stroke((x - half, yy), (x + half, yy))
+        g.stroke((x - half, yy, t), (x + half, yy))
 
 
 def _inner_asterisk(g, x, y, half):
@@ -1520,9 +1566,11 @@ def partialdiff(g):
     xl, xr = p.sv / 2, W - p.sv / 2
     yb, yt = g.sh / 2, p.cap - g.sh / 2
     ybt = 0.58 * p.cap - g.sh / 2
-    d = beak_depth(p)
+    # the beak: the 2's, never nearer the bowl than a stem's white
+    d = min(beak_depth(p), yt - (ybt + g.sh + max(p.sv, 1.25 * p.m)))
     g.stroke(B(xl, yb), B(xr, yb), B(xr, ybt), B(xl, ybt), closed=True)
-    g.stroke((xr, ybt), B(xr, yt), B(xl + 0.0, yt), (xl, p.cap - d))
+    # the right side runs on up from the bowl's straight side, so the two are one at every weight
+    g.stroke((xr, (yb + ybt) / 2), B(xr, yt), B(xl, yt), (xl, yt + g.sh / 2 - d))
 
 
 @glyph('emptyset', '∅', lambda p: 0.85 * p.cap + 0.5 * p.sv, kind='cap')
@@ -1678,7 +1726,12 @@ def contourintegral(g):
     bot, top = int_span(p)
     integral(g, g.W / 2, bot, top)
     r = _cint_r(p)
-    _small_ring_box(g, g.W / 2, (bot + top) / 2, r)
+    # an octagon wider than tall where the hooks' beaks would come near it
+    w = 0.85 * p.sv
+    white = max(0.75 * p.sv, p.m)
+    ry = min(r, (top - bot) / 2 - beak_depth(p) - white - w / 2)
+    c, mid = g.W / 2, (bot + top) / 2
+    _ring(g, c - r, mid - ry, c + r, mid + ry, w=w, leg=0.6 * min(r, ry))
 
 
 # --- Roots ---------------------------------------------------------------------------------------

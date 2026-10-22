@@ -41,7 +41,7 @@ from ..draw import B, REGISTRY, _lightened, _thickness, glyph
 from ..geom import Node, Stroke, stroke_polygon
 from ..params import SQRT2
 from .figures import heaviness
-from .letterframe import letter_width
+from .letterframe import STEEP, letter_width
 from .punct import axis
 
 WHITE = 0.5          # white under a barb's end, in stems
@@ -50,6 +50,7 @@ SHAFT_BETWEEN = 1.5  # shaft between two heads, in stems
 MONO_FREE = 0.4      # in the monospaced cell, free shafts shorten to this share
 MONO_MIN = 0.6       # ... strokes may lighten to this share of the weight's
 MONO_WHITE = 0.3     # ... and, last, the white under a barb narrow to this many stems
+DASHES = 3           # a dashed shaft's dashes (the head's included), at every weight
 STACK_MIN = 0.75     # stacked arrows' strokes at Black, of the weight's own
 
 
@@ -285,7 +286,7 @@ def shaft(ctx, kind, starts, ends, offs, start='flat', back=None):
         # to fit; the last dash runs on into the head
         dash, gap = dash_measures(ctx)
         run = back - u_tail
-        n = max(2, round((run + gap) / (dash + gap)))
+        n = DASHES                                          # the same at every weight
         k = (run + gap) / (n * (dash + gap))
         dash, gap = dash * k, gap * k
         u = u_tail
@@ -339,7 +340,7 @@ def pattern_min(ctx, kind):
     period of the wave, two teeth of the zigzag."""
     if kind == 'dashed':
         dash, gap = dash_measures(ctx)
-        return 2 * dash + gap
+        return DASHES * dash + (DASHES - 1) * gap
     if kind == 'wave':
         return 4 * wave_amp(ctx) + 2 * wave_flat(ctx) + wave_lead(ctx)
     if kind == 'squiggle':
@@ -500,6 +501,10 @@ class Spec(Drawing):
             d += 2 * t + max(bar_gap(ctx, t), 0.8 * ctx.p.sv) + 1.5 * ctx.p.sv
         if self.marks == 'base':                            # a base under the tail's head
             d += t + bar_gap(ctx, t)
+        if self.strike:                                     # room for the negation, clear of the barbs
+            p = ctx.p
+            half = max(self.offs(ctx)) + ctx.ts / 2 + max(2.0 * p.m, 1.0 * p.sv)
+            d += half + p.ss / STEEP[1] + 1.5 * p.sv
         return d + pattern_min(ctx, self.shaft)
 
     def free(self):
@@ -635,7 +640,7 @@ def fit_straight(dr, ctx, mono):
     Ls = solve(target, h)
     strokes = make(Ls, h)
     if dr.strike:
-        strokes += strike(ctx, strokes, dr, h)
+        strokes += strike(ctx, dr, Ls, h)
     return strokes, fits
 
 
@@ -670,13 +675,17 @@ def _move(q, dx, dy):
     return (q[0] + dx, q[1] + dy) + tuple(q[2:])
 
 
-def strike(ctx, strokes, spec, h):
-    """The negation: a 2:1 stroke across the shaft's middle, as the not-equal
-    sign's, reaching a little past the outer shafts."""
+def strike(ctx, spec, Ls, h):
+    """The negation: a 2:1 stroke, as the not-equal sign's, across the
+    middle of the free shaft (clear of the barbs), reaching two modules or
+    a stem past the outer shafts."""
     p = ctx.p
-    x0, y0, x1, y1 = bounds(ctx, strokes)
-    xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
-    half = max(spec.offs(ctx)) + ctx.ts / 2 + max(2.5 * p.m, 1.2 * p.sv)
+    offs = spec.offs(ctx)
+    hd = head(ctx, spec.head, h, offs).depth
+    td = hd if spec.tail == 'head' else (h if spec.tail == 'feather' else 0.0)
+    um = (-Ls + td - hd) / 2
+    xm, ym = ctx.turn.vec(um, 0.0)
+    half = max(offs) + ctx.ts / 2 + max(2.0 * p.m, 1.0 * p.sv)
     return [([(xm - half / 2, ym - half), (xm + half / 2, ym + half)], False, 'h', 'h')]
 
 
