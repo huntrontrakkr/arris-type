@@ -9,10 +9,9 @@ from __future__ import annotations
 
 import math
 
-from ..draw import B, glyph
+from ..draw import B, Opening, glyph
 from ..params import SQRT2, inner_leg, outer_leg
 
-JOG = None  # None: half a stem; a number: that many modules at every weight
 STEEP = (1 / math.sqrt(5), 2 / math.sqrt(5))  # the 2:1 slope, as a unit vector
 
 
@@ -49,10 +48,11 @@ def steep_thickness(p):
     return p.ss
 
 
-def jog(p, fixed=None):
+def jog(p):
     """The step in the 2's and 4's diagonals: one pixel of the watch's
-    two-pixel strokes, i.e. half a stem."""
-    return p.sv / 2 if JOG is None else JOG * p.m
+    two-pixel strokes (half a stem), but never less than a module, so the
+    step stays visible at light weights."""
+    return max(p.sv / 2, p.m)
 
 
 @glyph('zero', '0', 'fig_w')
@@ -61,7 +61,14 @@ def zero(g):
     g.stroke(B(xl, yb - g.ob), B(xr, yb - g.ob), B(xr, yt + g.ot), B(xl, yt + g.ot), closed=True)
 
 
-@glyph('one', '1', 'fig_w')
+def _notch_white(g):
+    """White under the 1's flag, between its foot and the stem."""
+    p = g.p
+    x1 = g.W / 2 + g.W / 18
+    return g.white_left(g.defaults_used['yf'] + 1e-3 * p.m, x1 - p.sv / 2)
+
+
+@glyph('one', '1', 'fig_w', openings=[Opening(_notch_white, 'yf', lambda p: p.cap / 3, max_ratio=0.5)])
 def one(g):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
     x1 = W / 2 + u / 2
@@ -70,12 +77,14 @@ def one(g):
     g.stroke((x1, yb), (x1, top))                           # stem
     # Flag: 45 degrees, its upper edge continuing the stem's cut top-left
     # corner (x - y = x1 - sv/2 + c - top); the centreline lies k inside. It
-    # ends square on a horizontal four modules down, and the corner rule
-    # fills the crotch under it, which leaves the notch.
-    k = p.sd / SQRT2
+    # ends square on a horizontal four modules down (lower when heavy strokes
+    # would close the notch), and the corner rule fills the crotch above it.
+    fd = p.sd
+    k = fd / SQRT2
     a = x1 - p.sv / 2 + p.c - top + k                       # centreline: x - y = a
-    yf = H - 4 * v
-    g.stroke((x1, x1 - a), (yf + a, yf), start='v', end='h')
+    yf = g.free('yf', H - 4 * v)
+    g.defaults_used['yf'] = yf
+    g.stroke((x1, x1 - a, fd), (yf + a, yf), start='v', end='h')
 
 
 @glyph('two', '2', 'fig_w')
@@ -84,15 +93,17 @@ def two(g):
     top = yt + g.ot
     k = p.sd / SQRT2
     g.stroke((0, yb), (W, yb))                              # base
-    # The spine is two 45-degree strokes offset by a jog and overlapping by
-    # it: the notch. The lower one's upper edge lands on the base one edge
-    # break in from its end (x - y = c - sh); the upper one sits a jog right.
+    # The spine: a 45-degree stroke that steps left by a jog on a short
+    # horizontal (the notch), then lands on the base one edge break in from
+    # its end (lower part's upper edge: x - y = c - sh).
+    J = jog(p)
     a_lo = p.c - p.sh + k
-    a_up = a_lo + jog(p)
-    yj = 5.5 * v
-    lo, hi = yj - jog(p) / 2, yj + jog(p) / 2
-    g.stroke((xl, beak_top(g)), B(xl, top), B(xr, top), (xr, xr - a_up), (lo + a_up, lo), end='h')
-    g.stroke((hi + a_lo, hi), (yb + a_lo, yb), start='h', end='h')
+    a_up = a_lo + J
+    y_turn = xr - a_up                                      # where the spine leaves the stem
+    yj = yb + (4.5 / 6.5) * (y_turn - yb)                   # the watch's step height, 5.5 of 7.5
+    step = min(J, p.sh)
+    g.stroke((xl, beak_top(g)), B(xl, top), B(xr, top), (xr, xr - a_up), (yj + a_up, yj, step),
+             (yj + a_lo, yj), (yb + a_lo, yb), end='h')
 
 
 @glyph('three', '3', 'fig_w')
@@ -106,23 +117,47 @@ def three(g):
     g.stroke((3 * u, ym), B(xr, ym), B(xr, bot), B(xl, bot), (xl, beak_bottom(g)))
 
 
-@glyph('four', '4', 'fig_w')
+def _four_gap(g):
+    return g.part('diagonal').distance(g.part('stem'))
+
+
+def heaviness(p):
+    """0 at the watch's weight and below, 1 at Black."""
+    return min(max((p.sv - 120.0) / (175.0 - 120.0), 0.0), 1.0)
+
+
+def _four_bar(p):
+    """The 4's crossbar centre: the watch's 5 modules, half a module lower at
+    Black, where the counter needs the room."""
+    return (5 - 0.5 * heaviness(p)) * p.cap / 12
+
+
+def _four_jog_limit(p):
+    """The deepest clip that still leaves the upper diagonal half a stem long."""
+    u = p.fig_w / 9
+    a_lo = p.sd / SQRT2 - (_four_bar(p) + p.sh / 2 + p.c)
+    return p.cap - p.sv / 2 - (4 * u - a_lo)
+
+
+@glyph('four', '4', 'fig_w', openings=[Opening(_four_gap, 'jog', _four_jog_limit)])
 def four(g):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
-    yc = 5 * v
+    yc = _four_bar(p)
     xs = 7 * u
     top = H + g.ot
-    k = p.sd / SQRT2
+    fd = p.sd
+    k = fd / SQRT2
     g.stroke((0, yc), (W, yc))                              # crossbar
-    g.stroke((xs, 0), (xs, 10 * v))                         # stem
-    # The diagonal: two 45-degree strokes, the upper a jog to the left, cut
-    # vertically where they overlap: the clip. The lower one's upper edge
-    # leaves the crossbar's end one edge break above its top.
+    g.stroke((xs, 0), (xs, 10 * v), part='stem')
+    # The diagonal steps left by a jog on a short vertical: the clip. Its lower
+    # part's upper edge leaves the crossbar's end one edge break above its
+    # top. At heavy weights the clip deepens so the 4 stays open at the top.
+    J = g.free('jog', jog(p))
     a_lo = k - (yc + p.sh / 2 + p.c)
-    a_up = a_lo - jog(p)
-    xj = 3 * u
-    g.stroke((yc + a_lo, yc), (xj + 2 * k, xj + 2 * k - a_lo), start='h', end='v')
-    g.stroke((xj, xj - a_up), (top + a_up, top), start='v', end='h')
+    a_up = a_lo - J
+    xc = 4 * u
+    g.stroke((yc + a_lo, yc, fd), (xc, xc - a_lo, p.sv), (xc, xc - a_up, fd), (top + a_up, top),
+             start='h', end='h', part='diagonal')
 
 
 @glyph('five', '5', 'fig_w')

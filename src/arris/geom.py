@@ -31,6 +31,7 @@ class Node:
     x: float
     y: float
     bowl: float = 0.0  # centreline chamfer leg at this node; 0 = plain corner
+    w: float | None = None  # thickness of the segment leaving this node (None: by direction)
 
 
 @dataclass(frozen=True)
@@ -93,7 +94,7 @@ def _expand(stroke: Stroke):
     and, per bowl, the index of its chamfer segment."""
     nodes = list(stroke.nodes)
     n = len(nodes)
-    pts, bowls = [], []
+    pts, bowls, widths = [], [], []   # widths[i]: thickness of the segment from pts[i]
     for i, nd in enumerate(nodes):
         p = (nd.x, nd.y)
         interior = stroke.closed or 0 < i < n - 1
@@ -106,9 +107,11 @@ def _expand(stroke: Stroke):
             b = _add(p, _mul(dout, nd.bowl))
             bowls.append(len(pts))
             pts.extend([a, b])
+            widths.extend([None, nd.w])
         else:
             pts.append(p)
-    return pts, bowls
+            widths.append(nd.w)
+    return pts, bowls, widths
 
 
 def _cap_point(p, d, side_pt, kind):
@@ -142,11 +145,11 @@ def stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
 
 
 def _scale_bowls(stroke: Stroke, k: float) -> Stroke:
-    return Stroke(tuple(Node(n.x, n.y, n.bowl * k) for n in stroke.nodes), stroke.closed, stroke.start, stroke.end)
+    return Stroke(tuple(Node(n.x, n.y, n.bowl * k, n.w) for n in stroke.nodes), stroke.closed, stroke.start, stroke.end)
 
 
 def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
-    pts, bowls = _expand(stroke)
+    pts, bowls, widths = _expand(stroke)
     closed = stroke.closed
     m = len(pts)
     nseg = m if closed else m - 1
@@ -154,7 +157,7 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
     for i in range(nseg):
         a, b = pts[i], pts[(i + 1) % m]
         d = _unit(_sub(b, a))
-        segs.append((a, d, thick(d) / 2))
+        segs.append((a, d, (widths[i] if widths[i] is not None else thick(d)) / 2))
 
     def side(sign):
         lines = [(_add(a, _mul((-d[1], d[0]), sign * h)), d) for a, d, h in segs]
