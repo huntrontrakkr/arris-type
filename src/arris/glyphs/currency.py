@@ -374,22 +374,31 @@ def hryvnia(g):
     bar_pair(g, ym - (pair_t(p) + pair_gap(p)) / 2, 0, W)    # the upper bar over the notch
 
 
-def _cross_pair(p, room=None):
+def _cross_pair(p):
     """Two parallel 45-degree strokes across a stem: their thickness (the
-    diagonal's, thinning toward Black as bar pairs do), the vertical step
-    between them (white across of half a stem or a module), and how far each
-    reaches either side of the stem's centre. ``room``: the stem's free
-    length, which the pair must fit."""
-    t = p.sd * (1 - 0.3 * heaviness(p))
-    dy = SQRT2 * (t + max(p.m, 0.6 * p.sv))
-    e = max(1.2 * p.m, 0.75 * p.m + p.sv / 2)
-    e = max(1.4 * p.m + p.sv / 2 if room is None else min(1.4 * p.m + p.sv / 2, (room - dy) / 2), e)
+    diagonal's, thinning toward Black to 0.6 of it, as a pair must), the
+    vertical step between them (white across of half a stem, or a module),
+    and how far each reaches either side of the stem's centre (never less
+    than the stem's half and a module and a quarter, so they read as
+    strokes and not as bumps on the stem)."""
+    t = p.sd * (1 - 0.4 * heaviness(p))
+    dy = SQRT2 * (t + max(p.m, 0.5 * p.sv))
+    e = 1.4 * p.m + p.sv / 2
     return t, dy, e
 
 
-def _cross(g, xs, yc, t, dy, e):
-    for y in (yc - dy / 2, yc + dy / 2):
-        g.stroke((xs - e, y - e, across(g.p, t, (1, 1))), (xs + e, y + e), start='v', end='v')
+def _free_arm(p):
+    """How far a crossing stroke's arm reaches where nothing is in its way:
+    long enough past the stem to read as a stroke, not a bump on it."""
+    return 2.0 * p.m + 0.75 * p.sv
+
+
+def _cross(g, xs, y_lo, y_hi, t, arms):
+    """The pair across a stem at xs, centred at y_lo and y_hi; ``arms``:
+    (lower left, lower right, upper left, upper right) reaches."""
+    a = arms
+    for y, el, er in ((y_lo, a[0], a[1]), (y_hi, a[2], a[3])):
+        g.stroke((xs - el, y - el, across(g.p, t, (1, 1))), (xs + er, y + er), start='v', end='v')
 
 
 @cur('uni20BA', '\u20ba', growing_width(9, 2, 1.0))
@@ -401,22 +410,28 @@ def turkishlira(g):
     xs = f.X(3)
     g.stroke((xs, p.cap), B(xs, f.Y(1)), B(*f.P(8, 1)), f.P(8, 6))
     t, dy, e = _cross_pair(p)
-    room = f.X(8) - p.sv / 2 - wmin(p) - t * 0.71 - xs        # the strokes' right ends stay clear of the right side
-    _cross(g, xs, f.Y(6.5), t, dy, max(min(e, room), 0.75 * p.m + p.sv / 2))
+    # the pair over the bowl: the lower stroke's right arm stays a stroke's
+    # white clear of the bowl's right side, so it rises as the stem thickens
+    yc = max(f.Y(6.5), f.Y(1) + g.sh / 2 + wmin(p) + 0.71 * t + dy / 2 + max(0.0, e - (f.X(8) - xs - p.sv)))
+    ef = _free_arm(p)
+    _cross(g, xs, yc - dy / 2, yc + dy / 2, t, (ef, e, ef, ef))   # only the lower stroke's right arm is over the bowl
 
 
 @cur('uni20AE', '\u20ae', letter_width(10, 1))
 def tugrik(g):
-    """T with two 45-degree strokes across its stem, in the stem's middle."""
+    """T with two 45-degree strokes across its stem. The upper stroke stays
+    a stroke's white under the bar; at heavy weights the lower one may run
+    out through the baseline, cut flat by it, rather than crowd the stem."""
     f = Frame(g, 10)
     p = f.p
     g.stroke(f.P(0, 11), f.P(10, 11))
     xs = f.X(5)
     g.stroke((xs, f.Y(11)), (xs, 0))
-    free = f.Y(11) - g.sh / 2 - wmin(p)                     # the stem below the bar, less a white
-    t, dy, e = _cross_pair(p, free)
-    yc = min(0.42 * p.cap, free / 2)
-    _cross(g, xs, yc, t, dy, e)
+    t, dy, e = _cross_pair(p)
+    top = f.Y(11) - g.sh / 2 - wmin(p) - 0.71 * t           # the upper stroke's highest centre point
+    y_hi = min(0.42 * p.cap + dy / 2, top - e)
+    ef = _free_arm(p)
+    _cross(g, xs, y_hi - dy, y_hi, t, (e, ef, ef, e))           # the arms toward the bar and the baseline kept short
     g.clip = (0, 0, f.W, p.cap)
 
 
