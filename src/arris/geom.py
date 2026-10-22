@@ -386,6 +386,8 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     if clip is not None:
         u = u.intersection(clip)
     u = shapely.make_valid(u)
+    if not butt:
+        u = _fill_slits(u, SLIT * c)
     u = MultiPolygon([g for g in getattr(u, 'geoms', [u]) if isinstance(g, Polygon) and g.area > 1e-9]) \
         if not isinstance(u, Polygon) else u
     if isinstance(u, Polygon):
@@ -407,6 +409,47 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
 
 MIN_COUNTER = 0.2   # pinholes (under a fifth of a stem, squared) fill in
 POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
+SLIT = 0.35         # white narrower than twice this share of the chamfer leg, and long, is a slit
+
+
+def _fill_slits(u, eps):
+    """Slits of white out of the union: where two strokes run past each
+    other a few units apart (a cedilla's foot under a c's foot at Black)
+    the white between is a hairline, invisible at text sizes and sloppy at
+    large ones. Closing the ink by ``eps`` finds the white narrower than
+    twice it; the long thin pieces (not the small triangles a closing fills
+    in every inside corner) open to the outside become ink, unless filling
+    one would seal a counter's mouth (the topology stays what it is)."""
+    if eps <= 0 or u.is_empty:
+        return u
+    closed = u.buffer(eps, join_style='mitre').buffer(-eps, join_style='mitre')
+    gaps = closed.difference(u)
+    # a counter (white enclosed by ink) is never filled here: its topology
+    # must be the same at every weight, for the variable font
+    filled = shapely.union_all([Polygon(g.exterior) for g in getattr(u, 'geoms', [u]) if isinstance(g, Polygon)])
+    holes = filled.difference(u)
+    fill = []
+    for part in getattr(gaps, 'geoms', [gaps]):
+        if part.is_empty or part.area < 1e-6:
+            continue
+        if not holes.is_empty and part.difference(holes).area < 0.5 * part.area:
+            continue
+        r = part.minimum_rotated_rectangle
+        xs, ys = r.exterior.coords.xy
+        long = max(math.hypot(xs[i + 1] - xs[i], ys[i + 1] - ys[i]) for i in range(2))
+        if long > 3 * eps and part.area < long * eps:
+            fill.append(part)
+    if not fill:
+        return u
+
+    def holes_of(v):
+        return sum(len(g.interiors) for g in getattr(v, 'geoms', [v]) if isinstance(g, Polygon))
+    n0 = holes_of(u)
+    for part in fill:                                         # never seal an open counter's mouth
+        v = shapely.make_valid(shapely.union_all([u, part]))
+        if holes_of(v) <= n0:
+            u = v
+    return u
 
 
 def _polish(pts, eps, moved):

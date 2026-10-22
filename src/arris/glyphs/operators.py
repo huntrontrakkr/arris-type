@@ -184,16 +184,18 @@ class Curly(Chevron):
     level for the last quarter of its reach."""
 
     def size(self, g):
-        if self.h is not None:
-            return self.h
+        """Its half height: at most what leaves the level run a quarter of
+        the reach (2:1 arms need twice their height across)."""
         from .punct import chevron_geometry
-        return 0.38 * chevron_geometry(g)[1]
+        reach = chevron_geometry(g)[1]
+        h = 0.38 * reach if self.h is None else self.h
+        return min(h, 0.385 * reach)
 
     def draw(self, g, yc):
         from .punct import chevron_geometry
         W = g.W
         h = self.size(g)
-        A = min(2.6 * h, W - chevron_geometry(g)[0])
+        A = chevron_geometry(g)[1]
         pts = [(W, yc + h), (W - A + 2 * h, yc + h), (W - A, yc), (W - A + 2 * h, yc - h), (W, yc - h)]
         if self.right:
             pts = [(W - x, y) for x, y in pts]
