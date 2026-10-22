@@ -81,6 +81,20 @@ class Glyph:
         th = Thickness(self.p.sv, self.sh, self.p.sd, self.p.ss)
         return shapely.union_all([stroke_polygon(self.strokes[i], th, self.p.c) for i in self.parts[name]])
 
+    def counter_size(self) -> float:
+        """Radius of the largest circle inside any counter: how open the
+        tightest-held white of a closed form stays."""
+        import shapely
+        from shapely.geometry import Polygon
+        from .geom import rings_to_shapely
+        poly = rings_to_shapely(self.rings())
+        best = 0.0
+        for part in getattr(poly, 'geoms', [poly]):
+            for hole in part.interiors:
+                mic = shapely.maximum_inscribed_circle(Polygon(hole), tolerance=1.0)
+                best = max(best, mic.length)
+        return best
+
     def white_left(self, y: float, x: float) -> float:
         """Width of the white run leftward from x at height y."""
         from shapely.geometry import LineString

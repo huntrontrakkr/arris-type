@@ -7,23 +7,31 @@ V on m, gables on v and w.
 """
 from __future__ import annotations
 
-from ..draw import B, glyph
+from ..draw import B, Opening, glyph
 from ..params import SQRT2
 from .figures import beak_depth, jog
 from .letterframe import Frame, letter_width
 
 
-def low(char, wm, stems, width=None):
-    return glyph(char, char, width or letter_width(wm, stems), kind='lower')
+def low(char, wm, stems, width=None, openings=()):
+    return glyph(char, char, width or letter_width(wm, stems), kind='lower', openings=openings)
 
 
-@low('a', 8, 2)
+def _a_gap(g):
+    """White between the a's arm and the top of its bowl."""
+    return g.defaults_used['arm'] - g.defaults_used['bowl'] - g.sh
+
+
+@low('a', 8, 2, openings=[Opening(_a_gap, 'bowl', lambda p: p.xh * 0.4, max_ratio=0.4)])
 def a(g):
     g.stack(3, g.p.xh, ratio=0.75)
     f = Frame(g, 8, 'lower')
     small = g.p.m / 2                                       # a one-step corner, as drawn
-    g.stroke(f.P(1, 8), B(*f.P(7, 8), small), f.P(7, 0))
-    g.stroke(f.P(7, 5), B(*f.P(1, 5)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    ya = f.Y(8)
+    yb = g.free('bowl', f.Y(5))                             # heavy weights lower the bowl
+    g.defaults_used.update(arm=ya, bowl=yb)
+    g.stroke((f.X(1), ya), B(f.X(7), ya, small), f.P(7, 0))
+    g.stroke((f.X(7), yb), B(f.X(1), yb), B(*f.P(1, 1)), f.P(7, 1), closed=True)
 
 
 @low('b', 8, 2)
@@ -47,12 +55,19 @@ def d(g):
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
 
 
-@low('e', 8, 2)
+def _e_gap(g):
+    """White between the e's bar and its lower arm."""
+    return g.defaults_used['bar'] - g.defaults_used['arm'] - g.sh
+
+
+@low('e', 8, 2, openings=[Opening(_e_gap, 'bar', lambda p: p.xh * 0.6, max_ratio=0.4)])
 def e(g):
     g.stack(3, g.p.xh, ratio=0.75)
     f = Frame(g, 8, 'lower')
-    g.stroke(f.P(1, 4), f.P(7, 4), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
-    g.stroke(f.P(1, 4), B(*f.P(1, 1)), f.P(7, 1))
+    yb = g.free('bar', f.Y(4))                              # heavy weights raise the bar
+    g.defaults_used.update(bar=yb, arm=f.Y(1))
+    g.stroke((f.X(1), yb), (f.X(7), yb), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
+    g.stroke((f.X(1), yb), B(*f.P(1, 1)), f.P(7, 1))
 
 
 @low('f', 7, 1)

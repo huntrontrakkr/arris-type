@@ -67,6 +67,13 @@ def place(name: str, p: Params, tune=None):
         zone = (0.0, p.xh) if spec.kind == 'lower' else (0.0, p.cap)
         lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * (zone[1] - zone[0]),
                                         floor=-0.25 * p.m)
+        # Parts outside the zone (a j's hook, a descender's tail) may hang
+        # into the neighbour's space, but by no more than half its light.
+        fx0 = min(x for r in rings for x, _ in r)
+        fx1 = max(x for r in rings for x, _ in r)
+        reach = 0.5 * light(p)
+        lsb = max(lsb, (xmin - fx0) - reach)
+        rsb = max(rsb, (fx1 - xmax) - reach)
         dx = lsb - xmin
         adv = lsb + (xmax - xmin) + rsb
     return [[(x + dx, y) for x, y in r] for r in rings], adv
@@ -100,13 +107,29 @@ def _notdef(p: Params):
     return pen.glyph(), 560
 
 
-def build(path, names, p: Params, family='Arris', style='Bold', weight=700, tune=None,
-          metrics: Metrics | None = None, version='0.1'):
+def _contours(rings):
+    """Rounded TrueType contours (outer clockwise) from ink-left rings."""
+    out = []
+    for ring in rings:
+        pts = [(round(x), round(y)) for x, y in ring]
+        clean = []
+        for q in pts:
+            if not clean or q != clean[-1]:
+                clean.append(q)
+        if len(clean) > 1 and clean[0] == clean[-1]:
+            clean.pop()
+        if len(clean) >= 3:
+            out.append(clean[::-1])
+    return out
+
+
+def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, tune=None,
+          metrics: Metrics | None = None, version='0.1', space=None):
     m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh))
     order = ['.notdef', 'space'] + list(names)
     fb = FontBuilder(UPM, isTTF=True)
     fb.setupGlyphOrder(order)
-    cmap = {0x20: 'space'}
+    cmap = {0x20: 'space', 0xA0: 'space'}
     for n in names:
         if REGISTRY[n].unicode is not None:
             cmap[REGISTRY[n].unicode] = n
@@ -115,26 +138,32 @@ def build(path, names, p: Params, family='Arris', style='Bold', weight=700, tune
     glyphs['.notdef'], adv = _notdef(p)
     hmtx['.notdef'] = (adv, 40)
     glyphs['space'] = TTGlyphPen(None).glyph()
-    hmtx['space'] = (round(p.fig_adv / 2), 0)
+    hmtx['space'] = (round(space if space is not None else 0.45 * p.xh), 0)
     for n in names:
-        lsb, adv = spacing(n, p)
-        g = _tt_glyph(glyph_contours(n, p, tune), round(lsb))
-        glyphs[n] = g
+        rings, adv = place(n, p, tune)
+        glyphs[n] = _tt_glyph(_contours(rings), 0)
         hmtx[n] = (round(adv), 0)
     fb.setupGlyf(glyphs)
-    # left side bearings come from the glyph bounds
+    ymin, ymax = 0, 0
     for n, (adv, _) in hmtx.items():
         g = glyphs[n]
         g.recalcBounds(fb.font['glyf'])
+        if g.numberOfContours:
+            ymin, ymax = min(ymin, g.yMin), max(ymax, g.yMax)
         hmtx[n] = (adv, getattr(g, 'xMin', 0) if g.numberOfContours else 0)
     fb.setupHorizontalMetrics(hmtx)
     fb.setupHorizontalHeader(ascent=m.asc, descent=m.desc, lineGap=m.gap)
+    ribbi = style in ('Regular', 'Bold')
+    fam1 = family if ribbi else f'{family} {style}'
+    sub1 = style if ribbi else 'Regular'
     ps = f'{family}-{style}'.replace(' ', '')
-    fb.setupNameTable({'familyName': family, 'styleName': style, 'uniqueFontIdentifier': f'{ps};{version}',
-                       'fullName': f'{family} {style}', 'psName': ps, 'version': f'Version {version}'})
+    fb.setupNameTable({'familyName': fam1, 'styleName': sub1, 'uniqueFontIdentifier': f'{ps};{version}',
+                       'fullName': f'{family} {style}', 'psName': ps, 'version': f'Version {version}',
+                       'typographicFamily': family, 'typographicSubfamily': style})
     fb.setupOS2(sTypoAscender=m.asc, sTypoDescender=m.desc, sTypoLineGap=m.gap,
-                usWinAscent=m.asc, usWinDescent=-m.desc, sxHeight=m.xh, sCapHeight=m.cap,
-                usWeightClass=weight, fsSelection=0x80 | {'Regular': 0x40, 'Bold': 0x20}.get(style, 0),
+                usWinAscent=max(m.asc, ymax), usWinDescent=max(-m.desc, -ymin), sxHeight=m.xh,
+                sCapHeight=m.cap, usWeightClass=weight,
+                fsSelection=0x80 | {'Regular': 0x40, 'Bold': 0x20}.get(style, 0),
                 achVendID='NONE', version=4)
     fb.setupPost()
     fb.font.save(path)

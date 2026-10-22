@@ -13,13 +13,13 @@ see ``letterframe``. The moves are the figures':
 """
 from __future__ import annotations
 
-from ..draw import B, glyph
+from ..draw import B, Opening, glyph
 from .figures import beak_depth, jog
 from .letterframe import STEEP, Frame, letter_width
 
 
-def cap(char, wm, stems, width=None):
-    return glyph(char, char, width or letter_width(wm, stems), kind='cap')
+def cap(char, wm, stems, width=None, openings=()):
+    return glyph(char, char, width or letter_width(wm, stems), kind='cap', openings=openings)
 
 
 def big(p):
@@ -183,14 +183,15 @@ def P(g):
     g.stroke(f.P(1, 11), B(*f.P(8, 11)), B(*f.P(8, 6)), f.P(1, 6))
 
 
-@cap('Q', 10, 2)
+@cap('Q', 10, 2, openings=[Opening(lambda g: g.counter_size(), 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=0.85)])
 def Q(g):
     f = Frame(g, 10)
     p = f.p
-    # The bowl's lower right corner is square, and the tail runs into it.
+    # The bowl's lower right corner is square, and the tail runs into it;
+    # heavy weights shorten the tail so the counter stays open.
     g.stroke(B(*f.P(1, 1)), f.P(9, 1), B(*f.P(9, 11)), B(*f.P(1, 11)), closed=True)
     ct = (f.X(9) - p.sv / 2) + (f.Y(1) + g.sh / 2) - p.c   # tail: x + y = ct
-    y0 = f.Y(5)
+    y0 = g.free('tail', f.Y(5))
     g.stroke((ct - y0, y0), (ct - f.Y(1), f.Y(1)), start='h')
 
 
