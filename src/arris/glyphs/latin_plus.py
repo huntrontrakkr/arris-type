@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import math
 
-from ..draw import B, REGISTRY, Glyph, glyph
+from ..draw import B, REGISTRY, Glyph, Opening, draw, glyph
 from ..params import SQRT2
 from . import marks
 from .cyrillic import mirror
@@ -189,32 +189,46 @@ def turn(g, H):
                  for s in g.strokes]
 
 
-@glyph('uni0259', 'ə', lambda p: REGISTRY['e'].width(p), kind='lower',
-       openings=REGISTRY['e'].openings)
+def _schwa_gap(g):
+    """White between the schwa's bar and its arm."""
+    return g.defaults_used['arm'] - g.defaults_used['bar'] - g.sh
+
+
+SCHWA_ARM = 1.5     # modules the schwa's arm stops short of the stem's centre
+
+
+@glyph('uni0259', 'ə', letter_width(8, 2), kind='lower',
+       openings=[Opening(_schwa_gap, 'bar', lambda p: p.xh * 0.4, max_ratio=0.4)])
 def schwa(g):
-    """The e turned: its eye below, its mouth at the top left."""
-    REGISTRY['e'].fn(g)
-    turn(g, g.p.xh)
+    """The e turned: its eye below, its mouth at the top left. The arm
+    stops a module and a half short of the left side, so the mouth opens
+    wider than the e's: the a, whose arm runs to its side, is the letter
+    an Azerbaijani reader must not take it for (tools/letter_confusion.py,
+    Regular at 11 arcminutes: a/ə 0.27, against 0.21 with the arm run on
+    and 0.21 in Chakra Petch and Barlow). At heavy weights the bar lowers,
+    as the e's rises."""
+    g.stack(3, g.p.xh, ratio=0.75)
+    f = Frame(g, 8, 'lower')
+    yb = g.free('bar', f.Y(5))
+    g.defaults_used.update(bar=yb, arm=f.Y(8))
+    g.stroke((f.X(7), yb), (f.X(1), yb), B(*f.P(1, 1)), B(*f.P(7, 1)), closed=True)
+    g.stroke((f.X(7), yb), B(*f.P(7, 8)), f.P(1 + SCHWA_ARM, 8))
 
 
-@glyph('uni01DD', 'ǝ', lambda p: REGISTRY['e'].width(p), kind='lower',
-       openings=REGISTRY['e'].openings)
+@glyph('uni01DD', 'ǝ', letter_width(8, 2), kind='lower',
+       openings=[Opening(_schwa_gap, 'bar', lambda p: p.xh * 0.4, max_ratio=0.4)])
 def turned_e(g):
     schwa(g)
 
 
-def _Schwa_gap(g):
-    return g.defaults_used['arm'] - g.defaults_used['bar'] - g.sh
-
-
 @glyph('uni018F', 'Ə', letter_width(9, 2), kind='cap')
 def Schwa(g):
-    """The capital schwa: the turned e on the capital grid, its bar a
-    little above the middle."""
+    """The capital schwa: the lowercase's construction on the capital grid,
+    its bar a little above the middle."""
     f = Frame(g, 9)
     yb = f.Y(6.5)
     g.stroke((f.X(8), yb), (f.X(1), yb), B(*f.P(1, 1)), B(*f.P(8, 1)), closed=True)
-    g.stroke((f.X(8), yb), B(*f.P(8, 11)), f.P(1, 11))
+    g.stroke((f.X(8), yb), B(*f.P(8, 11)), f.P(1 + SCHWA_ARM, 11))
 
 
 @glyph('uni018E', 'Ǝ', letter_width(8, 1), kind='cap')
@@ -304,14 +318,16 @@ def click_lateral(g):
         g.stroke((x, bot), (x, top))
 
 
-@glyph('uni01C2', 'ǂ', growing_width(8, 1, 1.0), kind='lower')
+@glyph('uni01C2', 'ǂ', growing_width(8, 1, 1.5), kind='lower')
 def click_alveolar(g):
-    """The dental click crossed by two bars, as the equals sign's."""
+    """The dental click crossed by two bars. The white between the bars is
+    a bar and the two edge breaks the stem's corners fill, so it stays
+    open beside the stem at every weight."""
     p = g.p
     bot, top = _click_span(p)
     g.stroke((g.W / 2, bot), (g.W / 2, top))
     a = (bot + top) / 2
-    off = (g.sh + max(0.8 * g.sh, p.m)) / 2
+    off = (g.sh + max(g.sh, p.m) + 2 * p.c) / 2
     for y in (a - off, a + off):
         g.stroke((0, y), (g.W, y))
 
@@ -323,16 +339,57 @@ def click_retroflex(g):
 
 # --- Digraphs (compatibility letters) -------------------------------------------
 
+def _digraph_gap(p, a, b):
+    """The white between two letters set side by side: the first's right
+    bearing and the second's left, as the font spaces them; but never so
+    little that their inks come nearer than half a sidebearing, the most a
+    part may hang into its neighbour's space (the L's foot and the J's
+    hook)."""
+    from shapely import affinity
+
+    from ..font import BODIES, _place, light
+    from ..geom import rings_to_shapely
+    q = p.with_(slant=0.0).ungraded()
+    out, inks = 0.0, []
+    for n, right in ((a, True), (b, False)):
+        rings, _, adv = _place(n, q)
+        dx, W, _ = BODIES[n, q]
+        out += (adv - dx - W) if right else dx
+        inks.append((rings_to_shapely(rings), dx, W))
+    (ia, dxa, Wa), (ib, dxb, _) = inks
+    ia = affinity.translate(ia, -dxa)
+    need = 0.5 * light(q)
+    for _ in range(6):
+        d = ia.distance(affinity.translate(ib, Wa + out - dxb))
+        if d >= need - 0.5:
+            break
+        out += need - d
+    return out
+
+
 def _digraph(name, ch, a, b, kind):
     def width(p, a=a, b=b):
-        return REGISTRY[a].width(p) + REGISTRY[b].width(p) + 2.5 * p.m
+        return REGISTRY[a].width(p) + REGISTRY[b].width(p) + _digraph_gap(p.with_(slant=0.0), a, b)
 
     def fn(g, a=a, b=b):
         p = g.p
-        gp = (0.75 if p.mono else 2.5) * p.m
-        wa = (g.W - gp) / 2 if p.mono else None
-        w = stamp(g, a, width=wa)
-        stamp(g, b, w + gp, width=(g.W - w - gp) if p.mono else None, clear=True)
+        if p.mono:
+            # two letters in one cell: both drawn small, strokes and all, at
+            # the size where they fit side by side in their own widths (a Z's
+            # diagonal cannot be squeezed into half a cell)
+            p0 = p.with_(mono=False)
+            gp = 1.0 * p.m
+            s = min(1.0, g.W / (REGISTRY[a].width(p0) + REGISTRY[b].width(p0) + gp))
+            q = p0.with_(m=s * p.m, cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.desc, leg=s * p.leg,
+                         sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
+            sa, sb = draw(a, q), draw(b, q)
+            x0 = (g.W - (sa.W + s * gp + sb.W)) / 2
+            g.add_glyph(sa, x0)
+            g.add_glyph(sb, x0 + sa.W + s * gp)
+            return
+        sub = draw(a, p)
+        g.add_glyph(sub)
+        stamp(g, b, sub.W + _digraph_gap(p.with_(slant=0.0), a, b), clear=True)
     glyph(name, ch, width, kind=kind)(fn)
 
 
