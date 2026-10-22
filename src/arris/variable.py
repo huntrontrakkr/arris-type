@@ -178,6 +178,8 @@ def align(masters: list[list[list[tuple]]]):
     made compatible (same contour order, same point counts, same order), or
     raises ValueError."""
     k = len(masters)
+    if not any(masters):                                    # empty in every master (a space)
+        return masters
     masters = _add_missing_counters(masters)
     ref_i = max(range(k), key=lambda i: sum(len(r) for r in masters[i]))
     ref = masters[ref_i]

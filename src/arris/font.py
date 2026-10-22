@@ -80,6 +80,11 @@ def _place(name: str, p: Params, tune=None, record: bool = False):
     """(rings, chamfer record, advance), upright, shifted into place."""
     from .spacing import bearings
     t = (tune or {}).get(name, {})
+    if REGISTRY[name].kind == 'space':
+        # a space: empty, its own advance; in the monospaced cut a cell
+        # (zero-width characters advance nothing in either)
+        w = REGISTRY[name].width(p.ungraded())
+        return [], [], (p.fig_adv if p.mono and w > 0 else w)
     if p.grade_k != 1.0:
         # Grade changes strokes only: space the glyph as its ungraded self,
         # then draw the graded strokes in the same body at the same place.

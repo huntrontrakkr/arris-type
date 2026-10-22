@@ -189,6 +189,15 @@ for n in CASE:
     glyph(f'{n}.case', None, spec.width, kind=spec.kind)(fn)
 
 
+# Single substitutions other glyph modules add to these features (sups,
+# subs, sinf, numr, dnom, frac, case): {feature tag: [(glyph, replacement)]}.
+MORE: dict = {}
+
+
+def _more(tag):
+    return ''.join(f' sub {a} by {b};' for a, b in MORE.get(tag, []))
+
+
 def fea() -> str:
     """The feature file."""
     figs = ' '.join(FIGS)
@@ -219,11 +228,11 @@ feature ss02 {{
 feature calt {{
     sub @anyfig colon' @anyfig by colon.tf;
 }} calt;
-feature sups {{ sub @figs by @sups; }} sups;
-feature subs {{ sub @figs by @subs; }} subs;
-feature sinf {{ sub @figs by @subs; }} sinf;
-feature numr {{ sub @figs by @numr; }} numr;
-feature dnom {{ sub @figs by @dnom; }} dnom;
+feature sups {{ sub @figs by @sups;{_more('sups')} }} sups;
+feature subs {{ sub @figs by @subs;{_more('subs')} }} subs;
+feature sinf {{ sub @figs by @subs;{_more('sinf')} }} sinf;
+feature numr {{ sub @figs by @numr;{_more('numr')} }} numr;
+feature dnom {{ sub @figs by @dnom;{_more('dnom')} }} dnom;
 feature frac {{
     lookup FRAC_SLASH {{ sub slash by fraction; }} FRAC_SLASH;
     lookup FRAC_NUMR {{ sub @figs by @numr; }} FRAC_NUMR;
@@ -233,6 +242,6 @@ feature ordn {{
     sub @figs [a o]' by [ordfeminine ordmasculine];
 }} ordn;
 feature case {{
-{case}
+{case}{_more('case')}
 }} case;
 """
