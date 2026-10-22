@@ -16,8 +16,8 @@ from .figures import beak_depth
 from .letterframe import Frame, letter_width
 
 
-def stamp(g, name, dx=0.0, dy=0.0):
-    sub = draw(name, g.p)
+def stamp(g, name, dx=0.0, dy=0.0, width=None):
+    sub = draw(name, g.p, width=width)
     poly = rings_to_shapely(sub.rings())
     g.extra.append(affinity.translate(poly, dx, dy))
     return sub.W
@@ -46,15 +46,16 @@ def _slashbar(g, x, y, e):
 def Lslash(g):
     p = g.p
     dx = 1.5 * p.m
-    stamp(g, 'L', dx)
+    stamp(g, 'L', dx, width=g.W - dx)
     _slashbar(g, dx + p.sv / 2, 0.45 * p.cap, 1.5 * p.m + p.sv / 2)
 
 
 @glyph('lslash', 'ł', width_of('l', 1.5), kind='lower')
 def lslash(g):
     p = g.p
-    w = stamp(g, 'l')
-    _slashbar(g, w - p.sv / 2, 0.55 * p.xh + p.m, 1.5 * p.m + p.sv / 2)
+    w = stamp(g, 'l', width=g.W - 1.5 * p.m if p.mono else None)
+    xs = (w - p.sv / 2) if not p.mono else g.W / 2
+    _slashbar(g, xs, 0.55 * p.xh + p.m, 1.5 * p.m + p.sv / 2)
 
 
 def _oslash(g, name, top):
@@ -82,7 +83,7 @@ def oslash(g):
 def Dcroat(g):
     p = g.p
     dx = 1.5 * p.m
-    stamp(g, 'D', dx)
+    stamp(g, 'D', dx, width=g.W - dx)
     _bar(g, 0, dx + p.sv + 2.5 * p.m, p.cap / 2)
 
 
@@ -94,7 +95,7 @@ def Eth(g):
 @glyph('dcroat', 'đ', width_of('d', 1.5), kind='lower')
 def dcroat(g):
     p = g.p
-    w = stamp(g, 'd')
+    w = stamp(g, 'd', width=g.W - 1.5 * p.m)
     xs = w - p.sv / 2
     _bar(g, xs - 2.5 * p.m, xs + 1.5 * p.m + p.sv / 2, (p.xh + p.asc) / 2 + p.m / 2)
 
@@ -102,14 +103,14 @@ def dcroat(g):
 @glyph('Hbar', 'Ħ', width_of('H', 2.0), kind='cap')
 def Hbar(g):
     p = g.p
-    w = stamp(g, 'H', p.m)
+    w = stamp(g, 'H', p.m, width=g.W - 2 * p.m)
     _bar(g, 0, w + 2 * p.m, 0.75 * p.cap + g.sh / 4)
 
 
 @glyph('hbar', 'ħ', width_of('h', 1.0), kind='lower')
 def hbar(g):
     p = g.p
-    w = stamp(g, 'h', p.m)
+    w = stamp(g, 'h', p.m, width=g.W - p.m)
     _bar(g, 0, p.m + p.sv + 2 * p.m, (p.xh + p.asc) / 2 + p.m / 2)
 
 
@@ -130,7 +131,7 @@ def tbar(g):
 @glyph('Ldot', 'Ŀ', width_of('L', 1.0), kind='cap')
 def Ldot(g):
     p = g.p
-    stamp(g, 'L')
+    stamp(g, 'L', width=g.W)
     x = p.sv + 1.0 * p.m + p.sv / 2
     g.stroke((x, p.cap / 2 - p.sv / 2), (x, p.cap / 2 + p.sv / 2))
 
@@ -138,7 +139,7 @@ def Ldot(g):
 @glyph('ldot', 'ŀ', width_of('l', 2.0), kind='lower')
 def ldot(g):
     p = g.p
-    w = stamp(g, 'l')
+    w = stamp(g, 'l', width=(g.W - 2 * p.m) if p.mono else None)
     x = w + 1.0 * p.m + p.sv / 2
     g.stroke((x, p.xh / 2 - p.sv / 2), (x, p.xh / 2 + p.sv / 2))
 
@@ -148,22 +149,26 @@ def ldot(g):
 @glyph('IJ', 'Ĳ', plus_width('I', 'J', gap=1.5), kind='cap')
 def IJ(g):
     p = g.p
-    w = stamp(g, 'I')
-    stamp(g, 'J', w + 1.5 * p.m)
+    gap = (0.75 if p.mono else 1.5) * p.m
+    w = stamp(g, 'I', width=p.sv)
+    stamp(g, 'J', w + gap, width=g.W - w - gap)
 
 
 @glyph('ij', 'ĳ', plus_width('i', 'j', gap=1.0), kind='lower')
 def ij(g):
     p = g.p
-    w = stamp(g, 'i')
-    stamp(g, 'j', w + 1.0 * p.m)
+    w = stamp(g, 'dotlessi', width=p.sv)
+    from .lower import _dot
+    _dot(g, None, p.sv / 2)
+    gap = (0.5 if p.mono else 1.0) * p.m
+    stamp(g, 'j', w + gap, width=g.W - w - gap)
 
 
 @glyph('napostrophe', 'ŉ', plus_width('quoteright', 'n', gap=0.5), kind='lower')
 def napostrophe(g):
     p = g.p
     w = stamp(g, 'quoteright')
-    stamp(g, 'n', w + 0.5 * p.m)
+    stamp(g, 'n', w + 0.5 * p.m, width=g.W - w - 0.5 * p.m)
 
 
 # --- Redrawn -----------------------------------------------------------------
@@ -276,8 +281,9 @@ def AE(g):
 @glyph('ae', 'æ', lambda p: REGISTRY['a'].width(p) + REGISTRY['e'].width(p) - p.sv, kind='lower')
 def ae(g):  # width: a + e sharing a stem
     p = g.p
-    wa = stamp(g, 'a')
-    stamp(g, 'e', wa - p.sv)
+    half = (g.W + p.sv) / 2
+    wa = stamp(g, 'a', width=half)
+    stamp(g, 'e', wa - p.sv, width=g.W - wa + p.sv)
 
 
 @glyph('OE', 'Œ', letter_width(13, 2), kind='cap')
@@ -293,5 +299,6 @@ def OE(g):
 @glyph('oe', 'œ', lambda p: REGISTRY['o'].width(p) + REGISTRY['e'].width(p) - p.sv, kind='lower')
 def oe(g):
     p = g.p
-    wo = stamp(g, 'o')
-    stamp(g, 'e', wo - p.sv)
+    half = (g.W + p.sv) / 2
+    wo = stamp(g, 'o', width=half)
+    stamp(g, 'e', wo - p.sv, width=g.W - wo + p.sv)

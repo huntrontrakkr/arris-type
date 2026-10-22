@@ -94,6 +94,13 @@ def H(g):
 
 @cap('I', 2, 1, width=lambda p: p.sv)
 def I(g):
+    if g.p.mono:                                            # slabs, as the 1's foot, top and bottom
+        f = Frame(g, 9)
+        u, x = g.W / 9, g.W / 2
+        g.stroke((x, 0), (x, g.p.cap))
+        for y in (f.Y(11), f.Y(1)):
+            g.stroke((x - 3 * u, y), (x + 3 * u, y))
+        return
     f = Frame(g, 2)
     g.stroke(f.P(1, 0), f.P(1, 12))
 
@@ -166,7 +173,13 @@ def N(g):
     # bottom bar's.
     w = p.ss / STEEP[1]
     x0, y0 = xl + p.sv / 2 + w / 2, f.Y(11)
-    at = lambda y: (x0 + (y0 - y) / 2, y)
+    if p.mono:
+        # in the fixed cell the diagonal takes whatever slope joins the stems
+        x1, y1 = xr - p.sv / 2 - w / 2, f.Y(1)
+        k = (x1 - x0) / (y0 - y1)
+        at = lambda y: (x0 + (y0 - y) * k, y)
+    else:
+        at = lambda y: (x0 + (y0 - y) / 2, y)
     g.stroke(at(H + p.sv), at(-p.sv), start='h', end='h')
 
 

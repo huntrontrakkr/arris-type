@@ -72,6 +72,11 @@ def e(g):
 
 @low('f', 7, 1)
 def f_(g):
+    if g.p.mono:
+        f = Frame(g, 9, 'asc')
+        g.stroke(f.P(3.5, 0), B(*f.P(3.5, 12)), f.P(9, 12))
+        g.stroke(f.P(0.5, 8), f.P(8, 8))
+        return
     f = Frame(g, 7, 'asc')
     g.stroke(f.P(2, 0), B(*f.P(2, 12)), f.P(7, 12))
     g.stroke(f.P(0, 8), f.P(6, 8))
@@ -99,8 +104,20 @@ def _dot(g, f, x):
     g.stroke((x, yc - p.sv / 2), (x, yc + p.sv / 2))
 
 
+def _mono_foot(g, f, x, u):
+    g.stroke((x - 3 * u, f.Y(1)), (x + 3 * u, f.Y(1)))
+
+
 @low('i', 2, 1, width=lambda p: p.sv)
 def i(g):
+    if g.p.mono:                                            # flag at the x-height, foot on the line
+        f = Frame(g, 9, 'asc', top=g.p.asc + g.p.sv)
+        u = g.W / 9
+        x = g.W / 2 + u / 2
+        g.stroke((x - 3 * u, f.Y(8)), (x, f.Y(8)), (x, 0))
+        _mono_foot(g, f, x - u / 2, u)
+        _dot(g, f, x)
+        return
     f = Frame(g, 2, 'asc', top=g.p.asc + g.p.sv)
     g.stroke(f.P(1, 0), f.P(1, 9))
     _dot(g, f, f.X(1))
@@ -108,6 +125,13 @@ def i(g):
 
 @low('j', 6, 1)
 def j(g):
+    if g.p.mono:
+        f = Frame(g, 9, 'asc', top=g.p.asc + g.p.sv)
+        p, u = f.p, g.W / 9
+        x = g.W / 2 + 1.5 * u
+        g.stroke((x - 3 * u, f.Y(8)), (x, f.Y(8)), B(x, f.Y(-2)), B(f.X(1), f.Y(-2)), (f.X(1), -p.desc + beak_depth(p)))
+        _dot(g, f, x)
+        return
     f = Frame(g, 6, 'asc', top=g.p.asc + g.p.sv)
     p = f.p
     g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
@@ -136,6 +160,13 @@ def k(g):
 
 @low('l', 4, 1)
 def l(g):
+    if g.p.mono:
+        f = Frame(g, 9, 'asc')
+        u = g.W / 9
+        x = g.W / 2 + u / 2
+        g.stroke((x - 3 * u, f.Y(12)), (x, f.Y(12)), (x, 0))
+        _mono_foot(g, f, x - u / 2, u)
+        return
     f = Frame(g, 4, 'asc')
     g.stroke(f.P(0, 12), f.P(3, 12), f.P(3, 0))
 
@@ -178,12 +209,19 @@ def q(g):
 @low('r', 8, 1)
 def r(g):
     f = Frame(g, 8, 'lower')
-    g.stroke(f.P(1, 0), f.P(1, 9))
+    p = g.p
+    # In the monospaced cell the r stands two and a half modules in, on a foot.
+    dx = 2.5 * g.W / 9 if p.mono else 0.0
+    xs = f.X(1) + dx
+    g.stroke((xs, 0), (xs, p.xh))
     # The shoulder: a 45-degree stroke from the stem to the arm, leaving a
     # notch under the arm (the 1's flag, turned).
-    x0, y0 = f.P(3, 6.5)
+    x0, y0 = f.X(3) + dx, f.Y(6.5)
     y8, y6 = f.Y(8), f.Y(6)
     g.stroke((x0 - (y0 - y6), y6), (x0 + (y8 - y0), y8), f.P(8, 8), start='h')
+    if p.mono:                                              # a foot, as the 1's
+        u = g.W / 9
+        g.stroke((xs - 2.5 * u, f.Y(1)), (xs + 2.5 * u, f.Y(1)))
 
 
 @low('s', 8, 2)
@@ -195,6 +233,11 @@ def s(g):
 
 @low('t', 7, 1)
 def t(g):
+    if g.p.mono:
+        f = Frame(g, 9, 'asc')
+        g.stroke(f.P(3, 11), B(*f.P(3, 1)), f.P(8.5, 1))
+        g.stroke(f.P(0.5, 8), f.P(8, 8))
+        return
     f = Frame(g, 7, 'asc')
     g.stroke(f.P(2, 11), B(*f.P(2, 1)), f.P(7, 1))
     g.stroke(f.P(0, 8), f.P(6, 8))

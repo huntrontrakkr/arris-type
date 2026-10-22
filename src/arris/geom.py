@@ -115,6 +115,18 @@ def _expand(stroke: Stroke):
         else:
             pts.append(p)
             widths.append(nd.w)
+    # Two chamfers that use a whole straight between them meet in one point.
+    keep = [i for i in range(len(pts))
+            if _len(_sub(pts[i], pts[i - 1 if (stroke.closed or i > 0) else i])) > 1e-9 or (i == 0 and not stroke.closed)]
+    if len(keep) < len(pts):
+        remap = {}
+        for new_i, old_i in enumerate(keep):
+            remap[old_i] = new_i
+        # a bowl's chamfer starts at its first point; if that point was merged
+        # into the previous one, the chamfer now starts there
+        bowls = [remap.get(b, remap.get(b - 1, 0)) for b in bowls]
+        pts = [pts[i] for i in keep]
+        widths = [widths[i] for i in keep]
     return pts, bowls, widths
 
 
@@ -145,14 +157,24 @@ def stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
             lo = mid
         except ValueError:
             hi = mid
-    return _stroke_polygon(_scale_bowls(stroke, lo * 0.98), thick, c)
+    try:
+        return _stroke_polygon(_scale_bowls(stroke, lo * 0.98), thick, c)
+    except ValueError:
+        # Last resort: repair the outline and log the stroke for review, so a
+        # crowded extreme (a ligature squeezed into a monospaced cell at Black)
+        # degrades instead of failing the build.
+        REPAIRED.append(stroke)
+        return _stroke_polygon(stroke, thick, c, repair=True)
+
+
+REPAIRED: list = []
 
 
 def _scale_bowls(stroke: Stroke, k: float) -> Stroke:
     return Stroke(tuple(Node(n.x, n.y, n.bowl * k, n.w) for n in stroke.nodes), stroke.closed, stroke.start, stroke.end)
 
 
-def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
+def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = False) -> Polygon:
     pts, bowls, widths = _expand(stroke)
     closed = stroke.closed
     m = len(pts)
@@ -209,6 +231,10 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
     else:
         poly = Polygon(left + right[::-1])
     if not poly.is_valid:
+        if repair:
+            fixed = shapely.make_valid(poly)
+            parts = [g for g in getattr(fixed, 'geoms', [fixed]) if isinstance(g, Polygon)]
+            return max(parts, key=lambda g: g.area)
         raise ValueError(f'stroke outline is not simple: {explain_validity(poly)}')
     return poly
 

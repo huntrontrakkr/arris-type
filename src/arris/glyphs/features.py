@@ -68,7 +68,10 @@ for n in FIGS:
 
 @glyph('zero.zero', None, 'fig_w')
 def zero_slash(g):
+    p0 = g.p
+    g.p = p0.with_(mono=False)
     REGISTRY['zero'].fn(g)
+    g.p = p0
     p, W, H = g.p, g.W, g.p.cap
     # a 45-degree slash across the counter, wall to wall
     a = (W - 2 * p.sv) / 2 + p.sv / 2
@@ -79,7 +82,8 @@ def zero_slash(g):
 def zero_dot(g):
     REGISTRY['zero'].fn(g)
     p, W, H = g.p, g.W, g.p.cap
-    g.stroke((W / 2, H / 2 - p.sv / 2), (W / 2, H / 2 + p.sv / 2))
+    if not p.mono:                                          # (Mono's zero is dotted already)
+        g.stroke((W / 2, H / 2 - p.sv / 2), (W / 2, H / 2 + p.sv / 2))
 
 
 # --- The time colon ------------------------------------------------------

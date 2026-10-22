@@ -138,8 +138,21 @@ class Glyph:
         return self.sh
 
 
-def _build(spec, p, ot, ob, overrides):
-    g = Glyph(p, spec.name, ot=ot, ob=ob, W=spec.width(p), overrides=dict(overrides))
+LETTER_KINDS = ('cap', 'lower')
+
+
+def body_width(spec, p, width=None):
+    """A glyph's body: its own width, or in the monospaced cut, every
+    letter fills the figures' body."""
+    if width is not None:
+        return width
+    if p.mono and spec.kind in LETTER_KINDS:
+        return p.fig_w
+    return spec.width(p)
+
+
+def _build(spec, p, ot, ob, overrides, width=None):
+    g = Glyph(p, spec.name, ot=ot, ob=ob, W=body_width(spec, p, width), overrides=dict(overrides))
     spec.fn(g)
     return g
 
@@ -157,10 +170,10 @@ def _heritage_ratio(spec, k):
     return _RATIOS[key]
 
 
-def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0) -> Glyph:
+def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
     spec = REGISTRY[name]
     overrides: dict = {}
-    g = _build(spec, p, ot, ob, overrides)
+    g = _build(spec, p, ot, ob, overrides, width)
     for k, op in enumerate(spec.openings):
         ratio = _heritage_ratio(spec, k)
         if op.max_ratio is not None:
@@ -171,11 +184,11 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0) -> Glyph:
         a, b = g.defaults[op.free], op.limit(p)
         for _ in range(40):  # bisection: a is too closed, b assumed open enough
             mid = (a + b) / 2
-            trial = _build(spec, p, ot, ob, {**overrides, op.free: mid})
+            trial = _build(spec, p, ot, ob, {**overrides, op.free: mid}, width)
             if op.measure(trial) >= target:
                 b = mid
             else:
                 a = mid
         overrides[op.free] = b
-        g = _build(spec, p, ot, ob, overrides)
+        g = _build(spec, p, ot, ob, overrides, width)
     return g

@@ -28,12 +28,13 @@ class Params:
     c: float = 30.0            # edge break on every right-angled corner
     fig_w: float = 540.0       # tabular figure body (9 modules)
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
+    mono: bool = False         # monospaced: every glyph on the figures' pitch
 
     def with_(self, **kw) -> 'Params':
         return replace(self, **kw)
 
     def scaled(self, k: float) -> 'Params':
-        return Params(**{f: getattr(self, f) * k for f in self.__dataclass_fields__})
+        return Params(**{f: (getattr(self, f) * k if f != 'mono' else self.mono) for f in self.__dataclass_fields__})
 
 
 def outer_leg(p: Params, sv: float | None = None, sh: float | None = None) -> float:

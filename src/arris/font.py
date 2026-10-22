@@ -61,7 +61,7 @@ def place(name: str, p: Params, tune=None):
     g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
     rings = g.rings()
     spec = REGISTRY[name]
-    if spec.kind == 'fig':
+    if spec.kind == 'fig' or p.mono:
         adv = p.fig_adv
         dx = (adv - g.W) / 2
     elif isinstance(spec.kind, tuple) and spec.kind[0] == 'punct':
@@ -171,7 +171,9 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
                 sCapHeight=m.cap, usWeightClass=weight,
                 fsSelection=0x80 | {'Regular': 0x40, 'Bold': 0x20}.get(style, 0),
                 achVendID='NONE', version=4)
-    fb.setupPost()
+    fb.setupPost(isFixedPitch=1 if p.mono else 0)
+    if p.mono:
+        fb.font['OS/2'].panose.bProportion = 9
     if fea:
         from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
         addOpenTypeFeaturesFromString(fb.font, fea)

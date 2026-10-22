@@ -59,6 +59,8 @@ def jog(p):
 def zero(g):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
     g.stroke(B(xl, yb - g.ob), B(xr, yb - g.ob), B(xr, yt + g.ot), B(xl, yt + g.ot), closed=True)
+    if p.mono:                                              # code wants 0 apart from O
+        g.stroke((W / 2, H / 2 - p.sv / 2), (W / 2, H / 2 + p.sv / 2))
 
 
 def _notch_white(g):
