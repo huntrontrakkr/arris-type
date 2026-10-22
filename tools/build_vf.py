@@ -71,8 +71,10 @@ for n in names:
     try:
         rings = align([upright[w][n][0] for w in MASTERS])
         if ITALIC:
+            # (terminal cells are curved but never slanted: font.place)
             rings = ital.aligned_outlines(rings, [upright[w][n][0] for w in MASTERS],
-                                          [upright[w][n][1] for w in MASTERS], [ps[w] for w in MASTERS])
+                                          [upright[w][n][1] for w in MASTERS],
+                                          [ps[w].with_(slant=0.0) if REGISTRY[n].cell else ps[w] for w in MASTERS])
     except ValueError as e:
         # cannot vary: every master carries the default outline (reported)
         frozen.append((n, str(e)))

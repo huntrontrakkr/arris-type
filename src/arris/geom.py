@@ -275,7 +275,19 @@ def _dir_class(u) -> str:
     return 'steep'
 
 
-def _ring_rule(coords, c, convex_sign, rec: list | None = None):
+def _on_butt(a, b, butt) -> bool:
+    """Whether the edge a-b lies on one of the butt lines (see ``ink``)."""
+    for axis, v in butt:
+        k = 0 if axis == 'x' else 1
+        if abs(a[k] - v) < BUTT_TOL and abs(b[k] - v) < BUTT_TOL:
+            return True
+    return False
+
+
+BUTT_TOL = 1e-6
+
+
+def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
     """The corner rule on one ring (ink on the left of travel), as the watch's
     pixel rule behaves:
 
@@ -286,7 +298,8 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None):
       diagonal's capped end) or concave (a crotch): a chord square to the
       diagonal, reaching c*sqrt2 along it and 2c along the axis edge;
     * a convex corner where a 2:1 edge meets a cap: a chord of leg c;
-    * anything else (135-degree turns, the bends of gables): left alone.
+    * anything else (135-degree turns, the bends of gables): left alone;
+    * a corner on a butt line (``butt``, see ``ink``): left square.
     """
     pts = [tuple(p) for p in coords[:-1]]
     # drop duplicate and collinear points
@@ -314,6 +327,8 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None):
             kind = 'acute'
         elif 'steep' in (k1, k2) and 'diag' not in (k1, k2) and turn > 45:
             kind = 'steep'
+        if butt and (_on_butt(a, b, butt) or _on_butt(b, q, butt)):
+            kind = None                                     # ink cut square where it meets a butt line
         kinds.append(kind)
     out = []
     for i in range(n):
@@ -349,9 +364,14 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None):
     return clean
 
 
-def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None):
+def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=()):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
+
+    ``butt``: lines, ('x', value) or ('y', value), where the ink must meet
+    its neighbour flush (a terminal cell's edges): a corner with an edge on
+    one of them is left square, so a line or a block joins the next cell's
+    without a notch.
 
     Returns a list of rings (lists of points); exteriors counter-clockwise,
     holes clockwise, ink always on the left of travel. ``rec``, if given,
@@ -374,11 +394,11 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     min_hole = (MIN_COUNTER * thick.v) ** 2
     for poly in u.geoms:
         poly = orient(poly, sign=1.0)
-        rings.append(_ring_rule(list(poly.exterior.coords), c, +1, rec))
+        rings.append(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_ring_rule(list(hole.coords), c, +1, rec))
+            rings.append(_ring_rule(list(hole.coords), c, +1, rec, butt))
     return rings
 
 

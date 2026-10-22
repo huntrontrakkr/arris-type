@@ -66,6 +66,10 @@ def place(name: str, p: Params, tune=None):
     if p.slant:
         from . import italic
         rings, record, adv = _place(name, p, tune, record=True)
+        if REGISTRY[name].cell:
+            # a terminal cell's drawing joins the cells above and below it:
+            # curved like the italic, never slanted (see _place)
+            p = p.with_(slant=0.0)
         return italic.outline(rings, record, p), adv
     rings, _, adv = _place(name, p, tune)
     return rings, adv
@@ -80,6 +84,8 @@ def _place(name: str, p: Params, tune=None, record: bool = False):
     """(rings, chamfer record, advance), upright, shifted into place."""
     from .spacing import bearings
     t = (tune or {}).get(name, {})
+    if p.slant and REGISTRY[name].cell:
+        p = p.with_(slant=0.0)          # drawn upright, so no stroke is set for a shear (geom.Thickness)
     if p.grade_k != 1.0:
         # Grade changes strokes only: space the glyph as its ungraded self,
         # then draw the graded strokes in the same body at the same place.

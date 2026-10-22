@@ -11,5 +11,6 @@ BASES = {chr(spec.unicode): name for name, spec in marks.REGISTRY.items() if spe
 BASES.update({chr(cp): name for cp, name in ALIASES.items()})
 ACCENTED = marks.compose(CHARS, BASES)
 
+from . import terminal, shapes, dingbats  # noqa: E402,F401  (terminal cells, geometric shapes, dingbats)
 from . import features  # noqa: E402,F401  (variants of everything above)
 from . import ligatures  # noqa: E402,F401  (the monospaced cut's programming ligatures)
