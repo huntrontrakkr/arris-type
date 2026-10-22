@@ -197,12 +197,51 @@ and open mouths take what makes them equal. Parts outside the measured
 zone, such as a j's hook, may hang into a neighbour's space by at most half
 its white.
 
-*Still to come: the literature review on the horizontal–vertical illusion,
-the oblique effect and irradiation (`docs/research/perception.md`). With it,
-a grade axis: light-on-dark text looks bolder, and the watch's dark
-palettes want a grade that thins the strokes without changing any width.*
+**Grade, for light on dark.** Light text on a dark ground looks bolder than
+the same text dark on light, and the watch has dark palettes. The grade
+axis (GRAD) thickens or thins every stroke by up to a fifth. Each glyph is
+spaced as its ungraded self and drawn in the same body, so no advance moves
+and a line of text keeps its length. Glyphs as narrow as a stem (I, i, dots)
+thicken outward about their centre; everything else thickens inward from
+its edges.
 
-## 6. Features
+*Pending: the literature review on the horizontal–vertical illusion, the
+oblique effect and irradiation (`docs/research/perception.md`), which will
+set the recommended grade for dark palettes.*
+
+## 6. The variable font
+
+Three axes: weight (100–900), grade (−100–100) and watch (0–100), the
+dial between the measured optics and the watch's own stroke balance.
+
+Arris's outlines are unions of strokes cut by the corner rule. That means
+the number of points can change between weights: a junction becomes a
+lump, a chamfer uses up a straight, an opening's free variable moves. A
+variable font needs every master of a glyph to have identical structure,
+so `arris.variable.align` makes the masters compatible after the fact:
+
+* Contours are matched by kind (ink or counter), position and size.
+* Points are matched by a sequence alignment on normalised position and
+  turning direction.
+* A point present in only some masters is inserted into the others as a
+  duplicate of its neighbour, so the feature grows from nothing.
+* A counter that closes at an extreme is given to the other masters as a
+  contour collapsed to a point.
+
+Nothing is trusted. `tools/build_vf.py` draws every glyph exactly at
+locations between the masters and compares the variable font's
+interpolation to it. With sixteen masters, every glyph varies, and the
+median outline difference is under half a unit of the 1000-unit em. The
+largest differences come where three axes combine, or where an opening is
+solved non-linearly.
+
+That check found real design faults, which were then fixed:
+
+* Z and r came apart at Thin.
+* Accents touched their letters at Black.
+* g-cedilla's comma was being drawn as a hidden cedilla.
+
+## 7. Features
 
 * `tnum` (default) and `pnum` figures.
 * `calt`: a colon between figures becomes the watch's time colon, with
@@ -213,7 +252,7 @@ palettes want a grade that thins the strokes without changing any width.*
   superior ¹ ² ³ and ª º.
 * `case`: dashes, guillemets, bullets and brackets raised for capitals.
 
-## 7. Metrics
+## 8. Metrics
 
 | | units | modules |
 |---|---|---|
