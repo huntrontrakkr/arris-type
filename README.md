@@ -56,7 +56,13 @@ uv run python tools/build_fonts.py all italic   # Arris Italic (add mono for Arr
 uv run python tools/build_vf.py                 # the variable font, with its interpolation check
 uv run python tools/build_vf.py italic          # the italic variable font
 uv run pytest                                   # the figures against the watch's pixels
+uv run python tools/presentation.py             # the presentation: presentation/slides/*.png and arris.pdf
 ```
+
+The presentation (`presentation/`) is thirty-one slides set in the built
+fonts: the family, axes, figures and their pixel masters, the italic, text,
+languages, Mono in code and in a terminal, and applications from a
+departure board to a watch face. It renders with Playwright's Chromium.
 
 Fonts land in `build/`. Proof tools: `tools/master_sheet.py` (pixel
 masters), `tools/overlay.py` (constructions over masters),
