@@ -299,13 +299,13 @@ def plus(g):
     g.clip = (0, a - h, W, a + h)
 
 
-@punct('minus', '−', 8, 0)
+@punct('minus', '−', 8, 1)
 def minus(g):
     p, W = g.p, g.W
     g.stroke((0, axis(p)), (W, axis(p)))
 
 
-@punct('equal', '=', 8, 0)
+@punct('equal', '=', 8, 1)
 def equal(g):
     p, W = g.p, g.W
     off = (g.sh + max(0.8 * g.sh, p.m)) / 2
@@ -322,7 +322,7 @@ def multiply(g):
     g.clip = (0, a - h, W, a + h)
 
 
-@punct('divide', '÷', 8, 0)
+@punct('divide', '÷', 8, 1)
 def divide(g):
     p, W = g.p, g.W
     a = axis(p)
@@ -342,12 +342,12 @@ def _chevron(g, mirror=False, half=None):
     g.clip = (0, a - h - p.sv, W, a + h + p.sv)
 
 
-@punct('less', '<', 7, 1)
+@punct('less', '<', 8, 1)
 def less(g):
     _chevron(g)
 
 
-@punct('greater', '>', 7, 1)
+@punct('greater', '>', 8, 1)
 def greater(g):
     _chevron(g, mirror=True)
 
@@ -455,7 +455,7 @@ def asciicircum(g):
     g.clip = (0, ya - h - p.sv, W, top)
 
 
-@punct('asciitilde', '~', 9, 1)
+@punct('asciitilde', '~', 8, 1)
 def asciitilde(g):
     """A step on the axis: up at 45 degrees, along, down, along, up."""
     p, W = g.p, g.W
@@ -589,12 +589,12 @@ def _lessequal(g, mirror):
     g.stroke((0, yb), (W, yb))
 
 
-@punct('lessequal', '\u2264', 7, 1)
+@punct('lessequal', '\u2264', 8, 1)
 def lessequal(g):
     _lessequal(g, False)
 
 
-@punct('greaterequal', '\u2265', 7, 1)
+@punct('greaterequal', '\u2265', 8, 1)
 def greaterequal(g):
     _lessequal(g, True)
 

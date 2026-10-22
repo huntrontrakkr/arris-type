@@ -189,7 +189,7 @@ def fea() -> str:
     """The feature file."""
     figs = ' '.join(FIGS)
     sm = {s: ' '.join(f'{n}.{s}' for n in FIGS) for s in ('sups', 'subs', 'numr', 'dnom', 'pnum')}
-    case = '\n'.join(f'    sub {n} by {n}.case;' for n in CASE if n != 'colon')
+    case = '\n'.join(f'    sub {n} by {n}.case;' for n in CASE)
     return f"""languagesystem DFLT dflt;
 languagesystem latn dflt;
 

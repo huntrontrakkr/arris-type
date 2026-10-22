@@ -173,8 +173,23 @@ def _contours(rings, keep=False):
     return out
 
 
+def _nonhinting(font):
+    """No hints, but smart dropout control and a gasp table, so unhinted
+    outlines rasterise solidly at small sizes (what gftools fix-nonhinting does)."""
+    from fontTools.ttLib import newTable
+    from fontTools.ttLib.tables import ttProgram
+    prep = newTable('prep')
+    prep.program = ttProgram.Program()
+    prep.program.fromAssembly(['PUSHW[ ]', '511', 'SCANCTRL[ ]', 'PUSHB[ ]', '4', 'SCANTYPE[ ]'])
+    font['prep'] = prep
+    gasp = newTable('gasp')
+    gasp.version = 1
+    gasp.gaspRange = {0xFFFF: 0x000F}
+    font['gasp'] = gasp
+
+
 def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, tune=None,
-          metrics: Metrics | None = None, version='0.1', space=None, fea: str | None = None,
+          metrics: Metrics | None = None, version='0.100', space=None, fea: str | None = None,
           kern: bool = True, placed: dict | None = None, kern_pairs: dict | None = None):
     m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh))
     order = ['.notdef', 'space'] + list(names)
@@ -229,13 +244,18 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     ps = f'{family}-{style}'.replace(' ', '')
     fb.setupNameTable({'familyName': fam1, 'styleName': sub1, 'uniqueFontIdentifier': f'{ps};{version}',
                        'fullName': f'{family} {style}', 'psName': ps, 'version': f'Version {version}',
-                       'typographicFamily': family, 'typographicSubfamily': style})
+                       'typographicFamily': family, 'typographicSubfamily': style}, mac=False)
     fb.setupOS2(sTypoAscender=m.asc, sTypoDescender=m.desc, sTypoLineGap=m.gap,
                 usWinAscent=max(m.asc, ymax), usWinDescent=max(-m.desc, -ymin), sxHeight=m.xh,
                 sCapHeight=m.cap, usWeightClass=weight,
                 fsSelection=0x80 | {'Regular': 0x40, 'Bold': 0x20}.get(style, 0),
                 achVendID='NONE', version=4)
     fb.setupPost(isFixedPitch=1 if p.mono else 0)
+    fb.font['head'].fontRevision = float(version)
+    os2 = fb.font['OS/2']
+    os2.recalcCodePageRanges(fb.font)
+    os2.recalcUnicodeRanges(fb.font)
+    _nonhinting(fb.font)
     if p.mono:
         fb.font['OS/2'].panose.bProportion = 9
     if fea:

@@ -346,3 +346,11 @@ def dje(g):
     w = stamp(g, 'eng', p.m, width=g.W - p.m)
     g.stroke((0, (p.xh + p.asc) / 2 + p.m / 2), (p.m + p.sv + 2 * p.m, (p.xh + p.asc) / 2 + p.m / 2))
     g.stroke((p.m + p.sv / 2, p.xh - g.sh), (p.m + p.sv / 2, p.asc))   # overlapping the stem below
+
+
+@ccap('uni04BA', '\u04ba', 9, 2)
+def Shha(g):
+    """Capital shha: the h at capital height."""
+    f = Frame(g, 9)
+    g.stroke(f.P(1, 0), f.P(1, 12))
+    g.stroke(f.P(1, 6.5), B(*f.P(8, 6.5)), f.P(8, 0))
