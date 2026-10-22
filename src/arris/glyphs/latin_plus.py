@@ -165,13 +165,6 @@ def horn(g, x, case):
     horn_at(g, *horn_anchor(g.extra[0]), case)
 
 
-def horn_room(p):
-    """How far a horn reaches right of the letter it leaves."""
-    return horn_reach(p) / SQRT2 + p.sv / 2 + p.c
-
-
-horn.room = horn_room
-
 ABOVE.update({'̉': hookabove, '̏': doublegrave, '̑': invertedbreve})
 BELOW.update({'̣': dotbelow, '̤': dieresisbelow, '̥': ringbelow, '̱': macronbelow})
 ATTACHED['̛'] = horn

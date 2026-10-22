@@ -175,8 +175,8 @@ ABOVE = {'̀': grave, '́': acute, '̂': circumflex, '̃': tilde, '̄': macron,
          '̌': caron}
 BELOW = {'̦': commabelow, '̧': cedilla, '̨': ogonek}
 # Marks joined to the base itself (the Vietnamese horn): fn(g, x, case),
-# reading the base's ink (g.extra[0]); ``room(p)`` is how far the mark
-# reaches past the base on the right, which a monospaced cell must give it.
+# reading the base's ink (g.extra[0]). A monospaced cell narrows the base
+# by as much as such a mark reaches past the cell's edge.
 ATTACHED: dict = {}
 # Pairs of marks above where the second stands beside the first, at its
 # upper right, instead of on top of it (Vietnamese tone marks on the
@@ -215,7 +215,45 @@ def mark_ink(g, n0=0):
     return rings_to_shapely(ink(g.strokes[n0:], _thickness(g.p, g.sh), g.p.c))
 
 
-def stack_above(p, marks, x, top, case, W, room=None):
+def raw_ink(g, n0=0):
+    """The ink of a glyph's strokes from the n0-th on before the corner rule:
+    what the glyph's union sees, so parts apart here stay apart."""
+    import shapely
+    from ..draw import _thickness
+    from ..geom import stroke_polygon
+    th = _thickness(g.p, g.sh)
+    return shapely.union_all([stroke_polygon(s, th, g.p.c) for s in g.strokes[n0:]])
+
+
+RAW_CLEAR = 1.0     # font units: marks whose raw strokes come nearer would fuse in the union
+
+
+def _nearest_clear(scratch, n0, draw_at, others, sg, reach):
+    """The least t in [0, reach] for which the mark drawn by draw_at(t)
+    stands ``sg`` clear of ``others`` (finished ink) and does not touch
+    them before the corner rule (raw ink)."""
+    fin, raw = others
+
+    def clear(t):
+        del scratch.strokes[n0:]
+        draw_at(t)
+        return ((not sg or mark_ink(scratch, n0).distance(fin) >= sg - 1e-6)
+                and raw_ink(scratch, n0).distance(raw) >= RAW_CLEAR)
+    if clear(0.0):
+        del scratch.strokes[n0:]
+        return 0.0
+    lo, hi = 0.0, reach
+    for _ in range(20):
+        mid = (lo + hi) / 2
+        if clear(mid):
+            hi = mid
+        else:
+            lo = mid
+    del scratch.strokes[n0:]
+    return hi
+
+
+def stack_above(p, marks, x, top, case, W, room=None, avoid=None):
     """Where the marks above a base go: ([(mark, x, y)], the stack's top).
 
     The first stands a gap above the base's highest ink; each next one a
@@ -223,43 +261,48 @@ def stack_above(p, marks, x, top, case, W, room=None):
     carries a macron lower than an acute would). A pair in ``BESIDE`` puts
     the second mark at the first's upper right instead: drawn where the
     first is, then moved out at 45 degrees, square to the circumflex's
-    right arm, until it stands a stack gap clear. ``room`` (x0, x1):
-    the whole stack shifts sideways, if it must, to stay inside it (a
-    monospaced cell)."""
+    right arm, until it stands a stack gap clear. Marks never come so near
+    that their strokes would fuse. ``avoid`` (finished, raw ink): what the
+    stack keeps a stack gap from, moving left if it must (a horn).
+    ``room`` (x0, x1): the whole stack shifts sideways, if it must, to stay
+    inside it (a monospaced cell)."""
     from ..draw import Glyph
     scratch = Glyph(p, W=W)
-    places, inks = [], []
+    places = []
     y = top + gap(p)
     sg = STACK_GAP * gap(p)
+    reach = 4 * size(p, case) + 2 * p.sv
     prev = None
     for m in marks:
         n0 = len(scratch.strokes)
-        xm, ym = x, y
-        if (prev, m) in BESIDE and inks:
-            first = inks[-1]
+        before = (mark_ink(scratch), raw_ink(scratch)) if n0 else None
+        if (prev, m) in BESIDE and places:
             x0, y0 = places[-1][1:]
-            lo, hi = 0.0, 4 * size(p, case) + 2 * p.sv
-            for _ in range(20):                             # the nearest place a stack gap clear
-                mid = (lo + hi) / 2
-                del scratch.strokes[n0:]
-                ABOVE[m](scratch, x0 + mid, y0 + mid, case)
-                if mark_ink(scratch, n0).distance(first) >= sg:
-                    hi = mid
-                else:
-                    lo = mid
-            del scratch.strokes[n0:]
-            xm, ym = x0 + hi, y0 + hi
+            t = _nearest_clear(scratch, n0, lambda t: ABOVE[m](scratch, x0 + t, y0 + t, case), before, sg, reach)
+            xm, ym = x0 + t, y0 + t
+        else:
+            xm, ym = x, y
+            if before is not None:                          # stacked: never fused to what is below
+                t = _nearest_clear(scratch, n0, lambda t: ABOVE[m](scratch, x, y + t, case), before, 0.0, reach)
+                ym = y + t
         ABOVE[m](scratch, xm, ym, case)
-        inks.append(mark_ink(scratch, n0))
         places.append((m, xm, ym))
-        y = max(i.bounds[3] for i in inks) + sg
+        y = mark_ink(scratch).bounds[3] + sg
         prev = m
-    if room is not None and inks:
-        x0 = min(i.bounds[0] for i in inks)
-        x1 = max(i.bounds[2] for i in inks)
+    if not places:
+        return places, top
+    if avoid is not None:
+        t = _nearest_clear(scratch, 0, lambda t: [ABOVE[m](scratch, xm - t, ym, case) for m, xm, ym in places],
+                           avoid, sg, reach)
+        places = [(m, xm - t, ym) for m, xm, ym in places]
+        del scratch.strokes[:]
+        for m, xm, ym in places:
+            ABOVE[m](scratch, xm, ym, case)
+    if room is not None:
+        x0, _, x1, _ = mark_ink(scratch).bounds
         shift = min(0.0, room[1] - x1) or max(0.0, room[0] - x0)
         places = [(m, xm + shift, ym) for m, xm, ym in places]
-    return places, max((i.bounds[3] for i in inks), default=top)
+    return places, mark_ink(scratch).bounds[3]
 
 
 def clear_below(base_ink, p, fn, x, case, W):
@@ -324,8 +367,16 @@ def _register(name, ch, bname, base, marks):
         from ..draw import Glyph, draw
         # The base, finished (openings solved, clipped and cut), then the marks.
         p = g.p
-        # a monospaced cell gives a mark joined on the right (the horn) its room
-        room = sum(ATTACHED[m].room(p) for m in marks if m in ATTACHED) if p.mono else 0.0
+        # a monospaced cell gives a mark joined on the right (the horn) the
+        # room it needs past the cell's edge: the base narrows by that much
+        room = 0.0
+        if p.mono and any(m in ATTACHED for m in marks):
+            trial = Glyph(p, W=g.W)
+            trial.add_glyph(draw(bname, p, g.ot, g.ob))
+            for m in marks:
+                if m in ATTACHED:
+                    ATTACHED[m](trial, g.W / 2, case)
+            room = max(0.0, mark_ink(trial).bounds[2] - (g.W + p.fig_adv) / 2)
         base_glyph = draw(bname, p, g.ot, g.ob, width=(g.W - room) if room else None)
         rings = base_glyph.rings()
         top = max(y for r in rings for _, y in r)
@@ -356,19 +407,21 @@ def _register(name, ch, bname, base, marks):
         # line's top lightens and shrinks, as heavy faces draw their accents,
         # as far as it must (never past LIGHTEST).
         cell = (-(p.fig_adv - g.W) / 2, g.W + (p.fig_adv - g.W) / 2) if p.mono else None
+        # marks joined to the base (a horn) are kept clear of
+        avoid = (mark_ink(g), raw_ink(g)) if g.strokes and any(m in ATTACHED for m in marks) else None
         k, q = 1.0, p
-        places, hi = stack_above(q, above, x, top, case, g.W, cell)
+        places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
         if hi > line_top(p):
             lo, k = LIGHTEST, 1.0
             for _ in range(16):
                 mid = (lo + k) / 2
-                if stack_above(accent_params(p, mid), above, x, top, case, g.W, cell)[1] <= line_top(p):
+                if stack_above(accent_params(p, mid), above, x, top, case, g.W, cell, avoid)[1] <= line_top(p):
                     lo = mid
                 else:
                     k = mid
             k = lo
             q = accent_params(p, k)
-            places, hi = stack_above(q, above, x, top, case, g.W, cell)
+            places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
         target = g if k == 1.0 else Glyph(q, W=g.W)
         for m, xm, ym in places:
             ABOVE[m](target, xm, ym, case)
