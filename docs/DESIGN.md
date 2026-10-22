@@ -492,8 +492,15 @@ Code's own:
 * **Pairs** of narrow signs (`||` `|||` `::` `:::` `..` `...` `!!` `;;`,
   and the dots of `:=` `=:` `::=` `..<` `..=`) move toward each other until
   half a cell of white is left between them. Wide signs are already closer
-  than that, so `&&` `??` `#!` `<$>` stay as their characters: pulled
+  than that, so `&&` `??` `#!` stay as their characters: pulled
   tighter, Arris's dense `&` and `?` run together.
+* **`<$>`** is joined as Fira Code joins it: the dollar's S runs on into
+  the chevrons, its bottom bar into the lower arm of `<` and its top bar
+  into the upper arm of `>`, one stroke through both points, crossed by
+  the dollar's stem (`<$` and `$>` take one join each, the S keeping its
+  other beak). The chevrons are 45 degrees and as tall as the S's bars
+  stand apart; `<*>` and `<+>` take the same chevrons around their sign,
+  lowered to the axis.
 * `--` stays two dashes (one line would read as an em dash); `++` `//`
   `///` `>>` `<<` `>>>` `<<<` set their signs at an even pitch; `/*` `*/`
   raise the font's own asterisk to the slash's middle.

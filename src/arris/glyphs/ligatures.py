@@ -531,6 +531,74 @@ def comment(g):
     g.add_glyph(st, _at(g, st, i_star) - (1 if opening else -1) * 0.1 * p.fig_adv, dy)
 
 
+# --- `<$>`: the dollar's S running on into the chevrons ------------------------
+
+def _wrap(p):
+    """The `<$>` family's chevrons: 45 degrees as `<` is, half as tall as
+    the S's top and bottom bars stand apart (so their arms meet the bars);
+    and the white between a chevron's free arm and what it wraps."""
+    hc = p.cap / 2 - _sub('dollar', p).sh / 2
+    return hc, max(2 * p.m, 0.75 * p.sv)
+
+
+def _dollar_wrap(g, left, right):
+    """`<$>`, `<$`, `$>`, as Fira Code joins them: the dollar's S runs on
+    into the chevrons, its bottom bar into the lower arm of `<` and its top
+    bar into the upper arm of `>`, so the sign is one stroke that turns
+    through both points; the dollar's stem crosses it. Where no chevron
+    takes a bar, the S keeps its beak. The S is caps.S on the dollar's
+    body; a chevron stands its white from it, and the sign is centred."""
+    from .figures import beak_depth
+    p, W = g.p, g.W
+    a = axis(p)
+    hc, white = _wrap(p)
+    ws = REGISTRY['dollar'].width(p)
+    span = ws + (left + right) * (white + hc)                  # centreline extent
+    s0 = (W - span) / 2 + (white + hc if left else 0.0)
+    x1, x8 = s0 + p.sv / 2, s0 + ws - p.sv / 2                 # caps.S's frame: X(1), X(8)
+    y1, y6, y11 = g.sh / 2, p.cap / 2, p.cap - g.sh / 2        # Y(1), Y(6), Y(11)
+    d = beak_depth(p)
+    pts = []
+    if left:
+        j = s0 - white                                         # the bottom bar's end: the lower arm's start
+        pts += [(j, a + hc), (j - hc, a), (j, y1)]
+    else:
+        pts += [(x1, d), B(x1, y1)]
+    pts += [B(x8, y1), B(x8, y6), B(x1, y6), B(x1, y11)]
+    if right:
+        j = s0 + ws + white
+        pts += [(j, y11), (j + hc, a), (j, a - hc)]
+    else:
+        pts += [B(x8, y11), (x8, p.cap - d)]
+    g.stroke(*pts, start='v' if left else 'flat', end='v' if right else 'flat')
+    xc = s0 + ws / 2
+    g.stroke((xc, -1.5 * p.m), (xc, p.cap + 1.5 * p.m), start='h', end='h')
+
+
+liga('<$>')(lambda g: _dollar_wrap(g, True, True))
+liga('<$')(lambda g: _dollar_wrap(g, True, False))
+liga('$>')(lambda g: _dollar_wrap(g, False, True))
+
+
+def _sign_wrap(g):
+    """`<*>` `<+>`: the `<$>` family's chevrons, as tall and as far from
+    the sign, around the sign as itself centred on the axis (Fira Code sets
+    them so; only the S has bars to run on)."""
+    p, W = g.p, g.W
+    a = axis(p)
+    hc, white = _wrap(p)
+    sign = _sub(COMPONENTS[g.name][1], p)
+    ink = _ink_of(sign)
+    xs = (W - sign.W) / 2
+    g.add_glyph(sign, xs, a - (ink.bounds[1] + ink.bounds[3]) / 2)
+    jl, jr = xs + ink.bounds[0] - white, xs + ink.bounds[2] + white
+    g.stroke((jl, a + hc), (jl - hc, a), (jl, a - hc), start='v', end='v')
+    g.stroke((jr, a + hc), (jr + hc, a), (jr, a - hc), start='v', end='v')
+
+
+liga('<*>', '<+>')(_sign_wrap)
+
+
 # --- `#` run into a bracket ------------------------------------------------------
 
 def _hash(p):
