@@ -439,19 +439,70 @@ def comment(g):
 
 # --- Tightened sequences ---------------------------------------------------
 
+TIGHT_WHITE = 0.25   # pulled parts keep this much of the heaviest stroke between them, or merge
+_JOINED: dict = {}
+
+
+def _joined_at_regular(comps, pull, mono):
+    """Which neighbours overlap when pulled together at Regular (the
+    weight the sequence is designed at); parts that only graze there are
+    given their white instead."""
+    key = (tuple(comps), pull, mono)
+    if key not in _JOINED:
+        from shapely import affinity
+        from ..draw import draw
+        from ..geom import rings_to_shapely
+        from ..instances import params
+        p = params(400).with_(mono=mono)
+        n = len(comps)
+        ink = []
+        for i, comp in enumerate(comps):
+            sub = draw(comp, p)
+            x = i * p.fig_adv + (p.fig_w - sub.W) / 2 + ((n - 1) / 2 - i) * pull * p.fig_adv
+            ink.append(affinity.translate(rings_to_shapely(sub.rings()), x))
+        r = TIGHT_WHITE * max(p.sv, p.sh, p.sd, p.ss) / 2          # overlapping, not just grazing
+        _JOINED[key] = [a.buffer(-r).intersects(b.buffer(-r)) for a, b in zip(ink, ink[1:])]
+    return _JOINED[key]
+
+
 def tight(*seqs, pull=0.22):
     """Sequences that read better closer together (`&&`, `</>`, `#{`): each
     component drawn as itself, pulled toward the sequence's middle by
-    ``pull`` of a cell."""
+    ``pull`` of a cell. Regular decides which neighbours join (`&&` and
+    `??` overlap there); the rest keep TIGHT_WHITE of the heaviest stroke
+    between them at every weight, since a hairline of white closes at heavy
+    weights and the italic's curved corners would make the outlines touch.
+    Where the full pull leaves less, it eases until that white is reached."""
     def fn(g):
+        from shapely import affinity
         from ..draw import draw
+        from ..geom import rings_to_shapely
         p = g.p
         comps = g.name[:-len('.liga')].split('_')
         n = len(comps)
-        for i, comp in enumerate(comps):
-            sub = draw(comp, p)
-            shift = ((n - 1) / 2 - i) * pull * p.fig_adv
-            g.add_glyph(sub, i * p.fig_adv + (p.fig_w - sub.W) / 2 + shift, 0.0)
+        subs = [draw(comp, p) for comp in comps]
+        ink = [rings_to_shapely(s.rings()) for s in subs]
+        white = TIGHT_WHITE * max(p.sv, p.sh, p.sd, p.ss)
+
+        def xs(f):
+            return [i * p.fig_adv + (p.fig_w - s.W) / 2 + ((n - 1) / 2 - i) * f * pull * p.fig_adv
+                    for i, s in enumerate(subs)]
+
+        joined = _joined_at_regular(comps, pull, p.mono)
+
+        def clear(f):
+            placed = [affinity.translate(s, x) for s, x in zip(ink, xs(f))]
+            return all(j or a.distance(b) >= white for a, b, j in zip(placed, placed[1:], joined))
+
+        f = 1.0
+        if not clear(1.0):
+            lo, hi = 0.0, 1.0
+            for _ in range(12):
+                mid = (lo + hi) / 2
+                lo, hi = (mid, hi) if clear(mid) else (lo, mid)
+            f = lo
+        for sub, x in zip(subs, xs(f)):
+            g.add_glyph(sub, x, 0.0)
     for seq in seqs:
         liga(seq)(fn)
 

@@ -23,11 +23,27 @@ pixel for pixel.
 | **Arris Mono** | Every glyph on the figures' 10-module pitch: slabbed I, footed i l r, dotted zero, and programming ligatures (`->` `=>` `!=` `===` `<=` `::` `:=` `|>` `//` …) that keep the grid. |
 | **Arris[GRAD,WTCH,wght]**, **Arris-Italic[GRAD,WTCH,wght]** | Variable: weight 100–900, grade −100–100, watch proportions 0–100; linked as one family on the `ital` axis. |
 
-Coverage: Latin (Western, Central and Eastern European, Turkish, Baltic,
-Romanian), Cyrillic (Russian, Ukrainian, Belarusian, Bulgarian, Serbian,
-Macedonian), Greek (monotonic). Features: `tnum` (default) `pnum` `calt`
-(the watch's time colon between figures) `zero` `ss01` `sups` `subs`
-`sinf` `numr` `dnom` `frac` `ordn` `case` `kern`.
+Coverage, about 2,150 code points (details in `docs/coverage/`):
+
+* **Latin**: Western, Central and Eastern European, Turkish, Baltic,
+  Romanian; Vietnamese; pinyin; Latin Extended-B and much of Extended
+  Additional (Irish, Welsh, Sami, Livonian, Azerbaijani); combining marks,
+  placed by `mark`/`mkmk`.
+* **Cyrillic**: Russian, Ukrainian, Belarusian, Bulgarian, Serbian,
+  Macedonian, the Central Asian, Caucasian, Siberian and Komi letters;
+  Bulgarian forms and Serbian/Macedonian italics through `locl`.
+* **Greek**: monotonic, with the symbol, archaic and lunate letters.
+* **Symbols**: general punctuation, super- and subscripts, every currency
+  sign, letterlike symbols, number forms (Roman numerals, fractions),
+  arrows, mathematical operators, technical symbols, geometric shapes,
+  dingbats.
+* **Terminal**: all box drawing, block elements, shades and Braille, cell
+  for cell, and the Powerline glyphs.
+
+Features: `tnum` (default) `pnum` `calt` (the watch's time colon between
+figures) `zero` `ss01` `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`
+`case` `locl` `ccmp` `mark` `mkmk` `kern`; in Mono, `calt` ligatures,
+`ss03` (no ligatures), `cv01`, `cv02`.
 
 ## Building
 

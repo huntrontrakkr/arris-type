@@ -436,6 +436,7 @@ horizontals.
 ## 8. Features
 
 * `tnum` (default) and `pnum` figures.
+* `locl`, `ccmp`, `mark`, `mkmk`: local forms and mark positioning (section 10).
 * `calt`: a colon between figures becomes the watch's time colon, with
   dots centred on the figures in a tighter slot.
 * `zero`: a slashed zero, its slash square to the bowl's corners.
@@ -484,3 +485,28 @@ plain zero.
 | descender | -180 | -3 |
 | hhea / typo ascender / descender | 950 / -250 | |
 | stem at Regular / SemiBold (watch) / Black | 90 / 120 / 175 | 1.5 / 2 / 2.9 |
+
+## 10. Beyond the letters
+
+The wider repertoire (about 2,150 code points) follows the same rules. Each
+area has a note in `docs/coverage/`, listing what was drawn and why:
+
+* **Marks** (`latin-plus.md`): combining marks are glyphs with no advance,
+  and `mark`/`mkmk` place them on anchors measured from each finished
+  outline (`arris.anchors`), so base + marks lands where the precomposed
+  letter has them. Stacks keep a gap over the ink below them, and a stack
+  that would pass the line lightens and shrinks as one, never below half
+  size. `ccmp` drops the i's and j's dots under a mark and picks the flat
+  `.case` marks after capitals.
+* **Local forms** (`cyrillic-greek-ext.md`): glyph modules add language
+  systems and feature code through `draw.LANGSYS` and `draw.FEATURE_CODE`;
+  `locl` runs first. Bulgarian gets its own forms, and the Serbian and
+  Macedonian italic gets its own cursive.
+* **Signs** (`symbols-plus.md`, `arrows-math.md`): currency and letterlike
+  signs are Arris letters with bars, strokes and inner lines whose white
+  grows with the stem; every arrow comes from one builder (shaft, head,
+  tail, eight directions); operators sit on the maths axis.
+* **Cells** (`terminal.md`): box drawing, blocks, shades and Braille fill
+  a Mono cell from descender to ascender in every family, meet the cell
+  edge square (`Glyph.butt`), and stay upright in the italic so that rows
+  and columns join.
