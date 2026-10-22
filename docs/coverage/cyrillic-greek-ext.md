@@ -107,3 +107,12 @@ feature. `tools/hbspec.py` takes `lang=xx` to proof it.
 * ϰ draws its curls only where they draw as a simple outline
   (`greek_ext._draws`); at Black with grade +100, and in the heavy
   monospaced cells, it falls back to plain flats.
+* Serbian and Macedonian д get no alternate: Arris's Russian italic д is
+  already the g that they write. Their upright б stays the Russian б.
+* Ԅ ԅ Ԇ ԇ (Komi) are not drawn.
+* At heavy weights the sampi's lower stroke meets the baseline (Ϡ) or
+  runs into the descender (ϡ), and is cut there; the variable font
+  follows that cut less closely than elsewhere (about 30 units of mean
+  outline difference between masters).
+* The kerning (measured for every pair of letters) roughly doubles with
+  these letters: about 43,000 pairs at Regular against 20,000 before.
