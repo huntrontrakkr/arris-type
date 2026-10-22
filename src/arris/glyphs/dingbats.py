@@ -200,23 +200,23 @@ def asterisk_heavy(g):
     g.clip = (cx - R, cy - R, cx + R, cy + R)
 
 
-@shape('✲', 'L', solid=True)
+@shape('✲', 'L')
 def asterisk_open(g):
-    """Eight spokes round a small white octagon at the centre."""
-    import shapely
+    """Eight spokes from a small octagonal ring at the centre (the ring
+    holds them together at every weight)."""
     cx, cy = _c(g)
     R = g.W / 2
     heavy(g, g.W, 1.0, share=0.13)
-    k = 1.0
-    lines = []
+    h = max(2.2 * g.p.sv, 0.3 * g.W)                         # the ring's width
+    pen(g, oct_pts(cx, cy, h), keep=0.4)
+    ring(g, cx, cy, h)
     for a in range(0, 360, 45):
         u = (round(math.cos(math.radians(a)), 12), round(math.sin(math.radians(a)), 12))
-        w = k * (g.p.sv if abs(u[0]) < 1e-9 else (g.sh if abs(u[1]) < 1e-9 else g.p.sd))
-        r = R - (k * g.p.sv / 4 if abs(u[0]) < 1e-9 or abs(u[1]) < 1e-9 else 0)
-        lines.append([(cx, cy, max(w, g.p.floor)), (cx + u[0] * r, cy + u[1] * r)])
-    hole = oct_pts(cx, cy, max(1.4 * k * g.p.sv, 0.2 * g.W))
-    ink = ink_of(g, lines).intersection(box(cx - R, cy - R, cx + R, cy + R)).difference(Polygon(hole))
-    solid(g, ink, oct_chords(hole))
+        axial = abs(u[0]) < 1e-9 or abs(u[1]) < 1e-9
+        r0 = h / 2 - widths(g)[0] / 2
+        r1 = R - (g.p.sv / 4 if axial else 0)
+        g.stroke((cx + u[0] * r0, cy + u[1] * r0), (cx + u[0] * r1, cy + u[1] * r1))
+    g.clip = (cx - R, cy - R, cx + R, cy + R)
 
 
 @shape('✳', 'L')
@@ -651,7 +651,7 @@ def _face(smile):
         for sx in (-1, 1):
             block(g, cx + sx * 0.17 * S, cy + 0.1 * S, min(e, 0.14 * S))
         w = 0.22 * S
-        y0, y1 = cy - 0.24 * S, cy - 0.1 * S
+        y0, y1 = cy - 0.2 * S, cy - 0.06 * S                 # (clear of the ring)
         leg = 0.08 * S
         if smile:
             g.stroke((cx - w, y1), B(cx - w, y0, leg), B(cx + w, y0, leg), (cx + w, y1))
@@ -733,7 +733,8 @@ def _spade(g, black):
     else:
         pen(g, pts)
         outline(g, pts)
-    _stem_foot(g, cx, y_bot + 0.05 * S, cy - H / 2 - 0.06 * S, S)
+    notch = 2 * body_c - (body_c + 0.9 * 0.92 * S / 2 - 0.12 * 0.92 * S)   # the turned notch's point
+    _stem_foot(g, cx, max(y_bot + 0.05 * S, notch + max(g.p.sv, g.p.floor)), cy - H / 2 - 0.06 * S, S)
 
 
 @shape('♠', 'L', solid=True)

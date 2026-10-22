@@ -12,7 +12,8 @@ block; consecutive arguments are separate blocks with a little paper
 between them. A label after a second '::' is written to the left. A SOURCE
 ending in '+grid' draws each cell's box in grey behind the ink (and puts a
 cell of paper between glyphs, '+grid+gap'). In a text, '{25A0-25FF/16}'
-stands for those code points in rows of 16, and '{E0B0}' for one.
+stands for those code points in rows of 16, and '{E0B0}' for one; «1»
+«2» «3» «0» set a terminal's colours (see STYLES).
 """
 from __future__ import annotations
 
@@ -79,40 +80,73 @@ def _font(path):
     return glyph, asc, desc, 'svg'
 
 
+# Colours, as a terminal sets them: «0» ink on paper, «1» paper on ink, «2»
+# paper on grey, «3» ink on light grey. A Powerline arrow takes its colour
+# from the cell it points away from and its ground from the cell it points to.
+STYLES = {'0': ('#fff', '#000'), '1': ('#000', '#fff'), '2': ('#777', '#fff'), '3': ('#ddd', '#000')}
+ARROWS = {'\ue0b0': 1, '\ue0b2': -1}                       # solid arrows: pointing right / left
+
+
+def _cells(line):
+    """A row's (character, ground, ink), colour markers applied."""
+    out, style = [], '0'
+    i = 0
+    while i < len(line):
+        if line[i] == '«' and i + 2 < len(line) and line[i + 2] == '»':
+            style = line[i + 1]
+            i += 3
+            continue
+        bg, fg = STYLES[style]
+        out.append([line[i], bg, fg])
+        i += 1
+    for j, c in enumerate(out):
+        if c[0] in ARROWS:
+            prev = out[j - 1][1] if j > 0 else '#fff'
+            nxt = out[j + 1][1] if j + 1 < len(out) else '#fff'
+            c[1], c[2] = (nxt, prev) if ARROWS[c[0]] > 0 else (prev, nxt)
+    return out
+
+
 def block_svg(source, text, px):
     grid, spaced = '+grid' in source, '+gap' in source
     source = source.replace('+grid', '').replace('+gap', '')
     glyph, asc, desc, kind = _font(source) if source.endswith('.ttf') else _engine(source)
     k = px / (asc - desc)
+    if text.startswith('@'):                                 # rows from a file
+        text = open(text[1:], encoding='utf-8').read().rstrip('\n').replace('\n', '\\n')
     rows = expand(text).split('\\n')
     if spaced:                                               # a row of paper between rows, too
         rows = [r for row in rows for r in (row, '')][:-1]
-    paths, boxes, width = [], [], 0.0
+    inks, grounds, boxes, width = {}, {}, [], 0.0
     for r, line in enumerate(rows):
         x = 0.0
         base = r * (asc - desc) + asc
-        for i, ch in enumerate(line):
+        for i, (ch, bg, fg) in enumerate(_cells(line)):
             if spaced and i:
                 x += glyph(' ')[1] if kind != 'svg' else glyph(' ', 0, 0, k)[1]
-            if grid:
-                adv0 = glyph(ch)[1] if kind != 'svg' else glyph(ch, 0, 0, k)[1]
-                boxes.append(f'<rect x="{x * k:.3f}" y="{r * px:.3f}" width="{adv0 * k:.3f}" height="{px}" '
-                             f'fill="none" stroke="#bbb" stroke-width="1"/>')
             if kind == 'svg':
                 d, adv = glyph(ch, x, base, k)
             else:
                 g, adv = glyph(ch)
                 d = ''.join('M' + 'L'.join(f'{(x + q[0]) * k:.3f},{(base - q[1]) * k:.3f}' for q in ring) + 'Z'
                             for ring in g if len(ring) >= 3)
-            paths.append(d)
+            if grid:
+                boxes.append(f'<rect x="{x * k:.3f}" y="{r * px:.3f}" width="{adv * k:.3f}" height="{px}" '
+                             f'fill="none" stroke="#bbb" stroke-width="1"/>')
+            if bg != '#fff':
+                x0, x1, y0 = x * k, (x + adv) * k, r * px
+                grounds.setdefault(bg, []).append(f'M{x0:.3f},{y0:.3f}L{x1:.3f},{y0:.3f}L{x1:.3f},{y0 + px:.3f}'
+                                                  f'L{x0:.3f},{y0 + px:.3f}Z')
+            inks.setdefault(fg, []).append(d)
             x += adv
         width = max(width, x)
     W, H = width * k, len(rows) * px
+    # one path per colour: abutting glyphs (and grounds) are filled as one
+    # shape, so a seam shows only where the ink really has a gap
+    body = ''.join(f'<path fill="{c}" fill-rule="nonzero" d="{" ".join(ds)}"/>' for c, ds in grounds.items())
+    body += ''.join(f'<path fill="{c}" fill-rule="nonzero" d="{" ".join(ds)}"/>' for c, ds in inks.items())
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}">'
-           f'<rect width="100%" height="100%" fill="#fff"/>' + ''.join(boxes) +
-           # one path for the whole block: abutting glyphs are filled as one
-           # shape, so a seam shows only where the ink really has a gap
-           f'<path fill="#000" fill-rule="nonzero" d="{" ".join(paths)}"/></svg>')
+           f'<rect width="100%" height="100%" fill="#fff"/>' + ''.join(boxes) + body + '</svg>')
     return Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode()))).convert('L')
 
 

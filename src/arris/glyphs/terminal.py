@@ -394,7 +394,7 @@ BRAILLE_DOTS = {1: (0, 0), 2: (0, 1), 3: (0, 2), 4: (1, 0), 5: (1, 1), 6: (1, 2)
 def _braille(bits):
     def fn(g):
         W, cx, cy = cell(g)
-        s = min(g.p.dot(), min(W / 2, HEIGHT / 4) - 0.6 * weights(g)[0])   # (white between dots: 3/5 stem)
+        s = g.p.dot()
         for d in range(1, 9):
             if bits & (1 << (d - 1)):
                 col, row = BRAILLE_DOTS[d]

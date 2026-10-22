@@ -295,14 +295,17 @@ def _hatch(g, horizontal=False, vertical=False, down=False, up=False, n=3):
             lines.append([(x0 - S, v, t), (x1 + S, v)])
         if vertical:
             lines.append([(u, y0 - S, t), (u, y1 + S)])
-    k = pitch * SQRT2                                                    # same perpendicular pitch
-    m = int(math.ceil(inner / k)) + 1
+    # diagonals: 2n + 1 lines, the outermost through the counter's corners
+    # (where they meet the outline), so no sliver of white is left in a corner
+    m = n
+    k = (inner + tv) / (2 * m)                                           # along x, from line to line
+    td = min(t, k / SQRT2 / 2)                                           # (as heavy as the white between)
     for i in range(-m, m + 1):
         c = i * k
         if down:                                                         # upper left to lower right
-            lines.append([(cx + c - S, cy + S, t * 1.0), (cx + c + S, cy - S)])
+            lines.append([(cx + c - S, cy + S, td), (cx + c + S, cy - S)])
         if up:
-            lines.append([(cx + c - S, cy - S, t * 1.0), (cx + c + S, cy + S)])
+            lines.append([(cx + c - S, cy - S, td), (cx + c + S, cy + S)])
     solid(g, ink_of(g, lines).intersection(region))
 
 
@@ -665,12 +668,15 @@ def inverse_bullet(g):
 
 
 def _inverse_ring(g):
+    """A black square with a white ring cut in it: the ring and the disc in
+    it in proportion to the square, the ring at least three fifths of the
+    stem wide, so neither closes at Black."""
     cx, cy = _centre(g)
     S = g.W
-    pen(g, oct_pts(cx, cy, S))
-    t = widths(g)[0]
-    o = oct_pts(cx, cy, S - 2 * t)                          # the white ring, as wide as the pen
-    i = oct_pts(cx, cy, S - 4 * t)
+    b = 0.12 * S                                            # black outside the ring
+    w = max(0.15 * S, 0.6 * g.p.sv)                         # the white ring
+    o = oct_pts(cx, cy, S - 2 * b)
+    i = oct_pts(cx, cy, S - 2 * b - 2 * w)
     ink = Polygon(sq_pts(cx, cy, S)).difference(Polygon(o)).union(Polygon(i))
     return cx, cy, S, ink, oct_chords(o) + oct_chords(i)
 
@@ -740,7 +746,9 @@ for cp, (sx, sy) in {0x25F4: (-1, 1), 0x25F5: (-1, -1), 0x25F6: (1, -1), 0x25F7:
 
 
 def bullet_size(p):
-    return max(2.4 * p.sv, 3 * p.m)
+    """The white bullet: a little larger than the bullet (2.4 stems), linear
+    in the stem so the variable font draws it exactly between masters."""
+    return 1.6 * p.sv + 1.5 * p.m
 
 
 @shape('◦', bullet_size, sides=0.8)
