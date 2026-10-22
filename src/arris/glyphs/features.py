@@ -191,7 +191,7 @@ for n in CASE:
 
 
 # Single substitutions other glyph modules add to these features (sups,
-# subs, sinf, numr, dnom, frac, case): {feature tag: [(glyph, replacement)]}.
+# subs, sinf, numr, dnom, case): {feature tag: [(glyph, replacement)]}.
 MORE: dict = {}
 
 
