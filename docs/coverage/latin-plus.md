@@ -44,6 +44,23 @@ case)` registered in `marks.ABOVE`, `marks.BELOW` or `marks.ATTACHED`:
 * **double grave, inverted breve**: two graves (as the double acute), the
   breve turned over.
 
+## New letters
+
+* **ə ǝ**: the e turned (its arm shortened, below); **Ə**: the same on the
+  capital grid, its bar a little above the middle; **Ǝ**: the E mirrored.
+* **ƒ**: the italic f's stem, upright: a hook at the top, the stem running
+  on below the baseline and turning back.
+* **Ʒ ʒ**: the sharp s's top bar and 45-degree return without its stem, the
+  3's lower bowl ending on a beak (ʒ's bowl hangs into the descender).
+* **Ǥ ǥ**: G and g with a bar across the right side (below G's own bar,
+  across g's descender stem).
+* **ǀ ǁ ǂ ǃ**: the bar's stroke, twice, crossed by two bars (their white a
+  bar and two edge breaks, so it stays open beside the stem), and the
+  exclamation mark, as letters.
+* **Ǆ–ǌ, Ǳ–ǳ**: the two letters, spaced as the font sets them.
+* **₫**: the barred d underlined, inside the descender.
+* **◌**: twelve dots on a circle an x-height across.
+
 ## Rules introduced
 
 * **Marks stack by measure** (`marks.stack_above`). The first mark above
@@ -83,9 +100,10 @@ case)` registered in `marks.ABOVE`, `marks.BELOW` or `marks.ATTACHED`:
   (`tools/letter_confusion.py`, Regular, 11 arcminutes).
 * **Digraphs are spaced as their letters**: the first letter's right
   bearing and the second's left, but never closer than half a sidebearing
-  between the inks (the L's foot and the J's hook). In Mono both letters
-  are drawn small enough to fit the cell at their own widths (a Z's diagonal
-  cannot be squeezed into half a cell).
+  between the inks (the L's foot and the J's hook; in the italic, the d's
+  and n's exit tails). Measured ungraded, so grade moves nothing. In Mono
+  both letters are drawn small enough to fit the cell at their own widths
+  (a Z's diagonal cannot be squeezed into half a cell).
 
 ## Mark positioning (`src/arris/anchors.py`)
 
@@ -106,11 +124,11 @@ difference): at Regular every composed letter of the generic design lands
 within 1.3 units upright and 4 in the italic, the largest being marks that
 touch their base (cedilla, ogonek, horn), whose junction the composed
 letter fills and two overlapping glyphs cannot; at Black within 5 upright
-and 6 in the italic. The
-rest differ by design: the caron as an apostrophe (ď ľ Ľ ť), the cedilla
-as a comma (ģ ķ ļ ņ ŗ ţ), the Greek capitals' tonos, the stacks the line
-rule lightens (which mark positioning, stacking separate glyphs, does not),
-and ỡ at heavy weights, whose tilde steps left of the horn.
+and 6 in the italic. The rest differ by design: the caron as an apostrophe
+(ď ľ Ľ ť), the cedilla as a comma (ģ ķ ļ ņ ŗ ţ), the Greek capitals'
+tonos, the stacks the line rule lightens (which mark positioning, stacking
+separate glyphs, does not), and ỡ at heavy weights, whose tilde steps left
+of the horn.
 
 Features:
 
