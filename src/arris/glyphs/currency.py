@@ -22,11 +22,11 @@ from ..params import SQRT2
 from .caps import big
 from .figures import beak_depth, heaviness, jog
 from .letterframe import STEEP, Frame, growing_width, letter_width
-from .symkit import across, set_tight, tight_width
+from .symkit import across, set_tight, sign, tight_width
 
 
 def cur(name, ch, width, kind='cap'):
-    return glyph(name, ch, width, kind=kind)
+    return sign(name, ch, width, kind=kind)
 
 
 def stamp(g, name, dx=0.0, dy=0.0, width=None, p=None):
@@ -124,20 +124,23 @@ def bitcoin(g):
     g.clip = (0, -h, g.W, p.cap + h)
 
 
-@cur('uni20B2', '₲', growing_width(9, 2, 1.5))
+@cur('uni20B2', '₲', letter_width(9, 2))
 def guarani(g):
-    """G with a stroke through it."""
+    """G with a stroke standing out of its top and bottom: drawn through it,
+    the stroke would close the white under the G's bar."""
     p = g.p
     REGISTRY['G'].fn(g)
-    x = 0.5 * g.W + 0.25 * p.sv
-    g.stroke((x, -1.5 * p.m), (x, p.cap + 1.5 * p.m))
-    g.clip = (0, -1.5 * p.m, g.W, p.cap + 1.5 * p.m)
+    h = 1.5 * p.m
+    _stubs(g, [0.5 * g.W], p.cap, 0.0, h)
+    g.clip = (0, -h, g.W, p.cap + h)
 
 
 def _small_letter(p, k=0.55, stroke=0.85):
-    """A letter's parameters at a smaller size, strokes a little lighter."""
-    return p.with_(cap=k * p.cap, xh=k * p.cap, m=k * p.m, sv=stroke * p.sv, sh=stroke * p.sh,
-                   sd=stroke * p.sd, ss=stroke * p.ss, c=stroke * p.c, leg=k * p.leg)
+    """A letter's parameters at a smaller size (symkit.small_letter), its
+    x-height its cap height (a small capital or a small r standing in a C)."""
+    from .symkit import small_letter
+    q = small_letter(p, k, stroke)
+    return q.with_(xh=q.cap)
 
 
 @cur('uni20A2', '₢', _c_width(1.0))
@@ -147,7 +150,9 @@ def cruzeiro(g):
     p = g.p
     wc = g.W - p.m
     stamp(g, 'C', width=wc)
-    pr = _small_letter(p, 0.62, 0.7)
+    # the r as tall as leaves a stroke's white under the C's upper beak
+    k = min(0.62, max(0.45, (p.cap - beak_depth(p) - wmin(p)) / p.cap))
+    pr = _small_letter(p, k, 0.7)
     wr = REGISTRY['r'].width(pr)
     stamp(g, 'r', dx=g.W - wr - 0.25 * p.m, p=pr)
 
@@ -215,7 +220,19 @@ def naira(g):
     w = p.ss / STEEP[1]
     x0, y0 = p.sv + w / 2, p.cap - p.sh / 2                  # the diagonal's centre at the top (caps.N)
     y1 = y0 - 2 * (wn - p.sv - w / 2 - x0)                  # where its right edge reaches the right stem
-    bar_pair(g, (y0 + y1) / 2, 0, g.W)
+    t, gap = pair_t(p), pair_gap(p)
+    yc = (y0 + y1) / 2
+    yu, yl = yc + (t + gap) / 2, yc - (t + gap) / 2
+    at = lambda y: p.m + x0 + (y0 - y) / 2                   # the diagonal's centre at height y
+    xs_l, xs_r = p.m + p.sv / 2, g.W - p.m - p.sv / 2        # the stems' centres
+    # each bar passes behind the diagonal on one side: the upper is cut
+    # between the left stem and the diagonal, the lower between the
+    # diagonal and the right stem, so the white each side of the diagonal is
+    # one counter, not a cell and a sliver of a triangle
+    g.stroke((0, yu, t), (xs_l, yu))
+    g.stroke((at(yu), yu, t), (g.W, yu))
+    g.stroke((0, yl, t), (at(yl), yl))
+    g.stroke((xs_r, yl, t), (g.W, yl))
 
 
 @cur('uni20A9', '₩', lambda p: REGISTRY['W'].width(p) + 2 * p.m)
@@ -375,7 +392,7 @@ def _cross(g, xs, yc, t, dy, e):
         g.stroke((xs - e, y - e, across(g.p, t, (1, 1))), (xs + e, y + e), start='v', end='v')
 
 
-@cur('uni20BA', '\u20ba', letter_width(9, 1))
+@cur('uni20BA', '\u20ba', growing_width(9, 2, 1.0))
 def turkishlira(g):
     """A stem whose foot turns along the baseline and up the right side, two
     45-degree strokes across the stem."""
@@ -384,7 +401,8 @@ def turkishlira(g):
     xs = f.X(3)
     g.stroke((xs, p.cap), B(xs, f.Y(1)), B(*f.P(8, 1)), f.P(8, 6))
     t, dy, e = _cross_pair(p)
-    _cross(g, xs, f.Y(6.5), t, dy, e)
+    room = f.X(8) - p.sv / 2 - wmin(p) - t * 0.71 - xs        # the strokes' right ends stay clear of the right side
+    _cross(g, xs, f.Y(6.5), t, dy, max(min(e, room), 0.75 * p.m + p.sv / 2))
 
 
 @cur('uni20AE', '\u20ae', letter_width(10, 1))
@@ -404,13 +422,19 @@ def tugrik(g):
 
 @cur('uni20A5', '₥', letter_width(12, 3), kind='lower')
 def mill(g):
-    """m with a 2:1 stroke through its middle stem."""
+    """m with a 2:1 stroke through its middle stem, shown where it stands out
+    of it, below the baseline and over the x-height (drawn across the
+    arches, it would close their white)."""
     p = g.p
-    stamp(g, 'm', width=g.W)
-    w = p.ss / STEEP[1]
-    xc, yc = g.W / 2, p.xh / 2
-    h = p.xh / 2 + 1.5 * p.m
-    g.stroke((xc - h / 2, yc - h), (xc + h / 2, yc + h), start='h', end='h')
+    sub = stamp(g, 'm', width=g.W)
+    f = Frame(g, 12, 'lower')
+    xc = f.X(6)
+    h = 1.5 * p.m + p.ss / 2
+    sh = sub.sh
+    g.stroke((xc, sh), (xc - h / 2, -h), start='flat', end='h')
+    y0 = p.xh - sh - p.leg - p.m                            # (from below the stem's chamfered top)
+    g.stroke((xc, y0), (xc + (p.xh + h - y0) / 2, p.xh + h), start='flat', end='h')
+    g.clip = None
 
 
 @cur('uni20BC', '₼', letter_width(10, 2))
@@ -485,8 +509,8 @@ def pfennig(g):
     p = f.p
     g.clip = (0, -p.desc, f.W, p.asc)
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
-    g.stroke((f.X(2), f.Y(12) - beak_depth(p) + g.sh / 2), B(*f.P(2, 12)), B(*f.P(7, 12)), B(*f.P(7, -2)),
-             f.P(2, -2))
+    beak = max(f.Y(12) - beak_depth(p) + g.sh / 2, p.xh + max(p.m, 0.6 * p.sv))   # clear of the bowl
+    g.stroke((f.X(2), min(beak, f.Y(12) - 0.01)), B(*f.P(2, 12)), B(*f.P(7, 12)), B(*f.P(7, -2)), f.P(2, -2))
 
 
 @cur('uni20BB', '\u20bb', lambda p: REGISTRY['m'].width(p) + _loop_w(p), kind='lower')

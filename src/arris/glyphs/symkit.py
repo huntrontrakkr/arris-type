@@ -164,6 +164,19 @@ def small_all(p):
     return small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.desc)
 
 
+SMALL_HEFT = 2.6    # the heaviest a small letter's stem may be, in its own modules
+
+
+def small_letter(p, k, stroke=0.8):
+    """A letter's parameters at k of its size (module, heights, legs), its
+    strokes ``stroke`` of the weight's, but never heavier than SMALL_HEFT of
+    its own (smaller) module: a stem 2.9 modules wide is the Black's, and a
+    small S or E drawn heavier than that closes its mouths and counters."""
+    s = min(stroke, SMALL_HEFT * k * p.m / p.sv)
+    return p.with_(cap=k * p.cap, xh=k * p.xh, asc=k * p.asc, desc=k * p.desc, m=k * p.m, leg=k * p.leg,
+                   sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
+
+
 def width_of(name, pf=None, extra=0.0):
     """A glyph's body width (under derived parameters pf(p)), plus ``extra``
     modules."""
@@ -180,9 +193,18 @@ def _scaled(p, s):
     return _condensed(p, s).with_(cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.desc)
 
 
-def _ink_x(fn, width, p):
+def _body(width, p, kind):
+    """The body a sign is drawn in (draw.body_width): in the monospaced cut
+    a letter fills the cell; other signs keep their width, at most a cell."""
+    from ..draw import LETTER_KINDS
+    if p.mono:
+        return p.fig_w if kind in LETTER_KINDS else min(width(p), p.fig_w)
+    return width(p)
+
+
+def _ink_x(fn, width, p, kind=None):
     from ..draw import Glyph
-    g = Glyph(p, W=min(width(p), p.fig_w) if p.mono else width(p))
+    g = Glyph(p, W=_body(width, p, kind))
     fn(g)
     xs = [x for r in g.rings() for x, _ in r]
     return (min(xs), max(xs)) if xs else (0.0, g.W)
@@ -191,19 +213,19 @@ def _ink_x(fn, width, p):
 _FIT: dict = {}
 
 
-def _mono_fit(key, fn, width, p):
+def _mono_fit(key, fn, width, p, kind=None):
     """(k, s, dx, dy) for a sign in the monospaced cell: condensed by k
     (module and strokes) until its ink fits; if even K_MIN does not do it
     (a sign whose long strokes are tied to the cap height, ‱), drawn
     smaller by s about the axis; then centred on its ink."""
     if (key, p) in _FIT:
         return _FIT[(key, p)]
-    cell = min(width(p), p.fig_w)
-    x0, x1 = _ink_x(fn, width, p)
+    cell = _body(width, p, kind)
+    x0, x1 = _ink_x(fn, width, p, kind)
     k, s = 1.0, 1.0
     if max(x1 - x0, width(p)) > p.fig_w + 1e-6:
         def fits(q):                    # its ink, and its body (ink a clip box may hide)
-            a, b = _ink_x(fn, width, q)
+            a, b = _ink_x(fn, width, q, kind)
             return max(b - a, width(q)) <= p.fig_w
 
         if fits(_condensed(p, K_MIN)):
@@ -223,7 +245,7 @@ def _mono_fit(key, fn, width, p):
     q = _scaled(q, s) if s < 1 else q
     dx, dy = 0.0, (1 - s) * p.cap / 2
     if k < 1 or s < 1:
-        a, b = _ink_x(fn, width, q)
+        a, b = _ink_x(fn, width, q, kind)
         dx = (cell - (a + b)) / 2
     _FIT[(key, p)] = (k, s, dx, dy)
     return _FIT[(key, p)]
@@ -260,7 +282,7 @@ def sign(name, ch, width, kind=('punct', 1.0), solid=False, openings=()):
         def wrapped(g):
             if not g.p.mono:
                 return fn(g)
-            k, s, dx, dy = _mono_fit(name, fn, width, g.p)
+            k, s, dx, dy = _mono_fit(name, fn, width, g.p, kind)
             p = g.p
             if k < 1.0:
                 g.p = _condensed(g.p, k)

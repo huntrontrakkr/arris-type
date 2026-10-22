@@ -89,12 +89,12 @@ for _cp, _s in UPPER.items():
     _numeral(f'uni{_cp + 0x10:04X}', chr(_cp + 0x10), list(_s.lower()), 'lower')
 
 
-@glyph('uni2183', 'Ↄ', lambda p: REGISTRY['C'].width(p), kind='cap')
+@sign('uni2183', 'Ↄ', lambda p: REGISTRY['C'].width(p), kind='cap')
 def reversedC(g):
     stamp_t(g, 'C', MIRROR, width=g.W)
 
 
-@glyph('uni2184', 'ↄ', lambda p: REGISTRY['c'].width(p), kind='lower')
+@sign('uni2184', 'ↄ', lambda p: REGISTRY['c'].width(p), kind='lower')
 def reversedc(g):
     stamp_t(g, 'c', MIRROR, width=g.W)
 
@@ -123,37 +123,38 @@ def _rings(g, n):
     the cap height, about the axis."""
     p, W = g.p, g.W
     w = _ring_white(p)
+    wx = (W - (2 * n + 1) * p.sv) / (2 * n)                  # white across: what the body leaves, shared
     bars = 2 * n
     g.sh_k = min(1.0, max(0.7, (p.cap - (bars - 1) * w) / (bars * p.sh)))
     sh = g.sh
     H = max(p.cap, bars * sh + (bars - 1) * w)
     y0 = (p.cap - H) / 2
     for i in range(n):
-        dx = i * (p.sv + w)
+        dx = i * (p.sv + wx)
         dy = i * (sh + w)
         x0, x1 = dx + p.sv / 2, W - dx - p.sv / 2
         ya, yb = y0 + dy + sh / 2, y0 + H - dy - sh / 2
-        leg = _inner_leg(p, p.leg, i * (p.sv + w))
+        leg = _inner_leg(p, p.leg, i * (p.sv + min(w, wx)))
         g.stroke(B(x0, ya, leg), B(x1, ya, leg), B(x1, yb, leg), B(x0, yb, leg), closed=True)
     g.stroke((W / 2, y0 + sh / 2), (W / 2, y0 + H - sh / 2))
 
 
-@glyph('uni2180', 'ↀ', _rings_width(1), kind='cap')
+@sign('uni2180', 'ↀ', _rings_width(1), kind='cap')
 def thousandCD(g):
     _rings(g, 1)
 
 
-@glyph('uni2182', 'ↂ', _rings_width(2), kind='cap')
+@sign('uni2182', 'ↂ', _rings_width(2), kind='cap')
 def tenthousand(g):
     _rings(g, 2)
 
 
-@glyph('uni2188', 'ↈ', _rings_width(3), kind='cap')
+@sign('uni2188', 'ↈ', _rings_width(3), kind='cap')
 def hundredthousand(g):
     _rings(g, 3)
 
 
-@glyph('uni2181', 'ↁ', growing_width(9, 2, 1.5), kind='cap')
+@sign('uni2181', 'ↁ', growing_width(9, 2, 1.5), kind='cap')
 def fivethousand(g):
     """D with a stem standing inside it."""
     f = Frame(g, 9)
@@ -163,7 +164,7 @@ def fivethousand(g):
     g.stroke((x, f.Y(1)), (x, f.Y(11)))
 
 
-@glyph('uni2187', 'ↇ', lambda p: letter_width(9, 2)(p) + p.sv + _ring_white(p) + 1.5 * heft(p), kind='cap')
+@sign('uni2187', 'ↇ', lambda p: letter_width(9, 2)(p) + p.sv + _ring_white(p) + 1.5 * heft(p), kind='cap')
 def fiftythousand(g):
     """Two D bowls, one inside the other, on one stem."""
     f = Frame(g, 9)
@@ -184,7 +185,7 @@ def fiftythousand(g):
     g.stroke((xs, yi0), B(xi, yi0, leg), B(xi, yi1, leg), (xs, yi1))
 
 
-@glyph('uni2185', 'ↅ', letter_width(9, 2), kind='cap')
+@sign('uni2185', 'ↅ', letter_width(9, 2), kind='cap')
 def sixlate(g):
     """C whose foot runs on below the baseline."""
     from .figures import beak_depth
@@ -200,7 +201,7 @@ def _arrow_w(p):
     return p.sv + 2 * arrow_head(p) / SQRT2
 
 
-@glyph('uni2186', 'ↆ', _arrow_w, kind='cap')
+@sign('uni2186', 'ↆ', _arrow_w, kind='cap')
 def fiftyearly(g):
     """A stem from the cap height ending on the baseline in an arrowhead."""
     from .symbols import arrow_head

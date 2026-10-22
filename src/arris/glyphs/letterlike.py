@@ -32,6 +32,13 @@ def stamp(g, name, dx=0.0, dy=0.0, width=None, p=None):
     return sub
 
 
+class _Body:
+    """A stand-in glyph for reading a frame's coordinates at another width."""
+
+    def __init__(self, p, W):
+        self.p, self.W, self.sh, self.clip = p, W, p.sh, None
+
+
 def ink_x(sub):
     xs = [x for r in sub.rings() for x, _ in r]
     return (min(xs), max(xs)) if xs else (0.0, sub.W)
@@ -81,7 +88,7 @@ def _double(name, ch, base, y_range, side=1, wider=True, kind='cap', dot=False):
             from .lower import _dot
             f = Frame(g, 2, 'asc', top=p.asc + p.sv)
             _dot(g, f, (xs + ds_x(p, xs, side)) / 2)
-    glyph(name, ch, _ds_width(base, wider), kind=kind)(fn)
+    sign(name, ch, _ds_width(base, wider), kind=kind)(fn)
 
 
 _double('uni2102', 'ℂ', 'C', lambda p, sh: (sh / 2, p.cap - sh / 2))
@@ -90,10 +97,24 @@ _double('uni211D', 'ℝ', 'R', lambda p, sh: (0.0, p.cap - sh / 2))
 _double('uni211A', 'ℚ', 'Q', lambda p, sh: (sh / 2, p.cap - sh / 2))
 _double('uni2145', 'ⅅ', 'D', lambda p, sh: (sh / 2, p.cap - sh / 2))
 _double('uni2146', 'ⅆ', 'd', lambda p, sh: (sh / 2, p.asc), side=-1, kind='lower')
-_double('uni2147', 'ⅇ', 'e', lambda p, sh: (sh / 2, p.xh - sh / 2), kind='lower')
 
 
-@glyph('uni2148', 'ⅈ', lambda p: p.sv + ds_extra(p), kind='lower')
+@sign('uni2147', '\u2147', lambda p: REGISTRY['e'].width(p) + ds_extra(p), kind='lower')
+def dse(g):
+    """The upright e (lower.e: three bars in a tight stack, the bar on row
+    4), its left side doubled by an inner stroke from the bottom bar to the
+    top. Drawn here rather than stamped, so the italic slants this e and not
+    its cursive one, and the closed-counter rule keeps the slits open."""
+    g.stack(3, g.p.xh, ratio=0.75)
+    f = Frame(g, 8, 'lower')
+    p = g.p
+    yb = f.Y(4)
+    g.stroke((f.X(1), yb), (f.X(7), yb), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
+    g.stroke((f.X(1), yb), B(*f.P(1, 1)), f.P(7, 1))
+    _inner(g, ds_x(p, f.X(1)), f.Y(1), f.Y(8))
+
+
+@sign('uni2148', 'ⅈ', lambda p: p.sv + ds_extra(p), kind='lower')
 def dsi(g):
     """The i's stem and an inner stroke beside it, the dot over both."""
     from .lower import _dot
@@ -107,25 +128,26 @@ def dsi(g):
     g.clip = None
 
 
-@glyph('uni2149', '\u2149', lambda p: REGISTRY['uni0237'].width(p) + ds_extra(p), kind='lower')
+@sign('uni2149', '\u2149', lambda p: REGISTRY['uni0237'].width(p) + ds_extra(p), kind='lower')
 def dsj(g):
-    """The j's stem and an inner stroke on its right, both standing on the
-    hook's bar, the dot over both."""
+    """The j doubled: its stem, and a lighter stroke on its right that turns
+    into the j's hook under both; the dot over the two."""
     from .lower import _dot
     p = g.p
     wj = g.W - ds_extra(p)
-    sub = stamp(g, 'uni0237', width=wj)
     f = Frame(g, 6, 'asc', top=p.asc + p.sv)
+    fj = Frame(_Body(p, wj), 6, 'lower')
     xs = wj - p.sv / 2
     xi = ds_x(p, xs)
-    yb = -p.desc + sub.sh / 2
-    g.stroke((xs, yb), (xi, yb))
-    _inner(g, xi, yb, p.xh)
+    yb = fj.Y(-2)
+    x1 = fj.X(1)
+    g.stroke((xi, p.xh, ds_t(p)), B(xi, yb), B(x1, yb), (x1, -p.desc + beak_depth(p)))
+    g.stroke((xs, p.xh), (xs, yb))
     _dot(g, f, (xs + xi) / 2)
     g.clip = None
 
 
-@glyph('uni2115', 'ℕ', _ds_width('N', False), kind='cap')
+@sign('uni2115', 'ℕ', _ds_width('N', False), kind='cap')
 def dsN(g):
     """N with an inner stroke beside its left stem, up to the diagonal."""
     p = g.p
@@ -155,11 +177,12 @@ def _z_diag(g, f, W, a_up, x_end, t=None):
 
 def _ds_shift(p):
     """How far apart (across) two parallel 45-degree strokes stand to keep
-    the slit between them."""
-    return max(SQRT2 * (p.sd / 2 + ds_t(p) / 2 + ds_s(p)), p.sv / 2 + ds_t(p) / 2 + ds_s(p))
+    the slit between them, where they run and where they step by the 2's
+    jog together (a jog's bar must not reach across the slit)."""
+    return max(SQRT2 * (p.sd / 2 + ds_t(p) / 2 + ds_s(p)), jog(p) + p.sv / 2 + ds_t(p) / 2 + ds_s(p))
 
 
-@glyph('uni2124', 'ℤ', lambda p: REGISTRY['Z'].width(p) + _ds_shift(p), kind='cap')
+@sign('uni2124', 'ℤ', lambda p: REGISTRY['Z'].width(p) + _ds_shift(p), kind='cap')
 def dsZ(g):
     """Z with its spine doubled by a lighter one beside it."""
     f = Frame(g, 9)
@@ -173,7 +196,7 @@ def dsZ(g):
     _z_diag(g, f, W, a_up - D, xl, ds_t(p))
 
 
-@glyph('uni2140', '⅀', lambda p: REGISTRY['uni03A3'].width(p) + _ds_shift(p), kind=('punct', 1.0))
+@sign('uni2140', '⅀', lambda p: REGISTRY['uni03A3'].width(p) + _ds_shift(p), kind=('punct', 1.0))
 def dsSigma(g):
     """Σ with its chevron doubled by a lighter one inside it."""
     f = Frame(g, 9)
@@ -238,7 +261,7 @@ def _script(name, ch, base, exit_=None, foot=None):
             g.stroke((x - p.sv / 2, y0), (x + p.sv / 2 + _tail_reach(p), y0))
         if foot:
             g.stroke((xs + p.sv / 2, sub.sh / 2), (xs - dx + p.sv, sub.sh / 2))
-    glyph(name, ch, width, kind='cap')(fn)
+    sign(name, ch, width, kind='cap')(fn)
 
 
 _script('uni211B', 'ℛ', 'R', exit_=lambda p, w: (w - 0.5 * p.sd, p.sh / 2))
@@ -247,35 +270,42 @@ _script('uni2131', 'ℱ', 'F')
 _script('uni2133', 'ℳ', 'M', exit_=lambda p, w: (w - p.sv / 2, p.sh / 2))
 
 
-@glyph('uni210E', 'ℎ', lambda p: REGISTRY['h.ital'].width(p), kind='lower')
+@sign('uni210E', 'ℎ', lambda p: REGISTRY['h.ital'].width(p), kind='lower')
 def planck(g):
     """The italic h (its flag and exit), as the italic writes it."""
     stamp(g, 'h.ital', width=g.W)
 
 
-@glyph('uni212F', 'ℯ', lambda p: REGISTRY['e.ital'].width(p), kind='lower')
+@sign('uni212F', 'ℯ', lambda p: REGISTRY['e.ital'].width(p), kind='lower')
 def scripte(g):
     """The italic's cursive e: its bar a diagonal into the top corner."""
     stamp(g, 'e.ital', width=g.W)
 
 
-@glyph('uni2134', '\u2134', lambda p: REGISTRY['o'].width(p) + _flag(p), kind='lower')
+@sign('uni2134', '\u2134', lambda p: REGISTRY['o'].width(p) + _flag(p), kind='lower')
 def scripto(g):
     """An o entered from the left on the 1's flag, as the italic enters its
     stems."""
     p = g.p
     dx = _flag(p)
-    stamp(g, 'o', dx, width=g.W - dx)
+    f = Frame(g, 8, 'lower')
+    X = lambda x: dx + (f.X(x) - dx) * 1.0
+    wo = g.W - dx
+    fo = Frame(_Body(p, wo), 8, 'lower')
+    P = lambda x, y: (dx + fo.X(x), fo.Y(y))
+    g.stroke(B(*P(1, 1)), B(*P(7, 1)), B(*P(7, 8)), P(1, 8), closed=True)
+    g.clip = None
     _entry(g, dx + p.sv / 2, p.xh)
 
 
-@glyph('uni210A', 'ℊ', letter_width(8, 2), kind='lower')
+@sign('uni210A', 'ℊ', letter_width(8, 2), kind='lower')
 def scriptg(g):
     """The g whose descender turns up into the j's beak."""
     f = Frame(g, 8, 'lower')
     p = f.p
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    g.stroke(f.P(7, 9), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    top = min(-p.desc + beak_depth(p), -max(p.m, 0.6 * p.sv))     # white under the bowl
+    g.stroke(f.P(7, 9), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), max(top, f.Y(-2) + 0.01)))
 
 
 def loop_w(p):
@@ -297,7 +327,7 @@ def loop_l(g, xs, y_top, side=1):
     return yj
 
 
-@glyph('uni2113', 'ℓ', lambda p: p.sv + loop_w(p) + 0.5 * p.m, kind='lower')
+@sign('uni2113', 'ℓ', lambda p: p.sv + loop_w(p) + 0.5 * p.m, kind='lower')
 def scriptl(g):
     """A stem with a loop at its top and the t's foot."""
     p = g.p
@@ -307,7 +337,7 @@ def scriptl(g):
     g.stroke((xs, y_top), B(xs, g.sh / 2), (g.W, g.sh / 2))
 
 
-@glyph('weierstrass', '℘', letter_width(9, 2), kind='lower')
+@sign('weierstrass', '℘', letter_width(9, 2), kind='lower')
 def weierstrass(g):
     """A p whose stem enters on the 1's flag and whose descender turns back
     up on the j's hook."""
@@ -327,7 +357,7 @@ def _turned(name, ch, base, M=TURN, zone='cap', kind=None, solid=False):
         p = g.p
         about = p.cap / 2 if zone == 'cap' else p.xh / 2
         stamp_t(g, base, M, width=g.W, about=about)
-    glyph(name, ch, lambda p: REGISTRY[base].width(p), kind=kind or REGISTRY[base].kind, solid=solid)(fn)
+    sign(name, ch, lambda p: REGISTRY[base].width(p), kind=kind or REGISTRY[base].kind, solid=solid)(fn)
 
 
 _turned('uni2141', '⅁', 'G')
@@ -343,7 +373,7 @@ _turned('uni2107', 'ℇ', 'uni0417', MIRROR)
 
 # --- Letters with marks ---------------------------------------------------------------
 
-@glyph('uni210F', 'ℏ', lambda p: REGISTRY['h'].width(p) + 1.5 * p.m, kind='lower')
+@sign('uni210F', 'ℏ', lambda p: REGISTRY['h'].width(p) + 1.5 * p.m, kind='lower')
 def hslash(g):
     """h with a 45-degree stroke across its ascender (ħ's bar is level)."""
     p = g.p
@@ -354,22 +384,38 @@ def hslash(g):
     g.stroke((x - e, y - e), (x + e, y + e), start='v', end='v')
 
 
-@glyph('prescription', '℞', lambda p: REGISTRY['R'].width(p) + p.m + 1.5 * heft(p), kind='cap')
-def prescription(g):
-    """R whose leg is crossed near its foot by a short stroke square to it."""
-    p = g.p
-    w = g.W - p.m
-    stamp(g, 'R', width=w)
+def _rx(p):
+    """℞: (R's width, where its leg is crossed (x, y), the crossing
+    stroke's reach): the leg runs on below the baseline and is crossed just
+    under it, clear of the bowl above."""
+    wr = REGISTRY['R'].width(p)
     k = p.sd / SQRT2
-    a = w + p.c - k                                         # the R's leg: x + y = a (caps.R)
-    yc = 0.2 * p.cap + 0.5 * (p.sv - p.m)
-    xc = a - yc
+    a = wr + p.c - k                                        # the R's leg: x + y = a (caps.R)
+    yc = -p.desc / 3
     e = 1.5 * p.m + p.sv / 2
+    return wr, a, yc, e
+
+
+def _rx_width(p):
+    wr, a, yc, e = _rx(p)
+    return max(a + 0.9 * p.desc, a - yc + e) + p.sd
+
+
+@sign('prescription', '\u211e', _rx_width, kind='cap')
+def prescription(g):
+    """R whose leg runs on below the baseline, crossed there by a short
+    stroke square to it."""
+    p = g.p
+    wr, a, yc, e = _rx(p)
+    stamp(g, 'R', width=wr)
+    bot = -0.9 * p.desc
+    g.stroke((a - p.sv / 2, p.sv / 2), (a - bot, bot), start='flat', end='h')   # (overlapping the leg)
+    xc = a - yc
     g.stroke((xc - e, yc - e), (xc + e, yc + e), start='v', end='v')
-    g.clip = (0, 0, g.W, p.cap)
+    g.clip = (0, bot, g.W, p.cap)
 
 
-@glyph('uni2128', 'ℨ', letter_width(9, 2), kind='cap')
+@sign('uni2128', 'ℨ', letter_width(9, 2), kind='cap')
 def frakturZ(g):
     """The black-letter Z as Arris writes it, an ezh: a top bar, a
     45-degree stroke down to the middle, and the 3's lower bowl falling
@@ -386,10 +432,11 @@ def frakturZ(g):
     yb = -p.desc + g.sh / 2
     g.stroke((0, yt), (W, yt))
     g.stroke((yt + a, yt), (xm, ym), start='h', end='flat')
-    g.stroke((xm - p.sv / 4, ym), B(xr, ym), B(xr, yb), B(xl, yb), (xl, yb + g.sh / 2 + beak_depth(p)))
+    beak = min(yb + g.sh / 2 + beak_depth(p), ym - g.sh / 2 - max(p.m, 0.6 * p.sv))
+    g.stroke((xm - p.sv / 4, ym), B(xr, ym), B(xr, yb), B(xl, yb), (xl, max(beak, yb + 0.01)))
 
 
-@glyph('estimated', '℮', letter_width(10, 2), kind='lower')
+@sign('estimated', '℮', letter_width(10, 2), kind='lower')
 def estimated(g):
     """The e-mark: an e taller than the x-height, its bar across, its lower
     arm turning up into a beak."""
@@ -401,12 +448,13 @@ def estimated(g):
     xl, xr = p.sv / 2, W - p.sv / 2
     yt, yb = H - sh / 2, sh / 2
     ym = H / 2
-    d = beak_depth(p, sh)
+    # the beak rises no closer to the bar than a stroke's white
+    d = max(min(beak_depth(p, sh), ym - sh / 2 - max(p.m, 0.6 * p.sv)), yb + sh / 2 + 0.01)
     g.stroke((xl, ym), (xr, ym), B(xr, yt), B(xl, yt), closed=True)
     g.stroke((xl, ym), B(xl, yb), B(xr, yb), (xr, d))
 
 
-@glyph('aleph', '\u2135', letter_width(10, 2), kind='cap')
+@sign('aleph', '\u2135', letter_width(10, 2), kind='cap')
 def aleph(g):
     """The X's falling stroke whole, and its rising stroke broken where they
     cross: the upper half meets the falling stroke a jog above the centre,
@@ -423,7 +471,7 @@ def aleph(g):
     g.stroke((xb, yb), (xl, xl - (xb - yb)), (xl, 0))
 
 
-@glyph('uni2139', 'ℹ', letter_width(8, 1), kind='lower')
+@sign('uni2139', 'ℹ', letter_width(8, 1), kind='lower')
 def information(g):
     """The monospaced i, its flag and foot, in a proportional body."""
     stamp(g, 'i', width=g.W, p=g.p.with_(mono=True))
@@ -431,12 +479,22 @@ def information(g):
 
 # --- Abbreviations ----------------------------------------------------------------
 
+def _over_gap(p):
+    """White beside the slash in a letter fraction: the fractions' 0.3
+    module, or more where heavy letters would reach it."""
+    return max(0.3 * p.m, 0.4 * p.sv - 0.5 * p.m)
+
+
 def _over(name, ch, num, den, caps=False):
     """Letters as a fraction: the first raised to the cap height, the
     fraction slash, the second on the baseline (as ½ sets its figures)."""
     def pf(p):
         from .features import small
-        return small(p) if caps else small_all(p)
+        if not caps:
+            return small_all(p)
+        from .symkit import small_letter
+        from .features import SMALL
+        return small_letter(p, SMALL, 0.8 * 0.85)
 
     def parts(p):
         ps = pf(p)
@@ -444,16 +502,16 @@ def _over(name, ch, num, den, caps=False):
 
     def width(p):
         ps, a, s, b = parts(p)
-        return a + s + b + 0.6 * p.m
+        return a + s + b + 2 * _over_gap(p)
 
     def fn(g):
         p = g.p
         ps, a, s, b = parts(p.with_(mono=False))
         top = ps.cap if caps else ps.xh
         g.add_glyph(draw(num, ps), 0, p.cap - top)
-        x = a + 0.3 * p.m
+        x = a + _over_gap(p)
         g.add_glyph(draw('fraction', p), x, 0.2 * p.cap)
-        g.add_glyph(draw(den, ps), x + s + 0.3 * p.m, 0)
+        g.add_glyph(draw(den, ps), x + s + _over_gap(p), 0)
     sign(name, ch, width, kind=('punct', 0.6))(fn)
 
 
@@ -473,27 +531,27 @@ def _degree_letter(name, ch, letter):
         g.add_glyph(sub)
         wl = REGISTRY[letter].width(p) if not p.mono else g.W - sub.W - gap(p)
         stamp(g, letter, sub.W + gap(p), width=wl)
-    glyph(name, ch, lambda p: REGISTRY['degree'].width(p) + gap(p) + REGISTRY[letter].width(p), kind='cap')(fn)
+    sign(name, ch, lambda p: REGISTRY['degree'].width(p) + gap(p) + REGISTRY[letter].width(p), kind='cap')(fn)
 
 
 _degree_letter('uni2103', '℃', 'C')
 _degree_letter('uni2109', '℉', 'F')
 
 
-@glyph('uni2117', '℗', lambda p: p.cap + 0.0, kind=('punct', 1.0))
+@sign('uni2117', '℗', lambda p: p.cap + 0.0, kind=('punct', 1.0))
 def soundcopyright(g):
     from .symbols import _ringed
     _ringed(g, 'P')
 
 
-@glyph('uni2120', '℠', lambda p: 0.55 * (REGISTRY['S'].width(p) + REGISTRY['M'].width(p)) + 0.6 * p.m,
+@sign('uni2120', '℠', lambda p: 0.55 * (REGISTRY['S'].width(p) + REGISTRY['M'].width(p)) + 0.6 * p.m,
        kind=('punct', 0.8))
 def servicemark(g):
     """S and M small on the cap height, as the trade mark sets T and M."""
     from .symbols import stamp as sstamp
     p = g.p
-    k = 0.55
-    ps = p.with_(cap=k * p.cap, m=k * p.m, sv=0.8 * p.sv, sh=0.8 * p.sh, sd=0.8 * p.sd, ss=0.8 * p.ss, c=0.8 * p.c)
+    from .symkit import small_letter
+    ps = small_letter(p, 0.55)
     ws = sstamp(g, 'S', ps, dy=p.cap - ps.cap)
     sstamp(g, 'M', ps, dx=ws + 0.6 * p.m, dy=p.cap - ps.cap)
 
