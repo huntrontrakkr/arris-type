@@ -380,10 +380,34 @@ def _digraph(name, ch, a, b, kind):
             g.add_glyph(sa, x0)
             g.add_glyph(sb, x0 + sa.W + s * gp)
             return
-        sub = draw(a, p)
-        g.add_glyph(sub)
-        stamp(g, b, sub.W + _digraph_gap(p.with_(slant=0.0), a, b), clear=True)
+        x, wa, wb = _digraph_x(p, a, b)
+        g.add_glyph(draw(a, p, width=wa))
+        g.add_glyph(draw(b, p, width=wb), x)
     glyph(name, ch, width, kind=kind)(fn)
+
+
+def _digraph_x(p, a, b):
+    """Where a digraph's second letter goes, and both letters' bodies:
+    after the first and the white the font sets between them, and, in the
+    italic, far enough on that the first's exit tail keeps the same half
+    sidebearing from the second's entry. Measured ungraded: grade thickens
+    strokes in the same bodies and moves nothing."""
+    from shapely import affinity
+
+    from ..font import light
+    from ..geom import rings_to_shapely
+    q = p.ungraded()
+    sa, sb = draw(a, q), draw(b, q)
+    xs = [x for r in sb.rings() for x, _ in r] or [0.0]
+    x = sa.W + _digraph_gap(p.with_(slant=0.0), a, b) - min(0.0, min(xs))
+    ia, ib = rings_to_shapely(sa.rings()), rings_to_shapely(sb.rings())
+    need = 0.5 * light(q)
+    for _ in range(6):
+        d = ia.distance(affinity.translate(ib, x))
+        if d >= need - 0.5:
+            break
+        x += need - d
+    return x, sa.W, sb.W
 
 
 for _cp, _a, _b, _k in ((0x01C4, 'D', 'Zcaron', 'cap'), (0x01C5, 'D', 'zcaron', 'cap'),
