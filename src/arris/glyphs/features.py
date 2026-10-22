@@ -29,7 +29,10 @@ SMALL_STROKE = 0.8  # their strokes, of the full stems
 
 
 def small(p):
-    k, s = SMALL, SMALL_STROKE
+    from .figures import heaviness
+    # strokes a little lighter than the figures' (0.8); toward Black, lighter
+    # still (0.68), so a small figure's strokes stay in proportion to its size
+    k, s = SMALL, SMALL_STROKE - 0.12 * heaviness(p)
     return p.with_(m=k * p.m, cap=k * p.cap, fig_w=k * p.fig_w, fig_adv=k * p.fig_adv, leg=k * p.leg,
                    sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
 

@@ -241,6 +241,54 @@ def _auto_counters(spec):
     return _AUTO[spec.name]
 
 
+# Symbols keep their white. A symbol's parts hold white between them (the
+# notch under an arrow's barb, a pilcrow's gap between its stems, the
+# asterisk's spaces between spokes); as strokes grow, that white closes and
+# the parts fuse. Every white feature (white at least half a stroke wide,
+# inside its hull) a symbol has it keeps at every weight: where a heavy weight would lose one of the features it has at
+# Regular, all its strokes lighten, as far as needed and never below
+# LIGHTEN_MIN. Better geometry comes first
+# (constructions whose white grows with the stroke); this is the rule that
+# catches the rest.
+LIGHTEN_MIN = 0.8
+WHITE_OPEN = 0.25
+_WHITE: dict = {}
+
+
+def white_features(rings, p) -> int:
+    """How many separate pieces of readable white a drawing holds inside its
+    hull: white at least half a stroke wide (opened by a quarter stroke)."""
+    from shapely.geometry import MultiPoint
+    from .geom import rings_to_shapely
+    if not rings:
+        return 0
+    ink = rings_to_shapely(rings)
+    hull = MultiPoint([q[:2] for r in rings for q in r]).convex_hull
+    r = WHITE_OPEN * max(p.sv, p.sh, p.sd, p.ss)
+    white = hull.difference(ink).buffer(-r, join_style='mitre').buffer(r, join_style='mitre')
+    return sum(1 for q in getattr(white, 'geoms', [white]) if not q.is_empty and q.area > 0.5 * (2 * r) ** 2)
+
+
+def _is_symbol(spec) -> bool:
+    return isinstance(spec.kind, tuple) and spec.kind[0] == 'punct'
+
+
+def _white_reference(spec, p):
+    """The white features of a symbol as drawn at Regular, in the same cut
+    (monospaced or not): the weight it was designed at."""
+    key = (spec.name, p.mono)
+    if key not in _WHITE:
+        from .instances import params
+        ref = params(400).with_(mono=p.mono)
+        g = _build(spec, ref, 0.0, 0.0, {})
+        _WHITE[key] = white_features(g.rings(), ref)
+    return _WHITE[key]
+
+
+def _lightened(p: Params, k: float) -> Params:
+    return p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k)
+
+
 def _counter_white(g, n):
     """The tightest counter, or 0 if any of the drawing's n counters closed."""
     sizes = g.counters()
@@ -300,4 +348,20 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                     a = mid
             overrides['sh_auto'] = b
             g = _build(spec, p, ot, ob, overrides, width)
+    # (the heritage drawing is never lightened; composites rely on their parts' own rules)
+    if _is_symbol(spec) and p.floor and g.strokes and not g.extra:
+        want = _white_reference(spec, p)
+        if want and white_features(g.rings(), p) < want:
+            a, b = 1.0, LIGHTEN_MIN
+            lo = _build(spec, _lightened(p, b), ot, ob, overrides, width)
+            if white_features(lo.rings(), _lightened(p, b)) >= want:
+                for _ in range(16):
+                    mid = (a + b) / 2
+                    trial = _build(spec, _lightened(p, mid), ot, ob, overrides, width)
+                    if white_features(trial.rings(), _lightened(p, mid)) >= want:
+                        b = mid
+                    else:
+                        a = mid
+            g = _build(spec, _lightened(p, b), ot, ob, overrides, width)
+            g.lightened = b
     return g

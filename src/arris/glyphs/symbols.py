@@ -17,7 +17,7 @@ from ..geom import rings_to_shapely
 from ..params import SQRT2
 from . import marks
 from .cyrillic import sc
-from .letterframe import STEEP, Frame, letter_width
+from .letterframe import STEEP, Frame, growing_width, letter_width
 from .punct import _ring, axis, dot, punct
 
 ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyphen', 0x2011: 'hyphen',
@@ -136,18 +136,21 @@ def section(g):
     # the S strokes run into the loop's straight sides, clear of its corners,
     # so the joins are the same at every weight
     g.stroke((xr, top - d), B(xr, yt), (xm, yt), part='beak')
-    g.stroke((xm, yt), B(xl, yt), (xl, ym))
+    g.stroke((xm + p.sv / 4, yt), B(xl, yt), (xl, ym))     # (overlapping the beak's stroke)
     g.stroke(B(xl, y1), B(xr, y1), B(xr, y2), B(xl, y2), closed=True, part='loop')
     g.stroke((xr, ym), B(xr, yb), (xm, yb))
-    g.stroke((xm, yb), B(xl, yb), (xl, bot + d))
+    g.stroke((xm + p.sv / 4, yb), B(xl, yb), (xl, bot + d))
     g.clip = (0, bot, W, top)
 
 
-@glyph('paragraph', '¶', letter_width(9, 3), kind=('punct', 1.0), solid=True)
+@glyph('paragraph', '¶', growing_width(9, 3, 1.5), kind=('punct', 1.0), solid=True)
 def paragraph(g):
     """Two stems and a solid chamfered bowl."""
     p, W = g.p, g.W
-    xs1, xs2 = W - 3 * p.m - p.sv, W - p.sv / 2
+    # the white between the stems: three modules less a stem, never less
+    # than three quarters of a stem
+    gap = max(3 * p.m - p.sv, 0.75 * p.sv)
+    xs1, xs2 = W - gap - 2 * p.sv, W - p.sv / 2
     top = p.cap
     g.stroke((xs1 + p.sv / 2, top - g.sh / 2), (W, top - g.sh / 2))
     for x in (xs1 + p.sv / 2, xs2):
@@ -210,12 +213,17 @@ def perthousand(g):
     _ring(g, x0 + s / 2, g.sh / 2, x0 + rw - s / 2, rh - g.sh / 2)
 
 
-@glyph('daggerdbl', '‡', letter_width(6, 1), kind=('punct', 1.0))
+@glyph('daggerdbl', '‡', growing_width(6, 1, 2.0), kind=('punct', 1.0))
 def daggerdbl(g):
+    """The dagger with a second bar; the stem's ends beyond the bars stay
+    longer than a stem is thick."""
+    from .punct import dagger_bar
     p, W = g.p, g.W
     g.stroke((W / 2, -p.desc + p.m), (W / 2, p.cap))
-    g.stroke((0, p.cap - 3.5 * p.m), (W, p.cap - 3.5 * p.m))
-    g.stroke((0, 2.5 * p.m), (W, 2.5 * p.m))
+    yt = dagger_bar(p)
+    yb = -p.desc + p.m + (p.cap - yt)
+    g.stroke((0, yt), (W, yt))
+    g.stroke((0, yb), (W, yb))
     g.clip = (0, -p.desc, W, p.cap)
 
 
@@ -256,6 +264,19 @@ def radical(g):
 
 # --- Arrows ------------------------------------------------------------------
 
+def arrow_head(p):
+    """Length of an arrowhead's barbs: the module design (3.2 modules and
+    half a stem), but never so short that the white between a barb's end
+    and the shaft drops below half a stem: at 45 degrees that white is
+    0.71 L - sv/2 - 0.71 sd, so L is at least sqrt2 sv + sd."""
+    return max(3.2 * p.m + 0.5 * p.sv, SQRT2 * p.sv + p.sd)
+
+
+def _arrow_width(p):
+    """Wide enough for the head and two and a half stems of shaft beyond it."""
+    return max(letter_width(11, 1)(p), p.sv + arrow_head(p) / SQRT2 + 2.5 * p.sv)
+
+
 def _arrow(g, angle):
     """Shaft and a two-stroke 45-degree head, pointing at ``angle`` degrees,
     centred on the axis."""
@@ -265,44 +286,53 @@ def _arrow(g, angle):
     half = W / 2 - p.sv / 2 if angle % 180 == 0 else (W / 2 - p.sv / 2 if angle % 90 else 0.42 * p.cap)
     if angle % 90 == 45:
         half = (W / 2 - p.sv / 2) * SQRT2 * 0.9
+    if angle % 180 == 90:                                   # vertical: room for the head and a shaft
+        half = max(half, 0.5 * (arrow_head(p) / SQRT2 + 2.5 * p.sv + p.sv))
     t = math.radians(angle)
     d = (math.cos(t), math.sin(t))
     tip = (cx + d[0] * half, a + d[1] * half)
     tail = (cx - d[0] * half, a - d[1] * half)
-    head = 3.2 * p.m + 0.5 * p.sv
+    head = arrow_head(p)
     g.stroke(tail, tip)
     for side in (1, -1):
         r = t + math.pi - side * math.pi / 4
         g.stroke(tip, (tip[0] + head * math.cos(r), tip[1] + head * math.sin(r)))
+    g.clip = None
 
 
 ARROWS = {'arrowleft': ('←', 180), 'arrowup': ('↑', 90), 'arrowright': ('→', 0),
           'arrowdown': ('↓', 270), 'arrowupleft': ('↖', 135), 'arrowupright': ('↗', 45),
           'arrowdownright': ('↘', 315), 'arrowdownleft': ('↙', 225)}
 for nm, (ch, ang) in ARROWS.items():
-    glyph(nm, ch, letter_width(11, 1), kind=('punct', 0.8))(lambda g, ang=ang: _arrow(g, ang))
+    glyph(nm, ch, _arrow_width, kind=('punct', 0.8))(lambda g, ang=ang: _arrow(g, ang))
 
 
-@glyph('arrowboth', '↔', letter_width(13, 1), kind=('punct', 0.8))
+@glyph('arrowboth', '↔', lambda p: max(letter_width(13, 1)(p), 2 * arrow_head(p) / SQRT2 + 3.5 * p.sv),
+       kind=('punct', 0.8))
 def arrowboth(g):
     p, W = g.p, g.W
     a = axis(p)
-    head = 3.2 * p.m + 0.5 * p.sv
+    head = arrow_head(p)
     g.stroke((p.sv / 2, a), (W - p.sv / 2, a))
     for x, sgn in ((p.sv / 2, 1), (W - p.sv / 2, -1)):
         for s in (1, -1):
             g.stroke((x, a), (x + sgn * head / SQRT2, a + s * head / SQRT2))
 
 
-@glyph('arrowupdn', '↕', letter_width(8, 1), kind=('punct', 0.8))
+@glyph('arrowupdn', '↕', lambda p: max(letter_width(8, 1)(p), 2 * arrow_head(p) / SQRT2 + p.sv), kind=('punct', 0.8))
 def arrowupdn(g):
     p, W = g.p, g.W
-    top, bot = p.cap, 0.0
-    head = 3.2 * p.m + 0.5 * p.sv
+    head = arrow_head(p)
+    # the cap height, or as much more (shared above and below) as two heads
+    # and a stem and a half of shaft between them need
+    need = 2 * head / SQRT2 + 2.5 * p.sv
+    extra = max(0.0, need - p.cap) / 2
+    top, bot = p.cap + extra, -extra
     g.stroke((W / 2, bot + p.sv / 2), (W / 2, top - p.sv / 2))
     for y, sgn in ((top - p.sv / 2, -1), (bot + p.sv / 2, 1)):
         for s in (1, -1):
             g.stroke((W / 2, y), (W / 2 + s * head / SQRT2, y + sgn * head / SQRT2))
+    g.clip = None
 
 
 # --- Spacing accents -----------------------------------------------------------

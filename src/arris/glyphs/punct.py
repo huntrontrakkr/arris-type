@@ -14,7 +14,7 @@ from __future__ import annotations
 from ..draw import B, glyph
 from ..params import SQRT2
 from .figures import beak_depth
-from .letterframe import STEEP, Frame, letter_width
+from .letterframe import STEEP, Frame, growing_width, letter_width
 
 
 def punct(name, char, wm, stems=1, width=None, sides=1.0):
@@ -362,13 +362,18 @@ def greater(g):
 
 # --- ASCII symbols ---------------------------------------------------------
 
-@punct('numbersign', '#', 10, 2)
+@punct('numbersign', '#', 10, 2, width=growing_width(10, 2, 2.0))
 def numbersign(g):
+    """Two bars each way, never closer than a stroke: the square between
+    them stays open at every weight."""
     f = Frame(g, 10, 'cap')
-    for x in (f.X(3), f.X(7)):
+    p, W = g.p, g.W
+    gx = max(f.X(7) - f.X(3) - p.sv, p.sv)                 # white between the verticals
+    gy = max(f.Y(8) - f.Y(4) - g.sh, g.sh)                  # and between the horizontals
+    for x in (W / 2 - (gx + p.sv) / 2, W / 2 + (gx + p.sv) / 2):
         g.stroke((x, f.Y(0.5)), (x, f.Y(11.5)))
-    for y in (f.Y(4), f.Y(8)):
-        g.stroke((0, y), (g.W, y))
+    for y in (p.cap / 2 - (gy + g.sh) / 2, p.cap / 2 + (gy + g.sh) / 2):
+        g.stroke((0, y), (W, y))
 
 
 @punct('dollar', '$', 9, 2)
@@ -437,7 +442,7 @@ def at(g):
     g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
 
 
-@punct('asterisk', '*', 7, 1)
+@punct('asterisk', '*', 7, 1, width=growing_width(7, 1, 2.5))
 def asterisk(g):
     p, W = g.p, g.W
     h = W / 2 - p.sv / 4
@@ -512,8 +517,9 @@ def ellipsis(g):
 
 
 def _guil_reach(p):
-    """How far a guillemet's chevron reaches across (and half its height)."""
-    return min((letter_width(7, 2)(p) - 1.4 * p.sv) / 2, p.xh / 3)
+    """How far a guillemet's chevron reaches across (and half its height):
+    never less than a diagonal stroke and a half, so its arms stay strokes."""
+    return max(min((letter_width(7, 2)(p) - 1.4 * p.sv) / 2, p.xh / 3), 1.5 * p.sd)
 
 
 def _guil_step(p):
@@ -628,11 +634,17 @@ def notequal(g):
     g.stroke((W / 2 - 2 * p.m, a - 4 * p.m), (W / 2 + 2 * p.m, a + 4 * p.m), start='h', end='h')
 
 
-@punct('dagger', '†', 6, 1)
+def dagger_bar(p):
+    """Where a dagger's bar crosses: three and a half modules down, or lower
+    where the stem above it would be shorter than two stems thick."""
+    return p.cap - max(3.5 * p.m, 2.2 * p.sv)
+
+
+@punct('dagger', '†', 6, 1, width=growing_width(6, 1, 2.0))
 def dagger(g):
     p, W = g.p, g.W
     g.stroke((W / 2, -p.desc + p.m), (W / 2, p.cap))
-    g.stroke((0, p.cap - 3.5 * p.m), (W, p.cap - 3.5 * p.m))
+    g.stroke((0, dagger_bar(p)), (W, dagger_bar(p)))
     g.clip = (0, -p.desc, W, p.cap)
 
 

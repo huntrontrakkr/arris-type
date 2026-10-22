@@ -193,8 +193,10 @@ def three(g):
     # The upper bowl's lower corner is a module rounder than the lower bowl's
     # upper one; their outer chamfers meet in a sharp point at the waist.
     g.stroke((u, yt), B(xr, yt), B(xr, ym, p.leg + u), (xm, ym), part='bar')
+    # parts that continue one another overlap by a quarter stem, so they
+    # always join (end-to-end square cuts join only if they coincide exactly)
     g.stroke((xm, ym), B(xr, ym), B(xr, bot), (W / 2, bot))
-    g.stroke((W / 2, bot), B(xl, bot), (xl, beak_bottom(g)), part='beak')
+    g.stroke((W / 2 + p.sv / 4, bot), B(xl, bot), (xl, beak_bottom(g)), part='beak')
 
 
 def _four_gap(g):
@@ -250,8 +252,8 @@ def five(g, junction=7):
     bot = yb - g.ob
     # the beak and the bar it faces (the 5's mouth, what tells it from a 6)
     g.stroke((8 * u, yt), (xl, yt), (xl, yj), (W / 2, yj), part='bar')
-    g.stroke((W / 2, yj), B(xr, yj), B(xr, bot), (W / 2, bot))
-    g.stroke((W / 2, bot), B(xl, bot), (xl, beak_bottom(g)), part='beak')
+    g.stroke((W / 2 - p.sv / 4, yj), B(xr, yj), B(xr, bot), (W / 2, bot))
+    g.stroke((W / 2 + p.sv / 4, bot), B(xl, bot), (xl, beak_bottom(g)), part='beak')
 
 
 def _six(g, flip):

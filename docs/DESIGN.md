@@ -194,6 +194,22 @@ tight-stack rule of the a, e and s, applied wherever it is needed rather
 than declared letter by letter. A stroke that crosses a bowl (the ø's
 slash, the ¢'s bar) thins instead.
 
+**Symbols keep their parts apart.** A symbol's white between its parts
+(the notch under an arrow's barb, the gap between a pilcrow's stems, the
+spaces between an asterisk's spokes) is drawn to grow with its strokes
+rather than fixed in modules, so heavy strokes cannot eat it: an
+arrowhead's barbs are at least √2 stems and a diagonal stroke long, so the
+white between a barb's end and the shaft never drops below half a stem,
+and the arrow widens to keep a shaft beyond its head; a pilcrow's stems
+keep three quarters of a stem between them; the bars of # stay a stroke
+apart; a dagger's bar moves down so the stem above it stays longer than it
+is thick; small figures' strokes ease from 0.8 to 0.68 of the figures' as
+the weight rises. Behind these sits a rule for every symbol: the white
+features it has at Regular (white at least half a stroke wide, inside its
+hull) it keeps at every weight, its strokes lightening as far as needed,
+never below 0.8 (`draw.LIGHTEN_MIN`; `tools/white_scan.py` lists what
+each weight loses).
+
 **A floor under every stroke.** The lightest the font draws is the Thin's
 own thinnest stroke (its horizontal, 22 units). Nothing is drawn thinner,
 however it was derived: small figures, the letters inside © and ®, a

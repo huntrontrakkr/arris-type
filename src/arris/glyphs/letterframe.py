@@ -51,6 +51,20 @@ def letter_width(wm: float, stems: float):
     return lambda p: stems * p.sv + (wm - 2 * stems) * p.m * white_scale(p)
 
 
+def heft(p) -> float:
+    """How far the stem is past Regular's (a module and a half), in units;
+    0 at Regular and lighter."""
+    return max(0.0, p.sv - 1.5 * p.m)
+
+
+def growing_width(wm: float, stems: float, k: float):
+    """A symbol's body: a letter's, plus k units for every unit its stem has
+    grown past Regular, so the white between its parts grows with its
+    strokes instead of being eaten by them."""
+    base = letter_width(wm, stems)
+    return lambda p: base(p) + k * heft(p)
+
+
 class Frame:
     def __init__(self, g, wm: float, zone: str = 'cap', top: float | None = None):
         p = g.p
