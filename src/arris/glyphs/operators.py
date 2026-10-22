@@ -102,8 +102,11 @@ TILDEW = growing_width(8, 1, 1.5)               # tilde signs: room for the step
 
 def tilde_rise(g):
     """The tilde's rise: a quarter of its width, or a bar and a third of a
-    stem, so the bays above and below its flats stay open."""
-    return max(g.W / 4, g.sh + 0.35 * g.p.sv)
+    stem, so the bays above and below its flats stay open; but never so
+    much that its flats are shorter than half a bar and a quarter stem (a
+    graded Black keeps its body)."""
+    flat = 0.5 * g.sh + 0.25 * g.p.sv
+    return min(max(g.W / 4, g.sh + 0.35 * g.p.sv), (g.W - 2 * flat) / 2)
 
 
 class Tilde:
@@ -475,26 +478,27 @@ def _small_ring_box(g, cx, cy, r):
     """A small octagon ring of centreline half-size r at (cx, cy)."""
     p = g.p
     w = 0.85 * p.sv
-    _ring(g, cx - r, cy - r, cx + r, cy + r, w=w, leg=0.9 * r)
+    _ring(g, cx - r, cy - r, cx + r, cy + r, w=w, leg=0.6 * r)
 
 
 def small_ring_r(g):
     """A small ring's centreline half-size: its counter at least half a stem."""
-    p = g.p
-    return max(1.5 * p.m, 0.85 * p.sv / 2 + 0.3 * p.sv)
+    return small_ring_r_p(g.p)
 
 
-@op(u(0x2256), '≖')
+@op(u(0x2256), '≖', width=growing_width(8, 1, 2.0))
 def ringinequal(g):
-    """A small ring between the bars, crossing them."""
+    """The equal sign with a ring between its bars: the ring's top and foot
+    run in the bars, its sides close a small octagon between them."""
     p = g.p
     a = axis(p)
     off = (g.sh + eq_gap(g)) / 2
-    r = max(small_ring_r(g), off + 0.3 * p.m)
     for y in (a - off, a + off):
-        g.stroke((0, y), (g.W / 2 - r, y))
-        g.stroke((g.W / 2 + r, y), (g.W, y))
-    _small_ring_box(g, g.W / 2, a, r)
+        g.stroke((0, y), (g.W, y))
+    r = off
+    rx = max(r, small_ring_r(g))
+    g.stroke(B(g.W / 2 - rx, a - r, 0.6 * r), B(g.W / 2 + rx, a - r, 0.6 * r), B(g.W / 2 + rx, a + r, 0.6 * r),
+             B(g.W / 2 - rx, a + r, 0.6 * r), closed=True)
 
 
 @op(u(0x2257), '≗')
@@ -522,8 +526,8 @@ def deltaequal(g):
 @op(u(0x225F), '≟')
 def questionequal(g):
     p = g.p
-    k = 0.45
-    ps = p.with_(cap=k * p.cap, m=k * p.m, sv=0.8 * p.sv, sh=0.8 * p.sh, sd=0.8 * p.sd, ss=0.8 * p.ss, c=0.8 * p.c)
+    k, t = 0.55, 0.45                                        # strokes in proportion to its size
+    ps = p.with_(cap=k * p.cap, m=k * p.m, sv=t * p.sv, sh=t * p.sh, sd=t * p.sd, ss=t * p.ss, c=t * p.c)
     sub = draw('question', ps)
     hq = ps.cap
     def q(g, yc):
@@ -627,7 +631,7 @@ def greaterequiv(g):
 def _lg(g, first_right):
     """< over > (or > over <), centred on the body, together as tall as <=."""
     p = g.p
-    h = (le_height(g) - eq_gap(g) - 4 * kd(p)) / 4
+    h = max((le_height(g) - eq_gap(g) - 4 * kd(p)) / 4, 1.5 * kd(p))
     xr = (g.W + h) / 2
     stack(g, [Chevron(first_right, h, x1=xr), Chevron(not first_right, h, x1=xr)])
 
@@ -679,10 +683,13 @@ def between(g):
 
 # --- Sets ----------------------------------------------------------------------------
 
-def box_r(g):
+def box_r(g, W=None):
     """The operator box's centreline half-height: the box is as tall as the
-    plus sign is wide."""
-    return OPW(g.p) / 2 - g.sh / 2
+    plus sign is wide (or as the body W, for the set signs)."""
+    return (OPW(g.p) if W is None else W) / 2 - g.sh / 2
+
+
+SETW = growing_width(8, 1, 1.2)                # set signs: their bays grow with the stroke
 
 
 def set_leg(g, r):
@@ -720,17 +727,21 @@ def SetShape(fn):
     return Shape(lambda g: 2 * box_r(g) + g.sh, fn)
 
 
-def _set(g, fn, below=None, neg=False):
-    """A set sign in the box, alone or over a bar (or a bar with a stroke);
-    with a negation across."""
+def _set(g, fn, below=None, neg=False, bars=2):
+    """A set sign in its box (as tall as it is wide), alone or over a bar
+    (or a bar with a stroke); with a negation across. The element signs
+    stack three bars in the box, and thin them as tight stacks do."""
+    if bars == 3:
+        g.stack(3, g.W, ratio=0.8)
+        g.sh_k = max(g.sh_k, 0.7)
     if below is None:
-        fn(g, axis(g.p), box_r(g))
+        fn(g, axis(g.p), box_r(g, g.W))
     else:
         # over a bar: the sign shrinks so the pair is as tall as <=
         H = le_height(g)
         hb = below.height(g)
         r = (H - hb - eq_gap(g) - g.sh) / 2
-        r = min(r, box_r(g))
+        r = min(r, box_r(g, g.W))
         top = axis(g.p) + (2 * r + g.sh + eq_gap(g) + hb) / 2
         fn(g, top - g.sh / 2 - r, r)
         below.draw(g, top - 2 * r - g.sh - eq_gap(g) - hb / 2)
@@ -762,27 +773,32 @@ SETS = [
     (0x220B, 'suchthat', lambda g, y, r: subset(g, y, r, right=True, bar=True), None, False),
     (0x220C, u(0x220C), lambda g, y, r: subset(g, y, r, right=True, bar=True), None, True),
 ]
+ELEMENTS = {0x2208, 0x2209, 0x220B, 0x220C}
 for cp, nm, fn, below, neg in SETS:
-    def make(g, fn=fn, below=below, neg=neg):
+    def make(g, fn=fn, below=below, neg=neg, cp=cp):
         b = {None: None, 'bar': Bar(), 'nbar': _bar_with_stroke(g)}[below]
-        _set(g, fn, b, neg)
-    op(nm, chr(cp))(make)
+        _set(g, fn, b, neg, bars=3 if cp in ELEMENTS else 2)
+    op(nm, chr(cp), width=SETW)(make)
 
 
 def _small_set(g, right):
-    """The small element signs: the element sign at the x-height's scale."""
+    """The small element signs: the element sign three quarters the size,
+    its bars a tight stack."""
     p = g.p
-    r = 0.75 * box_r(g)
-    W = g.W
-    subset(g, axis(p), r, right=right, bar=True)
+    g.stack(3, g.W, ratio=0.8)
+    g.sh_k = max(g.sh_k, 0.7)
+    subset(g, axis(p), box_r(g, g.W), right=right, bar=True)
 
 
-@op(u(0x220A), '∊', width=lambda p: 0.78 * OPW(p))
+SMALLSETW = lambda p: 0.78 * SETW(p)
+
+
+@op(u(0x220A), '∊', width=SMALLSETW)
 def smallelement(g):
     _small_set(g, False)
 
 
-@op(u(0x220D), '∍', width=lambda p: 0.78 * OPW(p))
+@op(u(0x220D), '∍', width=SMALLSETW)
 def smallcontains(g):
     _small_set(g, True)
 
@@ -833,20 +849,31 @@ def logicalor(g):
     gable(g, axis(g.p), 0, down=True)
 
 
+def _light(g):
+    """A stack of parts: lighter toward Black (arrows.stack_k)."""
+    from .arrows import stack_k
+    from ..draw import _lightened
+    k = stack_k(g.p)
+    if k != 1.0:
+        g.p = _lightened(g.p, k)
+
+
 @op(u(0x22BB), '⊻')
 def xor(g):
-    stack(g, [Shape(_gable_h, lambda g, y: gable(g, y, 0, down=True, x0=0.1 * g.W, x1=0.9 * g.W)), Bar()],
-          gap=lambda g: eq_gap(g))
+    _light(g)
+    stack(g, [Shape(_gable_h, lambda g, y: gable(g, y, 0, down=True)), Bar()])
 
 
 @op(u(0x22BC), '⊼')
 def nand(g):
-    stack(g, [Bar(), Shape(_gable_h, lambda g, y: gable(g, y, 0, x0=0.1 * g.W, x1=0.9 * g.W))])
+    _light(g)
+    stack(g, [Bar(), Shape(_gable_h, lambda g, y: gable(g, y, 0))])
 
 
 @op(u(0x22BD), '⊽')
 def nor(g):
-    stack(g, [Bar(), Shape(_gable_h, lambda g, y: gable(g, y, 0, down=True, x0=0.1 * g.W, x1=0.9 * g.W))])
+    _light(g)
+    stack(g, [Bar(), Shape(_gable_h, lambda g, y: gable(g, y, 0, down=True))])
 
 
 def tack(g, kind, n_v=1, n_h=1, short=False):
@@ -858,7 +885,8 @@ def tack(g, kind, n_v=1, n_h=1, short=False):
     r = box_r(g) + g.sh / 2                                  # ink half-height
     gapv = max(0.75 * p.sv, 1.25 * p.m)                      # between verticals (the pilcrow's)
     if kind in ('right', 'left'):
-        top, bot = (a + r, a - r) if not short else (a + 0.6 * r, a - 0.6 * r)
+        rs = max(0.6 * r, (g.sh + eq_gap(g)) / 2 * (n_h - 1) + g.sh / 2 + 0.75 * p.sv)   # a short stem, its bays open
+        top, bot = (a + r, a - r) if not short else (a + rs, a - rs)
         xs = [p.sv / 2 + i * (p.sv + gapv) for i in range(n_v)]
         x_end = xs[-1] + p.sv / 2
         for x in xs:
@@ -1014,7 +1042,7 @@ def diamondop(g):
     g.stroke((xm, a + h), (xm + h, a), (xm, a - h), (xm - h, a), closed=True)
 
 
-@op(u(0x22C6), '⋆', width=lambda p: 2 * (2.2 * p.m + 0.6 * p.sv))
+@op(u(0x22C6), '⋆', width=lambda p: 2 * (2.2 * p.m + 0.6 * p.sv), solid=True)
 def starop(g):
     """A solid four-pointed star, its edges at 2:1."""
     from shapely.geometry import Polygon
@@ -1081,8 +1109,7 @@ CIRCLED = {
                                                     g.stroke((x - (r - L / 2), y + r - L / 2), (x + r - L / 2, y - (r - L / 2))))),
     0x2298: (u(0x2298), lambda g, x, y, r, L: g.stroke((x - (r - L / 2), y - (r - L / 2)), (x + r - L / 2, y + r - L / 2))),
     0x2299: (u(0x2299), lambda g, x, y, r, L: cdot(g, x, y)),
-    0x229A: (u(0x229A), lambda g, x, y, r, L: _ring(g, x - 0.45 * r, y - 0.45 * r, x + 0.45 * r, y + 0.45 * r,
-                                                     leg=0.4 * r)),
+    0x229A: (u(0x229A), lambda g, x, y, r, L: _inner_ring(g, x, y, r)),
     0x229B: (u(0x229B), lambda g, x, y, r, L: _inner_asterisk(g, x, y, _free(g, r) + g.sh / 2)),
     0x229C: (u(0x229C), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r) + g.sh / 2, 2)),
     0x229D: (u(0x229D), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r) + g.sh / 2, 1)),
@@ -1093,6 +1120,14 @@ SQUARED = {
     0x22A0: (u(0x22A0), lambda g, x, y, r, L: (g.stroke((x - r, y - r), (x + r, y + r)), g.stroke((x - r, y + r), (x + r, y - r)))),
     0x22A1: (u(0x22A1), CIRCLED[0x2299][1]),
 }
+
+
+def _inner_ring(g, x, y, r):
+    """A ring inside the ring, half a stem of white between them."""
+    p = g.p
+    w = 0.6 * p.sv                                           # a lighter ring, as a small one is
+    ri = r - p.sv / 2 - max(0.45 * p.sv, 0.6 * p.m) - w / 2
+    _ring(g, x - ri, y - ri, x + ri, y + ri, w=w, leg=0.45 * ri)
 
 
 def _inner_bars(g, x, y, half, n):
@@ -1306,7 +1341,9 @@ def ringop(g):
 
 
 def small_ring_r_p(p):
-    return max(1.5 * p.m, 0.85 * p.sv / 2 + 0.3 * p.sv)
+    """A small ring's centreline half-size: its counter at least a stem
+    across, or a module and a half."""
+    return max(1.5 * p.m, 0.85 * p.sv / 2 + 0.5 * p.sv)
 
 
 # --- Divides and parallels ------------------------------------------------------------------
@@ -1630,12 +1667,17 @@ def integral3(g):
         integral(g, x0 + i * int_step(p), *int_span(p))
 
 
-@op(u(0x222E), '∮', width=lambda p: max(int_w()(p), 2 * (small_ring_r_p(p) + 1.0 * p.m) + p.sv))
+def _cint_r(p):
+    """∮'s ring: round the stem with white inside it, half a stem at least."""
+    return max(small_ring_r_p(p) + 1.0 * p.m, 1.4 * p.sv)
+
+
+@op(u(0x222E), '∮', width=lambda p: max(int_w()(p), 2 * _cint_r(p) + p.sv))
 def contourintegral(g):
     p = g.p
     bot, top = int_span(p)
     integral(g, g.W / 2, bot, top)
-    r = small_ring_r(g) + 1.0 * p.m
+    r = _cint_r(p)
     _small_ring_box(g, g.W / 2, (bot + top) / 2, r)
 
 
@@ -1645,7 +1687,7 @@ def _root(g, n):
     """The radical with a small index in its crook."""
     p = g.p
     k = 0.42
-    s = 0.8 - 0.12 * heaviness(p)
+    s = 0.5 - 0.08 * heaviness(p)                            # strokes in proportion to the index's size
     ps = p.with_(m=k * p.m, cap=k * p.cap, fig_w=k * p.fig_w, fig_adv=k * p.fig_adv, leg=k * p.leg,
                  sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
     sub = draw(n, ps)

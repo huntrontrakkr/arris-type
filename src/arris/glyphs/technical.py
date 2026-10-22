@@ -216,19 +216,19 @@ def arc(g):
     """An arch: half a flat octagon, open below."""
     p = g.p
     a = axis(p)
-    h = 0.3 * g.W
+    h = max(0.3 * g.W, g.sh + 0.75 * p.sv)                  # its bay three quarters of a stem deep
     leg = min(p.leg + 0.5 * p.m, 0.8 * h)
     xl, xr = p.sv / 2, g.W - p.sv / 2
     g.stroke((xl, a - h / 2), B(xl, a + h / 2, leg), B(xr, a + h / 2, leg), (xr, a - h / 2))
 
 
 def _cmd_s(p):
-    """⌘'s loop and square side (centrelines): a third of its body, the
-    loops' counters at least three fifths of a stem."""
-    return max((0.95 * p.cap - p.sv) / 3, p.sv + max(0.6 * p.sv, p.m))
+    """⌘'s loop and square side (centrelines; p its lightened strokes): a
+    third of its body, the counters at least seven tenths of a stem."""
+    return max((0.95 * p.cap - p.sv) / 3, 1.7 * p.sv, p.sv + p.m)
 
 
-@tech(u(0x2318), '⌘', lambda p: 3 * _cmd_s(p) + p.sv)
+@tech(u(0x2318), '⌘', lambda p: 3 * _cmd_s(_light(p)) + _light(p).sv)
 def placeofinterest(g):
     """The command key: a square with a loop at each corner, the loops'
     outer corners turned as bowls."""
@@ -347,7 +347,14 @@ def keyboard(g):
     g.stroke((inner0 + step, yb, s), (inner1 - step, yb))
 
 
-@tech(u(0x232C), '⌬', lambda p: 0.75 * p.cap + p.sv)
+def _benzene_w(p):
+    """⌬'s body: three quarters of the cap height, or room for its ring
+    (its counter nine tenths of a stem) with half a stem of white about it."""
+    q = _light(p)
+    return max(0.75 * q.cap, 2 * 2.35 * q.sv) + q.sv
+
+
+@tech(u(0x232C), '⌬', _benzene_w)
 def benzene(g):
     """A hexagon whose slopes run at 2:1, a ring inside it."""
     lighten(g)
@@ -359,8 +366,9 @@ def benzene(g):
     hh = w                                                  # a 2:1 slope from the point to the top's end
     g.stroke((c - w, a), (c - w / 2, a + hh), (c + w / 2, a + hh), (c + w, a), (c + w / 2, a - hh),
              (c - w / 2, a - hh), closed=True)
-    r = 0.45 * w
-    _ring(g, c - r, a - r, c + r, a + r, leg=0.586 * r)
+    gap = max(0.5 * p.sv, 0.75 * p.m)
+    r = min(max(0.45 * w, 0.9 * p.sv), w - g.sh / 2 - gap - p.sv / 2)
+    _ring(g, c - r, a - r, c + r, a + r, leg=0.45 * r)
 
 
 @tech(u(0x238B), '⎋', lambda p: 0.85 * p.cap + p.sv)
@@ -463,8 +471,8 @@ def _brace_piece(g, part, mirror):
     asc, desc = line_top(p)
     top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
     xs = W - p.sv / 2 - p.sv                                # the brace's spine
-    xp = p.sv / 2
-    reach_ = xs - xp
+    reach_ = max(xs - p.sv / 2, p.sd + 0.5 * p.sv)          # never too short for its stroke
+    xp = xs - reach_
     mid = (asc + desc) / 2
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
     if part == 'upper':
@@ -544,7 +552,7 @@ def ubar(g, x, yc, h, w):
 
 def media(name, char, width):
     def deco(fn):
-        tech(name, char, width)(lambda g: fn(g, M(g, width)))
+        tech(name, char, width, solid=True)(lambda g: fn(g, M(g, width)))
         return fn
     return deco
 
@@ -710,7 +718,7 @@ def _crown(p):
     return 0.5 * p.sv + 0.75 * p.m
 
 
-@tech(u(0x231A), '⌚', lambda p: 2 * face_r(_light(p), 0.3) + _light(p).sv + _crown(_light(p)))
+@tech(u(0x231A), '⌚', lambda p: 2 * face_r(_light(p), 0.3) + _light(p).sv + _crown(_light(p)), solid=True)
 def watch(g):
     """The watch: a chamfered case, a little taller than wide, on its
     straps, a crown at the right, hands at twelve and three."""
@@ -745,7 +753,7 @@ def alarmclock(g):
     face(g, c, a, r)
     hands(g, c, a, r)
     leg = 0.586 * r
-    gap = max(0.5 * p.sv, 0.75 * p.m)
+    gap = max(0.75 * p.sv, 1.0 * p.m)
     # bells: short 45-degree bars along the upper chamfers, a gap outside them
     for s in (-1, 1):
         mx, my = c + s * (r - leg / 2), a + (r - leg / 2)
@@ -784,7 +792,7 @@ def stopwatch(g):
     hands(g, c, a, r, minute=(0, 1), hour=None, long_=0.8)
 
 
-@tech(u(0x23F2), '⏲', clock_w(0.36))
+@tech(u(0x23F2), '⏲', clock_w(0.36), solid=True)
 def timerclock(g):
     """An octagon's face with a mark above it and a hand turned back to
     half past ten."""
@@ -862,7 +870,7 @@ def hourglass(g):
     _hourglass(g, False)
 
 
-@tech(u(0x23F3), '⏳', _hg_w)
+@tech(u(0x23F3), '⏳', _hg_w, solid=True)
 def hourglasssand(g):
     _hourglass(g, True)
 

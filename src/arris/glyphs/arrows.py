@@ -265,7 +265,7 @@ def open_reach(ctx, h):
     inradius is 0.414 of its reach; its strokes take half their weight
     from it)."""
     t = max(ctx.t(-1, 1), ctx.t(0, 1))
-    return max(h, (0.3 * ctx.p.sv + t / 2) / (SQRT2 - 1))
+    return max(h, (0.45 * ctx.p.sv + t / 2) / (SQRT2 - 1))
 
 
 # --- Shafts ---------------------------------------------------------------------
