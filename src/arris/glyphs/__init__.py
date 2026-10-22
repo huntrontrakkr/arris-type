@@ -6,3 +6,5 @@ from . import marks
 CHARS = [chr(c) for c in range(0xC0, 0x180)] + ['Ș', 'ș', 'Ț', 'ț']
 BASES = {spec.unicode and chr(spec.unicode): name for name, spec in marks.REGISTRY.items() if spec.unicode}
 ACCENTED = marks.compose(CHARS, BASES)
+
+from . import features  # noqa: E402,F401  (variants of everything above)

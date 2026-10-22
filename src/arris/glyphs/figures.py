@@ -106,15 +106,21 @@ def two(g):
              (yj + a_lo, yj), (yb + a_lo, yb), end='h')
 
 
-@glyph('three', '3', 'fig_w')
+def _three_gap(g):
+    return g.part('beak').distance(g.part('bar'))
+
+
+@glyph('three', '3', 'fig_w', openings=[Opening(_three_gap, 'bar_x', lambda p: p.fig_w / 2)])
 def three(g):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
     ym = 6 * v
     bot = yb - g.ob
+    xm = g.free('bar_x', 3 * u)                             # heavy small sizes pull the bar's end in
     # The upper bowl's lower corner is a module rounder than the lower bowl's
     # upper one; their outer chamfers meet in a sharp point at the waist.
-    g.stroke((u, yt), B(xr, yt), B(xr, ym, p.leg + u), (3 * u, ym))
-    g.stroke((3 * u, ym), B(xr, ym), B(xr, bot), B(xl, bot), (xl, beak_bottom(g)))
+    g.stroke((u, yt), B(xr, yt), B(xr, ym, p.leg + u), (xm, ym), part='bar')
+    g.stroke((xm, ym), B(xr, ym), B(xr, bot), (W / 2, bot), part='bar')
+    g.stroke((W / 2, bot), B(xl, bot), (xl, beak_bottom(g)), part='beak')
 
 
 def _four_gap(g):

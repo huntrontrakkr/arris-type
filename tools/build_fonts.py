@@ -6,6 +6,7 @@ from pathlib import Path
 
 from arris.draw import REGISTRY
 from arris.font import build
+from arris.glyphs.features import fea
 from arris.instances import NAMES, STEMS, params
 
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -15,5 +16,5 @@ Path('build').mkdir(exist_ok=True)
 for w in weights:
     p = params(w)
     path = f'build/Arris-{NAMES[w]}.ttf'
-    build(path, names, p, style=NAMES[w], weight=w)
+    build(path, names, p, style=NAMES[w], weight=w, fea=fea())
     print(path, len(names) + 2, 'glyphs')

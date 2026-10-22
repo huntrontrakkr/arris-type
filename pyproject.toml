@@ -12,6 +12,7 @@ dependencies = [
     "pillow>=13.0.0",
     "shapely>=2.2.0",
     "skia-pathops>=0.9.2",
+    "uharfbuzz>=0.56.3",
 ]
 
 [build-system]

@@ -130,7 +130,7 @@ def _contours(rings):
 
 
 def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, tune=None,
-          metrics: Metrics | None = None, version='0.1', space=None):
+          metrics: Metrics | None = None, version='0.1', space=None, fea: str | None = None):
     m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh))
     order = ['.notdef', 'space'] + list(names)
     fb = FontBuilder(UPM, isTTF=True)
@@ -172,5 +172,8 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
                 fsSelection=0x80 | {'Regular': 0x40, 'Bold': 0x20}.get(style, 0),
                 achVendID='NONE', version=4)
     fb.setupPost()
+    if fea:
+        from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
+        addOpenTypeFeaturesFromString(fb.font, fea)
     fb.font.save(path)
     return fb.font

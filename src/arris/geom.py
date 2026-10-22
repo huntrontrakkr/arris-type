@@ -101,10 +101,14 @@ def _expand(stroke: Stroke):
         if nd.bowl > 0 and interior:
             prev = nodes[(i - 1) % n]
             nxt = nodes[(i + 1) % n]
-            din = _unit(_sub(p, (prev.x, prev.y)))
-            dout = _unit(_sub((nxt.x, nxt.y), p))
-            a = _sub(p, _mul(din, nd.bowl))
-            b = _add(p, _mul(dout, nd.bowl))
+            vin, vout = _sub(p, (prev.x, prev.y)), _sub((nxt.x, nxt.y), p)
+            din, dout = _unit(vin), _unit(vout)
+            # A chamfer can be no longer than the straights it cuts into
+            # (half of one shared with another bowl).
+            share = lambda j: 0.5 if (nodes[j % n].bowl > 0 and (stroke.closed or 0 < j % n < n - 1)) else 0.95
+            leg = min(nd.bowl, _len(vin) * share(i - 1), _len(vout) * share(i + 1))
+            a = _sub(p, _mul(din, leg))
+            b = _add(p, _mul(dout, leg))
             bowls.append(len(pts))
             pts.extend([a, b])
             widths.extend([None, nd.w])
