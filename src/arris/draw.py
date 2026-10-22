@@ -14,6 +14,11 @@ from .params import Params
 
 REGISTRY: dict[str, 'Spec'] = {}
 
+# OpenType code that glyph modules contribute: language systems ('cyrl BGR')
+# and feature blocks (a locl). ``glyphs.features.fea`` gathers them.
+LANGSYS: list[str] = []
+FEATURE_CODE: list[str] = []
+
 
 @dataclass
 class Opening:

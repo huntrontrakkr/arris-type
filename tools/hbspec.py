@@ -1,6 +1,7 @@
 """Shape with HarfBuzz (features on) and render with FreeType.
 
 usage: hbspec.py out.png px 'font.ttf::text[::@feat,feat,wght=700]' ...
+(a feature 'lang=bg' shapes the text as that language: locl)
 """
 import sys
 
@@ -13,6 +14,8 @@ from PIL import Image
 def line(path, text, px, feats, pad=8):
     blob = hb.Blob.from_file_path(path)
     font = hb.Font(hb.Face(blob))
+    lang = next((f.split('=')[1] for f in feats if f.startswith('lang=')), None)
+    feats = [f for f in feats if not f.startswith('lang=')]
     axes = {f.split('=')[0]: float(f.split('=')[1]) for f in feats if '=' in f}
     feats = [f for f in feats if '=' not in f]
     if axes:
@@ -20,6 +23,8 @@ def line(path, text, px, feats, pad=8):
     buf = hb.Buffer()
     buf.add_str(text)
     buf.guess_segment_properties()
+    if lang:
+        buf.language = lang
     hb.shape(font, buf, {f: True for f in feats if f} | {f[1:]: False for f in feats if f.startswith('-')})
     upem = font.face.upem
     face = freetype.Face(path)
@@ -39,7 +44,8 @@ def line(path, text, px, feats, pad=8):
     tops = [t for _, t, a in raw if a is not None] + [int(face.size.ascender / 64)]
     bots = [a.shape[0] - t for _, t, a in raw if a is not None] + [int(-face.size.descender / 64)]
     asc, desc = int(max(tops)) + pad, int(max(bots)) + pad
-    img = np.zeros((asc + desc, int(pen) + 2 * pad), dtype=np.float32)
+    right = max([pen] + [x + a.shape[1] for x, _, a in raw if a is not None])    # ink may overhang the last advance
+    img = np.zeros((asc + desc, int(right) + 2 * pad + 1), dtype=np.float32)
     for x, t, arr in raw:
         if arr is None:
             continue
