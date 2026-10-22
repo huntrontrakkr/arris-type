@@ -167,7 +167,7 @@ def ogonek(g, x, y, case):
     cut = base.intersection(LineString([(-1e4, 0.3 * g.sh), (1e4, 0.3 * g.sh)]))
     xs = [c[0] for gg in getattr(cut, 'geoms', [cut]) for c in getattr(gg, 'coords', [])]
     x = (max(xs) - 0.75 * p.sv) if xs else x
-    g.stroke((x, g.sh), B(x, yb, p.m / 2), (x + 1.5 * p.m + p.sv / 2, yb))
+    g.stroke((x, g.sh / 2), B(x, yb, p.m / 2), (x + 1.5 * p.m + p.sv / 2, yb))
 
 
 ABOVE = {'̀': grave, '́': acute, '̂': circumflex, '̃': tilde, '̄': macron,

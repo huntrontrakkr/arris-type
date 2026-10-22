@@ -251,6 +251,8 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
         if repair:
             fixed = shapely.make_valid(poly)
             parts = [g for g in getattr(fixed, 'geoms', [fixed]) if isinstance(g, Polygon)]
+            if not parts:
+                raise ValueError(f'stroke cannot be drawn: {explain_validity(poly)}')
             poly = max(parts, key=lambda g: g.area)
         else:
             raise ValueError(f'stroke outline is not simple: {explain_validity(poly)}')

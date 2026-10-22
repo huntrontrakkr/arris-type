@@ -356,9 +356,33 @@ against it (each 45-degree diagonal by about 9%), so stroke weights are set
 before the shear: every stroke comes out as heavy across as its upright
 self, times cos 10 degrees, as a stem does.
 
-**Italic forms.** The single-storey a (the d's bowl on a stem that stops at
-the x-height) and an f that runs on below the baseline and turns back.
-Accented letters and the ordinals take them too.
+**A hand, not a slant.** The italic lowercase is cursive, built from moves
+the upright already makes (`arris.glyphs.italic_forms`):
+
+* *Entries*: the 1's flag leads into the tops of i j m n p r u y, and into
+  the ascenders of b h k l, its upper edge continuing the stem's cut corner
+  so the stem keeps its flat top on the x-height.
+* *Exits*: the t's foot ends the stems of a d h i m n u on the baseline;
+  curved by the italic, it is a hand's exit stroke, and a's tail meets i's
+  flag as a pen would join them.
+* *Branching*: arches leave their stems three modules below the arch, a
+  module lower than the upright's notched shoulders.
+* *Cursive forms*: the single-storey a; the f that runs on below the
+  baseline and turns back; the looped k, whose arm closes into a bowl on
+  the stem; the y that is a u running on into the g's descender; the s
+  whose spine is a 45-degree diagonal with the 2's notch; the e whose bar is
+  a 45-degree diagonal rising into the top right corner, the eye the
+  triangle above it, leaving on an upstroke. The e's bar thins and the k's
+  loop deepens at heavy weights, so their counters keep half a stem.
+* *Cyrillic*: и is written as a u, п as an n, т as an m, д as a g; ш, щ
+  and ц are u's with three stems or a descender (а е р у come through the
+  Latin forms).
+
+Measured with `tools/letter_confusion.py`, the diagonal s is further from
+its neighbours than a slanted upright s (closest pair 0.51 against 0.41 at
+11 arcminutes), and the cursive e is as far from c as the upright e is
+from o. Accented letters and the ordinals take the italic forms; the
+monospaced italic keeps the upright's, its cells having no room for tails.
 
 **Variable.** The italic's variable font aligns the upright masters, then
 curves them: a segment that is a chamfer in any master carries a control

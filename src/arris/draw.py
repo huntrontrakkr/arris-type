@@ -266,6 +266,8 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
         if op.max_ratio is not None:
             ratio = min(ratio, op.max_ratio)
         target = ratio * p.sv
+        if op.free not in g.defaults:                       # this drawing does not use it (a cell's upright form)
+            continue
         if op.measure(g) >= target - 1e-6:
             continue
         a, b = g.defaults[op.free], op.limit(p)

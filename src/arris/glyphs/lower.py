@@ -84,32 +84,6 @@ def f_(g):
     g.stroke(f.P(0, 8), f.P(6, 8))
 
 
-# --- Italic forms (arris.italic) ---------------------------------------------
-
-@glyph('a.ital', None, letter_width(8, 2), kind='lower')
-def a_ital(g):
-    """The italic's single-storey a: the d's bowl on a stem that stops at
-    the x-height."""
-    f = Frame(g, 8, 'lower')
-    g.stroke(f.P(7, 0), f.P(7, 9))
-    g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-
-
-@glyph('f.ital', None, letter_width(7, 1), kind='lower')
-def f_ital(g):
-    """The italic's f: the stem runs on below the baseline and turns back,
-    the top's hook turned over."""
-    if g.p.mono:
-        f = Frame(g, 9, 'asc')
-        g.stroke(f.P(8, 12), B(*f.P(4.5, 12)), B(*f.P(4.5, -2)), f.P(1, -2))
-        g.stroke(f.P(1, 8), f.P(8, 8))
-        return
-    f = Frame(g, 7, 'asc')
-    g.clip = (-f.W, -g.p.desc, 2 * f.W, g.p.asc)
-    g.stroke(f.P(7, 12), B(*f.P(3.5, 12)), B(*f.P(3.5, -2)), f.P(0, -2))
-    g.stroke(f.P(0.5, 8), f.P(6.5, 8))
-
-
 @low('g', 8, 2)
 def g_(g):
     f = Frame(g, 8, 'lower')
@@ -117,9 +91,10 @@ def g_(g):
     g.stroke(f.P(7, 9), B(*f.P(7, -2)), f.P(1, -2))
 
 
-def shoulder(g, f, xs, x_right, top=8):
-    """An arch's shoulder, as the r's: it leaves the stem at 45 degrees two
-    modules below the arch, an edge break into the stem, and leaves a notch
+def shoulder(g, f, xs, x_right, top=8, drop=2):
+    """An arch's shoulder, as the r's: it leaves the stem at 45 degrees
+    ``drop`` modules below the arch (two; the italic's branch lower), an
+    edge break into the stem, and leaves a notch
     under it (the 1's flag, turned). Returns the arch's points up to its
     right corner, and how the stroke's start is cut.
 
@@ -130,7 +105,7 @@ def shoulder(g, f, xs, x_right, top=8):
     p = g.p
     k = p.sd / 2 ** 0.5
     y_top = f.Y(top)
-    full = f.Y(top) - f.Y(top - 2)
+    full = f.Y(top) - f.Y(top - drop)
     x_full = xs + p.sv / 2 + k - p.c
     room = x_right - p.leg - p.c - x_full                  # the diagonal ends clear of the corner
     rise = min(full, max(room, 0.0))

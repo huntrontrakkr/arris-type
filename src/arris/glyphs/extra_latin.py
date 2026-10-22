@@ -17,10 +17,17 @@ from .lower import shoulder
 from .letterframe import Frame, k_arms, letter_width
 
 
-def stamp(g, name, dx=0.0, dy=0.0, width=None):
+def stamp(g, name, dx=0.0, dy=0.0, width=None, clear=False):
+    """Draw ``name`` into g at (dx, dy). Returns how far right it reaches:
+    its body, or its ink where that runs past (an italic's exit tail).
+    ``clear``: shift it right by any ink left of its body (an italic's
+    entry flag), so it keeps clear of what is already there."""
     sub = draw(name, g.p, width=width)
+    xs = [x for r in sub.rings() for x, _ in r] or [0.0, sub.W]
+    if clear:
+        dx -= min(0.0, min(xs))
     g.add_glyph(sub, dx, dy)
-    return sub.W
+    return max(sub.W, max(xs))
 
 
 def width_of(name, extra=0.0, scale=1.0):
@@ -172,14 +179,14 @@ def ij(g):
     from .lower import _dot
     _dot(g, None, p.sv / 2)
     gap = (0.5 if p.mono else 1.0) * p.m
-    stamp(g, 'j', w + gap, width=g.W - w - gap)
+    stamp(g, 'j', w + gap, width=(g.W - w - gap) if p.mono else None, clear=True)
 
 
 @glyph('napostrophe', 'ŉ', plus_width('quoteright', 'n', gap=0.5), kind='lower')
 def napostrophe(g):
     p = g.p
     w = stamp(g, 'quoteright')
-    stamp(g, 'n', w + 0.5 * p.m, width=g.W - w - 0.5 * p.m)
+    stamp(g, 'n', w + 0.5 * p.m, width=(g.W - w - 0.5 * p.m) if p.mono else None, clear=True)
 
 
 # --- Redrawn -----------------------------------------------------------------

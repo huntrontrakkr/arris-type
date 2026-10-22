@@ -100,7 +100,11 @@ def engine_distances(p, arcmin, pairs, names=None):
 
     def glyph(ch):
         if ch not in cache:
-            cache[ch] = place(cmap[ch], p)
+            r, adv = place(cmap[ch], p)
+            if p.slant:                                     # italic contours carry curves
+                from arris.italic import polylines
+                r = polylines(r)
+            cache[ch] = (r, adv)
         return cache[ch]
 
     view = View(cap_arcmin=arcmin, cap_units=p.cap, px_per_cap=PX)
