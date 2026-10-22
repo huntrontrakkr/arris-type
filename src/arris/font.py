@@ -13,6 +13,9 @@ from .params import Params
 
 UPM = 1000
 
+# Provisional sidebearings by side shape (font units); optical spacing replaces these.
+SIDES = {'stem': 60, 'round': 48, 'diag': 15, 'open': 24, 'arm': 15}
+
 
 @dataclass
 class Metrics:
@@ -48,6 +51,9 @@ def spacing(name: str, p: Params):
     if spec.kind == 'fig':
         adv = p.fig_adv
         return (adv - w) / 2, adv
+    if isinstance(spec.kind, tuple) and spec.kind[0] == 'cap':
+        l, r = SIDES[spec.kind[1]], SIDES[spec.kind[2]]
+        return l, l + w + r
     raise ValueError(f'no spacing rule for kind {spec.kind!r}')
 
 

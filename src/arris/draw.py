@@ -45,6 +45,7 @@ class Glyph:
     extra: list = field(default_factory=list)   # pre-made polygons
     ot: float = 0.0   # overshoot above the top line (solved per glyph)
     ob: float = 0.0   # overshoot below the baseline
+    W: float = 0.0    # body width
     clip: tuple[float, float, float, float] | None = None   # keep ink inside (x0, y0, x1, y1)
 
     def stroke(self, *pts, closed=False, start='flat', end='flat'):
@@ -68,6 +69,7 @@ class Glyph:
 
 
 def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0) -> Glyph:
-    g = Glyph(p, name, ot=ot, ob=ob)
-    REGISTRY[name].fn(g)
+    spec = REGISTRY[name]
+    g = Glyph(p, name, ot=ot, ob=ob, W=spec.width(p))
+    spec.fn(g)
     return g
