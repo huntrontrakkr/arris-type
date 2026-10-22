@@ -20,8 +20,9 @@ every sequence (``docs/DESIGN.md``, section 8):
 * **Tags**: the 2:1 slash with 2:1 chevrons the other way, whose arms
   meet it square (`</>`); the pipe closed by a chevron into a triangle
   (`|>`).
-* **`#` and brackets**: the bracket centred on `#`, the bars of `#`
-  running on into it; the brace's elbows are where the bars meet it.
+* **`#` and brackets**: the bracket exactly as itself (it must match its
+  closing partner) and `#` moved up to it, its bars running on at full
+  weight until they meet the bracket.
 * **Pairs** of narrow signs (`||` `::` `!!` `..`): moved toward each other
   until half a cell of white is left between them. Wide signs (`&&`,
   `??`) are already closer than that and are left as they are.
@@ -40,7 +41,6 @@ DOUBLE = 0.6         # a double head's second chevron: this share of the head be
 PAIR_WHITE = 0.5     # white left between a pair's signs, of a cell
 TAG_CHEVRON = 0.6    # a tag chevron's height, of its slash's
 TRIANGLE = 0.55      # a pipe triangle's half-height, of the cap height
-BRACE_RUN = 0.5      # the `#{` brace's point: run over rise of its diagonals (the slash's 2:1)
 
 
 def _names(seq: str) -> tuple[str, ...]:
@@ -533,53 +533,54 @@ def comment(g):
 
 # --- `#` run into a bracket ------------------------------------------------------
 
-def _hash(g):
-    """`#` as drawn, its bars' (centre y, thickness), low to high, its
-    right stem's right edge, and the white between its stems, all in its
-    own frame."""
-    hs = _sub('numbersign', g.p)
+def _hash(p):
+    """`#` as drawn, its bars as (centre y, thickness) low to high, its
+    stems as (left, right), and its ink, all in its own frame. Each bar is
+    measured between the right stem and the bar's end, clear of the
+    chamfers that cut its end, so it runs on at its full weight."""
+    hs = _sub('numbersign', p)
     ink = _ink_of(hs)
-    bars = [((lo + hi) / 2, hi - lo) for lo, hi in _runs(ink, x=ink.bounds[2] - 1)]
-    stems = _runs(ink, y=ink.bounds[1] + 1)
-    return hs, bars, stems[-1][1], stems[1][0] - stems[0][1]
+    stems = _runs(ink, y=(ink.bounds[1] + ink.bounds[3]) / 2)
+    x = (stems[-1][1] + ink.bounds[2]) / 2
+    bars = [((lo + hi) / 2, hi - lo) for lo, hi in _runs(ink, x=x)]
+    return hs, bars, stems, ink
 
 
 def _hash_join(g, bracket):
-    """`#{` `#[` `#(`: the bracket centred on `#` (between its bars), the
-    bars of `#` running on to the bracket's spine. The spine stands as far
-    from `#`'s right stem as `#`'s stems stand apart, so the bars close one
-    more square. The brace's elbows are where the bars meet it, its point
-    centred between them on diagonals at the slash's 2:1 (at 45 degrees,
-    bar and diagonal would make a K); the point keeps clear of the stem."""
-    p, W = g.p, g.W
-    hs, bars, right_stem, stems_white = _hash(g)
-    (y_lo, _), (y_hi, _) = bars[0], bars[-1]
-    mid = (y_lo + y_hi) / 2
+    """`#{` `#[` `#(`: the bracket exactly as itself, where it stands in its
+    cell (so it matches the closing one), and `#` moved up to it: its bars
+    run on at their full weight until they meet the bracket. The bracket's
+    spine stands as far from `#`'s right stem as `#`'s stems stand apart,
+    so the bars close one more square; the brace's point keeps that much
+    white from the stem instead. `#` is centred on the brace's point, so
+    its bars meet the brace alike above and below: on the point's arms where
+    the point is taller than the bars stand apart (Thin, Regular), on the
+    spine where it is not (Black)."""
+    p = g.p
+    hs, bars, stems, ink = _hash(p)
+    white = stems[1][0] - stems[0][1]                          # between `#`'s stems
+    right = stems[-1][1]
+    br = _sub(bracket, p)
+    xb = _at(g, br, 1)
+    ib = _ink_of(br, xb)
+    dy = 0.0
     if bracket == 'braceleft':
-        reach = (y_hi - y_lo) / 2                                # the point's diagonals run bar to bar
-        clear = max(stems_white, BRACE_RUN * reach + p.sd / SQRT2 + 0.5 * p.sv)
-        spine = right_stem + clear + p.sv / 2
-        hook = 1.5 * p.sv                                        # (punct._brace)
         top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
-        half = (top - bot) / 2
-        dx = (W - (spine + hook)) / 2
-        g.add_glyph(hs, dx, 0.0)
-        s = spine + dx
-        g.stroke((s + hook, mid + half - g.sh / 2), B(s, mid + half - g.sh / 2), (s, y_hi),
-                 (s - BRACE_RUN * reach, mid), (s, y_lo), B(s, mid - half + g.sh / 2), (s + hook, mid - half + g.sh / 2))
-        g.clip = (-W, mid - half, 2 * W, mid + half)
+        mid = (top + bot) / 2                                   # (punct._brace)
+        xs = xb + br.W - p.sv / 2 - p.sv                        # its spine
+        xp = xb + p.sv / 2                                      # its point
+        reach = xs - xp
+        dy = mid - (bars[0][0] + bars[-1][0]) / 2
+        dx = (xp - p.sd / SQRT2) - white - right                # the point keeps the stems' white
+        ends = [xp + min(abs(y + dy - mid), reach) for y, _ in bars]
     else:
-        br = _sub(bracket, p)
-        ib = _ink_of(br)
-        cy = (ib.bounds[1] + ib.bounds[3]) / 2
-        spine_in = _runs(ib, y=cy)[0][0] + p.sv / 2              # the bracket's spine, in its own frame
-        spine = right_stem + stems_white + p.sv / 2
-        dx = (W - (spine - spine_in + br.W)) / 2
-        g.add_glyph(hs, dx, 0.0)
-        g.add_glyph(br, dx + spine - spine_in, mid - cy)
-        s = spine + dx
-    for y, th in bars:
-        g.stroke((dx + hs.W - th, y, th), (s, y))
+        spine = _runs(ib, y=(bars[0][0] + bars[-1][0]) / 2)[0][0] + p.sv / 2
+        dx = spine - p.sv / 2 - white - right
+        ends = [spine for _ in bars]
+    g.add_glyph(hs, dx, dy)
+    g.add_glyph(br, xb, 0.0)
+    for (y, th), end in zip(bars, ends):
+        g.stroke((dx + right - p.sv / 2, y + dy, th), (end, y + dy))
 
 
 liga('#{')(lambda g: _hash_join(g, 'braceleft'))
@@ -589,19 +590,20 @@ liga('#(')(lambda g: _hash_join(g, 'parenleft'))
 
 @liga('#_')
 def hash_underscore(g):
-    """`#_`: the left stem of `#` runs down into the underscore, which
-    starts under it; the corner they make takes the corner rule."""
+    """`#_`: the left stem of `#` runs down at its full weight into the
+    underscore, which starts under it; the corner they make takes the
+    corner rule."""
     p = g.p
-    hs, us = _sub('numbersign', p), _sub('underscore', p)
+    hs, bars, stems, ink = _hash(p)
+    us = _sub('underscore', p)
     xh, xu = _at(g, hs, 0), _at(g, us, 1)
     g.add_glyph(hs, xh, 0.0)
     g.add_glyph(us, xu, 0.0)
-    ih, iu = _ink_of(hs, xh), _ink_of(us, xu)
-    low = ih.bounds[1]
-    x0, x1 = _runs(ih, y=low + 1)[0]                            # the left stem's foot
-    xc = (x0 + x1) / 2
-    yu = (iu.bounds[1] + iu.bounds[3]) / 2
-    g.stroke((xc, low + (x1 - x0)), (xc, yu), (iu.bounds[0] + p.sv, yu))
+    iu = _ink_of(us, xu)
+    x0, x1 = stems[0]
+    xc, w = xh + (x0 + x1) / 2, x1 - x0
+    yu, t = (iu.bounds[1] + iu.bounds[3]) / 2, iu.bounds[3] - iu.bounds[1]
+    g.stroke((xc, bars[0][0], w), (xc, yu, t), (iu.bounds[0] + p.sv, yu))
 
 
 # --- Alternates: plain comparisons (ss03) and character variants -----------
