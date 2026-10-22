@@ -18,10 +18,10 @@ apart"):
 
 * a barb reaches past the outermost shaft it guards far enough to leave at
   least half a stem of white between its end and that shaft
-  (``reach``); the module design (3.2 modules and half a stem) holds where
-  that is longer;
-* barb ends are cut square to the arrow, as < and > are, and the corner
-  rule trims their acute corners;
+  (``reach``); the design (``HEAD`` of the cap height) holds where that
+  is longer;
+* a head is one chevron whose point the corner rule keeps sharp, its barbs
+  cut square to themselves, as the Mono ligatures' heads are;
 * the shaft keeps two and a half stems of length beyond a head (a stem and
   a half between two heads), and the arrow lengthens to keep it;
 * parts that stack (double and triple shafts, paired arrows) are a tight
@@ -44,10 +44,11 @@ from .figures import heaviness
 from .letterframe import STEEP, letter_width
 from .punct import axis
 
+HEAD = 0.35          # a barb's reach, of the cap height: the Mono ligatures' head, scaled to one cell as Fira Code's
 WHITE = 0.5          # white under a barb's end, in stems
 SHAFT_FREE = 2.5     # shaft beyond a single head, in stems
 SHAFT_BETWEEN = 1.5  # shaft between two heads, in stems
-MONO_FREE = 0.4      # in the monospaced cell, free shafts shorten to this share
+MONO_FREE = 0.4      # in the monospaced cell, free shafts beyond one head shorten to this share
 MONO_MIN = 0.6       # ... strokes may lighten to this share of the weight's
 MONO_WHITE = 0.3     # ... and, last, the white under a barb narrow to this many stems
 DASHES = 3           # a dashed shaft's dashes (the head's included), at every weight
@@ -108,9 +109,12 @@ class Ctx:
         self.white = white
         self.free_k = MONO_FREE if p.mono else 1.0
 
-    def free(self, stems):
-        """A free run of shaft, in units."""
-        return stems * self.free_k * self.p.sv
+    def free(self, stems, between=False):
+        """A free run of shaft, in units. In the monospaced cell a shaft
+        beyond a single head shortens; one between two heads keeps its
+        length, the heads shrinking instead (shorter, they would meet and
+        the arrow read as a lozenge)."""
+        return stems * (1.0 if between else self.free_k) * self.p.sv
 
     def t(self, du, dv):
         """Thickness of a stroke running along local (du, dv)."""
@@ -196,14 +200,14 @@ def shaft_offsets(ctx, n: int):
 
 def reach(ctx, off=0.0, design=True) -> float:
     """How far a barb reaches back (and out) from the tip, along u: the
-    module design (3.2 modules and half a stem, along the barb), or as much
-    as leaves half a stem of white between the barb's end and the outermost
-    shaft (at ``off``), whichever is more."""
+    design (HEAD of the cap height), or as much as leaves half a stem of
+    white between the barb's end and the outermost shaft (at ``off``),
+    whichever is more."""
     p = ctx.p
     need = ctx.kb() + off + ctx.ts / 2 + ctx.white * p.sv
     if not design:
         return need
-    return max((3.2 * p.m + 0.5 * p.sv) / SQRT2, need)
+    return max(HEAD * p.cap, need)
 
 
 # --- Heads (tip vertex at u = 0, pointing +u) -------------------------------------
@@ -219,9 +223,9 @@ def chevron(h, u0=0.0, v0=0.0, sides=(1, -1)):
     """A chevron pointing +u with its vertex at (u0, v0), barbs reaching h
     back and out."""
     if len(sides) == 2:
-        return Part([(u0 - h, v0 + h), (u0, v0), (u0 - h, v0 - h)], 'across', 'across')
+        return Part([(u0 - h, v0 + h), (u0, v0), (u0 - h, v0 - h)])
     s = sides[0]
-    return Part([(u0, v0), (u0 - h, v0 + s * h)], 'flat', 'across')
+    return Part([(u0, v0), (u0 - h, v0 + s * h)])
 
 
 def head(ctx, kind, h, offs):
@@ -247,7 +251,7 @@ def head(ctx, kind, h, offs):
         # the shaft runs on into its one barb, a single stroke turning back
         # through 135 degrees: the outer corner is the tip
         lead = h
-        pc.parts.append(Part([(-lead, 0.0), (0.0, 0.0), (-h, s * h)], 'flat', 'across'))
+        pc.parts.append(Part([(-lead, 0.0), (0.0, 0.0), (-h, s * h)]))
         pc.depth = h
         pc.ends = {v: -lead / 2 for v in offs}
     elif kind == 'open':
@@ -450,8 +454,22 @@ class Drawing:
         raise NotImplementedError
 
     def reach_bounds(self, ctx):
+        """The barbs' design reach and the shortest the white rule allows. A
+        head at each end is never longer than a quarter of the arrow, so a
+        shaft shows between the two (longer, `↕` and the monospaced `↔`
+        would read as a lozenge)."""
         off = max(self.offs(ctx))
-        return reach(ctx, off), reach(ctx, off, design=False)
+        h, h_min = reach(ctx, off), reach(ctx, off, design=False)
+        if self.two:
+            p, turn = ctx.p, ctx.turn
+            if turn.vertical:
+                length = self.tall(ctx)
+            elif turn.horizontal:
+                length = min(self.natural(ctx), p.fig_w) if p.mono else self.natural(ctx)
+            else:
+                length = 0.85 * p.cap * SQRT2
+            h = max(h_min, min(h, length / 4))
+        return h, h_min
 
     def tall(self, ctx):
         """A vertical arrow's height: the cap height."""
@@ -609,7 +627,7 @@ def fit_straight(dr, ctx, mono):
         return L0 + (target - e0) / slope
 
     def min_len(h):
-        return dr.depth(ctx, h) + ctx.free(dr.free())
+        return dr.depth(ctx, h) + ctx.free(dr.free(), between=getattr(dr, 'two', False))
 
     def across(h):
         x0, y0, x1, y1 = bounds(ctx, make(min_len(h), h))
@@ -731,7 +749,7 @@ class Pair(Drawing):
         """Barbs a little shorter than a single arrow's, or as short as the
         white rule allows, whichever is longer."""
         h_min = reach(ctx, design=False)
-        return max(h_min, 0.85 * (3.2 * ctx.p.m + 0.5 * ctx.p.sv) / SQRT2), h_min
+        return max(h_min, 0.85 * HEAD * ctx.p.cap), h_min
 
     def depth(self, ctx, h):
         return h if self.mode == 'same' else 2 * h
@@ -750,16 +768,16 @@ class Pair(Drawing):
             for a, b in zip(vs, vs[1:]):
                 pts += [(-(a - b) / 2, (a + b) / 2), (0.0, b)]
             pts.append((-h, vs[-1] - h))
-            parts = [Part(pts, 'across', 'across')]
+            parts = [Part(pts)]
             parts += [Part([(-Ls, v), (-eps, v)]) for v in vs]
             return parts
         va, vb = self.side * d / 2, -self.side * d / 2
         if self.mode == 'harpoon':
             s = self.side
-            return [Part([(-Ls, va), (0.0, va), (-h, va + s * h)], 'flat', 'across'),
-                    Part([(0.0, vb), (-Ls, vb), (-Ls + h, vb - s * h)], 'flat', 'across')]
+            return [Part([(-Ls, va), (0.0, va), (-h, va + s * h)]),
+                    Part([(0.0, vb), (-Ls, vb), (-Ls + h, vb - s * h)])]
         return [chevron(h, 0.0, va), Part([(-Ls, va), (-eps, va)]),
-                Part([(-Ls + h, vb + h), (-Ls, vb), (-Ls + h, vb - h)], 'across', 'across'),
+                Part([(-Ls + h, vb + h), (-Ls, vb), (-Ls + h, vb - h)]),
                 Part([(-Ls + eps, vb), (0.0, vb)])]
 
 
@@ -773,8 +791,7 @@ def chev(ctx, tip, d, h):
     if dx == 0 or dy == 0:
         a = (tip[0] - dx * h - dy * h, tip[1] - dy * h + dx * h)
         b = (tip[0] - dx * h + dy * h, tip[1] - dy * h - dx * h)
-        cap = 'gv' if dy == 0 else 'gh'
-        return Part([a, tip, b], cap, cap)
+        return Part([a, tip, b])
     L = h * SQRT2
     sx, sy = (1 if dx > 0 else -1), (1 if dy > 0 else -1)
     return Part([(tip[0] - sx * L, tip[1]), tip, (tip[0], tip[1] - sy * L)])
@@ -984,7 +1001,7 @@ class White(Drawing):
         p = ctx.p
         t = max(ctx.t(1, 1), ctx.t(0, 1))
         need = (0.4 * p.sv + t / 2) / (SQRT2 - 1)
-        return max(1.3 * reach(ctx), need), need
+        return max(0.85 * HEAD * p.cap, need), need               # (its own size: an outline, not barbs)
 
     def half(self, ctx, hh):
         """The shaft's half width (centreline): half the head's, never so

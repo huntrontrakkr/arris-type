@@ -36,13 +36,18 @@ the same heads and measures.
 The rules every arrow keeps (they extend DESIGN.md "Symbols keep their
 parts apart"):
 
-* **The white under a barb.** A barb reaches past the outermost shaft it
-  guards far enough to leave half a stem of white between its end and that
-  shaft; the module design (3.2 modules and half a stem) holds where that
-  is longer. Barb ends are cut square to the arrow, as < and > are.
+* **The head.** One chevron whose point the corner rule keeps sharp, its
+  barbs cut square to themselves: the Mono ligatures' head (`->`), at 0.35
+  of the cap height where theirs is 0.44 (Fira Code's ratio between its
+  `→` and its `->`). A barb reaches past the outermost shaft it guards far
+  enough to leave half a stem of white between its end and that shaft, if
+  that is longer. A head at each end is at most a quarter of the arrow, so
+  a shaft shows between them (`↕`, the monospaced `↔`).
 * **Free shaft.** Two and a half stems of shaft beyond a head (a stem and a
   half between two heads); the arrow lengthens to keep it, and a negated
-  arrow lengthens again so its stroke stays clear of the barbs.
+  arrow lengthens again so its stroke stays clear of the barbs. In the
+  monospaced cell the shaft beyond a single head shortens; the shaft
+  between two heads does not.
 * **Stacked arrows lighten.** Parts that stack (double and triple shafts,
   patterned shafts, open heads, paired arrows, strokes across a shaft)
   are a tight stack: their strokes ease from the weight's own at SemiBold
