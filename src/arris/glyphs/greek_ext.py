@@ -105,6 +105,20 @@ def pi_symbol(g):
     g.stroke((f.W / 2, f.Y(1)), (f.W / 2, f.Y(5)))
 
 
+def _draws(g, pts):
+    """Whether a stroke through pts draws as a simple outline at these
+    weights (a curl turns back on itself where its flats are too short)."""
+    from ..draw import Glyph
+    from ..geom import REPAIRED
+    trial = Glyph(g.p, W=g.W, sh_k=g.sh_k, sh_auto=g.sh_auto)
+    trial.stroke(*pts)
+    n = len(REPAIRED)
+    trial.rings()
+    ok = len(REPAIRED) == n
+    del REPAIRED[n:]
+    return ok
+
+
 @glow('uni03F0', 'ϰ', 10, 2)
 def kappa_symbol(g):
     """An x whose falling stroke curls at both ends: it leaves a beak at
@@ -118,8 +132,9 @@ def kappa_symbol(g):
     xa = (W - run) / 2
     d = beak_depth(p) - g.sh / 2                            # the beak's stub, below the flat's centre
     x0, x1 = p.sv / 2, W - p.sv / 2
-    if xa - x0 >= p.leg + g.sh:
-        g.stroke((x0, yt - d), B(x0, yt), (xa, yt), (xa + run, yb), B(x1, yb), (x1, yb + d))
+    curl = [(x0, yt - d), B(x0, yt), (xa, yt), (xa + run, yb), B(x1, yb), (x1, yb + d)]
+    if _draws(g, curl):
+        g.stroke(*curl)
     else:                                                   # flats too short to curl (a crowded cell)
         g.stroke((x0, yt), (xa, yt), (xa + run, yb), (x1, yb))
     x0 = W / 2 - p.xh / 4
