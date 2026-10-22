@@ -1,0 +1,46 @@
+"""The engine at heritage parameters reproduces the watch's Chamfer figures."""
+import json
+
+import numpy as np
+from shapely import contains_xy
+
+import arris.glyphs.figures  # noqa: F401
+from arris import heritage
+from arris.draw import draw
+from arris.geom import rings_to_shapely
+from arris.params import HERITAGE
+
+NAMES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
+# Figures whose heritage drawing has no pixel wobble must come out identical;
+# the rest were deliberately straightened (2, 4, 7 spines; the 1's flag).
+EXACT = {'zero', 'five', 'six', 'nine'}
+
+
+def watch_mask(poly, k=3, ss=8):
+    """The watch's own sampler: 8x8 samples per pixel, ink if half are inside."""
+    xs = (np.arange(27 * ss) + 0.5) / ss / k
+    ys = 12 - (np.arange(36 * ss) + 0.5) / ss / k
+    X, Y = np.meshgrid(xs, ys)
+    inside = contains_xy(poly, X, Y).reshape(36, ss, 27, ss).sum(axis=(1, 3))
+    return (inside * 2 >= ss * ss).astype(np.uint8)
+
+
+def test_vector_trace_matches():
+    for i, n in enumerate(NAMES):
+        if n not in EXACT:
+            continue
+        new = rings_to_shapely(draw(n, HERITAGE).rings())
+        old = heritage.trace(heritage.zone(str(i)))
+        assert new.symmetric_difference(old).area < 1e-9, n
+
+
+def test_watch_pixels_match():
+    masters = json.loads((heritage.ROOT / 'heritage' / 'chamfer-clock.json').read_text())
+    for i, n in enumerate(NAMES):
+        mask = watch_mask(rings_to_shapely(draw(n, HERITAGE).rings()))
+        ref = np.array([(masters[i][j >> 3] >> (j & 7)) & 1 for j in range(27 * 36)], np.uint8).reshape(36, 27)
+        diff = int((mask != ref).sum())
+        if n in EXACT:
+            assert diff == 0, (n, diff)
+        else:
+            assert diff < 100, (n, diff)  # straightened, not redrawn
