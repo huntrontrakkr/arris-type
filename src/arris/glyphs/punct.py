@@ -350,3 +350,281 @@ def less(g):
 @punct('greater', '>', 7, 1)
 def greater(g):
     _chevron(g, mirror=True)
+
+
+# --- ASCII symbols ---------------------------------------------------------
+
+@punct('numbersign', '#', 10, 2)
+def numbersign(g):
+    f = Frame(g, 10, 'cap')
+    for x in (f.X(3), f.X(7)):
+        g.stroke((x, f.Y(0.5)), (x, f.Y(11.5)))
+    for y in (f.Y(4), f.Y(8)):
+        g.stroke((0, y), (g.W, y))
+
+
+@punct('dollar', '$', 9, 2)
+def dollar(g):
+    from .caps import S
+    S(g)
+    p = g.p
+    f = Frame(g, 9, 'cap')
+    top, bot = p.cap + 1.5 * p.m, -1.5 * p.m
+    g.stroke((g.W / 2, bot), (g.W / 2, top))
+    g.clip = (0, bot, g.W, top)
+
+
+def _ring(g, x0, y0, x1, y1, w=None, leg=None):
+    """A small closed octagon, centreline box (x0, y0)-(x1, y1)."""
+    p = g.p
+    leg = p.leg * 0.6 if leg is None else leg
+    pts = [B(x0, y0, leg), B(x1, y0, leg), B(x1, y1, leg), B(x0, y1, leg)]
+    if w is not None:
+        pts = [(q[0], q[1], q[2], q[3]) for q in pts]
+    g.stroke(*pts, closed=True)
+
+
+@punct('percent', '%', 11, 3)
+def percent(g):
+    f = Frame(g, 11, 'cap')
+    p, W, H = g.p, g.W, g.p.cap
+    s = p.sv
+    rw = 4.5 * p.m + s                                       # ring outer width
+    rh = 5.0 * p.m + s
+    _ring(g, s / 2, H - rh + g.sh / 2, rw - s / 2, H - g.sh / 2)
+    _ring(g, W - rw + s / 2, g.sh / 2, W - s / 2, rh - g.sh / 2)
+    w = p.ss / STEEP[1]
+    x_at = lambda y: (W - w) / 2 - H / 4 + w / 2 + y / 2
+    g.stroke((x_at(0), 0), (x_at(H), H), start='h', end='h')
+
+
+@punct('ampersand', '&', 10, 2)
+def ampersand(g):
+    f = Frame(g, 10, 'cap')
+    p, W, H, k = g.p, g.W, g.p.cap, p_k(g)
+    # upper loop: a small octagon, its lower corners large (the 8's)
+    big = p.leg + p.m
+    g.stroke(B(*f.P(2, 6.5), big), B(*f.P(6, 6.5), big), B(*f.P(6, 11)), B(*f.P(2, 11)), closed=True)
+    # lower bowl: from the loop's lower left, round the bottom, open at the right
+    g.stroke(f.P(2, 6.5), B(*f.P(1, 5.5), p.m / 2), B(*f.P(1, 1)), (f.X(7), f.Y(1)))
+    # the leg: 45 degrees from the loop down to the baseline at the right
+    a = W + p.c - k                                          # x + y = a
+    y0 = f.Y(7)
+    g.stroke((a - y0, y0), (a, 0), start='h', end='h')
+    # the arm, up from the leg at the right
+    g.stroke(f.P(8, 2), f.P(8, 5.5))
+
+
+def p_k(g):
+    return g.p.sd / SQRT2
+
+
+@punct('at', '@', 12, 3)
+def at(g):
+    f = Frame(g, 12, 'cap')
+    p = g.p
+    # inner a: bowl and stem
+    g.stroke(f.P(8, 3), B(*f.P(4.5, 3)), B(*f.P(4.5, 8)), f.P(8, 8), closed=True)
+    # stem, then out along the bottom and round the outside, open at the foot
+    g.stroke(f.P(8, 8.5), f.P(8, 3), B(*f.P(11, 3), p.m / 2), f.P(11, 7))
+    g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
+
+
+@punct('asterisk', '*', 7, 1)
+def asterisk(g):
+    p, W = g.p, g.W
+    h = W / 2 - p.sv / 4
+    yc = p.cap - h
+    xc = W / 2
+    g.stroke((xc, yc - h), (xc, yc + h))
+    d = h / SQRT2 * 1.1
+    g.stroke((xc - d, yc - d), (xc + d, yc + d))
+    g.stroke((xc - d, yc + d), (xc + d, yc - d))
+    g.clip = (0, yc - h, W, p.cap)
+
+
+@punct('asciicircum', '^', 8, 1)
+def asciicircum(g):
+    p, W = g.p, g.W
+    k = p.sd / SQRT2
+    top = p.cap
+    h = W / 2
+    ya = top + p.c - k
+    g.stroke((0, ya - h), (W / 2, ya), (W, ya - h), start='v', end='v')
+    g.clip = (0, ya - h - p.sv, W, top)
+
+
+@punct('asciitilde', '~', 9, 1)
+def asciitilde(g):
+    """A step on the axis: up at 45 degrees, along, down, along, up."""
+    p, W = g.p, g.W
+    a = axis(p)
+    d = W / 4
+    g.stroke((0, a - d / 2), (d, a + d / 2), (2 * d, a + d / 2), (3 * d, a - d / 2), (W, a + d / 2 - d),
+             start='v', end='v')
+
+
+@punct('grave', '`', 4, 1)
+def grave(g):
+    p, W = g.p, g.W
+    k = p.sd / SQRT2
+    top = p.cap
+    g.stroke((0, top + k), (W, top - W + k), start='h', end='h')
+    g.clip = (0, top - W, W, top)
+
+
+# --- Typographic -------------------------------------------------------------
+
+@punct('degree', '°', 5, 2)
+def degree(g):
+    p, W = g.p, g.W
+    s = p.sv * 0.8
+    top = p.cap
+    _ring(g, s / 2, top - W + g.sh / 2, W - s / 2, top - g.sh / 2)
+
+
+@punct('bullet', '\u2022', 4, width=lambda p: 2.4 * p.sv)
+def bullet(g):
+    """A large dot on the x-height's centre: a square, chamfered."""
+    p, W = g.p, g.W
+    y = p.xh / 2
+    g.stroke((W / 2, y - W / 2, W), (W / 2, y + W / 2))
+
+
+@punct('periodcentered', '·', 2, width=stem_w())
+def periodcentered(g):
+    p = g.p
+    dot(g, p.sv / 2, p.xh / 2 - p.sv / 2)
+
+
+@punct('ellipsis', '…', 8, width=lambda p: 3 * p.sv + 2 * (1.2 * p.sv))
+def ellipsis(g):
+    p = g.p
+    for i in range(3):
+        dot(g, p.sv / 2 + i * 2.2 * p.sv, 0)
+
+
+def _guil(g, n, mirror):
+    p, W = g.p, g.W
+    a = p.xh / 2
+    h = (W - (n - 1) * 1.4 * p.sv) / 2 if n == 2 else W / 2
+    h = min(h, p.xh / 3)
+    k = p.sd / SQRT2
+    for i in range(n):
+        x0 = i * 1.4 * p.sv
+        pts = [(x0 + h + p.sv / 2, a + h), (x0 + p.sv / 2, a), (x0 + h + p.sv / 2, a - h)]
+        if mirror:
+            pts = [(W - x, y) for x, y in pts]
+        g.stroke(*pts, start='v', end='v')
+
+
+@punct('guilsinglleft', '‹', 4, 1)
+def guilsinglleft(g):
+    _guil(g, 1, False)
+
+
+@punct('guilsinglright', '›', 4, 1)
+def guilsinglright(g):
+    _guil(g, 1, True)
+
+
+@punct('guillemotleft', '«', 7, 2)
+def guillemotleft(g):
+    _guil(g, 2, False)
+
+
+@punct('guillemotright', '»', 7, 2)
+def guillemotright(g):
+    _guil(g, 2, True)
+
+
+@punct('exclamdown', '¡', 2, width=stem_w())
+def exclamdown(g):
+    f = Frame(g, 2, 'lower')
+    p = g.p
+    top = p.xh
+    dot(g, f.X(1), top - p.sv)
+    g.stroke((f.X(1), top - p.sv - dot_gap(p)), (f.X(1), top - p.cap))
+    g.clip = (0, top - p.cap, g.W, top)
+
+
+@punct('questiondown', '¿', 9, 2)
+def questiondown(g):
+    from shapely.affinity import rotate
+    question(g)
+    # turned half round about the x-height's centre line
+    p = g.p
+    shift = p.xh - p.cap
+    g.strokes = [type(s)(tuple(type(n)(g.W - n.x, p.cap - n.y + shift, n.bowl, n.w) for n in s.nodes),
+                         s.closed, s.start, s.end) for s in g.strokes]
+    g.clip = (0, shift, g.W, p.xh)
+
+
+@punct('plusminus', '±', 8, 1)
+def plusminus(g):
+    p, W = g.p, g.W
+    a, h = axis(p) + p.m, W / 2 - p.sv / 4
+    g.stroke((0, a), (W, a))
+    g.stroke((W / 2, a - h), (W / 2, a + h))
+    g.stroke((0, a - h - g.sh), (W, a - h - g.sh))
+
+
+@punct('logicalnot', '¬', 8, 1)
+def logicalnot(g):
+    p, W = g.p, g.W
+    a = axis(p)
+    g.stroke((0, a), (W - p.sv / 2, a), (W - p.sv / 2, a - 2.5 * p.m))
+
+
+def _lessequal(g, mirror):
+    p, W = g.p, g.W
+    k = p.sd / SQRT2
+    h = 0.7 * (W - p.sv / 2)
+    gap = max(0.8 * g.sh, 0.6 * p.m)
+    a = axis(p) + (g.sh + gap) / 2                          # the pair centres on the axis
+    T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
+    g.stroke(T(W, a + h), T(W - 2 * h * 0 - h, a), T(W, a - h), start='v', end='v')
+    yb = a - h - k - gap - g.sh / 2
+    g.stroke((0, yb), (W, yb))
+
+
+@punct('lessequal', '\u2264', 7, 1)
+def lessequal(g):
+    _lessequal(g, False)
+
+
+@punct('greaterequal', '\u2265', 7, 1)
+def greaterequal(g):
+    _lessequal(g, True)
+
+
+@punct('notequal', '≠', 8, 1)
+def notequal(g):
+    equal(g)
+    p, W = g.p, g.W
+    a = axis(p)
+    w = p.ss / STEEP[1]
+    g.stroke((W / 2 - 2 * p.m, a - 4 * p.m), (W / 2 + 2 * p.m, a + 4 * p.m), start='h', end='h')
+
+
+@punct('dagger', '†', 6, 1)
+def dagger(g):
+    p, W = g.p, g.W
+    g.stroke((W / 2, -p.desc + p.m), (W / 2, p.cap))
+    g.stroke((0, p.cap - 3.5 * p.m), (W, p.cap - 3.5 * p.m))
+    g.clip = (0, -p.desc, W, p.cap)
+
+
+@punct('minute', '′', 3, 1)
+def minute(g):
+    p, W = g.p, g.W
+    w = p.ss / STEEP[1]
+    g.stroke((w / 2, p.cap - 4 * p.m), (w / 2 + 2 * p.m, p.cap), start='h', end='h')
+
+
+@punct('second', '″', 6, 2)
+def second(g):
+    p, W = g.p, g.W
+    w = p.ss / STEEP[1]
+    for x0 in (w / 2, w / 2 + 2.2 * p.m + w / 2):
+        g.stroke((x0, p.cap - 4 * p.m), (x0 + 2 * p.m, p.cap), start='h', end='h')

@@ -271,3 +271,16 @@ def z(g):
     step = min(J, g.sh)
     y0, y1 = f.Y(8), f.Y(1)
     g.stroke((y0 + a_up, y0), (yj + a_up, yj, step), (yj + a_lo, yj), (y1 + a_lo, y1), start='h', end='h')
+
+
+@glyph('dotlessi', '\u0131', lambda p: p.sv, kind='lower')
+def dotlessi(g):
+    f = Frame(g, 2, 'lower')
+    g.stroke(f.P(1, 0), f.P(1, 9))
+
+
+@glyph('uni0237', '\u0237', letter_width(6, 1), kind='lower')
+def dotlessj(g):
+    f = Frame(g, 6, 'lower')
+    p = f.p
+    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
