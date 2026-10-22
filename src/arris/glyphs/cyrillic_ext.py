@@ -163,9 +163,15 @@ def Obarred(g):
 
 @ccap('uni04B0', 'Ұ', 10, 2)
 def Ustraightstroke(g):
+    """Ү with a bar across its stem (``bar_reach`` past it each side)."""
     REGISTRY['Y'].fn(g)
     f = Frame(g, 10)
-    g.stroke(f.P(2.5, 3), f.P(7.5, 3))
+    _stem_bar(g, g.W / 2, f.Y(3))
+
+
+def _stem_bar(g, x, y):
+    reach = g.p.sv / 2 + bar_reach(g.p)
+    g.stroke((x - reach, y), (x + reach, y))
 
 
 @glyph('uni04D8', 'Ә', letter_width(9, 2), kind='cap', openings=[MOUTH])
@@ -191,11 +197,17 @@ def Esdesc(g):
     drop(g, g.W / 2)
 
 
+def bar_reach(p):
+    """How far a bar reaches past the stem it crosses or leads into: two
+    modules, or three quarters of a stem where that is more, so it shows
+    as a bar at every weight."""
+    return max(2 * room(p), 0.75 * p.sv)
+
+
 def lead(p):
-    """How far a bar leads in to a stem from the left (Ҡ's): two modules,
-    or three quarters of a stem where that is more, so it shows as a bar
-    (in the monospaced cell, half that: the K beside it needs the room)."""
-    return max(2 * room(p), 0.75 * p.sv) * (0.5 if p.mono else 1.0)
+    """How far Ҡ's bar leads in to its stem from the left (in the
+    monospaced cell, half a bar's reach: the K beside it needs the room)."""
+    return bar_reach(p) * (0.5 if p.mono else 1.0)
 
 
 @ccap('uni04A0', 'Ҡ', 9, 1, width=lambda p: REGISTRY['K'].width(p) + lead(p))
@@ -480,9 +492,11 @@ def Koppa(g):
 
 @ccap('uni04FE', 'Ӿ', 10, 2)
 def Hastroke(g):
+    """X with a bar across its crossing, the body's width less half a module
+    each side, so it reaches past the diagonals at every weight."""
     REGISTRY['X'].fn(g)
     f = Frame(g, 10)
-    g.stroke(f.P(2, 6), f.P(8, 6))
+    g.stroke(f.P(0.5, 6), f.P(9.5, 6))
 
 
 @ccap('uni04FC', 'Ӽ', 10, 2, width=plus_room('X', 0.5))
@@ -740,7 +754,7 @@ def ustraightstroke(g):
     p = g.p
     yb = -0.2 * p.desc
     _ustraight(g, f, ya=yb + g.sh + 0.5 * p.sv)
-    g.stroke((f.X(2), yb), (f.X(6), yb))
+    _stem_bar(g, g.W / 2, yb)
 
 
 @glyph('uni04B3', 'ҳ', plus_room('x'), kind='lower')
@@ -781,7 +795,7 @@ def ertick(g):
 def hastroke(g):
     REGISTRY['x'].fn(g)
     f = Frame(g, 8, 'lower')
-    g.stroke(f.P(1.5, 4.5), f.P(6.5, 4.5))
+    g.stroke(f.P(0.5, 4.5), f.P(7.5, 4.5))
 
 
 @glyph('uni04FD', 'ӽ', plus_room('x', 0.5), kind='lower')
