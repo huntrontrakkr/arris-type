@@ -40,7 +40,8 @@ CHECK = [(150, 0, 0), (300, 0, 0), (500, 0, 0), (700, 0, 0), (800, 0, 0),
 
 family = 'Arris'
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
-names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital')]   # italic drawings replace their uprights (arris.italic)
+names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital')
+                and not (isinstance(REGISTRY[n].kind, tuple) and REGISTRY[n].kind[0] == 'liga')]
 
 
 ITALIC = 'italic' in sys.argv[1:]

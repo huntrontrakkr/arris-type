@@ -100,7 +100,10 @@ def question(g):
 @punct('hyphen', '-', 6, 0)
 def hyphen(g):
     f = Frame(g, 6, 'lower')
-    g.stroke((0, f.Y(5)), (g.W, f.Y(5)))
+    # in the monospaced cut the hyphen is a minus for code: on the math axis,
+    # in line with + = < > and the arrows it ligates into
+    y = axis(g.p) if g.p.mono else f.Y(5)
+    g.stroke((0, y), (g.W, y))
 
 
 @punct('endash', '–', 9, 0)

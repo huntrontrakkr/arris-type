@@ -1,6 +1,6 @@
 """Shape with HarfBuzz (features on) and render with FreeType.
 
-usage: hbspec.py out.png px 'font.ttf::text::feat,feat' ...
+usage: hbspec.py out.png px 'font.ttf::text[::@feat,feat,wght=700]' ...
 """
 import sys
 
@@ -54,8 +54,12 @@ if __name__ == '__main__':
     imgs = []
     for spec in sys.argv[3:]:
         parts = spec.split('::')
-        path, text = parts[0], parts[1]
-        feats = parts[2].split(',') if len(parts) > 2 else []
+        path = parts[0]
+        if len(parts) > 2 and parts[-1].startswith('@'):   # features and axes after '::@'
+            feats, parts = parts[-1][1:].split(','), parts[:-1]
+        else:
+            feats = []
+        text = '::'.join(parts[1:])                         # the text may contain '::' itself
         imgs.append(line(path, text, px, feats))
     canvas = Image.new('L', (max(i.width for i in imgs), sum(i.height for i in imgs)), 255)
     y = 0

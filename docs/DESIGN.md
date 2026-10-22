@@ -449,6 +449,25 @@ horizontals.
   superior ¹ ² ³ and ª º.
 * `case`: dashes, guillemets, bullets and brackets raised for capitals.
 
+### Programming ligatures (Arris Mono)
+
+Code sits on a fixed grid, so a ligature never changes it: a sequence of N
+characters becomes N - 1 empty spacers and one glyph a cell wide that
+draws back across all N cells (the scheme Fira Code made standard). The
+substitution is contextual (`calt`, on by default; editors can turn it
+off), longest sequences first, and it never forms when an operator
+character touches the sequence on either side, so `<=<`, `>>=`, `//=`,
+`||=` and `---->` stay as their characters while `|->`, `!==` and `...`,
+which are ligatures themselves, still form. The drawings are Arris's own:
+the arrowheads of the arrow symbols, the bars of `=`, 45-degree chevrons,
+dots of `Params.dot`. `->` `<-` `<->` `-->` `<--` `=>` `<=>` `==>` `<==`
+`|->` `<-|` `|=>` `->>` `<<-` `~>` `~~>` `<~` become arrows; `==` `===`
+join; `!=` `/=` `!==` `=/=` strike through; `<=` `>=` become ≤ ≥; `::`
+`:::` `:=` `=:` `::=` `..` `...` `..<` `..=` set their dots evenly and on
+the bars; `||` `|>` `<|` `<|>` `++` `--` `//` `///` `/*` `*/` `>>` `<<`
+`>>>` `<<<` join. In the monospaced cut the hyphen sits on the math axis,
+in line with `+ = < >` and the arrows it grows into.
+
 ## 9. Metrics
 
 | | units | modules |

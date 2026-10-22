@@ -12,3 +12,4 @@ BASES.update({chr(cp): name for cp, name in ALIASES.items()})
 ACCENTED = marks.compose(CHARS, BASES)
 
 from . import features  # noqa: E402,F401  (variants of everything above)
+from . import ligatures  # noqa: E402,F401  (the monospaced cut's programming ligatures)

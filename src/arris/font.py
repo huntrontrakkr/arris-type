@@ -99,7 +99,12 @@ def _place(name: str, p: Params, tune=None, record: bool = False):
     g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
     rings, rec = g.outline(record)
     spec = REGISTRY[name]
-    if spec.kind == 'fig' or p.mono:
+    if isinstance(spec.kind, tuple) and spec.kind[0] == 'liga':
+        # a ligature is one cell wide and draws back over the n - 1 spacers
+        # before it, its body starting at the first cell's margin
+        adv = p.fig_adv
+        dx = (p.fig_adv - p.fig_w) / 2 - (spec.kind[1] - 1) * p.fig_adv
+    elif spec.kind == 'fig' or p.mono:
         adv = p.fig_adv
         dx = (adv - g.W) / 2
     elif isinstance(spec.kind, tuple) and spec.kind[0] == 'punct':

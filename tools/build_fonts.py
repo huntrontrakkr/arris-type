@@ -21,7 +21,13 @@ watch = 'watch' in sys.argv[2:]
 mono = 'mono' in sys.argv[2:]
 ital = 'italic' in sys.argv[2:]
 family = 'Arris' + (' Mono' if mono else '') + (' Watch' if watch else '')
-names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital')]   # italic drawings replace their uprights (arris.italic)
+def _liga(n):
+    k = REGISTRY[n].kind
+    return isinstance(k, tuple) and k[0] == 'liga'
+
+
+# italic drawings replace their uprights (arris.italic); ligatures are the monospaced cut's
+names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital') and (mono or not _liga(n))]
 Path('build').mkdir(exist_ok=True)
 for w in weights:
     p = params(w, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono)
@@ -30,5 +36,5 @@ for w in weights:
         p = italic(p)
         style = 'Italic' if style == 'Regular' else f'{style} Italic'
     path = f"build/{family.replace(' ', '')}-{style.replace(' ', '')}.ttf"
-    build(path, names, p, family=family, style=style, weight=w, fea=fea())
+    build(path, names, p, family=family, style=style, weight=w, fea=fea(mono=mono))
     print(path, len(names) + 2, 'glyphs')

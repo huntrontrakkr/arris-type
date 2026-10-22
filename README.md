@@ -20,7 +20,7 @@ pixel for pixel.
 | **Arris** | Proportional letters, tabular figures. Measured optics. Nine weights. |
 | **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem). |
 | **Arris Italic**, **Arris Mono Italic** | Slanted ten degrees, every chamfer a curve, every point the upright keeps sharp kept sharp; a single-storey a and a descending f. Nine weights each. |
-| **Arris Mono** | Every glyph on the figures' 10-module pitch: slabbed I, footed i l r, dotted zero. |
+| **Arris Mono** | Every glyph on the figures' 10-module pitch: slabbed I, footed i l r, dotted zero, and programming ligatures (`->` `=>` `!=` `===` `<=` `::` `:=` `|>` `//` …) that keep the grid. |
 | **Arris[GRAD,WTCH,wght]**, **Arris-Italic[GRAD,WTCH,wght]** | Variable: weight 100–900, grade −100–100, watch proportions 0–100; linked as one family on the `ital` axis. |
 
 Coverage: Latin (Western, Central and Eastern European, Turkish, Baltic,

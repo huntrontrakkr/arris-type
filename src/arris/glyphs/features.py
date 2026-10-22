@@ -189,12 +189,12 @@ for n in CASE:
     glyph(f'{n}.case', None, spec.width, kind=spec.kind)(fn)
 
 
-def fea() -> str:
-    """The feature file."""
+def fea(mono: bool = False) -> str:
+    """The feature file (the monospaced cut adds its programming ligatures)."""
     figs = ' '.join(FIGS)
     sm = {s: ' '.join(f'{n}.{s}' for n in FIGS) for s in ('sups', 'subs', 'numr', 'dnom', 'pnum')}
     case = '\n'.join(f'    sub {n} by {n}.case;' for n in CASE)
-    return f"""languagesystem DFLT dflt;
+    text = f"""languagesystem DFLT dflt;
 languagesystem latn dflt;
 
 @figs = [{figs}];
@@ -236,3 +236,7 @@ feature case {{
 {case}
 }} case;
 """
+    if mono:
+        from .ligatures import fea as ligature_fea
+        text += ligature_fea()
+    return text
