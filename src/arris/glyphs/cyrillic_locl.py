@@ -27,9 +27,14 @@ from .letterframe import Frame, letter_width
 
 
 def _stamped(name, latin, kind='lower'):
-    """An alternate that is a Latin letter's drawing (its italic too)."""
+    """An alternate that is a Latin letter's own drawing, and its italic
+    drawing too where it has one (looked up when drawn: ŭ is composed
+    after this module)."""
     glyph(name, None, lambda p, n=latin: REGISTRY[n].width(p), kind=kind)(
-        lambda g, n=latin: stamp(g, n, width=g.W))
+        lambda g, n=latin: REGISTRY[n].fn(g))
+    if f'{latin}.ital' in REGISTRY:
+        spec = REGISTRY[f'{latin}.ital']
+        glyph(f'{name}.ital', None, spec.width, kind=kind)(spec.fn)
 
 
 def _italic_as(name, default):
