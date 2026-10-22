@@ -138,7 +138,7 @@ def be_srb_ital(g):
     p = g.p
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
     x7, y8, y12 = f.X(7), f.Y(8), f.Y(12)
-    a = x7 + y8 - p.leg / 2                                 # x + y: through the bowl's corner chamfer
+    a = x7 + y8 - p.leg                                     # x + y: the bowl's corner chamfer, continued
     y0 = y8 - p.leg / 2
     xt = a - y12
     g.stroke((a - y0, y0), (xt, y12), (x7, y12))

@@ -176,12 +176,18 @@ def Esdesc(g):
     drop(g, g.W / 2)
 
 
-@ccap('uni04A0', 'Ҡ', 11, 1)
+def lead(p):
+    """How far a bar leads in to a stem from the left (Ҡ's): two modules,
+    or three quarters of a stem where that is more, so it shows as a bar."""
+    return max(2 * room(p), 0.75 * p.sv)
+
+
+@ccap('uni04A0', 'Ҡ', 9, 1, width=lambda p: REGISTRY['K'].width(p) + lead(p))
 def Kabashkir(g):
     """K with a bar at the top of its stem, leading in from the left (Ъ's)."""
-    f = Frame(g, 11)
     p = g.p
-    xs = f.X(3)
+    f = Frame(g, 9)
+    xs = lead(p) + p.sv / 2
     g.stroke((0, f.Y(11)), (xs, f.Y(11)))
     g.stroke((xs, 0), (xs, p.cap))
     for pts, a, b in k_arms(g, xs, f.W, p.cap):
@@ -247,10 +253,14 @@ def Ghemidhook(g):
 
 
 def hook_reach(p):
-    """How far a mid-stem hook's side stands from the stem it leaves: a
-    stem and two modules of white, so its white grows with the stroke (in
-    the monospaced cell, half a module)."""
-    return p.sv + (0.5 if p.mono else 2) * room(p)
+    """How far a hook's side stands from the stem it leaves: a stem and two
+    modules of white, so its white grows with the stroke. In the
+    monospaced cell, no more than leaves the letter beside it two stems
+    and a module and a half of white."""
+    reach = p.sv + 2 * room(p)
+    if p.mono:
+        reach = min(reach, max(p.fig_w - 2 * p.sv - 1.5 * room(p), 0.5 * p.sv))
+    return reach
 
 
 def frame_in(g, wm, W, zone='cap'):
@@ -546,16 +556,25 @@ def Haabkhasian(g):
     the foot running on past the loop."""
     f = Frame(g, 11)
     p = g.p
-    xm = f.X(6)
-    g.stroke((xm, f.Y(11) - beak_depth(p) + g.sh / 2), B(xm, f.Y(11)), B(*f.P(1, 11)), B(*f.P(1, 1)), (g.W, f.Y(1)))
-    g.stroke((xm, f.Y(1)), (xm, f.Y(6.5)), B(*f.P(10, 6.5)), f.P(10, 1))
+    xr = f.X(10)
+    xm = min(f.X(6), xr - p.sv - room(p))                   # the loop keeps a module of white
+    xl = f.X(1)
+    start = [(xm, f.Y(11) - beak_depth(p) + g.sh / 2), B(xm, f.Y(11))]
+    if xm - xl < p.sv + 2 * p.c:                            # (a crowded cell: no room to turn down)
+        start = [(xm, f.Y(11))]
+    g.stroke(*start, B(xl, f.Y(11)), B(xl, f.Y(1)), (g.W, f.Y(1)))
+    g.stroke((xm, f.Y(1)), (xm, f.Y(6.5)), B(xr, f.Y(6.5)), (xr, f.Y(1)))
 
 
 def komi_hook(g, f, x, y_top, rise):
     """A stem from y_top whose foot runs on into a small u: the Komi hook."""
     p = g.p
     xh = x + hook_reach(p)
-    g.stroke((x, y_top), B(x, f.Y(1)), B(xh, f.Y(1)), (xh, rise))
+    if xh - x >= p.sv + 2 * p.c:
+        g.stroke((x, y_top), B(x, f.Y(1)), B(xh, f.Y(1)), (xh, rise))
+    else:                                                   # (a crowded cell: the u closes up)
+        g.stroke((x, y_top), (x, f.Y(1)), (xh, f.Y(1)))
+        g.stroke((xh, f.Y(1)), (xh, rise))
     return xh
 
 
@@ -650,8 +669,12 @@ def _ustraight(g, f, ya=None):
     g.clip = (0, -p.desc, W, p.xh)
     xl, xr = f.X(1), f.X(7)
     ya = f.Y(1) if ya is None else ya
-    yt = min(ya + 2 * (W / 2 - xl), p.xh)
-    g.stroke((xl, p.xh), (xl, yt), (W / 2, ya), (xr, yt), (xr, p.xh))
+    yt = ya + 2 * (W / 2 - xl)
+    if yt < p.xh - 0.25 * p.sv:
+        g.stroke((xl, p.xh), (xl, yt), (W / 2, ya), (xr, yt), (xr, p.xh))
+    else:                                                   # no room for upright arms: 2:1 to the x-height
+        run = (p.xh - ya) / 2
+        g.stroke((W / 2 - run, p.xh), (W / 2, ya), (W / 2 + run, p.xh), start='h', end='h')
     g.stroke((W / 2, ya), (W / 2, -p.desc))
 
 
@@ -817,17 +840,13 @@ def _ctick(g, f, x):
 
 @ital('uni048B', 8, 2)
 def shortitail_ital(g):
-    """The italic й (a u) with a tail: its foot runs on into a drop that
-    turns left as a comma's does."""
+    """The italic й (a u), its foot running on into the cursive ц's tick."""
     from .marks import breve, gap
     f = Frame(g, 8, 'lower')
     _free(g)
     p = g.p
     xl, xr = f.X(1), f.X(7)
-    xd = xr + 1.5 * p.m * white_scale(p)
-    L = 0.75 * p.sv
-    y_turn = -p.desc + L
-    g.stroke(f.P(1, 9), B(*f.P(1, 1)), B(xd, f.Y(1), p.m / 2), (xd, y_turn), (xd - L, y_turn - L), end='h')
+    g.stroke(f.P(1, 9), B(*f.P(1, 1)), *_ctick(g, f, xr))
     entry(g, f, xl)
     g.stroke(f.P(7, 9), f.P(7, 1))
     x0, y0, x1, _ = g.clip

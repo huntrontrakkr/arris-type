@@ -17,6 +17,7 @@ from __future__ import annotations
 from ..draw import B, REGISTRY, glyph
 from ..params import SQRT2
 from .cyrillic import mirror
+from .cyrillic_ext import room
 from .cyrillic_locl import tall_ve
 from .figures import beak_depth
 from .greek import _tonos_width
@@ -53,9 +54,13 @@ def theta_symbol(g):
     back over a loop and leaves across it on a bar to the right."""
     f = Frame(g, 10, 'asc')
     p = g.p
-    xl, xm, xr = f.X(1), f.X(4.5), f.X(8.5)
+    xl, xr = f.X(1), f.X(8.5)
+    xm = min(f.X(4.5), xr - p.sv - room(p))                 # the loop keeps a module of white
     yb = f.Y(6)
-    g.stroke((xl, f.Y(7)), B(xl, f.Y(1)), B(xr, f.Y(1)), B(xr, f.Y(12)), B(xm, f.Y(12)), (xm, yb))
+    # the u's left arm reaches the bar's height where it stands clear of
+    # the loop, and stops half a stem under the bar where it cannot
+    top = f.Y(7) if xm - xl - p.sv >= 0.25 * p.sv else yb - g.sh - 0.5 * p.sv
+    g.stroke((xl, top), B(xl, f.Y(1)), B(xr, f.Y(1)), B(xr, f.Y(12)), B(xm, f.Y(12)), (xm, yb))
     g.stroke((xm, yb), (g.W, yb))
 
 
@@ -67,7 +72,7 @@ def Upsilonhook(g):
     xl, xr = f.X(1), f.X(9)
     d = beak_depth(p)
     yt = f.Y(11)
-    xa = xl + 1.25 * p.leg + 0.25 * p.sv                    # where the arm meets the top line
+    xa = xl + 1.25 * p.leg + 0.5 * p.sv                     # where the arm meets the top line
     yj = yt - 2 * (W / 2 - xa)                              # at the 7's 2:1 slope, as the v's arms
     g.stroke((W / 2, 0), (W / 2, yj))
     for s in (1, -1):
@@ -224,22 +229,30 @@ def koppa(g):
     g.stroke(f.P(1, 9), (f.X(1), ym), (xb, ym), (xl, yd), (min(xl + 2.5 * p.m, f.W), yd))
 
 
-def _sampi(g, f, xl, xr, top, foot, y1):
+def _sampi(g, f, xl, xr, top, foot):
     """An arch from a beak at the left over to the right, its right side
-    down to ``foot``; two parallel 45-degree strokes hang from the right
-    side to the baseline, kept apart by half a stem whatever the weight."""
+    down to ``foot``; two parallel strokes at the shallow 2:1 slope hang
+    from the right side, half a stem (a module at light weights) below the
+    arch and apart. Where the x-height has no room for them (the small
+    sampi at heavy weights) the lower one runs into the descender."""
     p = g.p
     d = beak_depth(p)
     g.stroke((xl, top + g.sh / 2 - d), B(xl, top), B(xr, top), (xr, foot))
-    gap = SQRT2 * (p.sd + 0.5 * p.sv)                       # along the side between the two
-    for y in (y1, y1 - gap):
-        g.stroke((xr, y), (xr - y, 0), start='flat', end='h')
+    t = p.sh + (p.sd - p.sh) * 26.565 / 45                   # thickness at the shallow slope (geom.Thickness)
+    v = t * 5 ** 0.5 / 2                                    # ... measured upright
+    white = max(0.5 * p.sv, p.m * 0.8)
+    wv = white * 5 ** 0.5 / 2
+    x_end = xl + 0.2 * (xr - xl)
+    run = xr - x_end
+    y1 = top - g.sh / 2 - wv - v / 2
+    for y in (y1, y1 - v - wv):
+        g.stroke((xr, y), (x_end, y - run / 2))
 
 
 @gcap('uni03E0', 'Ϡ', 9, 2)
 def Sampi(g):
     f = Frame(g, 9)
-    _sampi(g, f, f.X(1), f.X(8), f.Y(11), 0, f.Y(8.5))
+    _sampi(g, f, f.X(1), f.X(8), f.Y(11), 0)
 
 
 @glow('uni03E1', 'ϡ', 8, 2)
@@ -247,7 +260,7 @@ def sampi(g):
     f = Frame(g, 8, 'lower')
     p = g.p
     g.clip = (0, -p.desc, f.W, p.xh)
-    _sampi(g, f, f.X(1), f.X(7), f.Y(8), -p.desc, f.Y(6))
+    _sampi(g, f, f.X(1), f.X(7), f.Y(8), -p.desc)
 
 
 # --- Spacing marks -------------------------------------------------------------
