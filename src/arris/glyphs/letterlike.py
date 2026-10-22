@@ -20,8 +20,8 @@ from __future__ import annotations
 from ..draw import B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .figures import beak_depth, jog
-from .letterframe import STEEP, Frame, letter_width
-from .symkit import MIRROR, TURN, set_tight, sign, small_all, stamp_t, tight
+from .letterframe import STEEP, Frame, heft, letter_width
+from .symkit import MIRROR, TURN, across, set_tight, sign, small_all, stamp_t, tight
 
 ALIASES = {0x212A: 'K', 0x212B: 'Aring'}
 
@@ -139,16 +139,18 @@ def dsN(g):
 
 def _z_diag(g, f, W, a_up, x_end, t=None):
     """The Z's spine (caps.Z): from the top bar down at 45 degrees, a jog
-    left on a short bar, down again to a vertical at x_end."""
+    left on a short bar, down again to a vertical at x_end. ``t``: a lighter
+    stroke than the weight's (the inner spine of the double-struck Z)."""
     p = g.p
     J = jog(p)
     a_lo = a_up - J
     yj = f.Y(6.5)
     step = min(J, g.sh)
     y0, y1 = f.Y(11), f.Y(1)
-    first = (y0 + a_up, y0, t) if t else (y0 + a_up, y0)
-    g.stroke(first, (yj + a_up, yj, step), (yj + a_lo, yj, t) if t else (yj + a_lo, yj),
-             (x_end, x_end - a_lo), (x_end, y1), start='h')
+    d = across(p, t, (1, 1)) if t else None
+    v = t if t else None
+    g.stroke((y0 + a_up, y0, d), (yj + a_up, yj, step), (yj + a_lo, yj, d), (x_end, x_end - a_lo, v), (x_end, y1),
+             start='h')
 
 
 def _ds_shift(p):
@@ -183,7 +185,8 @@ def dsSigma(g):
     reach = min(half, 0.45 * (W - D))
     g.stroke((W, yt), (xl, yt), (xl + reach, (yt + yb) / 2), (xl, yb), (W, yb))
     t = ds_t(p)
-    g.stroke((xl + D, yt, t), (xl + D + reach, (yt + yb) / 2, t), (xl + D, yb))
+    g.stroke((xl + D, yt, across(p, t, (1, -1))), (xl + D + reach, (yt + yb) / 2, across(p, t, (-1, -1))),
+             (xl + D, yb))
 
 
 # --- Script: the italic's hand, upright -------------------------------------------
@@ -351,7 +354,7 @@ def hslash(g):
     g.stroke((x - e, y - e), (x + e, y + e), start='v', end='v')
 
 
-@glyph('prescription', '℞', lambda p: REGISTRY['R'].width(p) + p.m, kind='cap')
+@glyph('prescription', '℞', lambda p: REGISTRY['R'].width(p) + p.m + 1.5 * heft(p), kind='cap')
 def prescription(g):
     """R whose leg is crossed near its foot by a short stroke square to it."""
     p = g.p
@@ -359,7 +362,7 @@ def prescription(g):
     stamp(g, 'R', width=w)
     k = p.sd / SQRT2
     a = w + p.c - k                                         # the R's leg: x + y = a (caps.R)
-    yc = 0.2 * p.cap
+    yc = 0.2 * p.cap + 0.5 * (p.sv - p.m)
     xc = a - yc
     e = 1.5 * p.m + p.sv / 2
     g.stroke((xc - e, yc - e), (xc + e, yc + e), start='v', end='v')

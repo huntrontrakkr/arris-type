@@ -23,7 +23,7 @@ from __future__ import annotations
 from ..draw import B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .features import small
-from .letterframe import Frame, growing_width, letter_width
+from .letterframe import Frame, growing_width, heft, letter_width
 from .symkit import MIRROR, TURN, set_tight, sign, stamp_t, tight
 
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -109,6 +109,13 @@ def _rings_width(n):
                          (2 * n + 1) * p.sv + 2 * n * _ring_white(p))
 
 
+def _inner_leg(p, leg, d):
+    """A bowl corner's leg for a bowl d inside another: an octagon offset
+    inward by d cuts its corners 2 - sqrt2 of d shorter, so the white
+    between the two runs at one width round the corner."""
+    return max(leg - (2 - SQRT2) * d, p.c)
+
+
 def _rings(g, n):
     """n concentric octagons and a stem through them all. Their bars thin
     (to 0.7 of the weight's) before the sign outgrows the cap height; where
@@ -126,7 +133,7 @@ def _rings(g, n):
         dy = i * (sh + w)
         x0, x1 = dx + p.sv / 2, W - dx - p.sv / 2
         ya, yb = y0 + dy + sh / 2, y0 + H - dy - sh / 2
-        leg = max(p.leg - i * 0.25 * p.m, p.c)
+        leg = _inner_leg(p, p.leg, i * (p.sv + w))
         g.stroke(B(x0, ya, leg), B(x1, ya, leg), B(x1, yb, leg), B(x0, yb, leg), closed=True)
     g.stroke((W / 2, y0 + sh / 2), (W / 2, y0 + H - sh / 2))
 
@@ -156,20 +163,25 @@ def fivethousand(g):
     g.stroke((x, f.Y(1)), (x, f.Y(11)))
 
 
-@glyph('uni2187', 'ↇ', lambda p: letter_width(9, 2)(p) + p.sv + _ring_white(p), kind='cap')
+@glyph('uni2187', 'ↇ', lambda p: letter_width(9, 2)(p) + p.sv + _ring_white(p) + 1.5 * heft(p), kind='cap')
 def fiftythousand(g):
     """Two D bowls, one inside the other, on one stem."""
     f = Frame(g, 9)
     p, W = f.p, f.W
     w = _ring_white(p)
+    g.sh_k = min(1.0, max(0.7, (p.cap - 2 * w - 0.6 * p.sv) / (4 * p.sh)))   # four bars, two whites, a counter
     sh = g.sh
+    H = max(p.cap, 4 * sh + 2 * w + 0.6 * p.sv)              # outgrowing the cap height, about the axis
+    y0 = (p.cap - H) / 2
     xs = p.sv / 2
-    g.stroke((xs, 0), (xs, p.cap))
-    g.stroke((xs, sh / 2), B(W - p.sv / 2, sh / 2, p.leg + p.m), B(W - p.sv / 2, p.cap - sh / 2, p.leg + p.m),
-             (xs, p.cap - sh / 2))
-    yi0, yi1 = sh / 2 + sh + w, p.cap - sh / 2 - sh - w
+    g.stroke((xs, y0), (xs, y0 + H))
+    g.stroke((xs, y0 + sh / 2), B(W - p.sv / 2, y0 + sh / 2, p.leg + p.m),
+             B(W - p.sv / 2, y0 + H - sh / 2, p.leg + p.m), (xs, y0 + H - sh / 2))
+    yi0, yi1 = y0 + sh / 2 + sh + w, y0 + H - sh / 2 - sh - w
+    g.clip = None
     xi = W - p.sv / 2 - p.sv - w
-    g.stroke((xs, yi0), B(xi, yi0), B(xi, yi1), (xs, yi1))
+    leg = _inner_leg(p, p.leg + p.m, p.sv + w)
+    g.stroke((xs, yi0), B(xi, yi0, leg), B(xi, yi1, leg), (xs, yi1))
 
 
 @glyph('uni2185', 'ↅ', letter_width(9, 2), kind='cap')

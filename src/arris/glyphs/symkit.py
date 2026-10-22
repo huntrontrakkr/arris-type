@@ -275,3 +275,18 @@ def sign(name, ch, width, kind=('punct', 1.0), solid=False, openings=()):
         glyph(name, ch, body, kind=kind, solid=solid, openings=openings)(wrapped)
         return fn
     return deco
+
+
+def across(p, w, d):
+    """A stroke drawn ``w`` thick along direction d, as ``geom.Thickness``
+    draws strokes it weighs itself: never under the floor, and in the
+    italic set so the slanted stroke comes out as heavy as its upright self
+    (an explicit width would otherwise lean thinner or heavier with the
+    shear)."""
+    import math
+    w = max(w, p.floor)
+    if not p.slant:
+        return w
+    n = math.hypot(*d) or 1.0
+    dx, dy = d[0] / n, d[1] / n
+    return w * math.hypot(dx + p.slant * dy, dy) / math.sqrt(1 + p.slant ** 2)

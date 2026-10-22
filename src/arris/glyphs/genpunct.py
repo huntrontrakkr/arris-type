@@ -217,18 +217,28 @@ def fourdotmark(g):
     _dots(g, [(x - t, yc), (x + t, yc), (x, yc - t), (x, yc + t)])
 
 
-@sign('uni205D', '⁝', dot_w())
+def column_dot(p, n):
+    """Dots in a column of n over the cap height: a period's, or smaller
+    where heavy dots would leave less than 0.55 of a stem between them."""
+    return min(p.dot(), (p.cap - (n - 1) * max(0.5 * p.m, 0.55 * p.sv)) / n)
+
+
+def _column(g, n):
+    p = g.p
+    s = column_dot(p, n)
+    for i in range(n):
+        y = i * (p.cap - s) / (n - 1)
+        g.stroke((g.W / 2, y, s), (g.W / 2, y + s))
+
+
+@sign('uni205D', '\u205d', lambda p: column_dot(p, 3))
 def tricolon(g):
-    p, s = g.p, g.p.dot()
-    for i in range(3):
-        dot(g, s / 2, i * (p.cap - s) / 2)
+    _column(g, 3)
 
 
-@sign('uni205E', '⁞', dot_w())
+@sign('uni205E', '\u205e', lambda p: column_dot(p, 4))
 def verticalfourdots(g):
-    p, s = g.p, g.p.dot()
-    for i in range(4):
-        dot(g, s / 2, i * (p.cap - s) / 3)
+    _column(g, 4)
 
 
 def _wedge_reach(p, s, arm):
@@ -406,7 +416,7 @@ def asterism(g):
         g.add_glyph(draw('asterisk', sp), x, dy - H - 0.5 * gap)
 
 
-@sign('uni2055', '\u2055', growing_width(9, 1, 3.0))
+@sign('uni2055', '\u2055', growing_width(9, 1, 4.5))
 def flower(g):
     """Eight spokes: the asterisk's six and a level one, about the axis."""
     p, W = g.p, g.W
@@ -444,7 +454,7 @@ for _nm, _ch, _a, _b in (('exclamdbl', '‼', 'exclam', 'exclam'), ('uni2047', '
     sign(_nm, _ch, _pair(_a, _b))(_pair_fn(_a, _b))
 
 
-@sign('uni203D', '‽', letter_width(9, 2))
+@sign('uni203D', '‽', growing_width(9, 2, 0.6))
 def interrobang(g):
     """The question mark with the exclamation's stroke down its middle: the
     stem runs on up to the top bar."""
@@ -560,13 +570,16 @@ def swungdash(g):
     g.stroke((0, lo), (r, hi), (r + f, hi), (2 * r + f, lo), (2 * r + 2 * f, lo), (W, hi), start='v', end='v')
 
 
-@glyph('uni204A', '⁊', letter_width(7, 1), kind='lower')
+@glyph('uni204A', '⁊', growing_width(7, 1, 2.0), kind='lower')
 def tironianet(g):
-    """A bar on the x-height and a stem down from near its right end: the
-    seven drawn upright."""
+    """A bar on the x-height and a stem down from near its right end (the
+    seven drawn upright); the bar runs on past the stem by more than half a
+    stem, so it never reads as a turned L."""
     f = Frame(g, 7, 'lower')
+    p = g.p
     g.stroke(f.P(0, 8), f.P(7, 8))
-    g.stroke(f.P(5, 8), f.P(5, 0))
+    xs = min(f.X(5), g.W - max(1.5 * p.m, p.sv) - p.sv / 2)
+    g.stroke((xs, f.Y(8)), (xs, 0))
 
 
 # --- Per ten thousand -----------------------------------------------------------

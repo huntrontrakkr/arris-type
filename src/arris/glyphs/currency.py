@@ -22,7 +22,7 @@ from ..params import SQRT2
 from .caps import big
 from .figures import beak_depth, heaviness, jog
 from .letterframe import STEEP, Frame, growing_width, letter_width
-from .symkit import set_tight, tight_width
+from .symkit import across, set_tight, tight_width
 
 
 def cur(name, ch, width, kind='cap'):
@@ -207,9 +207,15 @@ def som(g):
 
 @cur('uni20A6', '₦', lambda p: REGISTRY['N'].width(p) + 2 * p.m)
 def naira(g):
+    """N with two bars across, centred between the points where the
+    diagonal meets the stems, so the white either side of it matches."""
     p = g.p
-    stamp(g, 'N', p.m, width=g.W - 2 * p.m)
-    bar_pair(g, p.cap / 2, 0, g.W)
+    wn = g.W - 2 * p.m
+    stamp(g, 'N', p.m, width=wn)
+    w = p.ss / STEEP[1]
+    x0, y0 = p.sv + w / 2, p.cap - p.sh / 2                  # the diagonal's centre at the top (caps.N)
+    y1 = y0 - 2 * (wn - p.sv - w / 2 - x0)                  # where its right edge reaches the right stem
+    bar_pair(g, (y0 + y1) / 2, 0, g.W)
 
 
 @cur('uni20A9', '₩', lambda p: REGISTRY['W'].width(p) + 2 * p.m)
@@ -348,7 +354,7 @@ def hryvnia(g):
     x1 = xr - run
     g.stroke((xl, H - d), B(xl, yt), B(xr, yt), (xr, y_hi), (x1, ym, min(J, g.sh)), (x1 - J, ym),
              (xl, y_lo), B(xl, yb), B(xr, yb), (xr, d))
-    bar_pair(g, ym, 0, W)
+    bar_pair(g, ym - (pair_t(p) + pair_gap(p)) / 2, 0, W)    # the upper bar over the notch
 
 
 def _cross_pair(p, room=None):
@@ -358,7 +364,7 @@ def _cross_pair(p, room=None):
     reaches either side of the stem's centre. ``room``: the stem's free
     length, which the pair must fit."""
     t = p.sd * (1 - 0.3 * heaviness(p))
-    dy = SQRT2 * (t + max(p.m, 0.5 * p.sv))
+    dy = SQRT2 * (t + max(p.m, 0.6 * p.sv))
     e = max(1.2 * p.m, 0.75 * p.m + p.sv / 2)
     e = max(1.4 * p.m + p.sv / 2 if room is None else min(1.4 * p.m + p.sv / 2, (room - dy) / 2), e)
     return t, dy, e
@@ -366,7 +372,7 @@ def _cross_pair(p, room=None):
 
 def _cross(g, xs, yc, t, dy, e):
     for y in (yc - dy / 2, yc + dy / 2):
-        g.stroke((xs - e, y - e, t), (xs + e, y + e), start='v', end='v')
+        g.stroke((xs - e, y - e, across(g.p, t, (1, 1))), (xs + e, y + e), start='v', end='v')
 
 
 @cur('uni20BA', '\u20ba', letter_width(9, 1))
@@ -467,19 +473,7 @@ def livretournois(g):
     g.stroke((0, y), (g.W - 1.5 * p.m, y))
 
 
-@cur('uni20B7', '₷', lambda p: REGISTRY['S'].width(p))
-def spesmilo(g):
-    """S whose bottom bar carries an m's three stems down into the
-    descender."""
-    from .symkit import small_all
-    p = g.p
-    stamp(g, 'S', width=g.W)
-    ps = small_all(p)
-    gap = max(ps.m, 0.75 * ps.sv)
-    for i in range(3):
-        x = ps.sv / 2 + i * (ps.sv + gap)
-        g.stroke((x, g.sh / 2, ps.sv), (x, -p.desc))
-    g.clip = None
+_letters('uni20B7', '\u20b7', ['S', 'm'])
 
 
 @cur('uni20B0', '₰', letter_width(8, 2), kind='lower')
