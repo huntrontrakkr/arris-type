@@ -30,12 +30,13 @@ class Params:
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
     mono: bool = False         # monospaced: every glyph on the figures' pitch
     grade_k: float = 1.0       # grade: strokes scaled by this, widths and spacing untouched
+    slant: float = 0.0         # italic: tan of the slant (outlines are sheared when built)
 
     def with_(self, **kw) -> 'Params':
         return replace(self, **kw)
 
     def scaled(self, k: float) -> 'Params':
-        keep = ('mono', 'grade_k')
+        keep = ('mono', 'grade_k', 'slant')
         return Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})
 
     def ungraded(self) -> 'Params':

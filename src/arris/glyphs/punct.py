@@ -42,13 +42,14 @@ def period(g):
     dot(g, f.X(1), 0)
 
 
-def _comma(g, f, x, y_top, stub=None):
+def _comma(g, f, x, y_top, stub=None, s=None):
     """A dot whose foot turns down-left at 45 degrees: the comma's tail.
-    ``stub`` is the dot's height above the turn (a stem and a half)."""
+    ``stub`` is the dot's height above the turn (a stem and a half); ``s``
+    its thickness (the stem's, unless a mark must be lighter to fit)."""
     p = g.p
-    s, k = p.sv, p.sd / SQRT2
+    s = p.sv if s is None else s
     y_turn = y_top - (1.5 * s if stub is None else stub)
-    g.stroke((x, y_top), (x, y_turn), (x - 0.75 * s, y_turn - 0.75 * s), end='h')
+    g.stroke((x, y_top, s), (x, y_turn, s * p.sd / p.sv), (x - 0.75 * s, y_turn - 0.75 * s), end='h')
 
 
 @punct('comma', ',', 3, width=lambda p: 1.5 * p.sv)
@@ -379,9 +380,7 @@ def _ring(g, x0, y0, x1, y1, w=None, leg=None):
     """A small closed octagon, centreline box (x0, y0)-(x1, y1)."""
     p = g.p
     leg = p.leg * 0.6 if leg is None else leg
-    pts = [B(x0, y0, leg), B(x1, y0, leg), B(x1, y1, leg), B(x0, y1, leg)]
-    if w is not None:
-        pts = [(q[0], q[1], q[2], q[3]) for q in pts]
+    pts = [B(x0, y0, leg, w), B(x1, y0, leg, w), B(x1, y1, leg, w), B(x0, y1, leg, w)]
     g.stroke(*pts, closed=True)
 
 
@@ -506,36 +505,50 @@ def ellipsis(g):
         dot(g, p.sv / 2 + i * 2.2 * p.sv, 0)
 
 
+def _guil_reach(p):
+    """How far a guillemet's chevron reaches across (and half its height)."""
+    return min((letter_width(7, 2)(p) - 1.4 * p.sv) / 2, p.xh / 3)
+
+
+def _guil_step(p):
+    """From one chevron to the next: an arm's width across (a 45-degree
+    stroke is sqrt2 of its thickness wide) and white as wide as a counter's
+    least, so the pair never runs together."""
+    return SQRT2 * (p.sd + max(0.8 * p.m, 0.7 * p.sd))
+
+
+def _guil_width(n):
+    return lambda p: (n - 1) * _guil_step(p) + _guil_reach(p) + p.sv
+
+
 def _guil(g, n, mirror):
     p, W = g.p, g.W
     a = p.xh / 2
-    h = (W - (n - 1) * 1.4 * p.sv) / 2 if n == 2 else W / 2
-    h = min(h, p.xh / 3)
-    k = p.sd / SQRT2
+    h = _guil_reach(p)
     for i in range(n):
-        x0 = i * 1.4 * p.sv
+        x0 = i * _guil_step(p)
         pts = [(x0 + h + p.sv / 2, a + h), (x0 + p.sv / 2, a), (x0 + h + p.sv / 2, a - h)]
         if mirror:
             pts = [(W - x, y) for x, y in pts]
         g.stroke(*pts, start='v', end='v')
 
 
-@punct('guilsinglleft', '‹', 4, 1)
+@punct('guilsinglleft', '‹', 4, 1, width=_guil_width(1))
 def guilsinglleft(g):
     _guil(g, 1, False)
 
 
-@punct('guilsinglright', '›', 4, 1)
+@punct('guilsinglright', '›', 4, 1, width=_guil_width(1))
 def guilsinglright(g):
     _guil(g, 1, True)
 
 
-@punct('guillemotleft', '«', 7, 2)
+@punct('guillemotleft', '«', 7, 2, width=_guil_width(2))
 def guillemotleft(g):
     _guil(g, 2, False)
 
 
-@punct('guillemotright', '»', 7, 2)
+@punct('guillemotright', '»', 7, 2, width=_guil_width(2))
 def guillemotright(g):
     _guil(g, 2, True)
 

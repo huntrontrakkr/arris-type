@@ -127,11 +127,14 @@ def zero(g):
 
 
 def zero_dot(g):
-    """The dot inside a zero: a stem square, but never more than half the
-    counter, so it never touches the walls."""
+    """The dot inside a zero: a stem wide (never more than half the counter)
+    and three times as tall, clear of the bars by a module. Taller than a
+    square dot, it survives blur and tells 0 from O; it never reaches the
+    walls, so it does not push the 0 toward 8."""
     p, W, H = g.p, g.W, g.p.cap
     s = min(p.sv, 0.5 * (W - 2 * p.sv))
-    g.stroke((W / 2, H / 2 - s / 2, s), (W / 2, H / 2 + s / 2))
+    h = min(3 * s, H - 2 * g.sh - 2 * max(p.m, 0.5 * p.sv))
+    g.stroke((W / 2, H / 2 - h / 2, s), (W / 2, H / 2 + h / 2))
 
 
 def _notch_white(g):

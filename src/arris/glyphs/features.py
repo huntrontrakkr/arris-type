@@ -37,7 +37,7 @@ def small(p):
 def _stamp_small(g, name, dy):
     ps = small(g.p)
     sub = draw(name, ps)
-    g.extra.append(affinity.translate(rings_to_shapely(sub.rings()), 0, dy))
+    g.add_glyph(sub, 0, dy)
 
 
 def _register_small(suffix, chars, dy_of):
@@ -120,13 +120,13 @@ def _fraction(name, ch, num, den):
         ps = small(p)
         x = 0.0
         a = draw(f'{num}', ps)
-        g.extra.append(affinity.translate(rings_to_shapely(a.rings()), x, p.cap - ps.cap))
+        g.add_glyph(a, x, p.cap - ps.cap)
         x += ps.fig_w + 0.3 * p.m
         sl = draw('fraction', p)
-        g.extra.append(affinity.translate(rings_to_shapely(sl.rings()), x, 0.2 * p.cap))
+        g.add_glyph(sl, x, 0.2 * p.cap)
         x += sl.W + 0.3 * p.m
         b = draw(f'{den}', ps)
-        g.extra.append(affinity.translate(rings_to_shapely(b.rings()), x, 0))
+        g.add_glyph(b, x, 0)
 
     def width(p):
         ps = small(p)
@@ -147,7 +147,7 @@ def _ordinal(name, ch, letter):
         ps = small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.desc)
         sub = draw(letter, ps)
         dy = p.cap - ps.xh
-        g.extra.append(affinity.translate(rings_to_shapely(sub.rings()), 0, dy))
+        g.add_glyph(sub, 0, dy)
         y = dy - 0.6 * p.m - ps.sh / 2
         g.stroke((0, y), (sub.W, y))
         g.sh_k = SMALL_STROKE
@@ -181,7 +181,7 @@ for n in CASE:
         if n == 'colon':
             REGISTRY['colon.tf'].fn(g)
             return
-        g.extra.append(affinity.translate(rings_to_shapely(sub.rings()), 0, _case_shift(g.p, n)))
+        g.add_glyph(sub, 0, _case_shift(g.p, n))
     glyph(f'{n}.case', None, spec.width, kind=spec.kind)(fn)
 
 

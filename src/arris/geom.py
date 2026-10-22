@@ -76,17 +76,29 @@ class Thickness:
     v*sin(45) and ``s`` is v*sin(63.4).
     """
 
-    def __init__(self, v: float, h: float, d: float, s: float | None = None):
+    def __init__(self, v: float, h: float, d: float, s: float | None = None, slant: float = 0.0):
         self.v, self.h, self.d = v, h, d
         self.s = s if s is not None else d + (v - d) * (STEEP_DEG - 45) / 45
+        self.slant = slant
 
     def __call__(self, direction) -> float:
         phi = math.degrees(math.atan2(abs(direction[1]), abs(direction[0])))  # 0 = horizontal
         if phi <= 45:
-            return self.h + (self.d - self.h) * phi / 45
-        if phi <= STEEP_DEG:
-            return self.d + (self.s - self.d) * (phi - 45) / (STEEP_DEG - 45)
-        return self.s + (self.v - self.s) * (phi - STEEP_DEG) / (90 - STEEP_DEG)
+            w = self.h + (self.d - self.h) * phi / 45
+        elif phi <= STEEP_DEG:
+            w = self.d + (self.s - self.d) * (phi - 45) / (STEEP_DEG - 45)
+        else:
+            w = self.s + (self.v - self.s) * (phi - STEEP_DEG) / (90 - STEEP_DEG)
+        if self.slant:
+            # The italic shears the finished outline, x += y * slant. A strip of
+            # width w along unit direction d comes out w / |S d| wide, so it is
+            # drawn |S d| cos(slant) wider: every stroke ends as heavy across as
+            # its upright self, times cos(slant) (as a vertical stem does).
+            dx, dy = direction
+            n = math.hypot(dx, dy) or 1.0
+            dx, dy = dx / n, dy / n
+            w *= math.hypot(dx + self.slant * dy, dy) / math.sqrt(1 + self.slant ** 2)
+        return w
 
 
 def _expand(stroke: Stroke):
@@ -141,17 +153,18 @@ def _cap_point(p, d, side_pt, kind):
     raise ValueError(f'unknown cap {kind!r}')
 
 
-def stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
+def stroke_polygon(stroke: Stroke, thick: Thickness, c: float, rec: list | None = None) -> Polygon:
     """The ink of one stroke. If a stroke's bowl chamfers do not fit inside it
-    (very heavy weights), the bowls shrink until they do."""
+    (very heavy weights), the bowls shrink until they do. ``rec`` collects
+    the lines the bowls' chamfer edges lie on (see ``ink``)."""
     try:
-        return _stroke_polygon(stroke, thick, c)
+        return _stroke_polygon(stroke, thick, c, rec=rec)
     except ValueError:
         if not any(n.bowl for n in stroke.nodes):
             # a stroke thicker than it is long (a short diagonal at the very
             # heaviest settings): repair it and log it
             REPAIRED.append(stroke)
-            return _stroke_polygon(stroke, thick, c, repair=True)
+            return _stroke_polygon(stroke, thick, c, repair=True, rec=rec)
     lo, hi = 0.0, 1.0
     for _ in range(30):
         mid = (lo + hi) / 2
@@ -161,13 +174,13 @@ def stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
         except ValueError:
             hi = mid
     try:
-        return _stroke_polygon(_scale_bowls(stroke, lo * 0.98), thick, c)
+        return _stroke_polygon(_scale_bowls(stroke, lo * 0.98), thick, c, rec=rec)
     except ValueError:
         # Last resort: repair the outline and log the stroke for review, so a
         # crowded extreme (a ligature squeezed into a monospaced cell at Black)
         # degrades instead of failing the build.
         REPAIRED.append(stroke)
-        return _stroke_polygon(stroke, thick, c, repair=True)
+        return _stroke_polygon(stroke, thick, c, repair=True, rec=rec)
 
 
 REPAIRED: list = []
@@ -177,7 +190,8 @@ def _scale_bowls(stroke: Stroke, k: float) -> Stroke:
     return Stroke(tuple(Node(n.x, n.y, n.bowl * k, n.w) for n in stroke.nodes), stroke.closed, stroke.start, stroke.end)
 
 
-def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = False) -> Polygon:
+def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = False,
+                    rec: list | None = None) -> Polygon:
     pts, bowls, widths = _expand(stroke)
     closed = stroke.closed
     m = len(pts)
@@ -237,8 +251,13 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
         if repair:
             fixed = shapely.make_valid(poly)
             parts = [g for g in getattr(fixed, 'geoms', [fixed]) if isinstance(g, Polygon)]
-            return max(parts, key=lambda g: g.area)
-        raise ValueError(f'stroke outline is not simple: {explain_validity(poly)}')
+            poly = max(parts, key=lambda g: g.area)
+        else:
+            raise ValueError(f'stroke outline is not simple: {explain_validity(poly)}')
+    if rec is not None:
+        for k in bowls:
+            rec.append(('line',) + llines[k])
+            rec.append(('line',) + rlines[k])
     return poly
 
 
@@ -251,7 +270,7 @@ def _dir_class(u) -> str:
     return 'steep'
 
 
-def _ring_rule(coords, c, convex_sign):
+def _ring_rule(coords, c, convex_sign, rec: list | None = None):
     """The corner rule on one ring (ink on the left of travel), as the watch's
     pixel rule behaves:
 
@@ -303,6 +322,8 @@ def _ring_rule(coords, c, convex_sign):
         if k in ('right', 'steep'):
             r = min(c, room_in, room_out)
             out += [_sub(b, _mul(u_in, r)), _add(b, _mul(u_out, r))]
+            if rec is not None and k == 'right':
+                rec.append(('chord', out[-2], out[-1]))
         elif k == 'acute':
             leg = c * math.sqrt(2)
             if _dir_class(u_in) == 'diag':
@@ -323,13 +344,17 @@ def _ring_rule(coords, c, convex_sign):
     return clean
 
 
-def ink(strokes, thick: Thickness, c: float, extra=(), clip=None):
+def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
 
     Returns a list of rings (lists of points); exteriors counter-clockwise,
-    holes clockwise, ink always on the left of travel."""
-    polys = [stroke_polygon(s, thick, c) for s in strokes] + list(extra)
+    holes clockwise, ink always on the left of travel. ``rec``, if given,
+    collects where the outline's chamfers came from: ('line', point,
+    direction) for the lines a bowl's chamfer edges lie on, ('chord', a, b)
+    for the corner rule's edge breaks on right angles. The italic curves
+    exactly these (``arris.italic``)."""
+    polys = [stroke_polygon(s, thick, c, rec) for s in strokes] + list(extra)
     if not polys:
         return []
     u = shapely.union_all(polys)
@@ -344,11 +369,11 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None):
     min_hole = (MIN_COUNTER * thick.v) ** 2
     for poly in u.geoms:
         poly = orient(poly, sign=1.0)
-        rings.append(_ring_rule(list(poly.exterior.coords), c, +1))
+        rings.append(_ring_rule(list(poly.exterior.coords), c, +1, rec))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_ring_rule(list(hole.coords), c, +1))
+            rings.append(_ring_rule(list(hole.coords), c, +1, rec))
     return rings
 
 

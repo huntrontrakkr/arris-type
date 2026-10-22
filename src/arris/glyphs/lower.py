@@ -8,7 +8,7 @@ V on m, gables on v and w.
 from __future__ import annotations
 
 from ..draw import B, Opening, glyph
-from ..params import SQRT2
+from ..params import SQRT2, outer_leg
 from .figures import beak_depth, jog
 from .letterframe import Frame, k_arms, letter_width
 
@@ -44,7 +44,9 @@ def b(g):
 @low('c', 8, 2)
 def c(g):
     f = Frame(g, 8, 'lower')
-    p, d = f.p, beak_depth(f.p)
+    # The shortest beaks (the outer flank alone): an open mouth tells c from o.
+    p = f.p
+    d = outer_leg(p) + p.c
     g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 1)), B(*f.P(7, 1)), (f.X(7), d))
 
 
@@ -82,6 +84,32 @@ def f_(g):
     g.stroke(f.P(0, 8), f.P(6, 8))
 
 
+# --- Italic forms (arris.italic) ---------------------------------------------
+
+@glyph('a.ital', None, letter_width(8, 2), kind='lower')
+def a_ital(g):
+    """The italic's single-storey a: the d's bowl on a stem that stops at
+    the x-height."""
+    f = Frame(g, 8, 'lower')
+    g.stroke(f.P(7, 0), f.P(7, 9))
+    g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+
+
+@glyph('f.ital', None, letter_width(7, 1), kind='lower')
+def f_ital(g):
+    """The italic's f: the stem runs on below the baseline and turns back,
+    the top's hook turned over."""
+    if g.p.mono:
+        f = Frame(g, 9, 'asc')
+        g.stroke(f.P(8, 12), B(*f.P(4.5, 12)), B(*f.P(4.5, -2)), f.P(1, -2))
+        g.stroke(f.P(1, 8), f.P(8, 8))
+        return
+    f = Frame(g, 7, 'asc')
+    g.clip = (-f.W, -g.p.desc, 2 * f.W, g.p.asc)
+    g.stroke(f.P(7, 12), B(*f.P(3.5, 12)), B(*f.P(3.5, -2)), f.P(0, -2))
+    g.stroke(f.P(0.5, 8), f.P(6.5, 8))
+
+
 @low('g', 8, 2)
 def g_(g):
     f = Frame(g, 8, 'lower')
@@ -89,11 +117,35 @@ def g_(g):
     g.stroke(f.P(7, 9), B(*f.P(7, -2)), f.P(1, -2))
 
 
+def shoulder(g, f, xs, x_right, top=8):
+    """An arch's shoulder, as the r's: it leaves the stem at 45 degrees two
+    modules below the arch, an edge break into the stem, and leaves a notch
+    under it (the 1's flag, turned). Returns the arch's points up to its
+    right corner, and how the stroke's start is cut.
+
+    The diagonal needs room between the stems. Where there is less (the
+    monospaced m, the heaviest weights) it rises less and starts further
+    into the stem, down to the plain square join, so the arch keeps its
+    counter and the drawing changes continuously with weight."""
+    p = g.p
+    k = p.sd / 2 ** 0.5
+    y_top = f.Y(top)
+    full = f.Y(top) - f.Y(top - 2)
+    x_full = xs + p.sv / 2 + k - p.c
+    room = x_right - p.leg - p.c - x_full                  # the diagonal ends clear of the corner
+    rise = min(full, max(room, 0.0))
+    if rise < 1e-3 * p.m:
+        return [(xs, y_top), B(x_right, y_top)], 'flat'
+    x0 = xs + rise / full * (x_full - xs)
+    return [(x0, y_top - rise), (x0 + rise, y_top), B(x_right, y_top)], 'h'
+
+
 @low('h', 8, 2)
 def h(g):
     f = Frame(g, 8, 'asc')
     g.stroke(f.P(1, 0), f.P(1, 13))
-    g.stroke(f.P(1, 8), B(*f.P(7, 8)), f.P(7, 0))
+    arch, cut = shoulder(g, f, f.X(1), f.X(7))
+    g.stroke(*arch, f.P(7, 0), start=cut)
 
 
 def _dot(g, f, x):
@@ -147,7 +199,7 @@ def k(g):
     g.clip = (0, -f.p.desc, f.W, f.p.asc)
 
 
-@low('l', 4, 1)
+@low('l', 6, 1)
 def l(g):
     if g.p.mono:
         f = Frame(g, 9, 'asc')
@@ -156,23 +208,28 @@ def l(g):
         g.stroke((x - 3 * u, f.Y(12)), (x, f.Y(12)), (x, 0))
         _mono_foot(g, f, x - u / 2, u)
         return
-    f = Frame(g, 4, 'asc')
-    g.stroke(f.P(0, 12), f.P(3, 12), f.P(3, 0))
+    # The 1's flag at the top and the t's foot at the bottom: a tail that
+    # tells l from I, i and 1 (docs/research/legibility.md).
+    f = Frame(g, 6, 'asc')
+    g.defaults_used['stem'] = f.X(2)
+    g.stroke(f.P(0, 12), f.P(2, 12), B(*f.P(2, 1)), f.P(6, 1))
 
 
 @low('m', 12, 3)
 def m(g):
     f = Frame(g, 12, 'lower')
     g.stroke(f.P(1, 0), f.P(1, 9))
-    g.stroke(f.P(1, 8), B(*f.P(6, 8)), f.P(6, 0))
-    g.stroke(f.P(6, 4), B(*f.P(6, 8)), B(*f.P(11, 8)), f.P(11, 0))
+    for xs, xr in ((f.X(1), f.X(6)), (f.X(6), f.X(11))):
+        arch, cut = shoulder(g, f, xs, xr)
+        g.stroke(*arch, (xr, 0), start=cut)
 
 
 @low('n', 8, 2)
 def n(g):
     f = Frame(g, 8, 'lower')
     g.stroke(f.P(1, 0), f.P(1, 9))
-    g.stroke(f.P(1, 8), B(*f.P(7, 8)), f.P(7, 0))
+    arch, cut = shoulder(g, f, f.X(1), f.X(7))
+    g.stroke(*arch, f.P(7, 0), start=cut)
 
 
 @low('o', 8, 2)
@@ -252,7 +309,9 @@ def v(g):
     p, W = f.p, f.W
     xl, xr = f.X(1), f.X(7)
     ya = _vee(f)
-    yt = ya + (W / 2 - xl)
+    # 2:1 arms (the 7's slope): a 45-degree gable in an x-height leaves too
+    # little diagonal, and the v reads as a u (docs/research/legibility.md)
+    yt = min(ya + 2 * (W / 2 - xl), p.xh)
     g.stroke((xl, p.xh), (xl, yt), (W / 2, ya), (xr, yt), (xr, p.xh))
 
 
@@ -263,7 +322,7 @@ def w(g):
     xl, xm, xr = f.X(1), W / 2, f.X(13)
     q1, q3 = (xl + xm) / 2, (xm + xr) / 2
     ya = _vee(f)
-    yt = ya + (q1 - xl)
+    yt = min(ya + 2 * (q1 - xl), p.xh)                      # 2:1, as the v
     g.stroke((xl, p.xh), (xl, yt), (q1, ya), (xm, yt), (q3, ya), (xr, yt), (xr, p.xh))
     g.stroke((xm, yt), (xm, f.Y(6)))
 

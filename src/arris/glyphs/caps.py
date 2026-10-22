@@ -45,7 +45,9 @@ def B_(g):
     f = Frame(g, 9)
     p = f.p
     g.stroke(f.P(1, 0), f.P(1, 12))
-    g.stroke(f.P(1, 11), B(*f.P(8, 11)), B(*f.P(8, 6), big(p)), f.P(1, 6), closed=True)
+    # the upper bowl a module narrower than the lower: the classic B, and
+    # what tells it from an 8
+    g.stroke(f.P(1, 11), B(*f.P(7, 11)), B(*f.P(7, 6), big(p)), f.P(1, 6), closed=True)
     g.stroke(f.P(1, 6), B(*f.P(8, 6)), B(*f.P(8, 1)), f.P(1, 1), closed=True)
 
 
@@ -81,7 +83,8 @@ def F(g):
 def G(g):
     f = Frame(g, 9)
     p, H, d = f.p, f.p.cap, beak_depth(f.p)
-    g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)), f.P(8, 6), f.P(4, 6))
+    # the bar below the middle and deep into the bowl, clear of the S and B
+    g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)), f.P(8, 5), f.P(4, 5))
 
 
 @cap('H', 9, 2)

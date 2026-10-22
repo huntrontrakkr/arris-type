@@ -8,18 +8,18 @@ from __future__ import annotations
 
 from shapely import affinity
 
-from ..draw import B, REGISTRY, draw, glyph
+from ..draw import AUTO_SHARE, B, REGISTRY, Opening, _counter_white, draw, glyph
 from ..geom import rings_to_shapely
 from ..params import SQRT2
 from .caps import big
 from .figures import beak_depth
+from .lower import shoulder
 from .letterframe import Frame, k_arms, letter_width
 
 
 def stamp(g, name, dx=0.0, dy=0.0, width=None):
     sub = draw(name, g.p, width=width)
-    poly = rings_to_shapely(sub.rings())
-    g.extra.append(affinity.translate(poly, dx, dy))
+    g.add_glyph(sub, dx, dy)
     return sub.W
 
 
@@ -53,8 +53,9 @@ def Lslash(g):
 @glyph('lslash', 'ł', width_of('l', 1.5), kind='lower')
 def lslash(g):
     p = g.p
-    w = stamp(g, 'l', width=g.W - 1.5 * p.m if p.mono else None)
-    xs = (w - p.sv / 2) if not p.mono else g.W / 2
+    sub = draw('l', p, width=g.W - 1.5 * p.m if p.mono else None)
+    stamp(g, 'l', width=sub.W if p.mono else None)
+    xs = sub.defaults_used['stem'] if not p.mono else g.W / 2
     _slashbar(g, xs, 0.55 * p.xh + p.m, 1.5 * p.m + p.sv / 2)
 
 
@@ -62,19 +63,27 @@ def _oslash(g, name, top):
     p = g.p
     w = stamp(g, name)
     k = p.sd / SQRT2
-    # along the main diagonal, square to the lower-left and upper-right chamfers
+    # along the main diagonal, square to the lower-left and upper-right chamfers;
+    # at heavy weights the slash thins so the two halves of the counter stay open
     a = w / 2 - top / 2                                     # x - y = a
     lo, hi = -0.75 * p.m, top + 0.75 * p.m
-    g.stroke((lo + a, lo), (hi + a, hi), start='h', end='h')
+    g.stroke((lo + a, lo, p.sd * g.free('slash', 1.0)), (hi + a, hi), start='h', end='h')
     g.clip = (-p.m, lo, w + p.m, hi)
 
 
-@glyph('Oslash', 'Ø', width_of('O'), kind='cap')
+def _split_counters(n):
+    """Opening for a stroke that crosses a bowl: the n counters it makes keep
+    half their share of the stem (as every closed counter does), by thinning
+    the crossing stroke to half."""
+    return Opening(lambda g: _counter_white(g, n), 'slash', lambda p: 0.5, max_ratio=AUTO_SHARE)
+
+
+@glyph('Oslash', 'Ø', width_of('O'), kind='cap', openings=[_split_counters(2)])
 def Oslash(g):
     _oslash(g, 'O', g.p.cap)
 
 
-@glyph('oslash', 'ø', width_of('o'), kind='lower')
+@glyph('oslash', 'ø', width_of('o'), kind='lower', openings=[_split_counters(2)])
 def oslash(g):
     _oslash(g, 'o', g.p.xh)
 
@@ -136,11 +145,13 @@ def Ldot(g):
     g.stroke((x, p.cap / 2 - p.sv / 2), (x, p.cap / 2 + p.sv / 2))
 
 
-@glyph('ldot', 'ŀ', width_of('l', 2.0), kind='lower')
+@glyph('ldot', 'ŀ', width_of('l', 0.5), kind='lower')
 def ldot(g):
     p = g.p
-    w = stamp(g, 'l', width=(g.W - 2 * p.m) if p.mono else None)
-    x = w + 1.0 * p.m + p.sv / 2
+    sub = draw('l', p, width=(g.W - 2 * p.m) if p.mono else None)
+    w = stamp(g, 'l', width=sub.W if p.mono else None)
+    # beside the stem, over the tail
+    x = (sub.defaults_used['stem'] if not p.mono else w) + p.sv / 2 + max(p.m, 0.6 * p.sv) + p.sv / 2
     g.stroke((x, p.xh / 2 - p.sv / 2), (x, p.xh / 2 + p.sv / 2))
 
 
@@ -192,7 +203,8 @@ def eng(g):
     f = Frame(g, 8, 'lower')
     p = f.p
     g.stroke(f.P(1, 0), f.P(1, 9))
-    g.stroke(f.P(1, 8), B(*f.P(7, 8)), B(*f.P(7, -2)), f.P(3, -2))
+    arch, cut = shoulder(g, f, f.X(1), f.X(7))
+    g.stroke(*arch, B(*f.P(7, -2)), f.P(3, -2), start=cut)
 
 
 @glyph('Eng', 'Ŋ', letter_width(9, 2), kind='cap')

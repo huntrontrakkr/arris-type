@@ -21,6 +21,11 @@ class Metrics:
     gap: int = 0
     cap: int = 720
     xh: int = 540
+    # Windows clipping box, one for the whole family (every weight, grade,
+    # balance and the italic): the tallest is the Black Å at the heaviest
+    # corner of the variable font, the deepest the comma below.
+    win_asc: int = 1160
+    win_desc: int = 250
 
 
 def glyph_contours(name: str, p: Params, tune=None):
@@ -55,7 +60,24 @@ def light(p: Params) -> float:
 
 
 def place(name: str, p: Params, tune=None):
-    """(rings shifted into place, advance) for a glyph."""
+    """(rings shifted into place, advance) for a glyph. In the italic
+    (``p.slant``) the rings are italic contours of (x, y, on): spaced as the
+    upright drawing, then curved and sheared (``arris.italic``)."""
+    if p.slant:
+        from . import italic
+        rings, record, adv = _place(name, p, tune, record=True)
+        return italic.outline(rings, record, p), adv
+    rings, _, adv = _place(name, p, tune)
+    return rings, adv
+
+
+def _shift_record(record, dx):
+    from .draw import _moved
+    return [_moved(r, dx, 0.0) for r in record]
+
+
+def _place(name: str, p: Params, tune=None, record: bool = False):
+    """(rings, chamfer record, advance), upright, shifted into place."""
     from .spacing import bearings
     t = (tune or {}).get(name, {})
     if p.grade_k != 1.0:
@@ -63,7 +85,7 @@ def place(name: str, p: Params, tune=None):
         # then draw the graded strokes in the same body at the same place.
         p0 = p.ungraded()
         g0 = draw(name, p0, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
-        r0, adv = place(name, p0, tune)
+        r0, _, adv = _place(name, p0, tune)
         dx = min(x for r in r0 for x, _ in r) - min(x for r in g0.rings() for x, _ in r) if r0 else 0.0
         # glyphs no wider than a couple of stems (I, i, dots) thicken outward,
         # centred where they were; everything else keeps its body
@@ -72,9 +94,10 @@ def place(name: str, p: Params, tune=None):
             W = REGISTRY[name].width(p)
             dx += (g0.W - W) / 2
         g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0), width=W)
-        return [[(x + dx, y) for x, y in r] for r in g.rings()], adv
+        rings, rec = g.outline(record)
+        return [[(x + dx, y) for x, y in r] for r in rings], _shift_record(rec, dx), adv
     g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
-    rings = g.rings()
+    rings, rec = g.outline(record)
     spec = REGISTRY[name]
     if spec.kind == 'fig' or p.mono:
         adv = p.fig_adv
@@ -97,7 +120,7 @@ def place(name: str, p: Params, tune=None):
         rsb = max(rsb, (fx1 - xmax) - reach)
         dx = lsb - xmin
         adv = lsb + (xmax - xmin) + rsb
-    return [[(x + dx, y) for x, y in r] for r in rings], adv
+    return [[(x + dx, y) for x, y in r] for r in rings], _shift_record(rec, dx), adv
 
 
 def spacing(name: str, p: Params):
@@ -108,17 +131,19 @@ def spacing(name: str, p: Params):
 
 def _raw_glyph(contours):
     """A glyf glyph with exactly these points: nothing merged or dropped,
-    as variable-font masters need."""
+    as variable-font masters need. Points are (x, y) on the curve, or
+    (x, y, on) for the italic's quadratic outlines."""
     from fontTools.ttLib.tables._g_l_y_f import Glyph, GlyphCoordinates
     g = Glyph()
-    pts, ends = [], []
+    pts, ends, flags = [], [], []
     for c in contours:
-        pts.extend(c)
+        pts.extend(q[:2] for q in c)
+        flags.extend(1 if (len(q) < 3 or q[2]) else 0 for q in c)
         ends.append(len(pts) - 1)
     g.numberOfContours = len(contours)
     g.coordinates = GlyphCoordinates(pts)
     g.endPtsOfContours = ends
-    g.flags = bytearray([1] * len(pts))
+    g.flags = bytearray(flags)
     g.program = __import__('fontTools.ttLib.tables.ttProgram', fromlist=['Program']).Program()
     g.program.fromBytecode(b'')
     return g
@@ -190,7 +215,7 @@ def _nonhinting(font):
 
 def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, tune=None,
           metrics: Metrics | None = None, version='0.100', space=None, fea: str | None = None,
-          kern: bool = True, placed: dict | None = None, kern_pairs: dict | None = None):
+          kern: bool = True, placed: dict | None = None, kern_pairs: dict | None = None, stat: bool = True):
     m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh))
     order = ['.notdef', 'space'] + list(names)
     fb = FontBuilder(UPM, isTTF=True)
@@ -215,7 +240,15 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
         if n not in placed:
             placed[n] = place(n, p, tune)
         rings, adv = placed[n]
-        glyphs[n] = _raw_glyph(_contours(rings, keep)) if keep else _tt_glyph(_contours(rings), 0)
+        if p.slant and keep:
+            glyphs[n] = _raw_glyph([[(round(x), round(y), on) for x, y, on in c][::-1] for c in rings])
+        elif p.slant:
+            from . import italic
+            pen = TTGlyphPen(None)
+            italic.draw_contours(pen, italic.tt_contours(rings))
+            glyphs[n] = pen.glyph()
+        else:
+            glyphs[n] = _raw_glyph(_contours(rings, keep)) if keep else _tt_glyph(_contours(rings), 0)
         hmtx[n] = (round(adv), 0)
     if kern_pairs is not None:
         from .kerning import fea as kern_fea
@@ -225,7 +258,12 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
         kinds = {n: REGISTRY[n].kind for n in names}
         kernable = [n for n in names if kinds[n] in ('cap', 'lower') or
                     (isinstance(kinds[n], tuple) and n in KERN_PUNCT)]
-        pairs = kerns({n: (placed[n][0], round(placed[n][1])) for n in kernable}, p, light(p))
+        if p.slant:
+            from .italic import polylines
+            outlines = {n: (polylines(placed[n][0]), round(placed[n][1])) for n in kernable}
+        else:
+            outlines = {n: (placed[n][0], round(placed[n][1])) for n in kernable}
+        pairs = kerns(outlines, p, light(p))
         fea = (fea or '') + kern_fea(pairs)
         print(f'  {len(pairs)} kerning pairs')
     fb.setupGlyf(glyphs)
@@ -238,19 +276,26 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
         hmtx[n] = (adv, getattr(g, 'xMin', 0) if g.numberOfContours else 0)
     fb.setupHorizontalMetrics(hmtx)
     fb.setupHorizontalHeader(ascent=m.asc, descent=m.desc, lineGap=m.gap)
-    ribbi = style in ('Regular', 'Bold')
-    fam1 = family if ribbi else f'{family} {style}'
-    sub1 = style if ribbi else 'Regular'
+    is_italic = style.endswith('Italic')
+    base = style[:-len('Italic')].strip() or 'Regular' if is_italic else style
+    ribbi = base in ('Regular', 'Bold')
+    fam1 = family if ribbi else f'{family} {base}'
+    sub1 = style if ribbi else ('Italic' if is_italic else 'Regular')
     ps = f'{family}-{style}'.replace(' ', '')
     fb.setupNameTable({'familyName': fam1, 'styleName': sub1, 'uniqueFontIdentifier': f'{ps};{version}',
                        'fullName': f'{family} {style}', 'psName': ps, 'version': f'Version {version}',
                        'typographicFamily': family, 'typographicSubfamily': style}, mac=False)
     fb.setupOS2(sTypoAscender=m.asc, sTypoDescender=m.desc, sTypoLineGap=m.gap,
-                usWinAscent=max(m.asc, ymax), usWinDescent=max(-m.desc, -ymin), sxHeight=m.xh,
+                usWinAscent=max(m.win_asc, ymax), usWinDescent=max(m.win_desc, -ymin), sxHeight=m.xh,
                 sCapHeight=m.cap, usWeightClass=weight,
-                fsSelection=0x80 | (0x20 if style == 'Bold' else 0x40),
+                fsSelection=0x80 | (0x20 if base == 'Bold' else 0) | (0x01 if is_italic else 0)
+                | (0x40 if not is_italic and base != 'Bold' else 0),
                 achVendID='NONE', version=4)
-    fb.setupPost(isFixedPitch=1 if p.mono else 0)
+    fb.setupPost(isFixedPitch=1 if p.mono else 0,
+                 italicAngle=-math.degrees(math.atan(p.slant)) if p.slant else 0)
+    if p.slant:
+        fb.font['hhea'].caretSlopeRise = 1000
+        fb.font['hhea'].caretSlopeRun = round(1000 * p.slant)
     fb.font['head'].fontRevision = float(version)
     os2 = fb.font['OS/2']
     os2.recalcCodePageRanges(fb.font)
@@ -259,10 +304,23 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     if p.mono:
         fb.font['OS/2'].panose.bFamilyType = 2
         fb.font['OS/2'].panose.bProportion = 9
-    if style == 'Bold':
+    if base == 'Bold':
         fb.font['head'].macStyle |= 1
+    if is_italic:
+        fb.font['head'].macStyle |= 2
     if fea:
         from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
         addOpenTypeFeaturesFromString(fb.font, fea)
+    if stat:
+        # where this font sits in the family: its weight, upright or italic
+        from fontTools.otlLib.builder import buildStatTable
+        buildStatTable(fb.font, [
+            {'tag': 'wght', 'name': 'Weight',
+             'values': [{'value': weight, 'name': base, 'flags': 0x2 if base == 'Regular' else 0}]},
+            {'tag': 'ital', 'name': 'Italic',
+             'values': [{'value': 1, 'name': 'Italic'}] if is_italic else
+                       [{'value': 0, 'name': 'Roman', 'flags': 0x2, 'linkedValue': 1}]},
+        ])
+        fb.font['name'].names = [nm for nm in fb.font['name'].names if nm.platformID != 1]
     fb.font.save(path)
     return fb.font

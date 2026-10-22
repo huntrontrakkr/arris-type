@@ -12,7 +12,7 @@ import math
 
 from shapely import affinity
 
-from ..draw import B, REGISTRY, Opening, draw, glyph
+from ..draw import AUTO_SHARE, B, REGISTRY, Opening, _counter_white, draw, glyph
 from ..geom import rings_to_shapely
 from ..params import SQRT2
 from . import marks
@@ -26,7 +26,7 @@ ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyp
 
 def stamp(g, name, p=None, dx=0.0, dy=0.0, width=None):
     sub = draw(name, p or g.p, width=width)
-    g.extra.append(affinity.translate(rings_to_shapely(sub.rings()), dx, dy))
+    g.add_glyph(sub, dx, dy)
     return sub.W
 
 
@@ -41,11 +41,13 @@ def Euro(g):
         g.stroke((0, y), (0.6 * g.W, y))
 
 
-@glyph('cent', '¢', letter_width(8, 2), kind='lower')
+@glyph('cent', '¢', letter_width(8, 2), kind='lower',
+       openings=[Opening(lambda g: _counter_white(g, 1), 'slash', lambda p: 0.5, max_ratio=AUTO_SHARE)])
 def cent(g):
     p = g.p
     stamp(g, 'c', width=g.W)
-    g.stroke((g.W / 2, -0.15 * p.cap), (g.W / 2, p.xh + 0.15 * p.cap))
+    # the bar thins at heavy weights so the counter it closes stays open
+    g.stroke((g.W / 2, -0.15 * p.cap, p.sv * g.free('slash', 1.0)), (g.W / 2, p.xh + 0.15 * p.cap))
     g.clip = None
 
 
@@ -169,7 +171,7 @@ def _ringed(g, letter):
     r = W / 2 - s / 2
     ring.stroke(B(s / 2, p.cap / 2 - r, 2 * p.m), B(W - s / 2, p.cap / 2 - r, 2 * p.m),
                 B(W - s / 2, p.cap / 2 + r, 2 * p.m), B(s / 2, p.cap / 2 + r, 2 * p.m), closed=True)
-    g.extra.append(rings_to_shapely(ring.rings()))
+    g.add_glyph(ring)
     # a half-size capital whose strokes stay in proportion to it
     k = 0.5
     t = min(0.6, 0.18 * k * p.cap / p.sv)

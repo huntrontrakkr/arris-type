@@ -7,10 +7,14 @@
 <style>
 @font-face { font-family: Arris; src: url(fonts/Arris-VF.woff2) format('woff2');
   font-weight: 100 900; font-display: block; }
+@font-face { font-family: Arris; src: url(fonts/Arris-Italic-VF.woff2) format('woff2');
+  font-weight: 100 900; font-style: italic; font-display: block; }
 @font-face { font-family: 'Arris Mono'; src: url(fonts/ArrisMono-Regular.woff2) format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Arris Mono'; src: url(fonts/ArrisMono-Italic.woff2) format('woff2'); font-weight: 400; font-style: italic; }
 @font-face { font-family: 'Arris Mono'; src: url(fonts/ArrisMono-Bold.woff2) format('woff2'); font-weight: 700; }
 :root { --wght: 600; --grad: 0; --wtch: 0; --size: 96px; --ink: #111; --paper: #f4f2ec; --dim: #8a877f; }
 body.dark { --ink: #f2efe6; --paper: #101214; --dim: #6f716f; }
+body.italic section { font-style: italic; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink);
   font-family: Arris, sans-serif; font-variation-settings: 'wght' 420, 'GRAD' var(--grad), 'WTCH' 0; }
@@ -60,6 +64,7 @@ p.lede { max-width: 60ch; font-size: 19px; line-height: 1.45; color: var(--ink);
   <label>Size <input id="size" type="range" min="16" max="240" value="96"><output id="size-o">96</output></label>
   <div class="feats">
     <label><input type="checkbox" id="dark"> light on dark</label>
+    <label><input type="checkbox" id="italic"> italic</label>
     <label><input type="checkbox" data-f="pnum"> pnum</label>
     <label><input type="checkbox" data-f="zero"> zero</label>
     <label><input type="checkbox" data-f="ss01"> ss01 (dotted zero)</label>
@@ -144,6 +149,7 @@ for (const id of ['wght', 'grad', 'wtch', 'size']) {
   el.addEventListener('input', set); set();
 }
 document.getElementById('dark').addEventListener('change', e => document.body.classList.toggle('dark', e.target.checked));
+document.getElementById('italic').addEventListener('change', e => document.body.classList.toggle('italic', e.target.checked));
 const feats = () => {
   const on = [...document.querySelectorAll('[data-f]')].map(c => `'${c.dataset.f}' ${c.checked ? 1 : 0}`).join(', ');
   for (const el of document.querySelectorAll('.live, .clock')) el.style.fontFeatureSettings = on;

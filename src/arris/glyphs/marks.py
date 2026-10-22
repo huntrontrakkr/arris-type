@@ -94,20 +94,30 @@ def tilde(g, x, y, case):
 
 
 def breve(g, x, y, case):
+    """A small chamfered cup. Its sides thin at heavy weights, as accents do,
+    so the cup stays open: twice the marks' gap across, room for its inner
+    corners' fills and a gap between them."""
     p = g.p
     w = size(p, case)
     h = 0.75 * w
-    g.stroke((x - w + p.sv / 2, y + h + g.sh / 2), B(x - w + p.sv / 2, y + g.sh / 2, p.m / 2),
-             B(x + w - p.sv / 2, y + g.sh / 2, p.m / 2), (x + w - p.sv / 2, y + h + g.sh / 2))
+    t = min(p.sv, w - gap(p))                               # side thickness
+    xl, xr = x - w + t / 2, x + w - t / 2
+    g.stroke((xl, y + h + g.sh / 2, t), B(xl, y + g.sh / 2, p.m / 2),
+             B(xr, y + g.sh / 2, p.m / 2, t), (xr, y + h + g.sh / 2))
 
 
 def ring(g, x, y, case):
-    """A small chamfered square ring."""
+    """A small chamfered square ring. Its counter is fixed in modules; its
+    stroke follows the weight's up to the watch's two modules and no
+    further, as accents lighten at heavy weights, so a heavy Å stays inside
+    the line."""
     p = g.p
-    r = p.sv / 2 + (1.0 if case == 'lc' else 0.8) * p.m      # centreline half-size
+    inner = (2.0 if case == 'lc' else 1.6) * p.m              # the counter, across
+    t = min(p.sv, 2 * p.m)                                  # the stroke
+    r = (inner + t) / 2                                     # centreline half-size
     leg = p.m / 2
-    yc = y + r + g.sh / 2
-    g.stroke(B(x - r, yc - r, leg), B(x + r, yc - r, leg), B(x + r, yc + r, leg), B(x - r, yc + r, leg),
+    yc = y + r + t / 2
+    g.stroke(B(x - r, yc - r, leg, t), B(x + r, yc - r, leg, t), B(x + r, yc + r, leg, t), B(x - r, yc + r, leg, t),
              closed=True)
 
 
@@ -119,9 +129,16 @@ def hungarumlaut(g, x, y, case):
 
 
 def commabelow(g, x, y, case):
+    """The comma, hung a gap below the baseline and kept within the
+    descender (a little past it, as far as a descender's chamfer): its stub
+    shortens first, down to a third of its thickness, then the whole comma
+    lightens, as heavy faces draw their accents."""
     from .punct import _comma
     p = g.p
-    _comma(g, None, x + 0.25 * p.sv, -gap(p))
+    room = 1.15 * p.desc - gap(p)
+    s = min(p.sv, room / (1 / 3 + 0.75))
+    stub = min(1.5 * s, room - 0.75 * s)
+    _comma(g, None, x + 0.25 * s, -gap(p), stub=stub, s=s)
 
 
 def commaabove(g, x, y, case):
@@ -158,9 +175,10 @@ ABOVE = {'̀': grave, '́': acute, '̂': circumflex, '̃': tilde, '̄': macron,
          '̌': caron}
 BELOW = {'̦': commabelow, '̧': cedilla, '̨': ogonek}
 
-# Letters whose cedilla is written as a comma (Latvian, and Romanian's own
-# comma-below letters come through U+0326 already).
-CEDILLA_AS_COMMA = set('KkLlNnRrGg')
+# Letters whose cedilla is written as a comma: Latvian's, and the T and t,
+# whose cedilla Romanian writes as a comma (and which, hung from the T's
+# stem, would turn the letter into a J).
+CEDILLA_AS_COMMA = set('KkLlNnRrGgTt')
 
 
 def _name(ch):
@@ -200,9 +218,11 @@ def _register(name, ch, bname, base, marks):
         from ..geom import rings_to_shapely
         # The base, finished (openings solved, clipped and cut), then the marks.
         p = g.p
-        rings = draw(bname, p, g.ot, g.ob).rings()
+        base_glyph = draw(bname, p, g.ot, g.ob)
+        rings = base_glyph.rings()
         top = max(y for r in rings for _, y in r)
-        g.extra, g.clip = [rings_to_shapely(rings)], None
+        g.extra, g.clip = [], None
+        g.add_glyph(base_glyph)
         x = g.W / 2
         y = top + gap(p)
         for m in marks:

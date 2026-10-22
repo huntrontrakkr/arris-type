@@ -48,9 +48,10 @@ def glyph(name: str, char: str | None, width, kind='fig', openings=()):
     return deco
 
 
-def B(x, y, leg=None):
-    """A bowl corner (leg None = the parameter default)."""
-    return ('bowl', x, y, leg)
+def B(x, y, leg=None, w=None):
+    """A bowl corner (leg None = the parameter default; w the thickness of
+    the segment that follows, None = by its direction)."""
+    return ('bowl', x, y, leg, w)
 
 
 @dataclass
@@ -63,11 +64,13 @@ class Glyph:
     ob: float = 0.0   # overshoot below the baseline
     W: float = 0.0    # body width
     sh_k: float = 1.0  # horizontal thickness factor (tight stacks of bars)
+    sh_auto: float = 1.0  # further thinning that keeps closed counters open (see draw)
     clip: tuple[float, float, float, float] | None = None   # keep ink inside (x0, y0, x1, y1)
     overrides: dict = field(default_factory=dict)
     defaults: dict = field(default_factory=dict)
     parts: dict = field(default_factory=dict)        # name -> stroke indices
     defaults_used: dict = field(default_factory=dict)
+    extra_chamfers: list = field(default_factory=list)   # chamfer record of stamped glyphs (see add_glyph)
 
     def free(self, name: str, default: float) -> float:
         """A free variable of the drawing (see Opening)."""
@@ -78,7 +81,7 @@ class Glyph:
         """The ink of the named strokes, before the union and corner rule."""
         import shapely
         from .geom import stroke_polygon
-        th = Thickness(self.p.sv, self.sh, self.p.sd, self.p.ss)
+        th = Thickness(self.p.sv, self.sh, self.p.sd, self.p.ss, self.p.slant)
         return shapely.union_all([stroke_polygon(self.strokes[i], th, self.p.c) for i in self.parts[name]])
 
     def counter_size(self) -> float:
@@ -116,14 +119,18 @@ class Glyph:
             return 1e4
         return (min(ys) - y) if up else (y - max(ys))
 
-    def tightest_counter(self) -> float:
-        """Diameter of the largest circle inside the tightest closed counter."""
+    def counters(self) -> list[float]:
+        """Diameters of the largest circles inside each closed counter."""
         import shapely
         from shapely.geometry import Polygon
         from .geom import rings_to_shapely
         poly = rings_to_shapely(self.rings())
-        sizes = [2 * shapely.maximum_inscribed_circle(Polygon(h), tolerance=1.0).length
-                 for part in getattr(poly, 'geoms', [poly]) for h in part.interiors]
+        return [2 * shapely.maximum_inscribed_circle(Polygon(h), tolerance=1.0).length
+                for part in getattr(poly, 'geoms', [poly]) for h in part.interiors]
+
+    def tightest_counter(self) -> float:
+        """Diameter of the largest circle inside the tightest closed counter."""
+        sizes = self.counters()
         return min(sizes) if sizes else 1e4
 
     def stroke(self, *pts, closed=False, start='flat', end='flat', part=None):
@@ -132,8 +139,8 @@ class Glyph:
         nodes = []
         for q in pts:
             if isinstance(q, tuple) and q and q[0] == 'bowl':
-                _, x, y, leg = q
-                nodes.append(Node(x, y, self.p.leg if leg is None else leg))
+                _, x, y, leg, w = q
+                nodes.append(Node(x, y, self.p.leg if leg is None else leg, w))
             else:
                 # (x, y) or (x, y, w): w is the thickness of the segment that follows
                 nodes.append(Node(q[0], q[1], 0.0, q[2] if len(q) > 2 else None))
@@ -141,16 +148,31 @@ class Glyph:
         return self
 
     def rings(self):
+        return self.outline(record=False)[0]
+
+    def outline(self, record: bool = True):
+        """(rings, chamfer record): see ``geom.ink``. Stamped glyphs bring
+        their own records (``add_glyph``)."""
         p = self.p
         box = None
         if self.clip is not None:
             from shapely.geometry import box as _box
             box = _box(*self.clip)
-        return ink(self.strokes, Thickness(p.sv, self.sh, p.sd, p.ss), p.c, self.extra, box)
+        rec = [] if record else None
+        rings = ink(self.strokes, Thickness(p.sv, self.sh, p.sd, p.ss, p.slant), p.c, self.extra, box, rec)
+        return rings, ((rec or []) + self.extra_chamfers if record else [])
+
+    def add_glyph(self, sub: 'Glyph', dx: float = 0.0, dy: float = 0.0):
+        """Stamp another drawn glyph into this one, chamfer record and all."""
+        from shapely import affinity
+        from .geom import rings_to_shapely
+        rings, rec = sub.outline()
+        self.extra.append(affinity.translate(rings_to_shapely(rings), dx, dy))
+        self.extra_chamfers += [_moved(r, dx, dy) for r in rec]
 
     @property
     def sh(self) -> float:
-        return self.p.sh * self.sh_k
+        return self.p.sh * self.sh_k * self.sh_auto
 
     def stack(self, n: int, height: float, ratio: float = 0.9):
         """Thin the horizontals where n bars share ``height`` so that each
@@ -158,6 +180,12 @@ class Glyph:
         fit = height / (n + (n - 1) * ratio)
         self.sh_k = min(1.0, fit / self.p.sh)
         return self.sh
+
+
+def _moved(r, dx, dy):
+    if r[0] == 'line':
+        return ('line', (r[1][0] + dx, r[1][1] + dy), r[2])
+    return ('chord', (r[1][0] + dx, r[1][1] + dy), (r[2][0] + dx, r[2][1] + dy))
 
 
 LETTER_KINDS = ('cap', 'lower')
@@ -175,8 +203,43 @@ def body_width(spec, p, width=None):
 
 def _build(spec, p, ot, ob, overrides, width=None):
     g = Glyph(p, spec.name, ot=ot, ob=ob, W=body_width(spec, p, width), overrides=dict(overrides))
+    g.sh_auto = overrides.get('sh_auto', 1.0)
+    g.defaults['sh_auto'] = 1.0
     spec.fn(g)
     return g
+
+
+# Every closed counter keeps at least half its share of the stem in the
+# watch's own drawing. Where heavier strokes would close it, the glyph's
+# horizontals thin, down to AUTO_MIN of the weight's own: the tight-stack
+# rule of the a, e and s, applied wherever it is needed. Glyphs that declare
+# their own openings on their horizontals (the figures) and composites (drawn
+# from other glyphs, which keep their own counters) are left alone.
+AUTO_SHARE = 0.5
+AUTO_MIN = 0.7
+_AUTO: dict = {}
+
+
+def _auto_counters(spec):
+    """(count, share of the stem of the tightest) of a glyph's closed
+    counters in the watch's drawing, or None if the rule does not apply."""
+    if spec.name not in _AUTO:
+        from .params import HERITAGE
+        res = None
+        if spec.kind != 'fig' and not any(op.free == 'sh_k' for op in spec.openings):
+            g = _build(spec, HERITAGE, 0.0, 0.0, {})
+            if g.strokes and not g.extra:
+                sizes = g.counters()
+                if sizes:
+                    res = (len(sizes), min(sizes) / HERITAGE.sv)
+        _AUTO[spec.name] = res
+    return _AUTO[spec.name]
+
+
+def _counter_white(g, n):
+    """The tightest counter, or 0 if any of the drawing's n counters closed."""
+    sizes = g.counters()
+    return min(sizes) if len(sizes) >= n else 0.0
 
 
 _RATIOS: dict = {}
@@ -194,6 +257,8 @@ def _heritage_ratio(spec, k):
 
 def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
     spec = REGISTRY[name]
+    if p.slant and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
+        spec = REGISTRY[f'{name}.ital']
     overrides: dict = {}
     g = _build(spec, p, ot, ob, overrides, width)
     for k, op in enumerate(spec.openings):
@@ -204,7 +269,7 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
         if op.measure(g) >= target - 1e-6:
             continue
         a, b = g.defaults[op.free], op.limit(p)
-        for _ in range(40):  # bisection: a is too closed, b assumed open enough
+        for _ in range(24):  # bisection: a is too closed, b assumed open enough
             mid = (a + b) / 2
             trial = _build(spec, p, ot, ob, {**overrides, op.free: mid}, width)
             if op.measure(trial) >= target:
@@ -213,4 +278,19 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                 a = mid
         overrides[op.free] = b
         g = _build(spec, p, ot, ob, overrides, width)
+    auto = _auto_counters(spec)
+    if auto is not None:
+        n, ratio = auto
+        target = min(ratio, AUTO_SHARE) * p.sv
+        if _counter_white(g, n) < target - 1e-6:
+            a, b = 1.0, AUTO_MIN
+            for _ in range(24):
+                mid = (a + b) / 2
+                trial = _build(spec, p, ot, ob, {**overrides, 'sh_auto': mid}, width)
+                if _counter_white(trial, n) >= target:
+                    b = mid
+                else:
+                    a = mid
+            overrides['sh_auto'] = b
+            g = _build(spec, p, ot, ob, overrides, width)
     return g

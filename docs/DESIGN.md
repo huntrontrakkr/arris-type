@@ -91,11 +91,54 @@ it reuses moves the figures already make:
 | the 4's clip / the 1's notched flag | 4 1 | the comma's tail, r's shoulder |
 | beaks | 2 3 5 | C G J S c j ? |
 | gables (verticals bending at 45°) | (the Draft 5×7 caps) | A V W X Y M v w x y |
-| straight 2:1 stroke | 7 | N, slashes, fraction slash |
+| straight 2:1 stroke | 7 | N, v, w, slashes, fraction slash |
 | the 1's foot | 1 | J's top bar |
+| the 1's notched flag, turned | 1 | the shoulders of n, m, h and r, the l's top |
+| the t's foot | t | the l's tail |
 
 The proofs in `proofs/caps-masters.png` and `proofs/lower-masters.png` show
 the pixels, and the rule's outlines beneath them.
+
+**One family of shoulders.** The r's shoulder leaves its stem at 45 degrees,
+two modules below the arch, and leaves a notch under it: the 1's flag,
+turned. The n, m and h spring from their stems the same way, so the arches
+lean forward, the lowercase reads as one family, and the 1's flag runs
+through every line of text. Where the stems stand too close for the
+diagonal (the monospaced m, the heaviest weights) the shoulder rises less,
+down to a plain square join, so the drawing changes continuously with
+weight. The u keeps its plain bowl: notched, it moved toward the v.
+
+**Measured, then drawn.** `tools/letter_confusion.py` puts every pair of
+letters, and the strings readers mistake for one another (rn and m, cl and
+d, I l 1), through the same ideal-observer model as the figures
+(`docs/research/legibility.md`), against B612, Atkinson Hyperlegible and
+the chamfered faces. Where Arris was weaker than all of them, the letter
+changed:
+
+| Change | Pair | before | after |
+|---|---|---|---|
+| l: the t's foot as a tail | l/I | 0.29 | 0.57 |
+| v, w: 2:1 arms (the 7's slope) instead of 45-degree gables | v/u | 0.43 | 0.72 |
+| B: the upper bowl a module narrower (the classic B) | B/8 | 0.25 | 0.29 |
+| c: the shortest beaks | c/o | 0.36 | 0.42 |
+| G: the bar below the middle and deeper in | G/B | 0.39 | 0.49 |
+| the dotted zero's dot three times as tall | 0/O (Mono) | 0.21 | 0.43 |
+
+(SemiBold, cap height 11 arcminutes: a small label.) The capital V keeps its
+45-degree gable, from the watch's own capitals: at cap height it has
+diagonal enough, and V/U measures 0.52.
+
+**Cyrillic in the Latin rhythm.** Small-capital forms (в, к, н, п, ы, я...)
+draw their capitals in the x-height with the white scaled four modules for
+five, so the small Н has the n's white. The Ы's separate stem stands from
+its bowl as far as a letter from its neighbour (two sidebearings), and the
+Љ counts the three verticals it has.
+
+**Marks under stems.** The cedilla of T and t is written as a comma, as
+Romanian writes it: hung from the T's stem, a cedilla would make the letter
+a J. The comma below keeps inside the descender: its stub shortens, then
+the whole comma lightens, as heavy faces draw their accents; the breve's
+sides thin the same way so its cup stays open.
 
 ## 4. From pixels to every weight
 
@@ -143,6 +186,13 @@ that variable until the opening is back to size:
 * the a's bowl lowers;
 * the e's bar rises;
 * the Q's tail shortens.
+
+Every closed counter, in letters and signs alike, keeps at least half its
+share of the stem in the watch's drawing. Where heavier strokes would close
+it, the glyph's horizontals thin, down to 0.7 of the weight's own: the
+tight-stack rule of the a, e and s, applied wherever it is needed rather
+than declared letter by letter. A stroke that crosses a bowl (the ø's
+slash, the ¢'s bar) thins instead.
 
 Mouths, where a beak faces a bar, keep three quarters of their share;
 closed counters and the gaps under the 5's and 6's arms keep half. The 5's
@@ -283,7 +333,39 @@ That check found real design faults, which were then fixed:
 * Accents touched their letters at Black.
 * g-cedilla's comma was being drawn as a hidden cedilla.
 
-## 7. Features
+## 7. The italic
+
+The italic is the same drawings, slanted ten degrees, with curves where
+the upright cuts chamfers (`arris.italic`).
+
+**Curves for chamfers, points kept.** Every 45-degree chamfer that stands in
+for a right angle between a horizontal and a vertical (a bowl's corner, an
+edge break, the steps of the 2's notch and the 4's clip) becomes a
+quadratic curve tangent to both edges, its control point the corner it
+cut. The construction records which edges are chamfers as it draws them,
+so a diagonal stroke never becomes a curve by looking like one. Everything
+the upright keeps sharp stays sharp: beaks, the 3's and 8's waists, the
+meeting of two diagonals, a diagonal's end, the X's stepped crossing. The
+softened bowls against those points are what keep the italic Arris.
+
+**Slant without distortion.** The outline is sheared about half the
+x-height, so every glyph keeps its place and its advance and the upright's
+spacing carries over; kerning is measured on the slanted shapes. A shear
+alone thins the strokes that lean with it and thickens those that lean
+against it (each 45-degree diagonal by about 9%), so stroke weights are set
+before the shear: every stroke comes out as heavy across as its upright
+self, times cos 10 degrees, as a stem does.
+
+**Italic forms.** The single-storey a (the d's bowl on a stem that stops at
+the x-height) and an f that runs on below the baseline and turns back.
+Accented letters and the ordinals take them too.
+
+**Variable.** The italic's variable font aligns the upright masters, then
+curves them: a segment that is a chamfer in any master carries a control
+point in all of them, at its middle where it is straight, so a curve grows
+from a straight edge as the weight moves.
+
+## 8. Features
 
 * `tnum` (default) and `pnum` figures.
 * `calt`: a colon between figures becomes the watch's time colon, with
@@ -299,7 +381,7 @@ That check found real design faults, which were then fixed:
   superior ¹ ² ³ and ª º.
 * `case`: dashes, guillemets, bullets and brackets raised for capitals.
 
-## 8. Metrics
+## 9. Metrics
 
 | | units | modules |
 |---|---|---|

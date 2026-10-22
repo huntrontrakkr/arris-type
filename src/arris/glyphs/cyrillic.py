@@ -208,8 +208,10 @@ def Yeru(g):
     f = Frame(g, 12)
     p = f.p
     xs = f.X(11)
-    # the bowl keeps at least a stem's white from the separate stem
-    xb = min(f.X(8), xs - 2 * p.sv - max(p.m, p.sv) + p.sv / 2 + p.sv / 2)
+    # the separate stem stands as far from the bowl as a letter from its
+    # neighbour in a word (two sidebearings), never nearer
+    from ..font import light
+    xb = min(f.X(8), xs - p.sv - 2 * light(p))
     _sign(g, f, f.X(1), xb)
     g.stroke((xs, 0), (xs, p.cap))
 
@@ -262,7 +264,7 @@ def Tshe(g):
     g.stroke(f.P(3, 6.5), B(*f.P(10, 6.5)), f.P(10, 0))
 
 
-@ccap('uni0409', 'Љ', 14, 2)
+@ccap('uni0409', 'Љ', 14, 3)
 def Lje(g):
     f = Frame(g, 14)
     p = f.p
@@ -299,15 +301,17 @@ SMALLCAP = {0x0431: None, 0x0432: 'B', 0x0433: 'uni0413', 0x0434: 'uni0414', 0x0
 
 
 def sc(p):
-    """Parameters that draw a capital construction as a small capital."""
-    r = p.xh / p.cap
-    return p.with_(cap=p.xh, m=p.m * r)
+    """Parameters that draw a capital construction as a small capital: the
+    x-height for the cap height, and the white scaled so the small H has the
+    n's white (four modules for five), which puts the Cyrillic lowercase in
+    the Latin lowercase's rhythm."""
+    return p.with_(cap=p.xh, m=p.m * 0.8)
 
 
 def smallcap(name, ch, cap_name):
     def fn(g, cap_name=cap_name):
         sub = draw(cap_name, sc(g.p), width=g.W if g.p.mono else None)
-        g.extra.append(rings_to_shapely(sub.rings()))
+        g.add_glyph(sub)
     glyph(name, ch, lambda p, c=cap_name: REGISTRY[c].width(sc(p)), kind='lower')(fn)
 
 

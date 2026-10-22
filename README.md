@@ -11,14 +11,17 @@ pixel for pixel.
 
 ![Weights](proofs/figures-weights.png)
 
+![Italic](proofs/italic.png)
+
 ## Families
 
 | Family | What it is |
 |---|---|
 | **Arris** | Proportional letters, tabular figures. Measured optics. Nine weights. |
 | **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem). |
+| **Arris Italic**, **Arris Mono Italic** | Slanted ten degrees, every chamfer a curve, every point the upright keeps sharp kept sharp; a single-storey a and a descending f. Nine weights each. |
 | **Arris Mono** | Every glyph on the figures' 10-module pitch: slabbed I, footed i l r, dotted zero. |
-| **Arris[GRAD,WTCH,wght]** | Variable: weight 100–900, grade −100–100, watch proportions 0–100. |
+| **Arris[GRAD,WTCH,wght]**, **Arris-Italic[GRAD,WTCH,wght]** | Variable: weight 100–900, grade −100–100, watch proportions 0–100; linked as one family on the `ital` axis. |
 
 Coverage: Latin (Western, Central and Eastern European, Turkish, Baltic,
 Romanian), Cyrillic (Russian, Ukrainian, Belarusian, Bulgarian, Serbian,
@@ -33,7 +36,9 @@ uv sync
 uv run python tools/build_fonts.py              # Arris, all weights
 uv run python tools/build_fonts.py all watch    # Arris Watch
 uv run python tools/build_fonts.py all mono     # Arris Mono
+uv run python tools/build_fonts.py all italic   # Arris Italic (add mono for Arris Mono Italic)
 uv run python tools/build_vf.py                 # the variable font, with its interpolation check
+uv run python tools/build_vf.py italic          # the italic variable font
 uv run pytest                                   # the figures against the watch's pixels
 ```
 
@@ -57,6 +62,10 @@ and where the optical corrections come from. In short:
 * `src/arris/vision.py`, `src/arris/spacing.py`, `src/arris/kerning.py`:
   measuring instead of eyeballing.
 * `src/arris/variable.py`: making masters point-compatible after the fact.
+* `src/arris/italic.py`: the italic, from the upright drawings.
+* `tools/confusion.py`, `tools/letter_confusion.py`: which figures and
+  letters a reader could mistake for one another, against legibility faces
+  (`docs/research/legibility.md`).
 
 ## Licence
 

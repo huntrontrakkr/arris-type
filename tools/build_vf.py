@@ -7,6 +7,9 @@ Axes:
   WTCH  0-100    the watch's own proportions (diagonals as wide across as a
                  stem, horizontals as heavy as verticals) instead of the
                  measured optics
+
+usage: build_vf.py [italic]   ('italic' builds Arris-Italic[GRAD,WTCH,wght].ttf:
+the upright masters are aligned, then curved and sheared, arris.italic)
 """
 import sys
 import tempfile
@@ -20,7 +23,8 @@ from shapely.geometry import Polygon
 
 import arris.glyphs  # noqa: F401
 from arris.draw import REGISTRY
-from arris.font import KERN_PUNCT, build, light, place
+from arris.font import KERN_PUNCT, _place, build, light, place
+from arris import italic as ital
 from arris.glyphs.features import fea
 from arris.instances import NAMES, params
 from arris.kerning import kerns
@@ -36,35 +40,57 @@ CHECK = [(150, 0, 0), (300, 0, 0), (500, 0, 0), (700, 0, 0), (800, 0, 0),
 
 family = 'Arris'
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
-names = FIGS + [n for n in REGISTRY if n not in FIGS]
+names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital')]   # italic drawings replace their uprights (arris.italic)
+
+
+ITALIC = 'italic' in sys.argv[1:]
 
 
 def P(loc):
     w, g, t = loc
-    return params(w, g, watch=t / 100)
+    p = params(w, g, watch=t / 100)
+    return ital.italic(p) if ITALIC else p
+
+
+def style_name(w):
+    nm = NAMES.get(w, f'W{w}')
+    if not ITALIC:
+        return nm
+    return 'Italic' if nm == 'Regular' else f'{nm} Italic'
 
 
 ps = {m: P(m) for m in MASTERS}
-placed = {m: {n: place(n, ps[m]) for n in names} for m in MASTERS}
+# upright drawings (rings, chamfer record, advance); the italic is made from them
+upright = {m: {n: _place(n, ps[m], record=ITALIC) for n in names} for m in MASTERS}
 print('placed', len(MASTERS), 'masters')
 
 aligned = {w: {} for w in MASTERS}
 frozen = []
 for n in names:
     try:
-        rings = align([placed[w][n][0] for w in MASTERS])
+        rings = align([upright[w][n][0] for w in MASTERS])
+        if ITALIC:
+            rings = ital.aligned_outlines(rings, [upright[w][n][0] for w in MASTERS],
+                                          [upright[w][n][1] for w in MASTERS], [ps[w] for w in MASTERS])
     except ValueError as e:
         # cannot vary: every master carries the default outline (reported)
         frozen.append((n, str(e)))
-        d = placed[DEFAULT][n][0]
+        d = place(n, ps[DEFAULT])[0]
         rings = [d for _ in MASTERS]
     for i, w in enumerate(MASTERS):
-        aligned[w][n] = (rings[i], placed[w][n][1])
+        aligned[w][n] = (rings[i], upright[w][n][2])
 print('aligned;', len(frozen), 'glyphs could not vary:', frozen[:10])
+
+
+def kern_outline(w, n):
+    if ITALIC:
+        return ital.polylines(place(n, ps[w])[0])
+    return upright[w][n][0]
+
 
 # kerning: the same pairs in every master, each master's own values
 kernable = [n for n in names if REGISTRY[n].kind in ('cap', 'lower') or n in KERN_PUNCT]
-pairs_by = {w: kerns({n: (placed[w][n][0], round(placed[w][n][1])) for n in kernable}, ps[w], light(ps[w]))
+pairs_by = {w: kerns({n: (kern_outline(w, n), round(upright[w][n][2])) for n in kernable}, ps[w], light(ps[w]))
             for w in MASTERS if w[1] == 0}
 for w in MASTERS:                       # grade keeps every advance, kerning included
     if w[1] != 0:
@@ -82,14 +108,14 @@ for tag, name, lo, df, hi in (('wght', 'Weight', 100, 400, 900), ('GRAD', 'Grade
 for i, m in enumerate(MASTERS):
     path = tmp / f'master-{i}.ttf'
     pairs = {pr: pairs_by[m].get(pr, 0) for pr in all_pairs}
-    build(str(path), names, ps[m], family=family, style=NAMES.get(m[0], f'W{m[0]}'), weight=m[0], fea=fea(),
-          placed=aligned[m], kern_pairs=pairs)
+    build(str(path), names, ps[m], family=family, style=style_name(m[0]), weight=m[0], fea=fea(),
+          placed=aligned[m], kern_pairs=pairs, stat=False)
     src = SourceDescriptor()
     src.path, src.location = str(path), {'Weight': m[0], 'Grade': m[1], 'Watch': m[2]}
     doc.addSource(src)
 for w, nm in NAMES.items():
     inst = InstanceDescriptor()
-    inst.familyName, inst.styleName, inst.location = family, nm, {'Weight': w, 'Grade': 0, 'Watch': 0}
+    inst.familyName, inst.styleName, inst.location = family, style_name(w), {'Weight': w, 'Grade': 0, 'Watch': 0}
     doc.addInstance(inst)
 vf, _, _ = varlib_build(doc)
 from fontTools.otlLib.builder import buildStatTable
@@ -99,9 +125,13 @@ buildStatTable(vf, [
     {'tag': 'GRAD', 'name': 'Grade', 'values': [{'value': 0, 'name': 'Normal', 'flags': 0x2}]},
     {'tag': 'WTCH', 'name': 'Watch', 'values': [{'value': 0, 'name': 'Measured', 'flags': 0x2},
                                                 {'value': 100, 'name': 'Watch'}]},
+    # the upright and the italic are one family: each names its place on ital
+    {'tag': 'ital', 'name': 'Italic',
+     'values': [{'value': 1, 'name': 'Italic'}] if ITALIC else
+               [{'value': 0, 'name': 'Roman', 'flags': 0x2, 'linkedValue': 1}]},
 ])
 vf['name'].names = [nm for nm in vf['name'].names if nm.platformID != 1]   # Windows names only
-out = Path('build') / 'Arris[GRAD,WTCH,wght].ttf'
+out = Path('build') / ('Arris-Italic[GRAD,WTCH,wght].ttf' if ITALIC else 'Arris[GRAD,WTCH,wght].ttf')
 vf.save(out)
 print('wrote', out)
 
@@ -113,15 +143,15 @@ for w in CHECK:
     p = P(w)
     for n in names:
         rings, adv = place(n, p)
-        exact = Polygon()
         from arris.geom import rings_to_shapely
-        exact = rings_to_shapely(rings)
+        exact = rings_to_shapely(ital.polylines(rings) if ITALIC else rings)
         g = glyf[n]
-        coords, ends, _ = g.getCoordinates(glyf)
+        coords, ends, flags = g.getCoordinates(glyf)
         pts, start = list(coords), 0
         got = []
         for e in ends:
-            got.append([tuple(q) for q in pts[start:e + 1]][::-1])
+            c = [(q[0], q[1], bool(f & 1)) for q, f in zip(pts[start:e + 1], flags[start:e + 1])][::-1]
+            got.append(ital.flatten(c) if ITALIC else [q[:2] for q in c])
             start = e + 1
         try:
             interp = rings_to_shapely([r for r in got if len(set(r)) >= 3])
