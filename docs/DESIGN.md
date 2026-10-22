@@ -134,9 +134,21 @@ that variable until the opening is back to size:
 
 * the 4's clip deepens;
 * the 1's flag drops;
+* the 3's waist bar draws back toward the middle;
+* a beak (3, 5, §) shortens, never past its own outer flank, so it keeps
+  its point;
+* the figures that stack three bars (3 5 6 8 9) thin their horizontals,
+  down to 0.7 of the weight's own, as the a, e and s do;
+* the open five's bowl comes back down toward the 5's own;
 * the a's bowl lowers;
 * the e's bar rises;
 * the Q's tail shortens.
+
+Mouths, where a beak faces a bar, keep three quarters of their share;
+closed counters and the gaps under the 5's and 6's arms keep half. The 5's
+mouth is what tells it from a 6, the pair most easily confused at small
+sizes (`docs/research/legibility.md`), so it is held open to the heaviest
+corner of the variable font: Black, grade +100, watch balance.
 
 The quirks therefore don't just survive heavy weights; at Black the 4's
 clip is what keeps the 4 open. At light weights the clip and notch never
@@ -153,12 +165,17 @@ Corrections in Arris are measured, not eyeballed. The numbers come from
 two sources. One is measurements of 24 open-licence fonts: neutral sans
 faces, chamfered and octagonal faces, and monospaced faces
 (`research-fonts/`, `docs/research/reference-fonts.md`). The other is a small
-model of vision (`arris.vision`).
+model of vision (`arris.vision`). A review of the perception literature
+(`docs/research/perception.md`) says which of these corrections the eye
+explains and which are typographers' practice.
 
 **Horizontals thinner than verticals.** A horizontal bar looks heavier than a
 vertical stem of the same thickness. The measured faces set horizontals at
 0.87–0.90 of the stem at Regular and 0.85–0.87 at Bold, chamfered faces
-included. Arris runs from 0.90 at Thin to 0.85 at Black. In tight stacks
+included. Arris runs from 0.90 at Thin to 0.85 at Black. Measured
+illusions explain the direction and about half the size: verticals look
+6–7% longer than horizontals of the same length, and horizontal bars 3–5%
+thicker. The rest is practice, rightly taken from the fonts. In tight stacks
 (the a, e and s carry three bars in an x-height), horizontals thin further
 so that each counter stays at least ¾ of a bar.
 
@@ -167,7 +184,11 @@ so that each counter stays at least ¾ of a bar.
 the mean of its side and top. That is where the watch's 71% sits furthest
 from practice, and where its light corners come from. Arris uses 0.94 at
 light weights, thinning to 0.84 at Black as heavy faces do, so that tight
-figures like the 4 keep their counters.
+figures like the 4 keep their counters. The oblique effect (the eye's
+poorer acuity for 45° lines) is real only near threshold and at fine
+detail, so it is no reason to change a diagonal's weight at text or watch
+size; the ratio is practice, which offsets the darkening where diagonals
+meet other strokes.
 
 **No overshoot for chamfered bowls.** Round letters usually rise above and
 dip below the flat ones (about 1.3–1.6% in the neutral faces), because a
@@ -177,13 +198,17 @@ size and finds where the blurred edge crosses half a bar's plateau. It
 shows that the octagon's flat top, four modules wide, reads as tall as a
 square top at text and watch sizes. Only below about 11 arcminutes of cap
 height (a 7-pixel label) do pointed ends start to look short. The
-chamfered faces agree: their median overshoot is zero. Arris does not
-overshoot its bowls.
+chamfered faces agree: their median overshoot is zero. No study measures
+how much overshoot a round form needs (the usual 1–3% is practice), and a
+flat top 44% of the width needs none under either a blur or a local-window
+model. Arris does not overshoot its bowls.
 
 **Optical centre.** Measured crossbars sit at 0.50–0.51 of the cap height in
 chamfered faces (0.51–0.53 in neutral ones). The watch figures put their
 waists at the geometric middle, and so do the Arris capitals. Bowls of B
-and P follow their masters.
+and P follow their masters. The "optical centre a few percent above the
+middle" is mostly folklore: people bisect a vertical line about 1% high,
+a third of a pixel at the watch's 36-pixel figures.
 
 **Small figures drawn small.** Superiors, inferiors and the figures of
 fractions are not scaled-down figures. They are the same constructions with
@@ -205,9 +230,26 @@ and a line of text keeps its length. Glyphs as narrow as a stem (I, i, dots)
 thicken outward about their centre; everything else thickens inward from
 its edges.
 
-*Pending: the literature review on the horizontal–vertical illusion, the
-oblique effect and irradiation (`docs/research/perception.md`), which will
-set the recommended grade for dark palettes.*
+**Recommended grade.** A light–dark border looks shifted about 0.4
+arcminutes toward the dark side (Westheimer), so a light stroke on dark
+gains about 0.8 arcminutes. At the watch's 36-pixel figures that is 11% of
+the SemiBold stem. Material's guidance for light-on-dark icons is −25;
+neither Google nor Apple documents a value for text, and in a 459-person
+study grade made no measurable difference to reading speed in dark mode,
+so the choice is one of appearance.
+
+| Screen and setting | GRAD |
+|---|---|
+| dark on light | 0 |
+| light on dark, backlit or OLED (the watch's dark palettes) | −50 (strokes −10%, about 0.6 px) |
+| light on dark, transflective in daylight | −25 |
+| night or glance use | −100, or a weight lighter at −50 |
+
+Never go past −100. The value that would fully match dark-on-light weight
+under the border model (−22% at SemiBold) is an upper bound from a single
+edge, not a stroke. Settle the final value with proofs on the device: how
+the watch blends antialiased edges (in gamma or linear light) thins light
+text by up to a third of a pixel per edge on its own.
 
 ## 6. The variable font
 
@@ -247,7 +289,9 @@ That check found real design faults, which were then fixed:
 * `calt`: a colon between figures becomes the watch's time colon, with
   dots centred on the figures in a tighter slot.
 * `zero`: a slashed zero, its slash square to the bowl's corners.
-* `ss01`: a dotted zero.
+* `ss01`: a dotted zero. Clocks should keep the plain 0: a dot or a slash
+  moves a zero toward an 8, which is why the German number-plate face
+  dropped its slashed zero. The Mono cut dots its zero, for code.
 * `ss02`: the open five, whose bowl sits one pixel row higher. Blurred, it
   is the figure that separates most from the 6
   (`docs/research/legibility.md`).

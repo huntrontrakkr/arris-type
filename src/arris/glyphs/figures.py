@@ -17,31 +17,94 @@ STEEP = (1 / math.sqrt(5), 2 / math.sqrt(5))  # the 2:1 slope, as a unit vector
 
 def frame(g):
     p = g.p
+    # Figures that stack three bars thin their horizontals where an opening
+    # needs it (see STACKED); elsewhere sh_k stays 1.
+    g.sh_k = g.free('sh_k', 1.0)
     W, H = p.fig_w, p.cap
     u, v = W / 9, H / 12
     xl, xr = p.sv / 2, W - p.sv / 2
-    yb, yt = p.sh / 2, H - p.sh / 2
+    yb, yt = g.sh / 2, H - g.sh / 2
     # Strokes may run past the body (a diagonal into a bar's end); the body
     # box trims them, so outer edges stay exactly on it.
     g.clip = (0, -g.ob, W, H + g.ot)
     return p, W, H, u, v, xl, xr, yb, yt
 
 
-def beak_depth(p):
+def beak_depth(p, sh=None):
     """How far a beak terminal reaches below the bowl's top (or above its
     bottom). Its outer flank under the corner chamfer is one edge break long,
     so the corner rule turns it into a point; at weights where that would leave
     the inner flank shorter than an edge break, the inner flank sets the depth.
     At the heritage weight both flanks are exactly one edge break."""
-    return max(outer_leg(p) + p.c, p.sh + inner_leg(p) + p.c)
+    sh = p.sh if sh is None else sh
+    return max(outer_leg(p, sh=sh) + p.c, sh + inner_leg(p, sh) + p.c)
 
 
 def beak_top(g):
-    return g.p.cap + g.ot - beak_depth(g.p)
+    return g.p.cap + g.ot - beak_depth(g.p, g.sh)
 
 
 def beak_bottom(g):
-    return -g.ob + beak_depth(g.p)
+    # an opening may shorten the beak, but never past its outer flank
+    shortest = outer_leg(g.p, sh=g.sh) + g.p.c
+    return -g.ob + max(g.free('beak', beak_depth(g.p, g.sh)), shortest)
+
+
+def _beak_limit(p):
+    """The shortest beak: its outer flank alone, an edge break under the
+    chamfer, at the thinnest horizontals a stack allows."""
+    return outer_leg(p, sh=STACK_MIN * p.sh) + p.c
+
+
+# Openings of the figures that stack three bars (3 5 6 8 9). Heavier strokes
+# grow into the white between the bars; the horizontals thin, down to
+# STACK_MIN of the weight's own, until the tightest opening has half its
+# share of the stem in the watch's drawing again. Mouths (where a beak faces
+# a bar) shorten the beak, and keep three quarters of their share.
+STACK_MIN = 0.7
+MOUTH_SHARE = 0.75
+STACK_SHARE = 0.5
+
+
+def _stacked(measure):
+    return Opening(measure, 'sh_k', lambda p: STACK_MIN, max_ratio=STACK_SHARE)
+
+
+def _mouth(measure):
+    return Opening(measure, 'beak', _beak_limit, max_ratio=MOUTH_SHARE)
+
+
+def _arm_gap(g):
+    """White under the top bar of a 5 or 6 (over the bottom bar of a 9),
+    measured at the middle of the body."""
+    H = g.p.cap
+    if g.defaults_used.get('flip'):
+        return g.white_vertical(g.W / 2, -g.ob + g.sh, up=True)
+    return g.white_vertical(g.W / 2, H + g.ot - g.sh)
+
+
+def _counters(g):
+    return g.tightest_counter()
+
+
+def _upper_bowl(g):
+    """The 3's upper bowl is open on the left: the largest circle in the white
+    between its top bar and its waist."""
+    import shapely
+    from shapely.geometry import box
+    from ..geom import rings_to_shapely
+    p = g.p
+    white = box(g.W / 9, p.cap / 2, g.W, p.cap).difference(rings_to_shapely(g.rings()))
+    part = max(getattr(white, 'geoms', [white]), key=lambda q: q.area)
+    return 2 * shapely.maximum_inscribed_circle(part, tolerance=1.0).length
+
+
+def _mouth_gap(g):
+    """White between a beak's tip (its ink above the bottom bar) and the bar
+    it faces."""
+    from shapely.geometry import box
+    tip = g.part('beak').intersection(box(-1e4, g.sh - g.ob + 1e-3, 1e4, 1e4))
+    return tip.distance(g.part('bar')) if not tip.is_empty else 1e4
 
 
 def steep_thickness(p):
@@ -116,11 +179,9 @@ def two(g):
              (yj + a_lo, yj), (yb + a_lo, yb), end='h')
 
 
-def _three_gap(g):
-    return g.part('beak').distance(g.part('bar'))
-
-
-@glyph('three', '3', 'fig_w', openings=[Opening(_three_gap, 'bar_x', lambda p: p.fig_w / 2)])
+@glyph('three', '3', 'fig_w', openings=[_stacked(_upper_bowl),
+                                       Opening(_mouth_gap, 'bar_x', lambda p: p.fig_w / 2, max_ratio=MOUTH_SHARE),
+                                       _mouth(_mouth_gap)])
 def three(g):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
     ym = 6 * v
@@ -129,7 +190,7 @@ def three(g):
     # The upper bowl's lower corner is a module rounder than the lower bowl's
     # upper one; their outer chamfers meet in a sharp point at the waist.
     g.stroke((u, yt), B(xr, yt), B(xr, ym, p.leg + u), (xm, ym), part='bar')
-    g.stroke((xm, ym), B(xr, ym), B(xr, bot), (W / 2, bot), part='bar')
+    g.stroke((xm, ym), B(xr, ym), B(xr, bot), (W / 2, bot))
     g.stroke((W / 2, bot), B(xl, bot), (xl, beak_bottom(g)), part='beak')
 
 
@@ -176,16 +237,23 @@ def four(g):
              start='h', end='h', part='diagonal')
 
 
-@glyph('five', '5', 'fig_w')
+FIVE_OPENINGS = [_stacked(_arm_gap), _mouth(_mouth_gap)]
+
+
+@glyph('five', '5', 'fig_w', openings=FIVE_OPENINGS)
 def five(g, junction=7):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
-    yj = junction * v
+    yj = g.free('junction', junction) * v
     bot = yb - g.ob
-    g.stroke((8 * u, yt), (xl, yt), (xl, yj), B(xr, yj), B(xr, bot), B(xl, bot), (xl, beak_bottom(g)))
+    # the beak and the bar it faces (the 5's mouth, what tells it from a 6)
+    g.stroke((8 * u, yt), (xl, yt), (xl, yj), (W / 2, yj), part='bar')
+    g.stroke((W / 2, yj), B(xr, yj), B(xr, bot), (W / 2, bot))
+    g.stroke((W / 2, bot), B(xl, bot), (xl, beak_bottom(g)), part='beak')
 
 
 def _six(g, flip):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
+    g.defaults_used['flip'] = flip
     ot, ob = (g.ob, g.ot) if flip else (g.ot, g.ob)
     yj = 7 * v
     top, bot = yt + ot, yb - ob
@@ -198,12 +266,12 @@ def _six(g, flip):
     g.stroke(T(xl, yj), b(xr, yj), b(xr, bot), b(xl, bot), closed=True)
 
 
-@glyph('six', '6', 'fig_w')
+@glyph('six', '6', 'fig_w', openings=[_stacked(_arm_gap)])
 def six(g):
     _six(g, False)
 
 
-@glyph('nine', '9', 'fig_w')
+@glyph('nine', '9', 'fig_w', openings=[_stacked(_arm_gap)])
 def nine(g):
     _six(g, True)
 
@@ -219,7 +287,7 @@ def seven(g):
     g.stroke((x_at(yt), yt), (x_at(0), 0), start='h', end='h')
 
 
-@glyph('eight', '8', 'fig_w')
+@glyph('eight', '8', 'fig_w', openings=[_stacked(_counters)])
 def eight(g):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
     yw = 6 * v
@@ -229,9 +297,12 @@ def eight(g):
     g.stroke(B(xl, bot), B(xr, bot), B(xr, yw), B(xl, yw), closed=True)
 
 
-@glyph('five.ss02', None, 'fig_w')
+@glyph('five.ss02', None, 'fig_w',
+       openings=[_stacked(_arm_gap), Opening(_arm_gap, 'junction', lambda p: 7.0, max_ratio=STACK_SHARE),
+                 _mouth(_mouth_gap)])
 def five_open(g):
     """The open five: its bowl's top one pixel row higher than the watch's.
     The one change that most separates 5 from 6 when blurred (see
-    docs/research/legibility.md)."""
+    docs/research/legibility.md). Where even thinned horizontals leave no
+    room under its arm, the bowl comes back down toward the 5's own."""
     five(g, junction=8)

@@ -104,6 +104,28 @@ class Glyph:
         xs = [c[0] for gg in getattr(cut, 'geoms', [cut]) for c in getattr(gg, 'coords', [])]
         return (x - max(xs)) if xs else 1e4
 
+    def white_vertical(self, x: float, y: float, up: bool = False) -> float:
+        """Height of the white run down (or up) from (x, y)."""
+        from shapely.geometry import LineString
+        from .geom import rings_to_shapely
+        poly = rings_to_shapely(self.rings())
+        d = 1.0 if up else -1.0
+        cut = poly.intersection(LineString([(x, y + d * 1e-3), (x, y + d * 1e4)]))
+        ys = [c[1] for gg in getattr(cut, 'geoms', [cut]) for c in getattr(gg, 'coords', [])]
+        if not ys:
+            return 1e4
+        return (min(ys) - y) if up else (y - max(ys))
+
+    def tightest_counter(self) -> float:
+        """Diameter of the largest circle inside the tightest closed counter."""
+        import shapely
+        from shapely.geometry import Polygon
+        from .geom import rings_to_shapely
+        poly = rings_to_shapely(self.rings())
+        sizes = [2 * shapely.maximum_inscribed_circle(Polygon(h), tolerance=1.0).length
+                 for part in getattr(poly, 'geoms', [poly]) for h in part.interiors]
+        return min(sizes) if sizes else 1e4
+
     def stroke(self, *pts, closed=False, start='flat', end='flat', part=None):
         if part:
             self.parts.setdefault(part, []).append(len(self.strokes))

@@ -52,8 +52,9 @@ def outer_leg(p: Params, sv: float | None = None, sh: float | None = None) -> fl
     return p.leg + (sv + sh) / 2 - p.sd / SQRT2
 
 
-def inner_leg(p: Params) -> float:
-    return max(p.c, p.leg - (p.sv + p.sh) / 2 + p.sd / SQRT2)
+def inner_leg(p: Params, sh: float | None = None) -> float:
+    sh = p.sh if sh is None else sh
+    return max(p.c, p.leg - (p.sv + sh) / 2 + p.sd / SQRT2)
 
 
 # The watch figures, in modules: two-module strokes; every diagonal as wide
