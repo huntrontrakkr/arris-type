@@ -592,12 +592,18 @@ def notgreater(g):
 @op(u(0x2270), '≰')
 def notlessequal(g):
     REGISTRY['lessequal'].fn(g)
-    negate(g, half=_neg_half(g))
+    _le_strike(g)
 
 
 @op(u(0x2271), '≱')
 def notgreaterequal(g):
     REGISTRY['greaterequal'].fn(g)
+    _le_strike(g)
+
+
+def _le_strike(g):
+    """The negation of <= and >=: the not-equal sign's stroke from below the
+    bar to above the chevron, crossing both, as tall as the sign needs."""
     negate(g, half=_neg_half(g))
 
 
@@ -1029,19 +1035,27 @@ def nottrue(g):
 # --- Triangles and the bowtie ------------------------------------------------------------
 
 def triangle(g, x_tip, yc, h, right=False):
-    """A 45-degree triangle pointing left (right), its point at x_tip, its
-    upright side h back from it, reaching h up and down."""
+    """A triangle pointing left (right), its sides at 2:1 (the media
+    controls' triangle, as wide as it is tall), its point at x_tip, its
+    upright side 2h back from it, reaching h up and down."""
     s = 1 if right else -1
-    x_back = x_tip - s * h
+    x_back = x_tip - s * 2 * h
     g.stroke((x_tip, yc), (x_back, yc + h), (x_back, yc - h), closed=True)
 
 
-def tri_reach_p(p):
-    """A triangle's reach: nine tenths of the box's half, or as much as
-    keeps its counter half a stem across (a right isosceles triangle's
-    inradius is 0.414 of its reach; its strokes take half their weight from
-    it)."""
-    return max(0.45 * (OPW(p) - p.sv / 2), (0.25 * p.sv + max(p.sv, p.sd) / 2) / (SQRT2 - 1))
+def _tip(p):
+    """How far a 2:1 triangle's point reaches past its vertex: its sides'
+    stroke over sin 26.6 degrees, less the corner rule's cut."""
+    t = p.sh + (p.sd - p.sh) * 26.565 / 45
+    return 1.118 * t
+
+
+def tri_reach_p(p, W=None):
+    """A triangle's reach (half its height): the box filled, or as much as
+    keeps its counter half a stem across (the inradius of a 2:1 triangle
+    is 0.618 of its reach; its strokes take half their weight from it)."""
+    W = OPW(p) if W is None else W
+    return max((W - p.sv / 2 - _tip(p)) / 2, (0.25 * p.sv + max(p.sv, p.sd) / 2) / 0.618)
 
 
 def tri_reach(g):
@@ -1049,24 +1063,24 @@ def tri_reach(g):
 
 
 def tri_w(p):
-    return tri_reach_p(p) + kd(p) + p.sv / 2
+    return 2 * tri_reach_p(p) + _tip(p) + p.sv / 2
 
 
 @op(u(0x22B2), '⊲', width=tri_w)
 def normalsub(g):
-    triangle(g, kd(g.p), axis(g.p), tri_reach(g))
+    triangle(g, _tip(g.p), axis(g.p), tri_reach(g))
 
 
 @op(u(0x22B3), '⊳', width=tri_w)
 def contnormalsub(g):
-    triangle(g, g.W - kd(g.p), axis(g.p), tri_reach(g), right=True)
+    triangle(g, g.W - _tip(g.p), axis(g.p), tri_reach(g), right=True)
 
 
 @op(u(0x22B4), '⊴')
 def normalsubeq(g):
     def t(g, yc):
         h = tri_reach(g)
-        triangle(g, kd(g.p) + (g.W - tri_w(g.p)) / 2, yc, h)
+        triangle(g, _tip(g.p) + (g.W - tri_w(g.p)) / 2, yc, h)
     stack(g, [Shape(lambda g: 2 * tri_reach(g) + 2 * kd(g.p), t), Bar()])
 
 
@@ -1074,7 +1088,7 @@ def normalsubeq(g):
 def contnormalsubeq(g):
     def t(g, yc):
         h = tri_reach(g)
-        triangle(g, g.W - kd(g.p) - (g.W - tri_w(g.p)) / 2, yc, h, right=True)
+        triangle(g, g.W - _tip(g.p) - (g.W - tri_w(g.p)) / 2, yc, h, right=True)
     stack(g, [Shape(lambda g: 2 * tri_reach(g) + 2 * kd(g.p), t), Bar()])
 
 
@@ -1487,16 +1501,17 @@ def _angle(g):
     yb = a - r
     k = kd(p)
     g.stroke((0, yb), (g.W, yb))
-    g.stroke((k, yb), (k + 2 * r + g.sh / 2, yb + 2 * r + g.sh / 2), start='h', end='h')
+    L = g.W - 2 * k                                          # its end at the body's edge
+    g.stroke((k, yb), (k + L, yb + L), start='h', end='h')
     return yb
 
 
-@op('angle', '∠')
+@op('angle', '∠', width=growing_width(8, 1, 1.5))
 def angle(g):
     _angle(g)
 
 
-@op(u(0x2221), '∡')
+@op(u(0x2221), '∡', width=growing_width(8, 1, 1.5))
 def measuredangle(g):
     """The angle with an arc across it: up from the bar, then square to the
     diagonal (an octagon's eighth)."""
@@ -1516,8 +1531,8 @@ def sphericalangle(g):
     """A < with a short upright crossing both arms."""
     p = g.p
     a = axis(p)
-    h = 0.7 * (g.W - p.sv / 2)
     W = g.W
+    h = W - kd(p)                                            # across the body, as < is
     g.stroke((W, a + h), (W - h, a), (W, a - h), start='v', end='v')
     x = W - h + 0.45 * h
     e = max(0.75 * p.m, 0.5 * p.sv)

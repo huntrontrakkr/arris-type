@@ -36,6 +36,14 @@ def tech(name, char, width, sides=1.0, solid=False, kind=None):
     return glyph(name, char, _mono(width), kind=kind or ('punct', sides), solid=solid)
 
 
+def piece(name, char, width):
+    """A bracket piece: set in its body on the figures' advance, as a
+    tabular figure is, so the pieces of one bracket stand on the same stem
+    line on line (spacing by ink would shift a piece with a point or a
+    hook off it)."""
+    return glyph(name, char, _mono(width), kind='fig')
+
+
 def lighten(g):
     """A compound drawing's strokes: lighter toward Black (arrows.stack_k)."""
     k = stack_k(g.p)
@@ -449,17 +457,17 @@ def _int_w(p):
     return 2 * (2.5 * p.m + p.sv / 2) + p.sv
 
 
-@tech('integraltp', '⌠', _int_w)
+@piece('integraltp', '⌠', _int_w)
 def integraltp(g):
     _int_piece(g, True)
 
 
-@tech('integralbt', '⌡', _int_w)
+@piece('integralbt', '⌡', _int_w)
 def integralbt(g):
     _int_piece(g, False)
 
 
-@tech(u(0x23AE), '⎮', _int_w)
+@piece(u(0x23AE), '⎮', _int_w)
 def integralex(g):
     asc, desc = line_top(g.p)
     g.stroke((g.W / 2, desc), (g.W / 2, asc))
@@ -531,7 +539,7 @@ PIECES = [
     (0x23AD, _brace_piece, 'lower', True, 6),
 ]
 for cp, fn, part, mirror, wm in PIECES:
-    tech(u(cp), chr(cp), letter_width(wm, 1))(lambda g, fn=fn, part=part, mirror=mirror: fn(g, part, mirror))
+    piece(u(cp), chr(cp), letter_width(wm, 1))(lambda g, fn=fn, part=part, mirror=mirror: fn(g, part, mirror))
 
 
 # --- Media controls ---------------------------------------------------------------------
