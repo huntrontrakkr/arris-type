@@ -7,11 +7,10 @@ cuts chamfers.
   stroke comes out as heavy across as its upright self (``geom.Thickness``):
   a shear alone would thin the strokes that lean with it and thicken those
   that lean against it.
-* **Curves.** Every 45-degree chamfer that stands in for a right angle
-  between a horizontal and a vertical edge (a bowl's corner, an edge break,
-  the steps of the 2's notch and the 4's clip) becomes a quadratic curve
-  tangent to both edges, its control point the corner it cut. A chamfer
-  longer than any bowl's is a stroke, not a corner, and stays straight.
+* **Curves.** Every chamfer the drawing recorded as one (a bowl's corner,
+  an edge break, the steps of the 2's notch and the 4's clip) becomes a
+  quadratic curve tangent to the edges it joins, its control point the
+  corner it cut. A bowl's corner curves on both its edges or on neither.
 * **Sharp where the upright is sharp.** Corners the upright never chamfers
   stay sharp: beaks, the 3's and 8's waists, the meeting of two diagonals,
   a diagonal's end. Soft bowls against those points are what keeps the
@@ -61,42 +60,95 @@ def _meet(p0, p1, q0, q1):
 ON = 0.5   # font units: how near a segment must lie to a recorded chamfer
 
 
-def _is_chamfer(a, b, record) -> bool:
-    """Whether the segment a-b is one the drawing chamfered (``geom.ink``
-    records them): a bowl's chamfer edge lies on a recorded line, an edge
-    break is a recorded chord."""
-    for r in record:
+def _owner(a, b, record):
+    """Which recorded corner the segment a-b belongs to: ('bowl', index)
+    if it lies on one of a bowl's two chamfer lines, ('chord', index) if it
+    is an edge break, else None."""
+    for idx, r in enumerate(record):
         if r[0] == 'chord':
             if ((math.dist(a, r[1]) < ON and math.dist(b, r[2]) < ON)
                     or (math.dist(a, r[2]) < ON and math.dist(b, r[1]) < ON)):
-                return True
+                return ('chord', idx)
         else:
-            q, d = r[1], r[2]
-            if all(abs(_cross((pt[0] - q[0], pt[1] - q[1]), d)) < ON for pt in (a, b)):
-                return True
-    return False
+            for q, d in r[1:]:
+                if all(abs(_cross((pt[0] - q[0], pt[1] - q[1]), d)) < ON for pt in (a, b)):
+                    return ('bowl', idx)
+    return None
 
 
-def curve_ring(ring, p: Params, record):
-    """A ring of points -> a contour of (x, y, on_curve) with its chamfers
-    made curves. The ring is in the upright frame."""
-    pts = [tuple(q) for q in ring]
-    if len(pts) > 1 and math.dist(pts[0], pts[-1]) < _TOL:
-        pts = pts[:-1]
-    n = len(pts)
+def _joins_smoothly(v, seg) -> bool:
+    """Whether a chamfer meets the edge v as a corner it stands in for: a
+    horizontal or vertical edge, or a diagonal running straight on. Any
+    other meeting is a point the upright keeps sharp (a waist, a beak's
+    tip against a diagonal)."""
+    return _axis(v) or (_diag(v) and abs(_cross(v, seg)) <= 1e-4 * math.hypot(*v) * math.hypot(*seg))
+
+
+def _corner(a, b, turn_left):
+    """The corner a 45-degree chamfer a-b cut: where the horizontal and the
+    vertical through its ends meet, outside the ink for a cut (left turns,
+    ink on the left), inside it for a fill."""
+    c1, c2 = (a[0], b[1]), (b[0], a[1])
+    seg = (b[0] - a[0], b[1] - a[1])
+    side = _cross(seg, (c1[0] - a[0], c1[1] - a[1]))       # > 0: c1 on the left of a-b
+    return c1 if (side > 0) != turn_left else c2
+
+
+def _segments(rings_, record):
+    """Every 45-degree recorded chamfer in the rings: (ring, i, owner,
+    smooth, turn_left)."""
     out = []
-    for i in range(n):
-        a, b = pts[i], pts[(i + 1) % n]
-        prev, nxt = pts[i - 1], pts[(i + 2) % n]
-        seg = (b[0] - a[0], b[1] - a[1])
-        vin = (a[0] - prev[0], a[1] - prev[1])
-        vout = (nxt[0] - b[0], nxt[1] - b[1])
-        out.append((a[0], a[1], True))
-        if (_diag(seg) and _axis(vin) and _axis(vout) and abs(_cross(vin, vout)) > _TOL
-                and (_cross(vin, seg) > 0) == (_cross(seg, vout) > 0)
-                and _is_chamfer(a, b, record)):
-            c = _meet(prev, a, b, nxt)
-            out.append((c[0], c[1], False))
+    for ri, ring in enumerate(rings_):
+        pts = [tuple(q) for q in ring]
+        n = len(pts)
+        for i in range(n):
+            a, b = pts[i], pts[(i + 1) % n]
+            seg = (b[0] - a[0], b[1] - a[1])
+            if not _diag(seg):
+                continue
+            own = _owner(a, b, record)
+            if own is None:
+                continue
+            prev, nxt = pts[i - 1], pts[(i + 2) % n]
+            vin = (a[0] - prev[0], a[1] - prev[1])
+            vout = (nxt[0] - b[0], nxt[1] - b[1])
+            t1, t2 = _cross(vin, seg), _cross(seg, vout)
+            turns = [t for t in (t1, t2) if abs(t) > 1e-6 * math.hypot(*seg)]
+            corner = bool(turns) and not (len(turns) == 2 and (turns[0] > 0) != (turns[1] > 0))
+            # an S-bend or a straight run is no corner: it cannot curve, and holds its pair straight
+            smooth = corner and _joins_smoothly(vin, seg) and _joins_smoothly(vout, seg)
+            out.append((ri, i, own, smooth, corner and turns[0] > 0))
+    return out
+
+
+def curve_rings(rings_, p: Params, record):
+    """Rings of points -> contours of (x, y, on_curve), in the upright frame,
+    with their corners made curves.
+
+    A bowl's corner is a pair of chamfers, the stroke's outer and inner
+    edges, and they are curved together or not at all: a curve on one edge
+    against a straight other would swell the stroke (or, bulging across it,
+    cross the outline). A corner whose either edge meets a sharp point (a
+    waist, a beak's tip, a diagonal junction) stays straight on both, so the
+    point stays sharp. Edge breaks curve on their own."""
+    segs = _segments(rings_, record)
+    blocked = {own for _, _, own, smooth, _ in segs if own[0] == 'bowl' and not smooth}
+    curved = {(ri, i): left for ri, i, own, smooth, left in segs
+              if smooth and own not in blocked}
+    out = []
+    for ri, ring in enumerate(rings_):
+        pts = [tuple(q) for q in ring]
+        if len(pts) > 1 and math.dist(pts[0], pts[-1]) < _TOL:
+            pts = pts[:-1]
+        n = len(pts)
+        c = []
+        for i in range(n):
+            a, b = pts[i], pts[(i + 1) % n]
+            c.append((a[0], a[1], True))
+            if (ri, i) in curved:
+                q = _corner(a, b, curved[(ri, i)])
+                c.append((q[0], q[1], False))
+        out.append(c)
     return out
 
 
@@ -108,7 +160,7 @@ def shear(contour, p: Params):
 def outline(rings, record, p: Params):
     """The italic outline: contours of (x, y, on), sheared, ink on the left
     (as the upright rings)."""
-    return [shear(curve_ring(r, p, record), p) for r in rings]
+    return [shear(c, p) for c in curve_rings(rings, p, record)]
 
 
 def tt_contours(outline_):
@@ -185,8 +237,7 @@ def _key(q):
 def _chamfer_map(rings_, record, p: Params):
     """{(a, b): control} for every chamfer segment a-b a drawing curves."""
     out = {}
-    for ring in rings_:
-        c = curve_ring(ring, p, record)
+    for c in curve_rings(rings_, p, record):
         n = len(c)
         for i, (x, y, on) in enumerate(c):
             if not on:

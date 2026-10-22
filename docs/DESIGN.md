@@ -194,6 +194,15 @@ tight-stack rule of the a, e and s, applied wherever it is needed rather
 than declared letter by letter. A stroke that crosses a bowl (the ø's
 slash, the ¢'s bar) thins instead.
 
+**A floor under every stroke.** The lightest the font draws is the Thin's
+own thinnest stroke (its horizontal, 22 units). Nothing is drawn thinner,
+however it was derived: small figures, the letters inside © and ®, a
+negative grade at Thin, the watch balance's light diagonals at Thin. The
+floor lives in the parameters (`Params.floor`): every derived set of
+parameters clamps its strokes to it as it is made, so the geometry that
+places a stroke and the stroke itself agree. It binds only at the lightest
+settings; from ExtraLight up every stroke is already above it.
+
 Mouths, where a beak faces a bar, keep three quarters of their share;
 closed counters and the gaps under the 5's and 6's arms keep half. The 5's
 mouth is what tells it from a 6, the pair most easily confused at small
@@ -339,11 +348,16 @@ The italic is the same drawings, slanted ten degrees, with curves where
 the upright cuts chamfers (`arris.italic`).
 
 **Curves for chamfers, points kept.** Every 45-degree chamfer that stands in
-for a right angle between a horizontal and a vertical (a bowl's corner, an
-edge break, the steps of the 2's notch and the 4's clip) becomes a
-quadratic curve tangent to both edges, its control point the corner it
-cut. The construction records which edges are chamfers as it draws them,
-so a diagonal stroke never becomes a curve by looking like one. Everything
+for a right angle (a bowl's corner, an edge break, the steps of the 2's
+notch and the 4's clip) becomes a quadratic curve, its control point the
+corner it cut. The construction records which edges are chamfers as it
+draws them, so a diagonal stroke never becomes a curve by looking like one.
+A bowl's corner is a pair of chamfers, the stroke's outer and inner edges,
+and they curve together or not at all: a curve on one edge against a
+straight other swells the stroke into a wedge, or, bulging across it,
+crosses the outline. A corner either of whose edges runs into a point (the
+3's, 8's and B's waists, a beak's tip at the lightest weights) stays
+straight on both, so the point stays sharp. Everything
 the upright keeps sharp stays sharp: beaks, the 3's and 8's waists, the
 meeting of two diagonals, a diagonal's end, the X's stepped crossing. The
 softened bowls against those points are what keep the italic Arris.
@@ -388,6 +402,17 @@ monospaced italic keeps the upright's, its cells having no room for tails.
 curves them: a segment that is a chamfer in any master carries a control
 point in all of them, at its middle where it is straight, so a curve grows
 from a straight edge as the weight moves.
+
+**Certified, not eyeballed.** `tools/stroke_scan.py` checks every glyph,
+upright and italic, at every weight and at the grade and watch extremes:
+no contour crosses itself or another; on the exact outline, no stroke is
+thinner than the floor (an opening of the ink by the floor's width removes
+nothing but corner slivers and the points the design draws sharp); and,
+along each stroke's skeleton away from junctions and points, none swells
+past 1.75 times its weight's thickest. Parts lighter than their weight's
+strokes are listed, and every one is designed so: small figures, the
+letters inside a ring, the notch's one-pixel step, a tight stack's
+horizontals.
 
 ## 8. Features
 

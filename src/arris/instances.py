@@ -89,7 +89,7 @@ def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Pa
     if grad:
         k = 1 + grad * GRAD_SHARE
         p = p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, grade_k=k)
-    return p
+    return p.with_(floor=stroke_floor(base))
 
 
 def _params(wght, optics, base):
@@ -100,3 +100,20 @@ def _params(wght, optics, base):
     fig_w = base.fig_w + (FIG_GROWTH if d > 0 else FIG_GROWTH / 2) * d
     return base.with_(fig_w=fig_w, fig_adv=fig_w + (base.fig_adv - base.fig_w), sv=sv, sh=sv * optics.h_ratio(sv), sd=sv * optics.d_ratio(sv),
                       ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=optics.leg)
+
+
+
+_FLOOR: dict = {}
+
+
+def stroke_floor(base: Params = Params()) -> float:
+    """The thinnest stroke the font draws, in font units: the Thin's own
+    thinnest (its horizontal), with the measured optics. Nothing is drawn
+    thinner, however it was derived (small figures, marks, the letters
+    inside a ring, a negative grade, the watch's light diagonals): below it
+    a stroke stops reading as the same pen (see geom.Thickness)."""
+    key = id(base)
+    if key not in _FLOOR:
+        p = _params(100, OPTICS, base)
+        _FLOOR[key] = min(p.sv, p.sh, p.sd, p.ss)
+    return _FLOOR[key]

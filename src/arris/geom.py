@@ -76,10 +76,12 @@ class Thickness:
     v*sin(45) and ``s`` is v*sin(63.4).
     """
 
-    def __init__(self, v: float, h: float, d: float, s: float | None = None, slant: float = 0.0):
+    def __init__(self, v: float, h: float, d: float, s: float | None = None, slant: float = 0.0,
+                 floor: float = 0.0):
         self.v, self.h, self.d = v, h, d
         self.s = s if s is not None else d + (v - d) * (STEEP_DEG - 45) / 45
         self.slant = slant
+        self.floor = floor          # no stroke thinner (instances.STROKE_FLOOR)
 
     def __call__(self, direction) -> float:
         phi = math.degrees(math.atan2(abs(direction[1]), abs(direction[0])))  # 0 = horizontal
@@ -89,6 +91,7 @@ class Thickness:
             w = self.d + (self.s - self.d) * (phi - 45) / (STEEP_DEG - 45)
         else:
             w = self.s + (self.v - self.s) * (phi - STEEP_DEG) / (90 - STEEP_DEG)
+        w = max(w, self.floor)
         if self.slant:
             # The italic shears the finished outline, x += y * slant. A strip of
             # width w along unit direction d comes out w / |S d| wide, so it is
@@ -200,7 +203,8 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
     for i in range(nseg):
         a, b = pts[i], pts[(i + 1) % m]
         d = _unit(_sub(b, a))
-        segs.append((a, d, (widths[i] if widths[i] is not None else thick(d)) / 2))
+        w = max(widths[i], thick.floor) if widths[i] is not None else thick(d)
+        segs.append((a, d, w / 2))
 
     def side(sign):
         lines = [(_add(a, _mul((-d[1], d[0]), sign * h)), d) for a, d, h in segs]
@@ -257,9 +261,8 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
         else:
             raise ValueError(f'stroke outline is not simple: {explain_validity(poly)}')
     if rec is not None:
-        for k in bowls:
-            rec.append(('line',) + llines[k])
-            rec.append(('line',) + rlines[k])
+        for k in bowls:                                     # a bowl's two chamfer edges, as one corner
+            rec.append(('bowl', llines[k], rlines[k]))
     return poly
 
 

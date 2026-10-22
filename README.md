@@ -66,6 +66,9 @@ and where the optical corrections come from. In short:
 * `tools/confusion.py`, `tools/letter_confusion.py`: which figures and
   letters a reader could mistake for one another, against legibility faces
   (`docs/research/legibility.md`).
+* `tools/stroke_scan.py`: every glyph's strokes certified, upright and
+  italic: no crossing outlines, nothing below the stroke floor, no swelling.
+* `tools/scan_counters.py`: counters that tighten or close at heavy weights.
 
 ## Licence
 

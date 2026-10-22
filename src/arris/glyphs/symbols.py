@@ -143,7 +143,7 @@ def section(g):
     g.clip = (0, bot, W, top)
 
 
-@glyph('paragraph', '¶', letter_width(9, 3), kind=('punct', 1.0))
+@glyph('paragraph', '¶', letter_width(9, 3), kind=('punct', 1.0), solid=True)
 def paragraph(g):
     """Two stems and a solid chamfered bowl."""
     p, W = g.p, g.W

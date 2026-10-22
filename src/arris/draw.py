@@ -38,12 +38,13 @@ class Spec:
     width: Callable[[Params], float]   # body width
     kind: str = 'fig'                  # spacing class
     openings: tuple = ()
+    solid: bool = False                # has a solid part by design (the pilcrow's bowl)
 
 
-def glyph(name: str, char: str | None, width, kind='fig', openings=()):
+def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False):
     def deco(fn):
         w = width if callable(width) else (lambda p, w=width: getattr(p, w))
-        REGISTRY[name] = Spec(name, ord(char) if char else None, fn, w, kind, tuple(openings))
+        REGISTRY[name] = Spec(name, ord(char) if char else None, fn, w, kind, tuple(openings), solid)
         return fn
     return deco
 
@@ -81,7 +82,7 @@ class Glyph:
         """The ink of the named strokes, before the union and corner rule."""
         import shapely
         from .geom import stroke_polygon
-        th = Thickness(self.p.sv, self.sh, self.p.sd, self.p.ss, self.p.slant)
+        th = _thickness(self.p, self.sh)
         return shapely.union_all([stroke_polygon(self.strokes[i], th, self.p.c) for i in self.parts[name]])
 
     def counter_size(self) -> float:
@@ -159,7 +160,7 @@ class Glyph:
             from shapely.geometry import box as _box
             box = _box(*self.clip)
         rec = [] if record else None
-        rings = ink(self.strokes, Thickness(p.sv, self.sh, p.sd, p.ss, p.slant), p.c, self.extra, box, rec)
+        rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec)
         return rings, ((rec or []) + self.extra_chamfers if record else [])
 
     def add_glyph(self, sub: 'Glyph', dx: float = 0.0, dy: float = 0.0):
@@ -172,7 +173,7 @@ class Glyph:
 
     @property
     def sh(self) -> float:
-        return self.p.sh * self.sh_k * self.sh_auto
+        return max(self.p.sh * self.sh_k * self.sh_auto, self.p.floor)
 
     def stack(self, n: int, height: float, ratio: float = 0.9):
         """Thin the horizontals where n bars share ``height`` so that each
@@ -182,9 +183,13 @@ class Glyph:
         return self.sh
 
 
+def _thickness(p: Params, sh: float) -> Thickness:
+    return Thickness(p.sv, sh, p.sd, p.ss, p.slant, floor=p.floor)
+
+
 def _moved(r, dx, dy):
-    if r[0] == 'line':
-        return ('line', (r[1][0] + dx, r[1][1] + dy), r[2])
+    if r[0] == 'bowl':
+        return ('bowl',) + tuple(((q[0] + dx, q[1] + dy), d) for q, d in r[1:])
     return ('chord', (r[1][0] + dx, r[1][1] + dy), (r[2][0] + dx, r[2][1] + dy))
 
 
