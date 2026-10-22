@@ -248,6 +248,9 @@ That check found real design faults, which were then fixed:
   dots centred on the figures in a tighter slot.
 * `zero`: a slashed zero, its slash square to the bowl's corners.
 * `ss01`: a dotted zero.
+* `ss02`: the open five, whose bowl sits one pixel row higher. Blurred, it
+  is the figure that separates most from the 6
+  (`docs/research/legibility.md`).
 * `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`, plus precomposed ½ ¼ ¾,
   superior ¹ ² ³ and ª º.
 * `case`: dashes, guillemets, bullets and brackets raised for capitals.

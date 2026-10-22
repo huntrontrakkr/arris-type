@@ -199,6 +199,7 @@ languagesystem latn dflt;
 @subs = [{sm['subs']}];
 @numr = [{sm['numr']}];
 @dnom = [{sm['dnom']}];
+@anyfig = [{figs} {sm['pnum']} zero.zero zero.dot five.ss02];
 
 feature tnum {{ sub @pnum by @figs; }} tnum;
 feature pnum {{ sub @figs by @pnum; }} pnum;
@@ -207,8 +208,12 @@ feature ss01 {{
     featureNames {{ name "Dotted zero"; }};
     sub zero by zero.dot;
 }} ss01;
+feature ss02 {{
+    featureNames {{ name "Open five"; }};
+    sub five by five.ss02;
+}} ss02;
 feature calt {{
-    sub @figs colon' @figs by colon.tf;
+    sub @anyfig colon' @anyfig by colon.tf;
 }} calt;
 feature sups {{ sub @figs by @sups; }} sups;
 feature subs {{ sub @figs by @subs; }} subs;

@@ -177,9 +177,9 @@ def four(g):
 
 
 @glyph('five', '5', 'fig_w')
-def five(g):
+def five(g, junction=7):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
-    yj = 7 * v
+    yj = junction * v
     bot = yb - g.ob
     g.stroke((8 * u, yt), (xl, yt), (xl, yj), B(xr, yj), B(xr, bot), B(xl, bot), (xl, beak_bottom(g)))
 
@@ -227,3 +227,11 @@ def eight(g):
     big = p.leg + u
     g.stroke(B(xl, yw, big), B(xr, yw, big), B(xr, top), B(xl, top), closed=True)
     g.stroke(B(xl, bot), B(xr, bot), B(xr, yw), B(xl, yw), closed=True)
+
+
+@glyph('five.ss02', None, 'fig_w')
+def five_open(g):
+    """The open five: its bowl's top one pixel row higher than the watch's.
+    The one change that most separates 5 from 6 when blurred (see
+    docs/research/legibility.md)."""
+    five(g, junction=8)
