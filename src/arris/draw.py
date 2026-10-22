@@ -39,12 +39,13 @@ class Spec:
     kind: str = 'fig'                  # spacing class
     openings: tuple = ()
     solid: bool = False                # has a solid part by design (the pilcrow's bowl)
+    cell: bool = False                 # a terminal cell's drawing: stays upright in the italic (font.place)
 
 
-def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False):
+def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False, cell=False):
     def deco(fn):
         w = width if callable(width) else (lambda p, w=width: getattr(p, w))
-        REGISTRY[name] = Spec(name, ord(char) if char else None, fn, w, kind, tuple(openings), solid)
+        REGISTRY[name] = Spec(name, ord(char) if char else None, fn, w, kind, tuple(openings), solid, cell)
         return fn
     return deco
 
@@ -67,6 +68,7 @@ class Glyph:
     sh_k: float = 1.0  # horizontal thickness factor (tight stacks of bars)
     sh_auto: float = 1.0  # further thinning that keeps closed counters open (see draw)
     clip: tuple[float, float, float, float] | None = None   # keep ink inside (x0, y0, x1, y1)
+    butt: tuple = ()   # lines ('x' or 'y', value) the ink meets flush: no edge breaks there (geom.ink)
     overrides: dict = field(default_factory=dict)
     defaults: dict = field(default_factory=dict)
     parts: dict = field(default_factory=dict)        # name -> stroke indices
@@ -160,7 +162,7 @@ class Glyph:
             from shapely.geometry import box as _box
             box = _box(*self.clip)
         rec = [] if record else None
-        rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec)
+        rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt)
         return rings, ((rec or []) + self.extra_chamfers if record else [])
 
     def add_glyph(self, sub: 'Glyph', dx: float = 0.0, dy: float = 0.0):
