@@ -357,7 +357,7 @@ def wave_points(ctx, kind, u0, u_w, u1):
     pts = [(u0, 0.0)]
     if kind == 'wave':
         a, f = wave_amp(ctx), wave_flat(ctx)
-        n = max(1, int(room / (4 * a + 2 * f)))
+        n = 1                                               # one period at every weight (so it varies)
         f = (room - n * 4 * a) / (2 * n)
         u = u0 + a
         pts.append((u, a))
@@ -369,8 +369,7 @@ def wave_points(ctx, kind, u0, u_w, u1):
                 u += 2 * a; pts.append((u, a))
         u += a; pts.append((u, 0.0))
     else:
-        a = zigzag_amp(ctx)
-        n = max(2, int((room / a + 2) / 4))
+        n = 2                                               # two teeth at every weight
         a = room / (4 * n - 2)
         u = u0 + a
         pts.append((u, a))
@@ -479,8 +478,9 @@ class Spec(Drawing):
     @property
     def stacked(self):
         """Drawn as a tight stack, lighter toward Black: several shafts, a
-        patterned shaft, an open head."""
-        return self.n > 1 or self.shaft in ('dashed', 'wave', 'squiggle') or self.head == 'open'
+        patterned shaft, an open head, strokes across the shaft or a base."""
+        return (self.n > 1 or self.shaft in ('dashed', 'wave', 'squiggle') or self.head == 'open'
+                or self.marks in ('dblbar', 'base'))
 
     @property
     def two(self):
@@ -504,7 +504,7 @@ class Spec(Drawing):
         if self.strike:                                     # room for the negation, clear of the barbs
             p = ctx.p
             half = max(self.offs(ctx)) + ctx.ts / 2 + max(2.0 * p.m, 1.0 * p.sv)
-            d += half + p.ss / STEEP[1] + 1.5 * p.sv
+            d += half + p.ss / STEEP[1] + (0.5 if p.mono else 1.5) * p.sv
         return d + pattern_min(ctx, self.shaft)
 
     def free(self):

@@ -103,10 +103,15 @@ TILDEW = growing_width(8, 1, 1.5)               # tilde signs: room for the step
 def tilde_rise(g):
     """The tilde's rise: a quarter of its width, or a bar and a third of a
     stem, so the bays above and below its flats stay open; but never so
-    much that its flats are shorter than half a bar and a quarter stem (a
-    graded Black keeps its body)."""
-    flat = 0.5 * g.sh + 0.25 * g.p.sv
-    return min(max(g.W / 4, g.sh + 0.35 * g.p.sv), (g.W - 2 * flat) / 2)
+    much that the flats' inner edges vanish (a graded Black keeps its
+    body)."""
+    from ..draw import _thickness
+    p = g.p
+    th = _thickness(p, g.sh)                                 # (the italic's own thicknesses)
+    sd, sh = max(th((1, 1)), th((-1, 1))), th((1, 0))
+    # a flat's inner edge loses sqrt2 sd - sh to the turns at its ends
+    flat = max(0.5 * sh, SQRT2 * sd - sh) + 0.25 * p.sv
+    return min(max(g.W / 4, g.sh + 0.35 * p.sv), (g.W - 2 * flat) / 2)
 
 
 class Tilde:
@@ -128,7 +133,13 @@ class Tilde:
                (x0 + 1.5 * d + 2 * f, lo), (x0 + 2 * d + 2 * f, yc)]
         if self.mirror:
             pts = [(x0 + x1 - x, y) for x, y in pts][::-1]
-        g.stroke(*pts, start='v', end='v')
+        # its ends cut upright, unless a half rise is too short for that
+        # under its stroke (the italic Black at the heaviest grade): then square
+        from ..draw import _thickness
+        th = _thickness(g.p, g.sh)
+        sd = max(th((1, 1)), th((-1, 1)))
+        cap = 'v' if d / 2 > (SQRT2 * sd - th((1, 0))) / 2 + 0.05 * g.p.sv else 'flat'
+        g.stroke(*pts, start=cap, end=cap)
 
 
 class Chevron:
@@ -196,7 +207,8 @@ def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
     gapf = (lambda: eq_gap(g)) if gap is None else (lambda: gap(g))
     limit = (tall or TALL)(p)
     flex = [c for c in comps if isinstance(c, Chevron) and c.h is None]
-    for k in [1.0 - 0.05 * i for i in range(7)]:
+
+    def fit(k):
         g.sh_k = k
         if flex:
             fixed = sum(c.height(g) for c in comps if c not in flex) + gapf() * (len(comps) - 1)
@@ -205,9 +217,21 @@ def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
             for c in flex:
                 c.h_fit = max(each, 1.5 * p.sv)
         ext = [_extent(c, g) for c in comps]
-        total = sum(y1 - y0 for y0, y1 in ext) + gapf() * (len(comps) - 1)
-        if total <= limit:
-            break
+        return ext, sum(y1 - y0 for y0, y1 in ext) + gapf() * (len(comps) - 1)
+
+    # thin the horizontals just as far as the limit needs (continuously, so
+    # the variable font interpolates it), never below 0.7
+    ext, total = fit(1.0)
+    if total > limit:
+        lo, hi = 0.7, 1.0
+        if fit(lo)[1] <= limit:
+            for _ in range(14):
+                mid = (lo + hi) / 2
+                if fit(mid)[1] <= limit:
+                    lo = mid
+                else:
+                    hi = mid
+        ext, total = fit(lo)
     y = centre + total / 2
     for c, (y0, y1) in zip(comps, ext):
         _draw(c, g, y - y1)
@@ -489,7 +513,7 @@ def equalscolon(g):
 def _small_ring_box(g, cx, cy, r):
     """A small octagon ring of centreline half-size r at (cx, cy)."""
     p = g.p
-    w = 0.85 * p.sv
+    w = max(0.85 * p.sv, 1.12 * p.floor)
     _ring(g, cx - r, cy - r, cx + r, cy + r, w=w, leg=0.6 * r)
 
 
@@ -614,8 +638,8 @@ def _guil_step(p):
 def muchless(g):
     p, W = g.p, g.W
     a = axis(p)
-    h = 0.85 * (OPW(p) - p.sv / 2)
     step = _guil_step(p)
+    h = max(min(0.85 * (OPW(p) - p.sv / 2), W - step - kd(p)), 1.5 * kd(p))
     for x in (W - step, W):
         g.stroke((x, a + h), (x - h, a), (x, a - h), start='v', end='v')
 
@@ -624,8 +648,8 @@ def muchless(g):
 def muchgreater(g):
     p, W = g.p, g.W
     a = axis(p)
-    h = 0.85 * (OPW(p) - p.sv / 2)
     step = _guil_step(p)
+    h = max(min(0.85 * (OPW(p) - p.sv / 2), W - step - kd(p)), 1.5 * kd(p))
     for x in (0, step):
         g.stroke((x, a + h), (x + h, a), (x, a - h), start='v', end='v')
 
@@ -1094,7 +1118,7 @@ def multimap(g):
     p = g.p
     a = axis(p)
     r = small_ring_r(g) + 0.25 * p.m
-    w = 0.85 * p.sv
+    w = max(0.85 * p.sv, 1.12 * p.floor)
     cx = g.W - r - w / 2
     g.stroke((0, a), (cx - r, a))
     _small_ring_box(g, cx, a, r)
@@ -1161,7 +1185,7 @@ SQUARED = {
 def _inner_ring(g, x, y, r):
     """A ring inside the ring, half a stem of white between them."""
     p = g.p
-    w = 0.6 * p.sv                                           # a lighter ring, as a small one is
+    w = max(0.6 * p.sv, 1.12 * p.floor)                     # a lighter ring, as a small one is
     ri = r - p.sv / 2 - max(0.45 * p.sv, 0.6 * p.m) - w / 2
     _ring(g, x - ri, y - ri, x + ri, y + ri, w=w, leg=0.45 * ri)
 
@@ -1175,7 +1199,7 @@ def _inner_bars(g, x, y, half, n, r=None):
     if n == 2 and r is not None:
         room = r - g.sh / 2 - max(0.5 * p.sv, 0.75 * p.m)     # from the centre to the white's edge
         if t + gap / 2 > room:
-            t = max(room / 1.4, p.floor)
+            t = max(room / 1.4, 1.12 * p.floor)
             gap = max(0.8 * t, 2 * (room - t))
     off = (t + gap) / 2
     ys = [y] if n == 1 else [y - off, y + off]
@@ -1221,18 +1245,25 @@ def ratio(g):
         cdot(g, g.W / 2, axis(p) + s * dot_step(p) / 2 * 1.4)
 
 
+def _dd(g):
+    """Half the step between a pair of dots: the ellipsis's, or as much as
+    the body holds."""
+    return min(0.7 * dot_step(g.p), (g.W - g.p.dot()) / 2)
+
+
 @op(u(0x2237), '∷', width=lambda p: p.dot() + 1.4 * dot_step(p))
 def proportion(g):
     p = g.p
+    d = _dd(g)
     for sx in (-1, 1):
         for sy in (-1, 1):
-            cdot(g, g.W / 2 + sx * 0.7 * dot_step(p), axis(p) + sy * 0.7 * dot_step(p))
+            cdot(g, g.W / 2 + sx * d, axis(p) + sy * 0.7 * dot_step(p))
 
 
 @op('therefore', '∴', width=lambda p: p.dot() + 1.4 * dot_step(p))
 def therefore(g):
     p = g.p
-    d = 0.7 * dot_step(p)
+    d = _dd(g)
     cdot(g, g.W / 2, axis(p) + d)
     cdot(g, g.W / 2 - d, axis(p) - d)
     cdot(g, g.W / 2 + d, axis(p) - d)
@@ -1241,7 +1272,7 @@ def therefore(g):
 @op(u(0x2235), '∵', width=lambda p: p.dot() + 1.4 * dot_step(p))
 def because(g):
     p = g.p
-    d = 0.7 * dot_step(p)
+    d = _dd(g)
     cdot(g, g.W / 2, axis(p) - d)
     cdot(g, g.W / 2 - d, axis(p) + d)
     cdot(g, g.W / 2 + d, axis(p) + d)
@@ -1313,14 +1344,15 @@ def vellipsis(g):
 @op(u(0x22EF), '⋯', width=lambda p: p.dot() + 2 * dot_step(p))
 def cellipsis(g):
     p = g.p
+    step = min(dot_step(p), (g.W - p.dot()) / 2)
     for i in range(3):
-        cdot(g, p.dot() / 2 + i * dot_step(p), axis(p))
+        cdot(g, p.dot() / 2 + i * step, axis(p))
 
 
 @op(u(0x22F0), '⋰', width=lambda p: p.dot() + 2 * dot_step(p) / SQRT2)
 def upellipsis(g):
     p = g.p
-    d = dot_step(p) / SQRT2
+    d = min(dot_step(p) / SQRT2, (g.W - p.dot()) / 2)
     for i in (-1, 0, 1):
         cdot(g, g.W / 2 + i * d, axis(p) + i * d)
 
@@ -1328,7 +1360,7 @@ def upellipsis(g):
 @op(u(0x22F1), '⋱', width=lambda p: p.dot() + 2 * dot_step(p) / SQRT2)
 def downellipsis(g):
     p = g.p
-    d = dot_step(p) / SQRT2
+    d = min(dot_step(p) / SQRT2, (g.W - p.dot()) / 2)
     for i in (-1, 0, 1):
         cdot(g, g.W / 2 + i * d, axis(p) - i * d)
 
@@ -1532,13 +1564,21 @@ def existential(g):
     _flip_strokes(g, fx=g.W)
 
 
-@glyph(u(0x2204), '∄', REGISTRY['E'].width, kind='cap')
+@glyph(u(0x2204), '∄', lambda p: p.fig_w if p.mono else REGISTRY['E'].width(p), kind=('punct', 1.0))
 def notexists(g):
+    """∃ struck through, the stroke crossing its bars well to the left of
+    its stem, so the pockets it closes off against the stem stay open; its
+    three bars a tight stack, lighter toward Black."""
+    _light(g)
     REGISTRY['E'].fn(g)
     _flip_strokes(g, fx=g.W)
     p = g.p
     g.clip = None
-    negate(g, half=p.cap / 2 + 1.0 * p.m)
+    x0 = 0.3 * g.W
+    half = p.cap / 2 + 1.0 * p.m
+    if p.mono:                                               # the cell: the stroke ends at the body
+        half = min(half, 2 * (x0 - p.ss / STEEP[1] / 2))
+    negate(g, half=half, x=x0)
 
 
 @glyph(u(0x2201), '∁', letter_width(8, 1), kind='cap')
@@ -1586,6 +1626,8 @@ def emptyset(g):
     cx = W / 2
     _ring(g, cx - r, cy - ry, cx + r, cy + ry, leg=leg)
     t = min(r, ry) - leg / 2 + p.sv / 2 + 1.0 * p.m
+    if p.mono:                                               # the cell: the stroke ends inside it
+        t = min(t, W / 2 - p.sd)
     g.stroke((cx - t, cy - t), (cx + t, cy + t), start='h', end='h')
     g.clip = None
 
@@ -1727,7 +1769,7 @@ def contourintegral(g):
     integral(g, g.W / 2, bot, top)
     r = _cint_r(p)
     # an octagon wider than tall where the hooks' beaks would come near it
-    w = 0.85 * p.sv
+    w = max(0.85 * p.sv, 1.12 * p.floor)
     white = max(0.75 * p.sv, p.m)
     ry = min(r, (top - bot) / 2 - beak_depth(p) - white - w / 2)
     c, mid = g.W / 2, (bot + top) / 2
@@ -1736,26 +1778,63 @@ def contourintegral(g):
 
 # --- Roots ---------------------------------------------------------------------------------------
 
-def _root(g, n):
-    """The radical with a small index in its crook."""
-    p = g.p
-    k = 0.42
+ROOT_K = 0.42                                  # the index's size, of the figures'
+
+
+def _root_params(p):
     s = 0.5 - 0.08 * heaviness(p)                            # strokes in proportion to the index's size
-    ps = p.with_(m=k * p.m, cap=k * p.cap, fig_w=k * p.fig_w, fig_adv=k * p.fig_adv, leg=k * p.leg,
-                 sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
-    sub = draw(n, ps)
-    wi = ps.fig_w
-    rad = draw('radical', p)
-    dx = max(0.0, wi + 0.5 * p.m - 1.0 * p.m)
-    g.add_glyph(rad, dx, 0)
-    g.add_glyph(sub, 0, 2.0 * p.m + 1.0 * p.m)
+    k = ROOT_K
+    return p.with_(m=k * p.m, cap=k * p.cap, fig_w=k * p.fig_w, fig_adv=k * p.fig_adv, leg=k * p.leg,
+                   sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
 
 
-@op(u(0x221B), '∛', width=lambda p: REGISTRY['radical'].width(p) + 0.42 * p.fig_w - 0.5 * p.m, sides=0.6)
+def _root_layout(p):
+    """(index width, index foot, the radical's shift, its bar's length):
+    the index stands above the radical's tick, a stem's white clear of it
+    and of the 2:1 rise; the radical moves right only as far as that needs.
+    In the monospaced cell the bar shortens to a module."""
+    t = _tick(p)
+    top = p.cap + 0.5 * p.m
+    gap = max(0.5 * p.sv, 0.75 * p.m)
+    wi = _root_params(p).fig_w
+    w = p.ss / STEEP[1]
+    yb = t + 0.5 * p.sv + gap
+    dx = max(0.0, wi + gap - t - yb / 2 + w / 2)
+    bar = 1.0 * p.m if p.mono else 3.5 * p.m
+    return wi, yb, dx, bar
+
+
+def _tick(p):
+    """The radical's tick: √'s two modules, or longer than its stroke is
+    wide across (the heaviest grade)."""
+    return max(2.0 * p.m, 1.3 * p.sd / SQRT2)
+
+
+def _root_w(p):
+    wi, yb, dx, bar = _root_layout(p)
+    return dx + _tick(p) + (p.cap + 0.5 * p.m) / 2 + bar
+
+
+def _root(g, n):
+    """The radical (its tick, its 2:1 rise and its bar, as √ draws them)
+    with a small index in its crook."""
+    p = g.p
+    wi, yb, dx, bar = _root_layout(p)
+    top = p.cap + 0.5 * p.m
+    t = _tick(p)
+    g.stroke((dx, t), (dx + t, 0), start='v', end='h')
+    g.stroke((dx + t, 0), (dx + t + top / 2, top), start='h', end='h')
+    g.stroke((dx + t + top / 2 - p.sv / 2, top - g.sh / 2), (g.W, top - g.sh / 2))
+    g.clip = (0, 0, g.W, top)
+    sub = draw(n, _root_params(p))
+    g.add_glyph(sub, 0, yb)
+
+
+@op(u(0x221B), '∛', width=_root_w, sides=0.6)
 def cuberoot(g):
     _root(g, 'three')
 
 
-@op(u(0x221C), '∜', width=lambda p: REGISTRY['radical'].width(p) + 0.42 * p.fig_w - 0.5 * p.m, sides=0.6)
+@op(u(0x221C), '∜', width=_root_w, sides=0.6)
 def fourthroot(g):
     _root(g, 'four')

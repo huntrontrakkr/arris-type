@@ -54,16 +54,17 @@ def line_top(p):
 
 # --- Diameter, house, keys ---------------------------------------------------------
 
-@tech(u(0x2300), '⌀', lambda p: 0.6 * p.cap + p.sv + 2.0 * p.m)
+@tech(u(0x2300), '⌀', lambda p: 0.6 * p.cap + p.sv)
 def diameter(g):
-    """A small regular octagon on the axis, a 45-degree stroke through it
-    reaching a module and a half past it."""
+    """A small regular octagon on the axis, a 45-degree stroke through its
+    corners reaching a module past them."""
     p = g.p
     a = axis(p)
-    r = (0.6 * p.cap) / 2
+    W2 = g.W / 2
+    r = min(0.3 * p.cap, W2 - p.sv / 2, (W2 - p.sv / 2 - 1.0 * p.m - p.sd / 2) / 0.707)
     cx = g.W / 2
     _ring(g, cx - r, a - r, cx + r, a + r, leg=0.586 * r)
-    t = r + p.sv / 2 + 1.0 * p.m
+    t = 0.707 * r + p.sv / 2 + 1.0 * p.m
     g.stroke((cx - t, a - t), (cx + t, a + t), start='h', end='h')
 
 
@@ -234,7 +235,7 @@ def placeofinterest(g):
     outer corners turned as bowls."""
     lighten(g)
     p = g.p
-    s = _cmd_s(p)
+    s = min(_cmd_s(p), (g.W - p.sv) / 3)
     a = axis(p)
     c = g.W / 2
     leg = min(p.leg + 0.5 * p.m, 0.45 * s)
@@ -272,8 +273,8 @@ def _erase(g, right):
     p = g.p
     a = axis(p)
     W = g.W
-    h = 0.33 * p.cap                                         # half height, centreline
     k = kd(p)
+    h = min(_erase_h(p), (W - k - p.sv / 2) / 2.2)           # half height, centreline (a narrow cell: smaller)
     x_tip = W - k
     x_back = x_tip - h
     x0 = p.sv / 2
@@ -288,12 +289,20 @@ def _erase(g, right):
     cx = (x0 + x_back) / 2
     if not right:
         cx = W - cx
-    g.stroke((cx - t, a - t), (cx + t, a + t), start='flat', end='flat')
-    g.stroke((cx - t, a + t), (cx + t, a - t), start='flat', end='flat')
+    xw = max(0.8 * p.sd, 1.12 * p.floor)                     # the x a little lighter, a mark inside the key
+    g.stroke((cx - t, a - t, xw), (cx + t, a + t), start='flat', end='flat')
+    g.stroke((cx - t, a + t, xw), (cx + t, a - t), start='flat', end='flat')
+
+
+def _erase_h(p):
+    """The erase keys' half height: a third of the cap height, or room for
+    an x a stem across inside, half a stem of white about it."""
+    return max(0.33 * p.cap, p.sh / 2 + max(0.5 * p.sv, 0.75 * p.m) + p.sd / (2 * SQRT2) + p.sv)
 
 
 def _erase_w(p):
-    return 1.35 * 0.66 * p.cap + p.sv
+    q = _light(p)
+    return 3.2 * _erase_h(q) + q.sv
 
 
 @tech(u(0x2326), '⌦', _erase_w)
@@ -308,17 +317,19 @@ def eraseleft(g):
     _erase(g, False)
 
 
-@tech(u(0x2327), '⌧', lambda p: 0.66 * p.cap + p.sv)
+@tech(u(0x2327), '⌧', lambda p: max(0.66 * p.cap, 3.8 * _light(p).sv) + _light(p).sv)
 def xinbox(g):
-    """A square with an x from corner to corner."""
+    """A square with a lighter x from corner to corner, the square growing
+    with the stroke so its four counters stay open."""
     lighten(g)
     p = g.p
     a = axis(p)
     r = (g.W - p.sv) / 2
     c = g.W / 2
+    xw = max(0.75 * p.sd, 1.12 * p.floor)
     g.stroke((c - r, a - r), (c + r, a - r), (c + r, a + r), (c - r, a + r), closed=True)
-    g.stroke((c - r, a - r), (c + r, a + r))
-    g.stroke((c - r, a + r), (c + r, a - r))
+    g.stroke((c - r, a - r, xw), (c + r, a + r))
+    g.stroke((c - r, a + r, xw), (c + r, a - r))
 
 
 KEYS = 5
@@ -341,6 +352,9 @@ def keyboard(g):
     W = g.W
     s = max(p.dot() * 0.8, p.sv)
     gap = max(0.6 * s, 0.75 * p.m)
+    # a narrow cell: smaller keys (the frame keeps its stroke)
+    k = min(1.0, (W - 2 * p.sv) / (KEYS * s + (KEYS + 1) * gap))
+    s, gap = max(k * s, p.floor), k * gap
     rowh = s
     H = 3 * rowh + 4 * gap + g.sh                          # frame height, centreline
     x0, x1 = p.sv / 2, W - p.sv / 2
@@ -382,7 +396,7 @@ def benzene(g):
     # upright side ends) by half a stem and more, which the italic's curves need
     gap = max(0.5 * p.sv, 0.75 * p.m) + 0.25 * p.sv
     wss = p.ss / STEEP[1]
-    t = 0.75 * p.sv                                          # a lighter ring, as a small one is
+    t = max(0.75 * p.sv, 1.12 * p.floor)                    # a lighter ring, as a small one is
     r = min(max(0.45 * w, 0.9 * p.sv), w - g.sh / 2 - gap - t / 2,
             (w - wss / 2 - t / 2 - gap) / 1.207)
     _ring(g, c - r, a - r, c + r, a + r, w=t, leg=0.586 * r)
@@ -706,7 +720,7 @@ def hand(g, c, a, d, L):
     """A hand from the centre along d (an axis or a diagonal), L long."""
     n = (d[0] ** 2 + d[1] ** 2) ** 0.5
     th = _thickness_of(g, d)
-    g.stroke((c, a, max(HAND * th, g.p.floor)), (c + d[0] / n * L, a + d[1] / n * L))
+    g.stroke((c, a, max(HAND * th, 1.12 * g.p.floor)), (c + d[0] / n * L, a + d[1] / n * L))
 
 
 def _thickness_of(g, d):
@@ -760,19 +774,30 @@ def watch(g):
     hands(g, c, a, min(rx, ry), minute=(0, 1), hour=(1, 0))
 
 
-@tech(u(0x23F0), '⏰', clock_w(0.33, 1.5))
+def _alarm_reach(p):
+    """How far the bells stand out past the face's half size, beyond 0.97 of it."""
+    gap = max(0.75 * p.sv, 1.0 * p.m)
+    bw = 1.2 * p.sd
+    return (p.sd / 2 + gap + bw / 2) / SQRT2 + 0.45 * bw
+
+
+def _alarm_r(p, W):
+    return min(face_r(p, 0.33), (W / 2 - _alarm_reach(p)) / 0.97)
+
+
+@tech(u(0x23F0), '⏰', lambda p: 2 * (0.97 * face_r(_light(p), 0.33) + _alarm_reach(_light(p))))
 def alarmclock(g):
     """An octagon's face with two bells above its upper chamfers and two
     feet below its lower ones."""
     lighten(g)
     p = g.p
     a = axis(p) - 0.04 * p.cap
-    r = (g.W - p.sv - 1.5 * p.m) / 2
+    gap = max(0.75 * p.sv, 1.0 * p.m)
+    r = _alarm_r(p, g.W)
     c = g.W / 2
     face(g, c, a, r)
     hands(g, c, a, r)
     leg = 0.586 * r
-    gap = max(0.75 * p.sv, 1.0 * p.m)
     # bells: short 45-degree bars along the upper chamfers, a gap outside them
     for s in (-1, 1):
         mx, my = c + s * (r - leg / 2), a + (r - leg / 2)
