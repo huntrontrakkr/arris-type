@@ -11,6 +11,10 @@ glyph's right profile and the right glyph's left profile is measured. If
 its narrowest point is much wider than two sidebearings, the pair closes
 toward that; if it is narrower than a collision floor (an accent on a
 capital against a T's bar), it opens. Everything else is left to spacing.
+A closing kern never brings the two inks closer than half a standard gap
+in any direction (CLEAR): rows a little apart count at their diagonal
+distance. A mark floating high kerns as if its sides ran down to half
+the x-height (``_shadow``), so it never slides over a lowercase body.
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ INTERLOCK = 1.25    # a pair closes when its narrowest gap passes this many stan
 CLOSE = 0.8         # ... by this share of the excess
 FLOOR = 0.35        # and opens when its narrowest gap is under this share of a standard gap
 MIN_KERN = 10
+CLEAR = 0.5         # a closing kern keeps the inks this share of a standard gap apart, in any direction
 
 
 def profiles(rings, ys):
@@ -43,10 +48,29 @@ def profiles(rings, ys):
     return left, right
 
 
+def _shadow(prof, ys, xh):
+    """A mark floating high (above half the x-height: quotes, apostrophes,
+    degree, ordinals) casts its sides straight down to half the x-height:
+    it may tuck beside a tall stem (L’) but never over a lowercase body,
+    where it would read as an accent (h’s, it's)."""
+    left, right = prof
+    ink = ~np.isnan(left)
+    if not ink.any():
+        return prof
+    low = ys[ink].min()
+    if low <= xh / 2:
+        return prof
+    i0 = int(np.argmax(ink))                                     # the mark's lowest row
+    fill = (ys >= xh / 2) & (ys < low)
+    left, right = left.copy(), right.copy()
+    left[fill], right[fill] = left[i0], right[i0]
+    return left, right
+
+
 def kerns(placed: dict, p, light: float, left_names=None, right_names=None):
     """placed: name -> (rings, advance). Returns {(left, right): kern}."""
     ys = np.linspace(-p.desc, p.asc + 0.3 * p.cap, ROWS)
-    prof = {n: profiles(r, ys) for n, (r, _) in placed.items()}
+    prof = {n: _shadow(profiles(r, ys), ys, p.xh) for n, (r, _) in placed.items()}
     std = 2 * light
     out = {}
     lnames = left_names or list(placed)
@@ -58,17 +82,40 @@ def kerns(placed: dict, p, light: float, left_names=None, right_names=None):
         both = ~np.isnan(gap)
         has = both.any(axis=1)
         g = np.where(both, gap, np.inf).min(axis=1)
+        ks = np.zeros(len(rnames))
         for j in np.nonzero(has)[0]:
             m = g[j]
-            k = 0.0
             if m > INTERLOCK * std:
-                k = -CLOSE * (m - INTERLOCK * std)
+                ks[j] = -CLOSE * (m - INTERLOCK * std)
             elif m < FLOOR * std:
-                k = FLOOR * std - m
-            k = 5 * round(k / 5)
+                ks[j] = FLOOR * std - m
+        closing = np.nonzero(ks < 0)[0]
+        if len(closing):
+            ks[closing] = np.maximum(ks[closing], np.minimum(0.0, _clearance(R[i], L[closing], ys, CLEAR * std)))
+        for j in np.nonzero(has)[0]:
+            k = 5 * round(ks[j] / 5)
             if abs(k) >= MIN_KERN:
                 out[(a, rnames[j])] = int(k)
     return out
+
+
+def _clearance(r, Ls, ys, d):
+    """For a left glyph's right white ``r`` (per row) and right glyphs'
+    left white ``Ls`` (glyphs x rows), the least kern that keeps their inks
+    at least ``d`` apart in any direction: rows a little apart count too, at
+    their diagonal distance. (Within a row the closing rule already keeps
+    more; across rows nothing else would stop an apostrophe being pulled
+    down onto an h's shoulder.)"""
+    dy = ys[1] - ys[0]
+    n = len(ys)
+    bound = np.full(len(Ls), -np.inf)
+    for off in range(-int(d // dy), int(d // dy) + 1):
+        lo, hi = max(0, -off), min(n, n - off)
+        gap = r[lo:hi][None, :] + Ls[:, lo + off:hi + off]       # left glyph's row i, right glyph's row i + off
+        gap = np.where(np.isnan(gap), np.inf, gap).min(axis=1)
+        need = np.sqrt(max(d * d - (off * dy) ** 2, 0.0))
+        bound = np.maximum(bound, need - gap)
+    return bound
 
 
 def fea(pairs: dict) -> str:
