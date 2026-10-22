@@ -403,32 +403,39 @@ def _register(name, ch, bname, base, marks):
                 BELOW[m](g, clear_below(g.extra[0], p, BELOW[m], x, case, g.W), 0, case)
         if not above:
             return
-        # Marks above stack on one another; a stack that would rise past the
-        # line's top lightens and shrinks, as heavy faces draw their accents,
-        # as far as it must (never past LIGHTEST).
         cell = (-(p.fig_adv - g.W) / 2, g.W + (p.fig_adv - g.W) / 2) if p.mono else None
         # marks joined to the base (a horn) are kept clear of
         avoid = (mark_ink(g), raw_ink(g)) if g.strokes and any(m in ATTACHED for m in marks) else None
-        k, q = 1.0, p
-        places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
-        if hi > line_top(p):
-            lo, k = LIGHTEST, 1.0
-            for _ in range(16):
-                mid = (lo + k) / 2
-                if stack_above(accent_params(p, mid), above, x, top, case, g.W, cell, avoid)[1] <= line_top(p):
-                    lo = mid
-                else:
-                    k = mid
-            k = lo
-            q = accent_params(p, k)
-            places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
-        target = g if k == 1.0 else Glyph(q, W=g.W)
-        for m, xm, ym in places:
-            ABOVE[m](target, xm, ym, case)
-        if target is not g:
-            g.add_glyph(target)
+        draw_above(g, above, x, top, case, cell, avoid)
 
     glyph(name, ch, spec.width, kind=spec.kind)(fn)
+
+
+def draw_above(g, above, x, top, case, cell=None, avoid=None):
+    """Draw marks above into g, stacked (``stack_above``) over ink reaching
+    ``top``. A stack that would rise past the line's top lightens and
+    shrinks, as heavy faces draw their accents, as far as it must (never
+    past LIGHTEST)."""
+    from ..draw import Glyph
+    p = g.p
+    k, q = 1.0, p
+    places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
+    if hi > line_top(p):
+        lo, k = LIGHTEST, 1.0
+        for _ in range(16):
+            mid = (lo + k) / 2
+            if stack_above(accent_params(p, mid), above, x, top, case, g.W, cell, avoid)[1] <= line_top(p):
+                lo = mid
+            else:
+                k = mid
+        k = lo
+        q = accent_params(p, k)
+        places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
+    target = g if k == 1.0 else Glyph(q, W=g.W)
+    for m, xm, ym in places:
+        ABOVE[m](target, xm, ym, case)
+    if target is not g:
+        g.add_glyph(target)
 
 
 def _ogonek_x(g, base):

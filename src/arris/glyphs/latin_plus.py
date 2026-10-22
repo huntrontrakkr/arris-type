@@ -456,10 +456,8 @@ def _combining(name, cp, seq, where, case):
     def fn(g, seq=seq, where=where, case=case):
         p = g.p
         x = g.W / 2
-        if where == 'top':
-            top = p.cap if case == 'uc' else p.xh
-            for m, xm, ym in marks.stack_above(p, seq, x, top, case, g.W)[0]:
-                ABOVE[m](g, xm, ym, case)
+        if where == 'top':                                  # (inside the line, as the composed letters)
+            marks.draw_above(g, seq, x, p.cap if case == 'uc' else p.xh, case)
         elif where == 'horn':
             ax, ay = horn_origin(p, case)
             horn_at(g, x + ax, ay, case)
