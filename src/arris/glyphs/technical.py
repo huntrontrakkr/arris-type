@@ -146,10 +146,14 @@ def wavyline(g):
     """A wave stood on end, the brackets' height: two periods of the tilde's
     step."""
     p = g.p
-    d = g.W - p.sv
-    lo, hi, mid = p.sv / 2, g.W - p.sv / 2, g.W / 2
     bot, top = -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
     n = 2
+    # the wave's step: the body's, unless two periods of it and their
+    # verticals (half a stem at least) would run past the brackets' height;
+    # then the wave narrows (its points stay the same, for the variable font)
+    d = min(g.W - p.sv, ((top - bot) - n * p.sv) / (2 * n))
+    mid = g.W / 2
+    lo, hi = mid - d / 2, mid + d / 2
     f = max(((top - bot) - 2 * n * d) / (2 * n), 0.5 * p.sv)
     y = bot
     pts = [(mid, y)]

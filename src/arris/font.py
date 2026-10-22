@@ -23,9 +23,10 @@ class Metrics:
     xh: int = 540
     # Windows clipping box, one for the whole family (every weight, grade,
     # balance and the italic): the tallest is the Black Å at the heaviest
-    # corner of the variable font, the deepest the comma below.
+    # corner of the variable font, the deepest the integral and bracket
+    # pieces there (302).
     win_asc: int = 1160
-    win_desc: int = 250
+    win_desc: int = 310
 
 
 def glyph_contours(name: str, p: Params, tune=None):
