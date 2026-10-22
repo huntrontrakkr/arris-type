@@ -113,6 +113,13 @@ def _notdef(p: Params):
     return pen.glyph(), 560
 
 
+KERN_PUNCT = {'period', 'comma', 'colon', 'semicolon', 'hyphen', 'endash', 'emdash', 'quotesingle', 'quotedbl',
+              'quoteleft', 'quoteright', 'quotedblleft', 'quotedblright', 'quotesinglbase', 'quotedblbase',
+              'parenleft', 'parenright', 'bracketleft', 'bracketright', 'braceleft', 'braceright', 'slash',
+              'backslash', 'guilsinglleft', 'guilsinglright', 'guillemotleft', 'guillemotright', 'exclam',
+              'question', 'ampersand', 'asterisk', 'at', 'ellipsis'}
+
+
 def _contours(rings):
     """Rounded TrueType contours (outer clockwise) from ink-left rings."""
     out = []
@@ -130,7 +137,8 @@ def _contours(rings):
 
 
 def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, tune=None,
-          metrics: Metrics | None = None, version='0.1', space=None, fea: str | None = None):
+          metrics: Metrics | None = None, version='0.1', space=None, fea: str | None = None,
+          kern: bool = True):
     m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh))
     order = ['.notdef', 'space'] + list(names)
     fb = FontBuilder(UPM, isTTF=True)
@@ -145,10 +153,20 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     hmtx['.notdef'] = (adv, 40)
     glyphs['space'] = TTGlyphPen(None).glyph()
     hmtx['space'] = (round(space if space is not None else 0.45 * p.xh), 0)
+    placed = {}
     for n in names:
         rings, adv = place(n, p, tune)
+        placed[n] = (rings, adv)
         glyphs[n] = _tt_glyph(_contours(rings), 0)
         hmtx[n] = (round(adv), 0)
+    if kern and not p.mono:
+        from .kerning import fea as kern_fea, kerns
+        kinds = {n: REGISTRY[n].kind for n in names}
+        kernable = [n for n in names if kinds[n] in ('cap', 'lower') or
+                    (isinstance(kinds[n], tuple) and n in KERN_PUNCT)]
+        pairs = kerns({n: (placed[n][0], round(placed[n][1])) for n in kernable}, p, light(p))
+        fea = (fea or '') + kern_fea(pairs)
+        print(f'  {len(pairs)} kerning pairs')
     fb.setupGlyf(glyphs)
     ymin, ymax = 0, 0
     for n, (adv, _) in hmtx.items():
