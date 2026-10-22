@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import math
 
-from shapely import affinity
+from shapely import affinity  # noqa: F401
 from shapely.geometry import Polygon, box
 
 from ..draw import B, REGISTRY, draw
@@ -37,11 +37,11 @@ HEAVY = 1.6
 def heavy(g, S, k=HEAVY, share=0.25):
     """Set the glyph's pen for a form S wide: k times the weight's stroke
     (HEAVY for the heavy forms), but no heavier than ``share`` of the form
-    (half again for the heavy ones), so that at Black its parts stay apart
+    (a quarter more for the heavy ones), so that at Black its parts stay apart
     and the heavy forms stay heavier than the light. Every direction and
     the edge break scale together."""
     p = g.p
-    t = min(k * p.sv, share * (1.5 if k > 1 else 1.0) * S)
+    t = min(k * p.sv, share * (1.25 if k > 1 else 1.0) * S)
     f = max(t, p.floor) / p.sv
     g.p = p.with_(sv=p.sv * f, sh=p.sh * f, sd=p.sd * f, ss=p.ss * f, c=p.c * f)
     return g.p
@@ -112,10 +112,10 @@ for ch, k, steep in (('✕', 1.0, False), ('✖', HEAVY, False), ('✗', 1.0, Tr
     def fn(g, k=k, steep=steep):
         heavy(g, g.W, k)
         _x(g, g.W, steep)
-    shape(ch, 'M')(fn)
+    shape(ch, 'L')(fn)
 
 
-@shape('❌', 'L')
+@shape('❌', 'L', solid=True)                                 # (twice the stroke, by design)
 def cross_mark(g):
     heavy(g, g.W, 2.0)
     _x(g, g.W)
@@ -206,7 +206,8 @@ def asterisk_open(g):
     import shapely
     cx, cy = _c(g)
     R = g.W / 2
-    k = 0.8
+    heavy(g, g.W, 1.0, share=0.13)
+    k = 1.0
     lines = []
     for a in range(0, 360, 45):
         u = (round(math.cos(math.radians(a)), 12), round(math.sin(math.radians(a)), 12))
@@ -222,7 +223,7 @@ def asterisk_open(g):
 def asterisk_eight(g):
     """Eight spokes through the centre, in a pen light enough that they part
     within the inner half."""
-    heavy(g, g.W, 1.0, share=0.16)
+    heavy(g, g.W, 1.0, share=0.13)
     _spokes(g, 8, 0, g.W / 2 - g.p.sv / 4)
     g.clip = (0, axis(g.p) - g.W / 2, g.W, axis(g.p) + g.W / 2)
 
@@ -272,26 +273,28 @@ def balloon_asterisk_heavy(g):
     _balloons(g, True, 1.6)
 
 
-def club_pts(cx, cy, d):
-    """Three discs in a trefoil, d wide each, centred on (cx, cy)."""
+def club_pts(cx, cy, d, quarter=0):
+    """Three discs in a trefoil, d wide each, centred on (cx, cy), its top
+    turned ``quarter`` right angles (the discs' centres turn; an octagon is
+    its own quarter turn)."""
     import shapely
     off = 0.5 * d
-    discs = [Polygon(oct_pts(cx, cy + off * 0.75, d)), Polygon(oct_pts(cx - off, cy - off * 0.35, d)),
-             Polygon(oct_pts(cx + off, cy - off * 0.35, d))]
-    return shapely.union_all(discs)
+    cs = rot([(cx, cy + off * 0.75), (cx - off, cy - off * 0.35), (cx + off, cy - off * 0.35)], cx, cy, quarter)
+    return shapely.union_all([Polygon(oct_pts(x, y, d)) for x, y in cs])
 
 
 @shape('✥', 'L', solid=True)
 def club_asterisk(g):
-    """Four spokes, each ending in a club's trefoil."""
+    """Four light spokes, each ending in a club's trefoil."""
     cx, cy = _c(g)
     R = g.W / 2
-    d = 0.24 * R + 0.3 * heft(g.p)
+    heavy(g, g.W, 1.0, share=0.12)
+    d = 0.28 * R
     for q in range(4):
         u = [(0, 1), (-1, 0), (0, -1), (1, 0)][q]
         bx, by = cx + u[0] * (R - 0.8 * d), cy + u[1] * (R - 0.8 * d)
         g.stroke((cx, cy, g.p.sv if u[0] == 0 else g.sh), (bx, by))
-        tre = affinity.rotate(club_pts(bx, by, d), 90 * q - 0, origin=(bx, by))
+        tre = club_pts(bx, by, d, q)
         solid(g, tre)
 
 
@@ -315,7 +318,7 @@ def star4_black(g):
 def star4_white(g):
     cx, cy = _c(g)
     pts = star4_pts(cx, cy, g.W / 2)
-    pen(g, pts, keep=0.3)
+    pen(g, pts, keep=0.5)
     outline(g, pts)
 
 
@@ -421,7 +424,7 @@ def ornament_pen(p):
     never so light that the white ornament's walls (a quarter of the stroke,
     at least the floor) leave less than the floor of white inside."""
     T = min(HEAVY * p.sv, max(p.sv, 0.2 * p.cap))
-    wall = max(p.floor, 0.25 * T)
+    wall = max(1.12 * p.floor, 0.22 * T)                    # (the italic's shear thins a wall by up to a tenth)
     return max(T, 2 * wall + p.floor), wall
 
 
@@ -480,8 +483,8 @@ def _black_arrow(g, d, head_k=1.0, shaft_k=1.0):
     cx, cy = _c(g)
     L = g.W if d % 2 == 0 else (g.p.cap * 0.9 + heft(g.p))
     hh = head_k * 0.5 * min(L, size_of(g.p, 'L')) * 0.9     # half the head's height
-    s = shaft_k * max(0.9 * g.p.sv, 0.16 * hh * 2)           # half the shaft's thickness... (a stem and more)
-    s = min(s, 0.55 * hh)
+    s = shaft_k * min(max(1.6 * g.p.sv, 0.5 * hh), 0.7 * hh) / 2   # half the shaft: a quarter to a third of the head
+    s = min(s, 0.42 * hh)
     x0, x1 = cx - L / 2, cx + L / 2
     xh = x1 - hh
     pts = [(x0, cy - s), (xh, cy - s), (xh, cy - hh), (x1, cy), (xh, cy + hh), (xh, cy + s), (x0, cy + s)]
@@ -775,19 +778,27 @@ def _note_head(g, x, y, w):
     solid(g, pts, oct_chords(pts))
 
 
+def flag_reach(p):
+    """How far a quaver's flag reaches right of its stem: far enough that
+    the white under it stays wider than the stem."""
+    return max(0.15 * p.cap, 1.6 * max(p.sv, p.floor))
+
+
 def _notes(g, n, beams, flag=False):
+    """Note heads (solid octagons, wider than tall) with stems on their right;
+    a flag, or beams joining two stems' tops (each as heavy as a bar and a
+    third, the white between them as wide as a beam)."""
     p = g.p
     W = g.W
-    w = note_head(p)
+    w = note_head(p) if n == 1 else min(note_head(p), 0.42 * W)   # two heads keep white between them
     hy = w / 2.7
     top = p.cap
     sv = max(p.sv, p.floor)
-    xs = [w / 2] if n == 1 else [w / 2, W - w / 2 - (0 if not beams else 0)]
+    xs = [w / 2] if n == 1 else [w / 2, W - w / 2]
     stems = []
     for x in xs:
         _note_head(g, x, hy, w)
-        xs_ = x + w / 2 - sv / 2
-        stems.append(xs_)
+        stems.append(x + w / 2 - sv / 2)
     bh = max(g.sh * 1.3, 0.09 * top)                         # a beam
     for xs_ in stems:
         g.stroke((xs_, hy, sv), (xs_, top))
@@ -797,8 +808,8 @@ def _notes(g, n, beams, flag=False):
             g.stroke((stems[0] - sv / 2, y, bh), (stems[-1] + sv / 2, y))
     if flag:
         x = stems[0]
-        f = 0.3 * top
-        g.stroke((x, top), (x + f / 2, top - f / 2), (x + f / 2, top - f), end='h')
+        f = flag_reach(p)
+        g.stroke((x, top), (x + f, top - f), (x + f, top - f - 0.12 * top), end='h')
 
 
 def note_head(p):
@@ -810,7 +821,7 @@ def _note_w(n, flag=False):
     def w(p):
         head = note_head(p)
         if n == 1:
-            return fit(p, head + (0.15 * p.cap + max(p.sv, p.floor) / 2 if flag else 0))
+            return fit(p, head + (flag_reach(p) + max(p.sv, p.floor) / 2 if flag else 0))
         return fit(p, 2 * head + 0.25 * p.cap)
     return w
 
@@ -900,13 +911,15 @@ shape('⚑', _flag_w, solid=True)(lambda g: _flag(g, True))
 
 # --- Powerline icons ------------------------------------------------------------------------------
 
-@shape('', lambda p: fit(p, 0.62 * p.cap + max(p.sv, p.floor)))
+@shape('\ue0a0', lambda p: fit(p, 0.62 * p.cap + 0.5 * heft(p)))
 def pl_branch(g):
     """Version-control branch: a stem, and a branch that leaves it at 45
-    degrees and rises; a square node at each end."""
+    degrees and rises; a square node at each end. Its pen is the weight's,
+    up to a seventh of its width, so the branch stays apart from the stem."""
     p = g.p
-    sv = max(p.sv, p.floor)
-    d = max(2.0 * sv, 3 * p.floor)
+    heavy(g, g.W, 1.0, share=0.14)
+    sv = max(g.p.sv, g.p.floor)
+    d = min(max(2.0 * sv, 3 * p.floor), 0.28 * g.W)
     x1, x2 = d / 2, g.W - d / 2
     top, bot = p.cap - d / 2, d / 2
     yj = 0.3 * p.cap
@@ -917,7 +930,7 @@ def pl_branch(g):
         block(g, x, y, d)
 
 
-@shape('', lambda p: fit(p, 0.62 * p.cap + max(p.sv, p.floor)))
+@shape('\ue0a1', lambda p: fit(p, 0.62 * p.cap + max(p.sv, p.floor)))
 def pl_line_number(g):
     """'LN': a small L over a small N, stepped."""
     p = g.p
@@ -932,17 +945,20 @@ def pl_line_number(g):
     g.add_glyph(sub, g.W - wn, 0)
 
 
-@shape('', lambda p: fit(p, 0.62 * p.cap + 0.5 * heft(p)), solid=True)
+@shape('\ue0a2', lambda p: fit(p, 0.62 * p.cap + 0.5 * heft(p)), solid=True)
 def pl_lock(g):
-    """A padlock: a shackle with chamfered shoulders over a solid body with
-    a keyhole cut in it."""
+    """A padlock: a shackle with chamfered shoulders, narrower than the body,
+    over a solid body with a keyhole cut in it. The shackle's pen is the
+    weight's, up to a seventh of the width, so its counter stays open."""
     p = g.p
     W = g.W
-    sv = max(p.sv, p.floor)
-    body_top = 0.55 * p.cap
-    m = 0.18 * W
-    g.stroke((m + sv / 2, body_top), B(m + sv / 2, p.cap - g.sh / 2, 1.2 * p.m), B(W - m - sv / 2, p.cap - g.sh / 2, 1.2 * p.m),
-             (W - m - sv / 2, body_top))
-    kw = max(0.9 * sv, 0.12 * W, 2 * p.floor)
-    key = box(W / 2 - kw / 2, 0.16 * p.cap, W / 2 + kw / 2, 0.38 * p.cap)
+    body_top = 0.52 * p.cap
+    sv0 = p.sv
+    heavy(g, W, 1.0, share=0.14)
+    t = max(g.p.sv, g.p.floor)
+    m = 0.14 * W
+    g.stroke((m + t / 2, body_top), B(m + t / 2, p.cap - g.sh / 2, 0.3 * (W - 2 * m)),
+             B(W - m - t / 2, p.cap - g.sh / 2, 0.3 * (W - 2 * m)), (W - m - t / 2, body_top))
+    kw = max(0.9 * t, 0.12 * W, 0.6 * sv0, 2 * p.floor)        # (a keyhole three fifths of a stem wide at least)
+    key = box(W / 2 - kw / 2, 0.14 * p.cap, W / 2 + kw / 2, 0.36 * p.cap)
     solid(g, box(0, 0, W, body_top).difference(key))

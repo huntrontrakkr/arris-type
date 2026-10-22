@@ -264,7 +264,7 @@ def _boxed(g, keep=0.6):
     return cx, cy, S, (cx - S / 2 + tv, cy - S / 2 + th, cx + S / 2 - tv, cy + S / 2 - th)
 
 
-@shape('▣', 'L')
+@shape('▣', 'L', solid=True)
 def square_in_square(g):
     """A black square inside a white one, the white between them as wide as
     the pen at least."""
@@ -344,36 +344,36 @@ def _half_box(g, region):
     solid(g, inside.intersection(region(cx, cy, S)))
 
 
-@shape('◧', 'L')
+@shape('◧', 'L', solid=True)
 def sq_left_black(g):
     _half_box(g, lambda cx, cy, S: box(cx - S, cy - S, cx, cy + S))
 
 
-@shape('◨', 'L')
+@shape('◨', 'L', solid=True)
 def sq_right_black(g):
     _half_box(g, lambda cx, cy, S: box(cx, cy - S, cx + S, cy + S))
 
 
-@shape('◩', 'L')
+@shape('◩', 'L', solid=True)
 def sq_ul_black(g):
     _half_box(g, lambda cx, cy, S: Polygon([(cx - S, cy - S), (cx + S, cy + S), (cx - S, cy + S)]))
 
 
-@shape('◪', 'L')
+@shape('◪', 'L', solid=True)
 def sq_lr_black(g):
     _half_box(g, lambda cx, cy, S: Polygon([(cx - S, cy - S), (cx + S, cy - S), (cx + S, cy + S)]))
 
 
 @shape('◫', 'L')
 def sq_bisected(g):
-    cx, cy, S, (x0, y0, x1, y1) = _boxed(g, keep=0.4)
+    cx, cy, S, (x0, y0, x1, y1) = _boxed(g, keep=0.6)
     tv = widths(g)[0]
     g.stroke((cx, y0 - tv / 2, tv), (cx, y1 + tv / 2))
 
 
 def _quadrant_box(sx, sy):
     def fn(g):
-        cx, cy, S, (x0, y0, x1, y1) = _boxed(g, keep=0.4)
+        cx, cy, S, (x0, y0, x1, y1) = _boxed(g, keep=0.6)
         tv, th, _ = widths(g)
         ye = y1 + th / 2 if sy > 0 else y0 - th / 2
         xe = x1 + tv / 2 if sx > 0 else x0 - tv / 2
@@ -471,8 +471,8 @@ def _tri_half(side):
     return fn
 
 
-shape('◭', 'L')(_tri_half(-1))
-shape('◮', 'L')(_tri_half(1))
+shape('◭', 'L', solid=True)(_tri_half(-1))
+shape('◮', 'L', solid=True)(_tri_half(1))
 
 
 def corner_tri_pts(cx, cy, S, corner):
@@ -522,10 +522,11 @@ def diamond_in_diamond(g):
     cx, cy = _centre(g)
     S = g.W
     pts = diamond_pts(cx, cy, S)
+    sv = g.p.sv
     pen(g, pts, keep=0.6)
     outline(g, pts)
     t = widths(g)[2]
-    gap = max(t, 0.1 * S)
+    gap = max(t, 0.1 * S, 0.6 * sv)                         # (white: three fifths of the weight's stem)
     inner = S - 2 * SQRT2 * (t + gap)                       # (45-degree sides: across is sqrt2 along)
     solid(g, diamond_pts(cx, cy, inner))
 
@@ -589,7 +590,7 @@ def bullseye(g):
     ring(g, cx, cy, S - 2 * (tv + gap))
 
 
-@shape('◉', 'L')
+@shape('◉', 'L', solid=True)
 def fisheye(g):
     cx, cy = _centre(g)
     S = g.W
@@ -635,7 +636,7 @@ HALVES = {
     0x25D5: lambda cx, cy, S: box(cx - S, cy - S, cx + S, cy + S).difference(box(cx - S, cy, cx, cy + S)),
 }
 for cp, region in HALVES.items():
-    shape(chr(cp), 'L')(_half_circle(region))
+    shape(chr(cp), 'L', solid=True)(_half_circle(region))
 
 
 def _half_disc(side):

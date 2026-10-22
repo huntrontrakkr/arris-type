@@ -21,7 +21,8 @@ siblings do) and from the line's descender to its ascender (``font.Metrics``,
 
 Weights: a light line is the weight's own stroke (vertical sv, horizontal
 sh, never under the stroke floor); heavy is twice that; a double line is two
-light lines with a light line's white between them (at least a module).
+light lines, three quarters of a light line's white between them (at least
+a module), so that at Black the cell keeps white outside them.
 """
 from __future__ import annotations
 
@@ -83,7 +84,7 @@ def double_offset(g, vertical):
     """Distance from the cell's centre line to each line of a double."""
     lv, lh = weights(g)
     t = lv if vertical else lh
-    gap = max(t, g.p.m)
+    gap = max(0.75 * t, g.p.m)                             # (at Black the cell keeps white outside them)
     return (gap + t) / 2
 
 
@@ -210,12 +211,12 @@ def _mixed(g, arms):
 
 def _dashes(g, n, vertical, style):
     """n dashes to a cell, each centred in its nth: across cells, gaps stay
-    even. The gap is a quarter of a dash's share, never under half a stem."""
+    even. The gap is a quarter of a dash's share, never under three fifths of a stem."""
     W, cx, cy = cell(g)
     t = _thick(g, style, vertical)
     length = HEIGHT if vertical else W
     share = length / n
-    gap = max(share / 4, weights(g)[0] / 2)
+    gap = max(share / 4, 0.6 * weights(g)[0])
     for i in range(n):
         a, b = i * share + gap / 2, (i + 1) * share - gap / 2
         if vertical:
@@ -285,7 +286,7 @@ def _register_box():
             else:
                 fn = (lambda g, a=arms: _junction(g, a))
         BOX[gname(cp)] = ch
-        cell_glyph(ch)(fn)
+        cell_glyph(ch, solid='HEAVY' in body)(fn)          # (heavy lines: twice the stroke, by design)
 
 
 _register_box()
@@ -393,7 +394,7 @@ BRAILLE_DOTS = {1: (0, 0), 2: (0, 1), 3: (0, 2), 4: (1, 0), 5: (1, 1), 6: (1, 2)
 def _braille(bits):
     def fn(g):
         W, cx, cy = cell(g)
-        s = g.p.dot()
+        s = min(g.p.dot(), min(W / 2, HEIGHT / 4) - 0.6 * weights(g)[0])   # (white between dots: 3/5 stem)
         for d in range(1, 9):
             if bits & (1 << (d - 1)):
                 col, row = BRAILLE_DOTS[d]
