@@ -538,7 +538,7 @@ _degree_letter('uni2103', '℃', 'C')
 _degree_letter('uni2109', '℉', 'F')
 
 
-@sign('uni2117', '℗', lambda p: p.cap + 0.0, kind=('punct', 1.0))
+@glyph('uni2117', '℗', lambda p: p.cap + 0.0, kind=('punct', 1.0))     # (drawn as © and ®, Mono too)
 def soundcopyright(g):
     from .symbols import _ringed
     _ringed(g, 'P')
