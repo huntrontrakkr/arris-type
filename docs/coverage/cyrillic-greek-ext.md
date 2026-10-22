@@ -65,8 +65,10 @@ Every added part is a function used by every letter that carries it:
   side stands a stem and two modules from the stem it leaves
   (`hook_reach`), so the hook's counter grows with the weight; Ҡ's lead-in
   bar is two modules or three quarters of a stem, whichever is more
-  (`lead`); Ҝ's stem stands two modules of white clear of K's stem and
-  half a stem clear of the leg. In the monospaced cell a hook takes no
+  (`lead`); a bar across a stem reaches past it as far (`bar_reach`: Ұ ұ),
+  and Ӿ's bar runs nearly the body's width, past the diagonals; Ҝ's stem
+  stands two modules of white clear of K's stem and half a stem clear of
+  the leg. In the monospaced cell a hook takes no
   more than leaves the letter two stems and a module and a half.
 * **Lowercase follows the Russian lowercase**: a small capital where the
   Russian letter is one (қ ң ҷ ...), the Latin letter's own drawing where
