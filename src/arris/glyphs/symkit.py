@@ -227,7 +227,6 @@ def _mono_fit(key, fn, width, p, kind=None):
     from ..draw import LETTER_KINDS
     cell = _body(width, p, kind)        # the body it is drawn in, whatever it is condensed by
     tol = 0.5                           # font units
-
     def fits(q):
         # a letter's sign fills the cell it is given, as letters do, and is
         # condensed only if its ink will not fit, bars hanging into half the
@@ -264,6 +263,49 @@ def _mono_fit(key, fn, width, p, kind=None):
         dx = (cell - (a + b)) / 2
     _FIT[(key, p)] = (k, s, dx, dy)
     return _FIT[(key, p)]
+
+
+_OVER: dict = {}
+
+
+def mono_overflows(key, fn, width, p):
+    """Whether a symbol drawn at its own width in the monospaced cut runs
+    out of its cell: its body centred in the cell (font.place), its ink
+    reaching past half the cell's margin on either side (as far as a
+    letter's sign may reach, _mono_fit)."""
+    if (key, p) not in _OVER:
+        W = width(p)
+        a, b = _ink_x(fn, p, W)
+        x0 = (p.fig_adv - W) / 2                            # the body's place in the cell
+        edge = (p.fig_adv - p.fig_w) / 4
+        _OVER[(key, p)] = x0 + a < edge - 0.5 or x0 + b > p.fig_adv - edge + 0.5
+    return _OVER[(key, p)]
+
+
+def mono_fitted(name, fn, width, kind):
+    """(drawing, body) for a symbol in the monospaced cut: as drawn, unless
+    its ink would run out of the cell (mono_overflows); then fitted as a
+    sign is (_mono_fit: condensed, or drawn smaller, and centred)."""
+    def body(p):
+        n = width(p)
+        return min(n, p.fig_w) if p.mono and mono_overflows(name, fn, width, p) else n
+
+    def wrapped(g):
+        p = g.p
+        if not p.mono or not mono_overflows(name, fn, width, p):
+            return fn(g)
+        k, s, dx, dy = _mono_fit(name, fn, width, p, kind)
+        if k < 1.0:
+            g.p = _condensed(g.p, k)
+        if s < 1.0:
+            g.p = _scaled(g.p, s)
+        fn(g)
+        if dx or dy:
+            shift(g, dx, dy)
+    wrapped.__module__ = fn.__module__
+    wrapped.__name__ = fn.__name__
+    wrapped.mono_fitted = True
+    return wrapped, body
 
 
 def shift(g, dx, dy):
@@ -309,6 +351,7 @@ def sign(name, ch, width, kind=('punct', 1.0), solid=False, openings=(), squint=
             g.p = p if (k < 1 or s < 1) and False else g.p
         wrapped.__module__ = fn.__module__
         wrapped.__name__ = fn.__name__
+        wrapped.mono_fitted = True
         glyph(name, ch, body, kind=kind, solid=solid, openings=openings, squint=squint)(wrapped)
         return fn
     return deco

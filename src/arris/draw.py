@@ -63,7 +63,12 @@ class Spec:
 def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False, cell=False, squint=()):
     def deco(fn):
         w = width if callable(width) else (lambda p, w=width: getattr(p, w))
-        REGISTRY[name] = Spec(name, ord(char) if char else None, fn, w, kind, tuple(openings), solid, cell,
+        f = fn
+        if isinstance(kind, tuple) and kind[0] == 'punct' and not cell and not getattr(fn, 'mono_fitted', False):
+            # a symbol keeps to its cell in the monospaced cut (symkit.mono_fitted)
+            from .glyphs.symkit import mono_fitted
+            f, w = mono_fitted(name, fn, w, kind)
+        REGISTRY[name] = Spec(name, ord(char) if char else None, f, w, kind, tuple(openings), solid, cell,
                               tuple(squint))
         return fn
     return deco

@@ -30,9 +30,13 @@ SMALL_STROKE = 0.8  # their strokes, of the full stems
 
 def small(p):
     from .figures import heaviness
+    from .symkit import SMALL_HEFT
     # strokes a little lighter than the figures' (0.8); toward Black, lighter
-    # still (0.68), so a small figure's strokes stay in proportion to its size
-    k, s = SMALL, SMALL_STROKE - 0.12 * heaviness(p)
+    # still (0.68), so a small figure's strokes stay in proportion to its
+    # size; and, as small letters' (symkit.small_letter), never heavier than
+    # SMALL_HEFT of its own module, or the 8's counters close to pinholes
+    k = SMALL
+    s = min(SMALL_STROKE - 0.12 * heaviness(p), SMALL_HEFT * k * p.m / p.sv)
     return p.with_(m=k * p.m, cap=k * p.cap, fig_w=k * p.fig_w, fig_adv=k * p.fig_adv, leg=k * p.leg,
                    sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
 
@@ -160,7 +164,8 @@ def _ordinal(name, ch, letter):
         sub = draw(letter, ps)
         dy = p.cap - ps.xh
         g.add_glyph(sub, 0, dy)
-        y = dy - 0.6 * p.m - ps.sh / 2
+        gap = max(0.6 * p.m, 0.75 * ps.sv)                  # white over the rule: never under the small stroke's
+        y = dy - gap - ps.sh / 2
         g.stroke((0, y), (sub.W, y))
         g.sh_k = SMALL_STROKE
     glyph(name, ch, lambda p: REGISTRY[letter].width(small(p).with_(xh=SMALL * p.xh)), kind=('punct', 0.6))(fn)

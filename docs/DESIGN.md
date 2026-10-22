@@ -311,6 +311,19 @@ is less), so nothing that reads already is touched. `tools/squint_scan.py`
 lists the holes and slots each weight squeezes shut, and the pinholes and
 slivers that never read at all.
 
+**Small counters.** A closed counter narrower than half a stroke is not
+white at all, only a speck, so small closed forms keep at least the
+least white (`letterframe.least_white`: a module, or 0.6 of a stem) or
+their own stroke across. The degree sign's ring, like the ring accent's,
+stops thickening at two modules and keeps three quarters of its stroke
+inside; ¤ widens to hold its counter; the ring below is drawn wider than
+high; the @ stands its four uprights evenly, and thins its four bars as a
+tight stack does, where its a would close; small figures, like small
+letters, are never heavier than 2.6 of their own modules, so the small
+8 keeps both counters. The dollar's stem runs above and below the S at
+the weights where, run through, it would split the S's counters into
+slivers.
+
 **Barred signs.** ¥ € and the currency signs with two bars (₦ ₩ ₱ ₳ ₤ ₴
 ₸ ₹) follow one rule. The bars are the weight's horizontals, easing to
 0.8 of them at Black; the white between them is at least three quarters
@@ -572,7 +585,10 @@ area has a note in `docs/coverage/`, listing what was drawn and why:
   letter's sign fills the cell as letters do, and is condensed only when
   its ink will not fit; bars hang into half the cell's margin, and a letter
   drawn narrower to give them room is condensed only as far as it needs
-  to stay as open, for its width, as it is in its own cell.
+  to stay as open, for its width, as it is in its own cell. Every other
+  symbol whose ink would run out of its cell (‰ ™ ∭ @ …) is condensed, or
+  drawn smaller, to fit (`symkit.mono_fitted`); the em dash just spans
+  the cell.
 * **Cells** (`terminal.md`): box drawing, blocks, shades and Braille fill
   a Mono cell from descender to ascender in every family, meet the cell
   edge square (`Glyph.butt`), and stay upright in the italic so that rows

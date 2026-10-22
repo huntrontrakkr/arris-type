@@ -267,7 +267,7 @@ def cruzeiro(g):
     stamp(g, 'C', width=wc)
     # the r as tall as leaves a stroke's white under the C's upper beak
     k = min(0.62, max(0.45, (p.cap - beak_depth(p) - wmin(p)) / p.cap))
-    pr = _small_letter(p, k, 0.7)
+    pr = _small_letter(p, k, 0.7).with_(mono=False)        # a letter inside a sign: the plain r, not Mono's footed one
     wr = REGISTRY['r'].width(pr)
     stamp(g, 'r', dx=g.W - wr - 0.25 * p.m, p=pr)
 

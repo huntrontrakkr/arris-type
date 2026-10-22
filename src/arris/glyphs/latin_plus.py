@@ -76,16 +76,19 @@ def macronbelow(g, x, y, case):
 
 def ringbelow(g, x, y, case):
     """A small chamfered ring under the baseline; it keeps within the
-    descender by lightening (its counter about a stroke and a fifth)."""
+    descender by lightening (its counter two strokes high), and is drawn
+    wider than high, so the counter stays a counter where the room below
+    the line is short."""
     p = g.p
     t0 = min(p.sv, 1.5 * p.m)
     H = min(room_below(p), 1.2 * p.m + 2 * t0)
-    t = min(t0, H / 3.2)
-    r = (H - t) / 2                                         # centreline half-size
+    t = min(t0, H / 4)
+    r = (H - t) / 2                                         # centreline half-height
+    rx = 1.4 * r                                            # and half-width
     yc = -gap(p) - H / 2
     leg = min(p.m / 2, r / 2)
-    g.stroke(B(x - r, yc - r, leg, t), B(x + r, yc - r, leg, t), B(x + r, yc + r, leg, t),
-             B(x - r, yc + r, leg, t), closed=True)
+    g.stroke(B(x - rx, yc - r, leg, t), B(x + rx, yc - r, leg, t), B(x + rx, yc + r, leg, t),
+             B(x - rx, yc + r, leg, t), closed=True)
 
 
 # --- Marks above --------------------------------------------------------------

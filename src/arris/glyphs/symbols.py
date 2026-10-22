@@ -16,8 +16,9 @@ from ..draw import AUTO_SHARE, B, REGISTRY, Opening, Squint, _counter_white, dra
 from ..geom import rings_to_shapely
 from ..params import SQRT2
 from . import marks
+from .symkit import sign
 from .cyrillic import sc
-from .letterframe import STEEP, Frame, growing_width, letter_width
+from .letterframe import STEEP, Frame, growing_width, least_white, letter_width
 from .punct import _ring, axis, dot, punct
 
 ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyphen', 0x2011: 'hyphen',
@@ -98,8 +99,11 @@ def yen(g):
     bar_pair(g, yc, xc - p.sv / 2 - bar_out(p), xc + p.sv / 2 + bar_out(p))
 
 
-@glyph('currency', '¤', letter_width(8, 2), kind=('punct', 1.0))
+@glyph('currency', '¤', lambda p: max(letter_width(8, 2)(p), 2.4 * p.m + 2 * p.sv + least_white(p)),
+       kind=('punct', 1.0))
 def currency(g):
+    """A ring on the axis, its counter never under least_white (the sign
+    widens), four ticks running out of its corners."""
     p, W = g.p, g.W
     a = axis(p)
     r = W / 2 - 1.2 * p.m - p.sv / 2
@@ -256,10 +260,13 @@ def daggerdbl(g):
     g.clip = (0, -p.desc, W, p.cap)
 
 
-@glyph('numero', '№', lambda p: REGISTRY['N'].width(p) + 5 * p.m, kind='cap')
+@sign('numero', '№', lambda p: REGISTRY['N'].width(p) + 5 * p.m, kind='cap')
 def numero(g):
-    p = g.p
-    w = stamp(g, 'N')
+    """N and a small underlined o: a sign, drawn with the plain letters
+    (not Mono's cell-wide ones), so in the monospaced cut it is fitted to
+    its cell as signs are (symkit.sign)."""
+    p = g.p.with_(mono=False)
+    w = stamp(g, 'N', p)
     ps = p.with_(xh=0.5 * p.cap, m=0.6 * p.m)
     wo = REGISTRY['o'].width(ps)
     stamp(g, 'o', ps, dx=w + 0.8 * p.m, dy=p.cap - ps.xh, width=wo)

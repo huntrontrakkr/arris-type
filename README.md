@@ -56,7 +56,7 @@ uv run pytest                                   # the figures against the watch'
 uv run python tools/presentation.py             # the presentation: presentation/slides/*.png and arris.pdf
 ```
 
-The presentation (`presentation/`) is thirty-one slides set in the built
+The presentation (`presentation/`) is thirty-seven slides set in the built
 fonts: the family, axes, figures and their pixel masters, the italic, text,
 languages, Mono in code and in a terminal, and applications from a
 departure board to a watch face. It renders with Playwright's Chromium.
@@ -88,6 +88,8 @@ and where the optical corrections come from. In short:
 * `tools/stroke_scan.py`: every glyph's strokes certified, upright and
   italic: no crossing outlines, nothing below the stroke floor, no swelling.
 * `tools/scan_counters.py`: counters that tighten or close at heavy weights.
+* `tools/squint_scan.py`: holes and slots a squinting reader loses, weight
+  by weight (`arris.vision.narrow_whites`).
 
 ## Licence
 

@@ -107,13 +107,14 @@ def breve(g, x, y, case):
 
 
 def ring(g, x, y, case):
-    """A small chamfered square ring. Its counter is fixed in modules; its
-    stroke follows the weight's up to the watch's two modules and no
-    further, as accents lighten at heavy weights, so a heavy Å stays inside
-    the line."""
+    """A small chamfered square ring. Its counter is fixed in modules, but
+    never narrower than its stroke (at heavy weights a module-wide counter
+    in a two-module ring is a pinhole); its stroke follows the weight's up
+    to the watch's two modules and no further, as accents lighten at heavy
+    weights, so a heavy Å stays inside the line."""
     p = g.p
-    inner = (2.0 if case == 'lc' else 1.6) * p.m              # the counter, across
     t = min(p.sv, 2 * p.m)                                  # the stroke
+    inner = max((2.0 if case == 'lc' else 1.6) * p.m, t)    # the counter, across
     r = (inner + t) / 2                                     # centreline half-size
     leg = p.m / 2
     yc = y + r + t / 2

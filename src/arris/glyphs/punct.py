@@ -16,7 +16,7 @@ import math
 from ..draw import B, Squint, glyph
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
-from .letterframe import STEEP, Frame, growing_width, letter_width
+from .letterframe import STEEP, Frame, growing_width, least_white, letter_width, white_scale
 
 
 def punct(name, char, wm, stems=1, width=None, sides=1.0):
@@ -114,8 +114,11 @@ def endash(g):
     g.stroke((0, f.Y(5)), (g.W, f.Y(5)))
 
 
-@punct('emdash', '—', 16, 0)
+@punct('emdash', '—', 16, 0,
+       width=lambda p: min(letter_width(16, 0)(p), p.fig_adv) if p.mono else letter_width(16, 0)(p))
 def emdash(g):
+    """A bar sixteen modules long; in the monospaced cut, the cell's full
+    advance, as a code face's em dash runs (it shortens, never thins)."""
     f = Frame(g, 16, 'lower')
     g.stroke((0, f.Y(5)), (g.W, f.Y(5)))
 
@@ -493,15 +496,38 @@ def p_k(g):
     return g.p.sd / SQRT2
 
 
-@punct('at', '@', 12, 3)
+@punct('at', '@', 12, 3, width=lambda p: max(letter_width(12, 3)(p), 4 * p.sv + 3 * least_white(p)))
 def at(g):
+    """An a in a ring open at its foot. Four uprights cross it (the ring's
+    sides, the a's bowl and stem); the white between them is the frame's,
+    unless at heavy weights one would drop under least_white (the a's
+    counter would close to a pinhole): then the sign is wider and the four
+    stand evenly spaced. Up its height, the same with four bars."""
     f = Frame(g, 12, 'cap')
     p = g.p
-    # inner a: bowl and stem, kept a stroke's white inside the ring
+    xs = [f.X(1), f.X(4.5), f.X(8), f.X(11)]
+    if min(b - a for a, b in zip(xs, xs[1:])) - p.sv < least_white(p) - 0.5:
+        step = (xs[3] - xs[0]) / 3
+        xs = [xs[0] + i * step for i in range(4)]
+    xa, xs8 = xs[1], xs[2]
+    # inner a: bowl and stem, kept a stroke's white inside the ring; four
+    # bars stack up the height (the ring's, the a's), and where their white
+    # would drop under three quarters of a bar they thin, as tight stacks
+    # do, and stand evenly
     yb = max(f.Y(3), f.Y(1) + g.sh + max(p.m, 0.5 * p.sv))
-    g.stroke((f.X(8), yb), B(f.X(4.5), yb), B(*f.P(4.5, 7.5)), f.P(8, 7.5), closed=True)
+    ys = [f.Y(1), yb, f.Y(7.5), f.Y(11)]
+    if min(b - a for a, b in zip(ys, ys[1:])) - g.sh < 0.75 * g.sh:
+        g.stack(4, p.cap, 0.75)
+        f = Frame(g, 12, 'cap')
+        step = (f.Y(11) - f.Y(1)) / 3
+        ys = [f.Y(1) + i * step for i in range(4)]
+    yb, ya = ys[1], ys[2]
+    # the bowl's corners as large as its counter allows: a full leg on a
+    # counter under a stroke and a half across leaves it a diamond
+    leg = min(p.leg, max(p.m / 2, (min(xs8 - xa, ya - yb) - 1.5 * p.sv) / 2))
+    g.stroke((xs8, yb), B(xa, yb, leg), B(xa, ya, leg), (xs8, ya), closed=True)
     # stem, then out along the bottom and round the outside, open at the foot
-    g.stroke(f.P(8, 7.5), (f.X(8), yb), B(f.X(11), yb, p.m / 2), f.P(11, 7))
+    g.stroke((xs8, ya), (xs8, yb), B(f.X(11), yb, p.m / 2), f.P(11, 7))
     g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
 
 
@@ -574,12 +600,25 @@ def grave(g):
 
 # --- Typographic -------------------------------------------------------------
 
-@punct('degree', '°', 5, 2)
+def _degree_t(p):
+    """The degree ring's stroke: the weight's, up to the watch's two
+    modules and no further, as the ring accent's (marks.ring)."""
+    return min(p.sv, 2 * p.m)
+
+
+@punct('degree', '°', 5, 2, width=lambda p: 2 * _degree_t(p) + max(white_scale(p) * p.m, 0.75 * _degree_t(p)))
 def degree(g):
+    """A ring a cap's height on top: two strokes and a module of white. At
+    heavy weights its stroke stops at two modules and its counter keeps
+    three quarters of it, so it stays a small open ring, not a pinhole in
+    a blob."""
     p, W = g.p, g.W
-    s = p.sv * 0.8
+    t = _degree_t(p)
+    th = t * g.sh / p.sv
     top = p.cap
-    _ring(g, s / 2, top - W + g.sh / 2, W - s / 2, top - g.sh / 2)
+    x0, x1, y0, y1 = t / 2, W - t / 2, top - W + th / 2, top - th / 2
+    leg = p.leg * 0.6
+    g.stroke(B(x0, y0, leg, th), B(x1, y0, leg, t), B(x1, y1, leg, th), B(x0, y1, leg, t), closed=True)
 
 
 @punct('bullet', '\u2022', 4, width=lambda p: 2.4 * p.sv)

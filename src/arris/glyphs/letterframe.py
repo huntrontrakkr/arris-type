@@ -51,6 +51,13 @@ def letter_width(wm: float, stems: float):
     return lambda p: stems * p.sv + (wm - 2 * stems) * p.m * white_scale(p)
 
 
+def least_white(p) -> float:
+    """The least white across a closed counter or between two parts of a
+    sign: a module, or 0.6 of a stem toward Black (white narrower than half
+    a stroke is no white at all: draw.white_features)."""
+    return max(p.m, 0.6 * p.sv)
+
+
 def heft(p) -> float:
     """How far the stem is past Regular's (a module and a half), in units;
     0 at Regular and lighter."""
