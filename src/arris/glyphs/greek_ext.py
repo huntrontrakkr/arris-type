@@ -32,6 +32,7 @@ ALIASES = {
     0x03F5: 'uni0454',      # lunate epsilon (є)
     0x03F6: 'uni044D',      # reversed lunate epsilon (э)
     0x03F7: 'Thorn', 0x03F8: 'thorn',   # sho
+    0x02B9: 'uni0374',      # the numeral sign's canonical equivalent (what NFC text holds)
 }
 
 

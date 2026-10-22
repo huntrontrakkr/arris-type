@@ -1,6 +1,7 @@
 """Shape with HarfBuzz (features on) and render with FreeType.
 
 usage: hbspec.py out.png px 'font.ttf::text::feat,feat' ...
+(a feature 'lang=bg' shapes the text as that language: locl)
 """
 import sys
 
@@ -13,6 +14,8 @@ from PIL import Image
 def line(path, text, px, feats, pad=8):
     blob = hb.Blob.from_file_path(path)
     font = hb.Font(hb.Face(blob))
+    lang = next((f.split('=')[1] for f in feats if f.startswith('lang=')), None)
+    feats = [f for f in feats if not f.startswith('lang=')]
     axes = {f.split('=')[0]: float(f.split('=')[1]) for f in feats if '=' in f}
     feats = [f for f in feats if '=' not in f]
     if axes:
@@ -20,6 +23,8 @@ def line(path, text, px, feats, pad=8):
     buf = hb.Buffer()
     buf.add_str(text)
     buf.guess_segment_properties()
+    if lang:
+        buf.language = lang
     hb.shape(font, buf, {f: True for f in feats if f} | {f[1:]: False for f in feats if f.startswith('-')})
     upem = font.face.upem
     face = freetype.Face(path)
