@@ -21,14 +21,13 @@ from __future__ import annotations
 
 import math
 
-from shapely import affinity  # noqa: F401
 from shapely.geometry import Polygon, box
 
 from ..draw import B, REGISTRY, draw
 from ..params import SQRT2
 from .letterframe import heft
 from .punct import axis
-from .shapes import (OCT, block, disc, fit, ink_of, inradius, large, oct_chords, oct_pts, outline, pen, ring, slanted,
+from .shapes import (OCT, block, disc, fit, ink_of, oct_chords, oct_pts, outline, pen, ring, slanted,
                      shape, size_of, solid, sq_pts, tri_pts, widths, xl)
 
 HEAVY = 1.6
@@ -173,7 +172,6 @@ def _spokes(g, n, r0, r1, k=1.0):
     for a in dirs:
         u = (math.cos(math.radians(a)), math.sin(math.radians(a)))
         u = (round(u[0], 12), round(u[1], 12))
-        axial = abs(u[0]) < 1e-9 or abs(u[1]) < 1e-9
         w = k * (g.p.sv if abs(u[0]) < 1e-9 else (g.sh if abs(u[1]) < 1e-9 else g.p.sd))
         start = (cx + u[0] * r0, cy + u[1] * r0) if r0 else (cx, cy)
         g.stroke((*start, slanted(g, w, u)), (cx + u[0] * r1, cy + u[1] * r1))
@@ -723,7 +721,6 @@ def _stem_foot(g, cx, y_top, y0, S):
 def _spade(g, black):
     cx, cy = _c(g)
     S = g.W
-    H = 0.9 * S
     body_c = cy + 0.12 * S
     pts, ch = heart_pts(cx, body_c, S * 0.92)
     pts = [(2 * cx - x, 2 * body_c - y) for x, y in pts]     # turned half round: point up
@@ -758,7 +755,6 @@ def _club(g, black):
     else:
         t = max(min(g.p.sv, 0.2 * d), g.p.floor)
         solid(g, tre.difference(tre.buffer(-t, join_style='mitre')))
-    y_bot = tre.bounds[1]
     _stem_foot(g, cx, cy + 0.0 * S, cy - 0.6 * S, S)
 
 
