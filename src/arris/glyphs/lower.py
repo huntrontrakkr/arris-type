@@ -205,9 +205,10 @@ def r(g):
     g.stroke((xs, 0), (xs, p.xh))
     # The shoulder: a 45-degree stroke from the stem to the arm, leaving a
     # notch under the arm (the 1's flag, turned).
-    x0, y0 = f.X(3) + dx, f.Y(6.5)
+    k = p.sd / 2 ** 0.5
     y8, y6 = f.Y(8), f.Y(6)
-    g.stroke((x0 - (y0 - y6), y6), (x0 + (y8 - y0), y8), f.P(8, 8), start='h')
+    x6 = xs + p.sv / 2 + k - p.c                             # starts an edge break into the stem
+    g.stroke((x6, y6), (x6 + (y8 - y6), y8), f.P(8, 8), start='h')
     if p.mono:                                              # a foot, as the 1's
         u = g.W / 9
         g.stroke((xs - 2.5 * u, f.Y(1)), (xs + 2.5 * u, f.Y(1)))
@@ -302,7 +303,8 @@ def z(g):
     yj = f.Y(4.5)
     step = min(J, g.sh)
     y0, y1 = f.Y(8), f.Y(1)
-    g.stroke((y0 + a_up, y0), (yj + a_up, yj, step), (yj + a_lo, yj), (y1 + a_lo, y1), start='h', end='h')
+    xl = f.X(1)
+    g.stroke((y0 + a_up, y0), (yj + a_up, yj, step), (yj + a_lo, yj), (xl, xl - a_lo), (xl, y1), start='h')
 
 
 @glyph('dotlessi', '\u0131', lambda p: p.sv, kind='lower')

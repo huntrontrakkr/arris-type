@@ -338,24 +338,30 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None):
     if isinstance(u, Polygon):
         u = MultiPolygon([u])
     rings = []
+    min_hole = (MIN_COUNTER * thick.v) ** 2
     for poly in u.geoms:
         poly = orient(poly, sign=1.0)
         rings.append(_ring_rule(list(poly.exterior.coords), c, +1))
         for hole in poly.interiors:
+            if Polygon(hole).area < min_hole:                # a counter too small to see is ink
+                continue
             rings.append(_ring_rule(list(hole.coords), c, +1))
     return rings
 
 
+MIN_COUNTER = 0.2   # pinholes (under a fifth of a stem, squared) fill in
+
+
 def rings_to_shapely(rings):
-    """Rebuild a (multi)polygon from rings using even-odd containment."""
-    polys = [Polygon(r) for r in rings]
-    shells = [p for p, r in zip(polys, rings) if _signed_area(r) > 0]
-    holes = [p for p, r in zip(polys, rings) if _signed_area(r) < 0]
-    out = []
-    for s in shells:
-        hs = [h.exterior.coords for h in holes if s.contains(h.representative_point())]
-        out.append(Polygon(s.exterior.coords, hs))
-    return MultiPolygon(out) if len(out) != 1 else out[0]
+    """Rebuild the ink from rings, even-odd: a ring toggles ink inside it, so
+    a dot inside a counter inside a bowl comes out right."""
+    out = Polygon()
+    for r in rings:
+        if len(r) < 3:
+            continue
+        poly = shapely.make_valid(Polygon(r))
+        out = out.symmetric_difference(poly)
+    return out
 
 
 def _signed_area(r):

@@ -204,9 +204,8 @@ def mu(g):
     f = Frame(g, 8, 'lower')
     p = f.p
     g.clip = (0, -p.desc, f.W, p.xh)
-    g.stroke(f.P(1, -3), B(*f.P(1, 1)), f.P(7, 1))
-    g.stroke(f.P(1, 9), f.P(1, 1))
-    g.stroke(f.P(7, 0), f.P(7, 9))
+    g.stroke(f.P(1, -3), f.P(1, 9))
+    g.stroke(f.P(1, 1), B(*f.P(7, 1)), f.P(7, 9))
 
 
 @glow('uni03BE', 'ξ', 8, 1)

@@ -13,6 +13,10 @@ from PIL import Image
 def line(path, text, px, feats, pad=8):
     blob = hb.Blob.from_file_path(path)
     font = hb.Font(hb.Face(blob))
+    axes = {f.split('=')[0]: float(f.split('=')[1]) for f in feats if '=' in f}
+    feats = [f for f in feats if '=' not in f]
+    if axes:
+        font.set_variations(axes)
     buf = hb.Buffer()
     buf.add_str(text)
     buf.guess_segment_properties()
@@ -20,6 +24,9 @@ def line(path, text, px, feats, pad=8):
     upem = font.face.upem
     face = freetype.Face(path)
     face.set_pixel_sizes(0, px)
+    if axes:
+        tags = [a.tag for a in face.get_variation_info().axes]
+        face.set_var_design_coords([axes.get(t, a.default) for t, a in zip(tags, face.get_variation_info().axes)])
     scale = px / upem
     pen, raw = 0.0, []
     for info, pos in zip(buf.glyph_infos, buf.glyph_positions):

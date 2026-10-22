@@ -406,13 +406,13 @@ def ampersand(g):
     big = p.leg + p.m
     g.stroke(B(*f.P(2, 6.5), big), B(*f.P(6, 6.5), big), B(*f.P(6, 11)), B(*f.P(2, 11)), closed=True)
     # lower bowl: from the loop's lower left, round the bottom, open at the right
-    g.stroke(f.P(2, 6.5), B(*f.P(1, 5.5), p.m / 2), B(*f.P(1, 1)), (f.X(7), f.Y(1)))
-    # the leg: 45 degrees from the loop down to the baseline at the right
-    a = W + p.c - k                                          # x + y = a
-    y0 = f.Y(7)
+    a = W + p.c - k                                          # the leg: x + y = a
+    g.stroke(f.P(2, 8.5), f.P(2, 6.5), B(*f.P(1, 5.5), p.m / 2), B(*f.P(1, 1)), (a - f.Y(1), f.Y(1)))
+    # the leg: 45 degrees from inside the loop down to the baseline at the right
+    y0 = f.Y(8.5)
     g.stroke((a - y0, y0), (a, 0), start='h', end='h')
     # the arm, up from the leg at the right
-    g.stroke(f.P(8, 2), f.P(8, 5.5))
+    g.stroke((f.X(8), a - f.X(8) - p.sv), f.P(8, 5.5))
 
 
 def p_k(g):
@@ -423,10 +423,11 @@ def p_k(g):
 def at(g):
     f = Frame(g, 12, 'cap')
     p = g.p
-    # inner a: bowl and stem
-    g.stroke(f.P(8, 3), B(*f.P(4.5, 3)), B(*f.P(4.5, 8)), f.P(8, 8), closed=True)
+    # inner a: bowl and stem, kept a stroke's white inside the ring
+    yb = max(f.Y(3), f.Y(1) + g.sh + max(p.m, 0.5 * p.sv))
+    g.stroke((f.X(8), yb), B(f.X(4.5), yb), B(*f.P(4.5, 7.5)), f.P(8, 7.5), closed=True)
     # stem, then out along the bottom and round the outside, open at the foot
-    g.stroke(f.P(8, 8.5), f.P(8, 3), B(*f.P(11, 3), p.m / 2), f.P(11, 7))
+    g.stroke(f.P(8, 7.5), (f.X(8), yb), B(f.X(11), yb, p.m / 2), f.P(11, 7))
     g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
 
 

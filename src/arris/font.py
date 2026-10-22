@@ -91,6 +91,24 @@ def spacing(name: str, p: Params):
     return 0.0, adv
 
 
+def _raw_glyph(contours):
+    """A glyf glyph with exactly these points: nothing merged or dropped,
+    as variable-font masters need."""
+    from fontTools.ttLib.tables._g_l_y_f import Glyph, GlyphCoordinates
+    g = Glyph()
+    pts, ends = [], []
+    for c in contours:
+        pts.extend(c)
+        ends.append(len(pts) - 1)
+    g.numberOfContours = len(contours)
+    g.coordinates = GlyphCoordinates(pts)
+    g.endPtsOfContours = ends
+    g.flags = bytearray([1] * len(pts))
+    g.program = __import__('fontTools.ttLib.tables.ttProgram', fromlist=['Program']).Program()
+    g.program.fromBytecode(b'')
+    return g
+
+
 def _tt_glyph(contours, lsb):
     pen = TTGlyphPen(None)
     for c in contours:
@@ -120,11 +138,15 @@ KERN_PUNCT = {'period', 'comma', 'colon', 'semicolon', 'hyphen', 'endash', 'emda
               'question', 'ampersand', 'asterisk', 'at', 'ellipsis'}
 
 
-def _contours(rings):
-    """Rounded TrueType contours (outer clockwise) from ink-left rings."""
+def _contours(rings, keep=False):
+    """Rounded TrueType contours (outer clockwise) from ink-left rings.
+    ``keep``: keep every point, duplicates included (variable-font masters)."""
     out = []
     for ring in rings:
         pts = [(round(x), round(y)) for x, y in ring]
+        if keep:
+            out.append(pts[::-1])
+            continue
         clean = []
         for q in pts:
             if not clean or q != clean[-1]:
@@ -138,7 +160,7 @@ def _contours(rings):
 
 def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, tune=None,
           metrics: Metrics | None = None, version='0.1', space=None, fea: str | None = None,
-          kern: bool = True):
+          kern: bool = True, placed: dict | None = None, kern_pairs: dict | None = None):
     m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh))
     order = ['.notdef', 'space'] + list(names)
     fb = FontBuilder(UPM, isTTF=True)
@@ -157,13 +179,18 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     hmtx['.notdef'] = (adv, 40)
     glyphs['space'] = TTGlyphPen(None).glyph()
     hmtx['space'] = (round(space if space is not None else 0.45 * p.xh), 0)
-    placed = {}
+    keep = placed is not None
+    placed = dict(placed or {})
     for n in names:
-        rings, adv = place(n, p, tune)
-        placed[n] = (rings, adv)
-        glyphs[n] = _tt_glyph(_contours(rings), 0)
+        if n not in placed:
+            placed[n] = place(n, p, tune)
+        rings, adv = placed[n]
+        glyphs[n] = _raw_glyph(_contours(rings, keep)) if keep else _tt_glyph(_contours(rings), 0)
         hmtx[n] = (round(adv), 0)
-    if kern and not p.mono:
+    if kern_pairs is not None:
+        from .kerning import fea as kern_fea
+        fea = (fea or '') + kern_fea(kern_pairs)
+    elif kern and not p.mono:
         from .kerning import fea as kern_fea, kerns
         kinds = {n: REGISTRY[n].kind for n in names}
         kernable = [n for n in names if kinds[n] in ('cap', 'lower') or

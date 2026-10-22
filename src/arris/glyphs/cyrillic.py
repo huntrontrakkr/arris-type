@@ -203,11 +203,15 @@ def Hardsign(g):
     _sign(g, f, f.X(3), f.X(10))
 
 
-@ccap('uni042B', 'Ы', 12, 3)
+@ccap('uni042B', '\u042b', 12, 3)
 def Yeru(g):
     f = Frame(g, 12)
-    _sign(g, f, f.X(1), f.X(8))
-    g.stroke(f.P(11, 0), f.P(11, 12))
+    p = f.p
+    xs = f.X(11)
+    # the bowl keeps at least a stem's white from the separate stem
+    xb = min(f.X(8), xs - 2 * p.sv - max(p.m, p.sv) + p.sv / 2 + p.sv / 2)
+    _sign(g, f, f.X(1), xb)
+    g.stroke((xs, 0), (xs, p.cap))
 
 
 @ccap('uni042D', 'Э', 9, 2)
@@ -341,4 +345,4 @@ def dje(g):
     p = g.p
     w = stamp(g, 'eng', p.m, width=g.W - p.m)
     g.stroke((0, (p.xh + p.asc) / 2 + p.m / 2), (p.m + p.sv + 2 * p.m, (p.xh + p.asc) / 2 + p.m / 2))
-    g.stroke((p.m + p.sv / 2, p.xh), (p.m + p.sv / 2, p.asc))
+    g.stroke((p.m + p.sv / 2, p.xh - g.sh), (p.m + p.sv / 2, p.asc))   # overlapping the stem below

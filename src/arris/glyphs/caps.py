@@ -297,4 +297,5 @@ def Z(g):
     yj = f.Y(6.5)
     step = min(J, g.sh)
     y0, y1 = f.Y(11), f.Y(1)
-    g.stroke((y0 + a_up, y0), (yj + a_up, yj, step), (yj + a_lo, yj), (y1 + a_lo, y1), start='h', end='h')
+    xl = f.X(1)
+    g.stroke((y0 + a_up, y0), (yj + a_up, yj, step), (yj + a_lo, yj), (xl, xl - a_lo), (xl, y1), start='h')

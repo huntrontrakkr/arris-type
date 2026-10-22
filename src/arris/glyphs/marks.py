@@ -87,6 +87,7 @@ def tilde(g, x, y, case):
     h = w / 2.5
     a = (2 * w - 3 * h) / 2
     x0 = x - w
+    y = y + p.sd / SQRT2                                    # the centreline sits half a stroke up
     pts = [(x0, y), (x0 + h, y + h), (x0 + h + a, y + h), (x0 + 2 * h + a, y), (x0 + 2 * h + 2 * a, y),
            (x0 + 3 * h + 2 * a, y + h)]
     g.stroke(*pts, start='v', end='v')
@@ -112,7 +113,7 @@ def ring(g, x, y, case):
 
 def hungarumlaut(g, x, y, case):
     p = g.p
-    d = 0.6 * size(p, case) + 0.5 * p.sv
+    d = 2 * p.sd / SQRT2 + max(0.6 * p.m, 0.4 * p.sv)     # clear of each other at every weight
     acute(g, x - d / 2, y, case)
     acute(g, x + d / 2, y, case)
 
@@ -127,7 +128,7 @@ def commaabove(g, x, y, case):
     """The turned comma that stands for a cedilla over g."""
     p = g.p
     s = p.sv
-    yb = y
+    yb = y + 0.5 * gap(p)
     yt = yb + 1.5 * s
     g.stroke((x, yb), (x, yt), (x + 0.75 * s, yt + 0.75 * s), end='h')
 
@@ -140,9 +141,16 @@ def cedilla(g, x, y, case):
 
 
 def ogonek(g, x, y, case):
+    """Hangs from the base's rightmost ink on the baseline (a stem's foot or
+    a bar's end, whichever the letter has), turning right underneath."""
     p = g.p
     yb = -p.desc + g.sh / 2 + 0.25 * p.m
-    g.stroke((x, g.sh / 2), B(x, yb, p.m / 2), (x + 1.5 * p.m + p.sv / 2, yb))
+    from shapely.geometry import LineString
+    base = g.extra[0]
+    cut = base.intersection(LineString([(-1e4, 0.3 * g.sh), (1e4, 0.3 * g.sh)]))
+    xs = [c[0] for gg in getattr(cut, 'geoms', [cut]) for c in getattr(gg, 'coords', [])]
+    x = (max(xs) - 0.75 * p.sv) if xs else x
+    g.stroke((x, g.sh), B(x, yb, p.m / 2), (x + 1.5 * p.m + p.sv / 2, yb))
 
 
 ABOVE = {'̀': grave, '́': acute, '̂': circumflex, '̃': tilde, '̄': macron,
@@ -152,7 +160,7 @@ BELOW = {'̦': commabelow, '̧': cedilla, '̨': ogonek}
 
 # Letters whose cedilla is written as a comma (Latvian, and Romanian's own
 # comma-below letters come through U+0326 already).
-CEDILLA_AS_COMMA = set('KkLlNnRrG')
+CEDILLA_AS_COMMA = set('KkLlNnRrGg')
 
 
 def _name(ch):
@@ -226,6 +234,15 @@ def _caron_apostrophe(g, base):
     """The caron on d, l, L and t is written as an apostrophe beside the stem."""
     from .punct import _comma
     p = g.p
-    top = p.cap if base == 'L' else (p.asc if base in 'dl' else p.cap)
-    x = g.W + 0.5 * p.sv if base != 'L' else 0.55 * g.W
-    _comma(g, None, x, top)
+    gap = max(p.m, 0.6 * p.sv)
+    # clear of the ink beside it by a gap: its tail reaches 0.75 of a stem left
+    # of its centre, its dot half a stem
+    from shapely.geometry import box
+    base = g.extra[0]
+    y0 = (p.cap if base == 'L' else p.asc) - 2.25 * p.sv
+    band = g.extra[0].intersection(box(-1e4, y0, 1e4, p.asc + 1))
+    right = band.bounds[2] if not band.is_empty else 0.0
+    if base == 'L':
+        right = p.sv
+    x = right + gap + 0.75 * p.sv + p.sd / SQRT2          # its tail's far edge clears the ink by the gap
+    _comma(g, None, x, p.cap if base == 'L' else p.asc)
