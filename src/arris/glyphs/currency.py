@@ -6,10 +6,13 @@ with strokes through it (₵ ₲ ₮ ₺ ₥) or standing out of it (₡ ₿), o
 letters set as one sign (₧ Pts, ₨ Rs, ₯ Δρ, ₶ lt, ₠ CE). They are spaced
 as letters, like € £ ¥.
 
-Bars across a letter come in pairs that keep their white: the white between
-them never drops below 0.6 of a stem, and toward Black the pair thins (to
-0.7 of the weight's horizontals) rather than closing or running into the
-letter's own bars (``bar_pair``). Strokes through a bowl leave each part of
+Bars across a letter come in pairs that keep their white (``bar_pair``):
+the bars are the weight's horizontals, easing to 0.8 of them at Black; the
+white between them is at least three quarters of a stem; they run out past the letter
+by 0.9 of a stem (in Mono, a module and half the cell's margin). Where a
+squinting reader would still see the pair fuse, with itself or with the
+letter (``draw.Squint``), the bars thin further, down to 0.65 of the
+horizontals. Strokes through a bowl leave each part of
 the counter at least 0.6 of a stem: the sign widens with the stroke where
 it must (``growing_width``).
 """
@@ -17,22 +20,67 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from ..draw import B, REGISTRY, draw, glyph
+from ..draw import B, REGISTRY, Squint, draw, glyph, white_features
 from ..params import SQRT2
 from .caps import big
 from .figures import beak_depth, heaviness, jog
 from .letterframe import STEEP, Frame, growing_width, letter_width
-from .symkit import across, set_tight, sign, tight_width
+from .symkit import _condensed, across, set_tight, sign, tight_width
 
 
-def cur(name, ch, width, kind='cap'):
-    return sign(name, ch, width, kind=kind)
+def cur(name, ch, width, kind='cap', squint=()):
+    return sign(name, ch, width, kind=kind, squint=squint)
 
 
 def stamp(g, name, dx=0.0, dy=0.0, width=None, p=None):
     sub = draw(name, p or g.p, width=width)
     g.add_glyph(sub, dx, dy)
     return sub
+
+
+_INSET: dict = {}
+
+
+def _white_share(g, p):
+    """The readable white inside a letter's hull (opened by a quarter of
+    its stroke, as draw.white_features counts it) per unit of its width."""
+    from shapely.geometry import MultiPoint
+    from ..draw import WHITE_OPEN
+    from ..geom import rings_to_shapely
+    rings = g.rings()
+    ink = rings_to_shapely(rings)
+    hull = MultiPoint([q[:2] for r in rings for q in r]).convex_hull
+    r = WHITE_OPEN * max(p.sv, p.sh, p.sd, p.ss)
+    white = hull.difference(ink).buffer(-r, join_style='mitre').buffer(r, join_style='mitre')
+    return white.area / max(1.0, g.W)
+
+
+def inset_letter(g, name, dx, w):
+    """Stamp the letter a sign's bars cross, ``w`` wide at dx. In Mono a
+    letter fills its cell; one drawn narrower, to leave its bars room to run
+    out, is condensed (module and strokes, symkit._condensed) as far as it
+    must be to keep the white it has in its own cell (as much of it for its
+    width), and no further."""
+    p = g.p
+    if not p.mono or w >= p.fig_w - 0.5:
+        return stamp(g, name, dx, width=w)
+    key = (name, p, round(w, 3))
+    if key not in _INSET:
+        own = draw(name, p)
+        want = _white_share(own, p)
+
+        def keeps(k):           # as open, for its width, as in its own cell
+            q = _condensed(p, k)
+            return _white_share(draw(name, q, width=w), q) >= want - 1e-3
+        lo = 1.0
+        if not keeps(1.0):
+            lo, hi = 0.5, 1.0
+            for _ in range(12):
+                mid = (lo + hi) / 2
+                lo, hi = (mid, hi) if keeps(mid) else (lo, mid)
+        _INSET[key] = lo
+    k = _INSET[key]
+    return stamp(g, name, dx, width=w, p=_condensed(p, k) if k < 1 else None)
 
 
 def frame(p, W, wm, zone='cap'):
@@ -46,30 +94,97 @@ def wmin(p):
     return max(p.m, 0.6 * p.sv)
 
 
+PAIR_T = 0.8         # a pair's bars at Black, as a share of the horizontal
+PAIR_T_MIN = 0.65    # as thin as the squint rule takes them
+
+
 def pair_t(p):
-    """Thickness of a pair of bars: the weight's horizontal, thinning toward
-    Black to 0.7 of it, so two bars and their white fit across a letter."""
-    return p.sh * (1 - 0.3 * heaviness(p))
+    """Thickness of a pair of bars as drawn: the weight's horizontal, easing
+    toward Black to PAIR_T of it."""
+    return p.sh * (1 - (1 - PAIR_T) * heaviness(p))
 
 
 def pair_gap(p):
-    return max(1.25 * p.m, 0.6 * p.sv)
+    """White between a pair of bars: a module and a quarter, or three
+    quarters of a stem, whichever is more (the ungraded stem: grade changes
+    strokes, never where they lie)."""
+    return max(1.25 * p.m, 0.75 * p.ungraded().sv)
 
 
-def bar_pair(g, yc, x0, x1, t=None, gap=None):
-    """Two bars from x0 to x1 about yc. Returns their centres."""
-    p = g.p
-    t = pair_t(p) if t is None else t
-    gap = pair_gap(p) if gap is None else gap
+def pair(g):
+    """(thickness, white) of the glyph's pair of bars: as drawn, unless the
+    squint rule has thinned them (the free variable 'bars', the share of
+    pair_t they keep). The white between them stays: what the bars give up
+    goes to the white between them and the letter."""
+    return pair_t(g.p) * g.free('bars', 1.0), pair_gap(g.p)
+
+
+def mark_bars(g, x0, x1, y_lo, y_hi):
+    """Mark a pair of bars, centred at y_lo and y_hi from x0 to x1, for the
+    squint rule: it watches the white that touches them (between them,
+    where they run out past the letter, between them and the letter's
+    other strokes), not the letter's own."""
+    t, _ = pair(g)
+    e = 2.0
+    for y in (y_lo, y_hi):
+        g.zones.append((min(x0, x1) - e, y - t / 2 - e, max(x0, x1) + e, y + t / 2 + e))
+
+
+# The squint rule for a sign with a pair of bars: the bars thin, from the
+# drawing's own down to PAIR_T_MIN of the horizontal, until their white reads.
+BARS = (Squint('bars', lambda p: PAIR_T_MIN * p.sh / pair_t(p)),)
+
+
+def bar_out(p):
+    """How far a bar runs out past the letter it crosses: a module, or 0.9
+    of a stem toward Black, so it reads as a bar and not as a nub on the
+    letter's side. In Mono the cell is fixed and the letter can give up
+    only a module of it; the bars make up some of the rest by hanging into
+    the cell's margin (bar_hang)."""
+    if p.mono:
+        return p.m + bar_hang(p)
+    return max(p.m, 0.9 * p.ungraded().sv)                  # (grade moves strokes, not layout)
+
+
+def bar_hang(p):
+    """How far bars hang past the body: half of Mono's cell margin, nothing
+    in the proportional cuts (where the body grows instead)."""
+    return (p.fig_adv - p.fig_w) / 4 if p.mono else 0.0
+
+
+def bar_inset(p):
+    """How far the letter stands in from the body's side the bars cross."""
+    return bar_out(p) - bar_hang(p)
+
+
+def bar_pair(g, yc, x0, x1):
+    """Two bars from x0 to x1 about yc (see pair). Returns their centres."""
+    t, gap = pair(g)
     off = (t + gap) / 2
     for y in (yc - off, yc + off):
         g.stroke((x0, y, t), (x1, y))
+    mark_bars(g, x0, x1, yc - off, yc + off)
     return yc - off, yc + off
 
 
-def pair_band(p):
-    """Height of a pair of bars, white included."""
-    return 2 * pair_t(p) + pair_gap(p)
+def fit_pair(g, lo, hi, x0, x1):
+    """A pair of bars in the room between two of the letter's strokes (the
+    white from lo to hi), centred in it. Where the room is short of the
+    pair and a pair's white either side, the three whites (under, between,
+    over) share it evenly."""
+    t, gap = pair(g)
+    gap = min(gap, (hi - lo - 2 * t) / 3)
+    off = (t + gap) / 2
+    yc = (lo + hi) / 2
+    for y in (yc - off, yc + off):
+        g.stroke((x0, y, t), (x1, y))
+    mark_bars(g, x0, x1, yc - off, yc + off)
+
+
+def pair_band(g):
+    """Height of the glyph's pair of bars, white included."""
+    t, gap = pair(g)
+    return 2 * t + gap
 
 
 # --- C, and what crosses it ------------------------------------------------------
@@ -210,144 +325,161 @@ def som(g):
 
 # --- Letters with bars -----------------------------------------------------------
 
-@cur('uni20A6', '₦', lambda p: REGISTRY['N'].width(p) + 2 * p.m)
+@cur('uni20A6', '₦', lambda p: REGISTRY['N'].width(p) + 2 * bar_inset(p), squint=BARS)
 def naira(g):
     """N with two bars across, centred between the points where the
     diagonal meets the stems, so the white either side of it matches."""
     p = g.p
-    wn = g.W - 2 * p.m
-    stamp(g, 'N', p.m, width=wn)
-    w = p.ss / STEEP[1]
-    x0, y0 = p.sv + w / 2, p.cap - p.sh / 2                  # the diagonal's centre at the top (caps.N)
-    y1 = y0 - 2 * (wn - p.sv - w / 2 - x0)                  # where its right edge reaches the right stem
-    t, gap = pair_t(p), pair_gap(p)
+    o, hang = bar_inset(p), bar_hang(p)
+    wn = g.W - 2 * o
+    q = inset_letter(g, 'N', o, wn).p                       # the N as drawn (condensed, in Mono)
+    w = q.ss / STEEP[1]
+    f = frame(q, wn, 10)
+    x0, y0 = f.X(1) + q.sv / 2 + w / 2, f.Y(11)             # the diagonal's centre at the top (caps.N)
+    if p.mono:                                              # it joins the stems' feet: corner to corner
+        y1 = f.Y(1)
+        k = (f.X(9) - q.sv / 2 - w / 2 - x0) / (y0 - y1)
+    else:                                                   # at 2:1, to where it meets the right stem
+        k = 0.5
+        y1 = y0 - (f.X(9) - q.sv / 2 - w / 2 - x0) / k
+    t, gap = pair(g)
     yc = (y0 + y1) / 2
     yu, yl = yc + (t + gap) / 2, yc - (t + gap) / 2
-    at = lambda y: p.m + x0 + (y0 - y) / 2                   # the diagonal's centre at height y
-    xs_l, xs_r = p.m + p.sv / 2, g.W - p.m - p.sv / 2        # the stems' centres
+    at = lambda y: o + x0 + (y0 - y) * k                     # the diagonal's centre at height y
+    xs_l, xs_r = o + q.sv / 2, g.W - o - q.sv / 2            # the stems' centres
     # each bar passes behind the diagonal on one side: the upper is cut
     # between the left stem and the diagonal, the lower between the
     # diagonal and the right stem, so the white each side of the diagonal is
     # one counter, not a cell and a sliver of a triangle
-    g.stroke((0, yu, t), (xs_l, yu))
-    g.stroke((at(yu), yu, t), (g.W, yu))
-    g.stroke((0, yl, t), (at(yl), yl))
-    g.stroke((xs_r, yl, t), (g.W, yl))
+    g.stroke((-hang, yu, t), (xs_l, yu))
+    g.stroke((at(yu), yu, t), (g.W + hang, yu))
+    g.stroke((-hang, yl, t), (at(yl), yl))
+    g.stroke((xs_r, yl, t), (g.W + hang, yl))
+    mark_bars(g, -hang, g.W + hang, yl, yu)
 
 
-@cur('uni20A9', '₩', lambda p: REGISTRY['W'].width(p) + 2 * p.m)
+@cur('uni20A9', '₩', lambda p: REGISTRY['W'].width(p) + 2 * bar_inset(p), squint=BARS)
 def won(g):
     """W with two bars, the lower one where the middle stem ends."""
     p = g.p
-    w = g.W - 2 * p.m
-    stamp(g, 'W', p.m, width=w)
+    o, hang = bar_inset(p), bar_hang(p)
+    w = g.W - 2 * o
+    inset_letter(g, 'W', o, w)
     f = frame(p, w, 14)
     y_lo = f.Y(7)
-    off = pair_t(p) + pair_gap(p)
-    bar_pair(g, y_lo + off / 2, 0, g.W)
+    off = sum(pair(g))
+    bar_pair(g, y_lo + off / 2, -hang, g.W + hang)
 
 
-@cur('uni20B3', '\u20b3', lambda p: REGISTRY['A'].width(p) + 2 * p.m)
+@cur('uni20B3', '\u20b3', lambda p: REGISTRY['A'].width(p) + 2 * bar_inset(p), squint=BARS)
 def austral(g):
     """A whose crossbar is doubled and drawn out past its legs."""
     p = g.p
-    w = g.W - 2 * p.m
+    o, hang = bar_inset(p), bar_hang(p)
+    w = g.W - 2 * o
     f = frame(p, w, 10)
     k = p.sd / SQRT2
-    xl, xr = f.X(1) + p.m, f.X(9) + p.m
+    xl, xr = f.X(1) + o, f.X(9) + o
     ya = p.cap + p.c - k                                    # the A's gable (caps.A)
     yt = ya - (w / 2 - f.X(1))
-    g.stroke((xl, 0), (xl, yt), (p.m + w / 2, ya), (xr, yt), (xr, 0))
-    g.clip = (0, 0, g.W, p.cap)
-    bar_pair(g, f.Y(4), 0, g.W)
+    g.stroke((xl, 0), (xl, yt), (o + w / 2, ya), (xr, yt), (xr, 0))
+    g.clip = (-hang, 0, g.W + hang, p.cap)
+    bar_pair(g, f.Y(4), -hang, g.W + hang)
 
 
-@cur('uni20B8', '₸', letter_width(10, 1))
+@cur('uni20B8', '₸', letter_width(10, 1), squint=BARS)
 def tenge(g):
     """T with a second bar above its own: the stem hangs from the lower."""
     p = g.p
     f = Frame(g, 10)
-    t, gap = pair_t(p), pair_gap(p)
+    t, gap = pair(g)
     y1 = p.cap - t / 2
     y2 = y1 - t - gap
     g.stroke((0, y1, t), (g.W, y1))
     g.stroke((0, y2, t), (g.W, y2))
     g.stroke((g.W / 2, y2), (g.W / 2, 0))
+    mark_bars(g, 0, g.W, y2, y1)
 
 
-@cur('uni20B1', '₱', letter_width(10.5, 2))
+@cur('uni20B1', '₱', lambda p: letter_width(10.5, 2)(p) + max(0.0, bar_inset(p) - 1.5 * p.m), squint=BARS)
 def peso(g):
     """P whose bowl's top bar and a second bar through the bowl run out to
     the left past the stem."""
     p = g.p
     W = g.W
-    xs = 1.5 * p.m + p.sv / 2
+    hang = bar_hang(p)
+    xs = max(1.5 * p.m, bar_inset(p)) + p.sv / 2
     xr = W - p.sv / 2
     top = p.cap
-    t, gap = pair_t(p), pair_gap(p)
+    t, gap = pair(g)
     y1 = top - t / 2
     y2 = y1 - t - gap
     y3 = y2 - t - gap
     g.stroke((xs, 0), (xs, top))
-    g.stroke((0, y1, t), B(xr, y1), B(xr, y3, None, t), (xs, y3))
-    g.stroke((0, y2, t), (xr, y2))
-    g.clip = (0, 0, W, top)
+    g.stroke((-hang, y1, t), B(xr, y1), B(xr, y3, None, t), (xs, y3))
+    g.stroke((-hang, y2, t), (xr, y2))
+    g.clip = (-hang, 0, W, top)
+    mark_bars(g, -hang, xr, y3, y1)
 
 
-@cur('uni20BD', '₽', lambda p: REGISTRY['P'].width(p) + 1.5 * p.m)
+@cur('uni20BD', '₽', lambda p: REGISTRY['P'].width(p) + bar_inset(p))
 def ruble(g):
     """P with a bar across its stem below the bowl."""
     p = g.p
-    dx = 1.5 * p.m
-    stamp(g, 'P', dx, width=g.W - dx)
+    dx, hang = bar_inset(p), bar_hang(p)
+    inset_letter(g, 'P', dx, g.W - dx)
     f = frame(p, g.W - dx, 9)
     y = min(f.Y(3), f.Y(6) - g.sh - wmin(p))
-    g.stroke((0, y), (dx + p.sv + 2.5 * p.m, y))
+    g.stroke((-hang, y), (dx + p.sv + bar_out(p) + 1.5 * p.m, y))
 
 
-@cur('franc', '₣', lambda p: REGISTRY['F'].width(p) + 1.5 * p.m)
+@cur('franc', '₣', lambda p: REGISTRY['F'].width(p) + bar_inset(p))
 def franc(g):
     """F with a bar across its stem below its arm."""
     p = g.p
-    dx = 1.5 * p.m
-    stamp(g, 'F', dx, width=g.W - dx)
+    dx, hang = bar_inset(p), bar_hang(p)
+    inset_letter(g, 'F', dx, g.W - dx)
     f = frame(p, g.W - dx, 8)
     y = min(f.Y(3), f.Y(6) - g.sh - wmin(p))
-    g.stroke((0, y), (dx + p.sv + 2 * p.m, y))
+    g.stroke((-hang, y), (dx + p.sv + bar_out(p) + p.m, y))
 
 
-@cur('uni20AD', '₭', lambda p: REGISTRY['K'].width(p) + 1.5 * p.m)
+@cur('uni20AD', '₭', lambda p: REGISTRY['K'].width(p) + bar_inset(p))
 def kip(g):
     """K with a bar across its stem at the middle."""
     p = g.p
-    dx = 1.5 * p.m
-    stamp(g, 'K', dx, width=g.W - dx)
-    g.stroke((0, p.cap / 2), (dx + p.sv + 1.5 * p.m, p.cap / 2))
+    dx, hang = bar_inset(p), bar_hang(p)
+    inset_letter(g, 'K', dx, g.W - dx)
+    g.stroke((-hang, p.cap / 2), (dx + p.sv + 1.5 * p.m, p.cap / 2))
 
 
-@cur('lira', '₤', letter_width(8, 1))
+@cur('lira', '₤', letter_width(8, 1), squint=BARS)
 def lira(g):
-    """The pound sign with two bars."""
+    """The pound sign with two bars, centred between its base and its top,
+    the white below, between and above them shared evenly where the room
+    is short (fit_pair)."""
     f = Frame(g, 8)
     p = f.p
     g.stroke(f.P(8, 11), B(*f.P(2.5, 11)), f.P(2.5, 1))
     g.stroke((0, f.Y(1)), (f.W, f.Y(1)))
-    bar_pair(g, f.Y(6), f.X(0.5), f.X(6))
+    fit_pair(g, f.Y(1) + g.sh / 2, f.Y(11) - g.sh / 2, f.X(0.5), f.X(6))
 
 
-@cur('uni20B9', '₹', letter_width(9, 2))
+@cur('uni20B9', '₹', letter_width(9, 2), squint=BARS)
 def rupee(g):
     """Two bars on top, a bowl hanging from the first, and a 45-degree leg
     from the bowl's foot to the baseline."""
     f = Frame(g, 9)
     p, W = f.p, f.W
-    t, gap = pair_t(p), pair_gap(p)
+    t, gap = pair(g)
     y1 = p.cap - t / 2
     y2 = y1 - t - gap
     yb = min(f.Y(6), y2 - t - gap)
-    g.stroke((0, y1, t), (W, y1))
-    g.stroke((0, y2, t), (W, y2))
     xr = f.X(7.5)
+    xe = min(W, xr + p.sv / 2)                              # the bars end flush with the bowl's side
+    g.stroke((0, y1, t), (xe, y1))
+    g.stroke((0, y2, t), (xe, y2))
+    mark_bars(g, 0, xe, y2, y1)
     g.stroke((f.X(3), y1, t), B(xr, y1), B(xr, yb, None, t), (f.X(1), yb))
     k = p.sd / SQRT2
     a = f.X(1) - p.sv / 2 + yb + g.sh / 2 + k - p.c        # leg: x + y = a, leaving the bowl's foot
@@ -355,23 +487,34 @@ def rupee(g):
     g.clip = (0, 0, W, p.cap)
 
 
-@cur('uni20B4', '₴', letter_width(9, 2))
+@cur('uni20B4', '₴', lambda p: letter_width(9, 2)(p) + 2 * bar_inset(p), squint=BARS)
 def hryvnia(g):
     """The 2 with a beak at its foot: a top beak and bowl, a 45-degree spine
     with the 2's notch, a bottom bowl rising to a beak; two bars across."""
     f = Frame(g, 9)
     p, W, H = f.p, f.W, f.p.cap
     d = beak_depth(p)
-    xl, xr = f.X(1), f.X(8)
+    o, hang = bar_inset(p), bar_hang(p)
+    xl, xr = f.X(1) + o, f.X(8) - o                          # the 2's body, the bars running out past it
     yt, yb = f.Y(11), f.Y(1)
     J = jog(p)
     run = (xr - xl - J) / 2
     ym = (yt + yb) / 2
     y_hi, y_lo = ym + run, ym - run
     x1 = xr - run
-    g.stroke((xl, H - d), B(xl, yt), B(xr, yt), (xr, y_hi), (x1, ym, min(J, g.sh)), (x1 - J, ym),
-             (xl, y_lo), B(xl, yb), B(xr, yb), (xr, d))
-    bar_pair(g, ym - (pair_t(p) + pair_gap(p)) / 2, 0, W)    # the upper bar over the notch
+    t, gap = pair(g)
+    off = t + gap
+    # the upper bar over the notch, unless that brings the lower one within a
+    # stroke's white of the bottom beak, where it would close the bowl to a sliver
+    yc = max(ym - off / 2, d + wmin(p) + t + gap / 2)
+    yu, yl = yc + off / 2, yc - off / 2
+    # a beak the pair cannot clear by a stroke's white (at heavy weights the
+    # beaks take a third of the height) runs on into the bar it meets
+    top = H - d if (H - d) - (yu + t / 2) >= wmin(p) else yu
+    foot = d if yl - t / 2 - d >= wmin(p) else yl
+    g.stroke((xl, top), B(xl, yt), B(xr, yt), (xr, y_hi), (x1, ym, min(J, g.sh)), (x1 - J, ym),
+             (xl, y_lo), B(xl, yb), B(xr, yb), (xr, foot))
+    bar_pair(g, yc, -hang, W + hang)
 
 
 def _cross_pair(p):

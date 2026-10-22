@@ -293,6 +293,36 @@ fractions are not scaled-down figures. They are the same constructions with
 a smaller module and cap height (0.62) and strokes only a little lighter
 (0.8). Their colour then matches the full figures beside them.
 
+**White that reads when you squint.** Two parts of a glyph are only
+apart if a reader sees the white between them. The vision model squints:
+it blurs the drawing with a Gaussian 5% of the cap height wide and looks
+at the white narrower than half a stem, where parts come close
+(`vision.narrow_whites`). That white is a hole (closed), a slot (between
+two parts, the same width all along: the gap between a sign's bars, the
+notch where a bar runs out past a stem), a wedge (where two strokes meet
+at an angle, a K's crotch) or a shallow inside corner. Blur fills a wedge's
+point in every face at every weight, so wedges and corners are not
+counted. A hole or slot reads if its median stays at least 0.55 of the
+way from the blurred ink's peak to paper; the e's eye and the a's and s's
+counters keep 0.52–0.59 at Bold and Black. A glyph declares the free
+variable that opens its white (`draw.Squint`), and the rule moves it only
+as far as needed to keep what the glyph keeps at Regular (or 0.55, if that
+is less), so nothing that reads already is touched. `tools/squint_scan.py`
+lists the holes and slots each weight squeezes shut, and the pinholes and
+slivers that never read at all.
+
+**Barred signs.** ¥ € and the currency signs with two bars (₦ ₩ ₱ ₳ ₤ ₴
+₸ ₹) follow one rule. The bars are the weight's horizontals, easing to
+0.8 of them at Black; the white between them is at least three quarters
+of a stem; they run 0.9 of a stem past the letter, which widens to hold
+them. Where the squint would still see the pair fuse, the bars thin
+(never below 0.65 of the horizontal) and the white between them stays.
+Each sign places its pair where its letter has room: ¥ a stroke's white
+under where the arms meet the stem, ₤ centred between base and top with
+the white shared evenly, ₴ clear of its beaks, or, at heavy weights where
+no pair fits between them, with the beak running into the bar rather than
+leaving a sliver.
+
 **Spacing by area.** Each side of each glyph carries the same mean white,
 counted to a depth limit (`arris.spacing`). That is the area method, made
 exact for any outline: a flat H side sets the target, and octagonal sides
@@ -538,7 +568,11 @@ area has a note in `docs/coverage/`, listing what was drawn and why:
 * **Signs** (`symbols-plus.md`, `arrows-math.md`): currency and letterlike
   signs are Arris letters with bars, strokes and inner lines whose white
   grows with the stem; every arrow comes from one builder (shaft, head,
-  tail, eight directions); operators sit on the maths axis.
+  tail, eight directions); operators sit on the maths axis. In Mono a
+  letter's sign fills the cell as letters do, and is condensed only when
+  its ink will not fit; bars hang into half the cell's margin, and a letter
+  drawn narrower to give them room is condensed only as far as it needs
+  to stay as open, for its width, as it is in its own cell.
 * **Cells** (`terminal.md`): box drawing, blocks, shades and Braille fill
   a Mono cell from descender to ascender in every family, meet the cell
   edge square (`Glyph.butt`), and stay upright in the italic so that rows

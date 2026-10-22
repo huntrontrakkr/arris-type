@@ -419,7 +419,9 @@ def _fill_slits(u, eps):
     large ones. Closing the ink by ``eps`` finds the white narrower than
     twice it; the long thin pieces (not the small triangles a closing fills
     in every inside corner) open to the outside become ink, unless filling
-    one would seal a counter's mouth (the topology stays what it is)."""
+    one would seal a counter's mouth or join two parts that are drawn apart
+    (a tonos and its capital): the topology stays what it is, at every
+    weight, for the variable font."""
     if eps <= 0 or u.is_empty:
         return u
     closed = u.buffer(eps, join_style='mitre').buffer(-eps, join_style='mitre')
@@ -442,12 +444,13 @@ def _fill_slits(u, eps):
     if not fill:
         return u
 
-    def holes_of(v):
-        return sum(len(g.interiors) for g in getattr(v, 'geoms', [v]) if isinstance(g, Polygon))
-    n0 = holes_of(u)
-    for part in fill:                                         # never seal an open counter's mouth
+    def topology(v):
+        polys = [g for g in getattr(v, 'geoms', [v]) if isinstance(g, Polygon)]
+        return len(polys), sum(len(g.interiors) for g in polys)
+    t0 = topology(u)
+    for part in fill:     # never seal an open counter's mouth, never join two separate parts
         v = shapely.make_valid(shapely.union_all([u, part]))
-        if holes_of(v) <= n0:
+        if topology(v) == t0:
             u = v
     return u
 

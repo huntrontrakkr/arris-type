@@ -182,3 +182,104 @@ def circle_rings(d: float, cx: float, cy: float, n: int = 720):
 
 def rect_rings(x0, y0, x1, y1):
     return [[(x0, y0), (x1, y0), (x1, y1), (x0, y1)]]
+
+
+# --- White that reads -------------------------------------------------------
+#
+# A white feature (a counter, the gap between a sign's bars, the notch where a
+# bar runs out past a stem) is only a feature if a reader sees it. Squint at
+# the drawing (blur it with a Gaussian a fixed share of the cap height wide)
+# and look at the white narrower than a stem, where parts come close: white
+# the blur fills in has fused, however open it is on paper.
+#
+# Narrow white comes in four kinds. A hole is closed white. A slot runs
+# between two parts at much the same width all along (the gap between a
+# sign's bars, the notch where they run out past a stem). A wedge narrows to
+# nothing where two strokes meet at an angle (a K's crotch, an R's leg); the
+# blur fills its point at every weight and in every face, so it is no fault.
+# A shallow piece lies open along its length (where a chamfer meets a
+# stroke's side): an inside corner, not white between parts.
+
+SQUINT = 0.05       # the blur's sigma, as a share of the cap height
+NARROW = 0.5        # white narrower than this many stems is narrow
+READS = 0.55        # what narrow white keeps under the squint: the e's eye and the
+                    # a's and s's counters at Bold and Black keep 0.52-0.59
+WEDGE_KEEP = 0.6    # a slot keeps this much of its area opened by 0.4 of its half-width
+SHALLOW = 0.4       # a piece open to wide white along this share of its edge is shallow
+
+
+def _mask(poly, x0, y0, h, s, shape):
+    img = Image.new('L', (shape[1], shape[0]), 0)
+    d = ImageDraw.Draw(img)
+    for q in getattr(poly, 'geoms', [poly]):
+        if q.geom_type != 'Polygon':
+            continue
+        d.polygon([((x - x0) * s, (y0 + h - y) * s) for x, y in q.exterior.coords], fill=255)
+        for r in q.interiors:
+            d.polygon([((x - x0) * s, (y0 + h - y) * s) for x, y in r.coords], fill=0)
+    return np.asarray(img) > 0
+
+
+def _half_width(q, hi):
+    """The largest r that q survives being eroded by (bisection)."""
+    lo = 0.0
+    for _ in range(14):
+        mid = (lo + hi) / 2
+        if q.buffer(-mid, join_style='mitre').is_empty:
+            hi = mid
+        else:
+            lo = mid
+    return lo
+
+
+def narrow_whites(rings, sv: float, cap: float = 720.0, squint: float = SQUINT):
+    """The narrow white of a drawing: [(piece, kind, depth)], kind 'hole',
+    'slot', 'wedge' or 'shallow', depth how light the piece stays under the
+    squint (1 - the blurred ink's median over it / the blurred ink's peak)."""
+    from shapely.geometry import Polygon
+    from .geom import rings_to_shapely
+    if not rings:
+        return []
+    ink = rings_to_shapely(rings)
+    rho = NARROW * sv
+    closed = ink.buffer(rho, join_style='mitre').buffer(-rho, join_style='mitre')
+    nw = closed.difference(ink).buffer(-0.5, join_style='mitre').buffer(0.5, join_style='mitre')
+    pieces = [q for q in getattr(nw, 'geoms', [nw]) if q.geom_type == 'Polygon' and q.area > 4]
+    if not pieces:
+        return []
+    holes = [Polygon(r) for q in getattr(ink, 'geoms', [ink]) for r in q.interiors]
+    edge = ink.boundary.buffer(1.0)
+    view = View(cap_arcmin=1.0, cap_units=cap, px_per_cap=144)
+    s = view.unit_px
+    bx0, by0, bx1, by1 = ink.bounds
+    m = 4 * squint * cap
+    x0, y0, w, h = bx0 - m, by0 - m, bx1 - bx0 + 2 * m, by1 - by0 + 2 * m
+    seen = gaussian_blur(coverage(rings, view, x0, y0, w, h), squint * view.px_per_cap)
+    peak = float(seen.max()) or 1.0
+    out = []
+    for q in pieces:
+        msk = _mask(q, x0, y0, h, s, seen.shape)
+        if msk.any():
+            v = float(np.median(seen[msk]))
+        else:
+            c = q.representative_point()
+            v = float(seen[min(seen.shape[0] - 1, max(0, int((y0 + h - c.y) * s))),
+                           min(seen.shape[1] - 1, max(0, int((c.x - x0) * s)))])
+        if any(hl.buffer(0.5).contains(q) for hl in holes):
+            kind = 'hole'
+        elif q.boundary.difference(edge).length >= SHALLOW * q.length:
+            kind = 'shallow'
+        else:
+            r = _half_width(q, rho)
+            kept = q.buffer(-0.4 * r, join_style='mitre').buffer(0.4 * r, join_style='mitre').area
+            kind = 'slot' if kept >= WEDGE_KEEP * q.area else 'wedge'
+        out.append((q, kind, 1.0 - v / peak))
+    return out
+
+
+def fused(rings, sv: float, cap: float = 720.0, zones=()):
+    """The holes and slots of a drawing that the squint fills in (depth
+    under READS), within ``zones`` (polygons) if any are given."""
+    return [(q, kind, d) for q, kind, d in narrow_whites(rings, sv, cap)
+            if kind in ('hole', 'slot') and d < READS
+            and (not zones or any(q.intersects(z) for z in zones))]

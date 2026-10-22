@@ -12,7 +12,7 @@ import math
 
 from shapely import affinity
 
-from ..draw import AUTO_SHARE, B, REGISTRY, Opening, _counter_white, draw, glyph
+from ..draw import AUTO_SHARE, B, REGISTRY, Opening, Squint, _counter_white, draw, glyph
 from ..geom import rings_to_shapely
 from ..params import SQRT2
 from . import marks
@@ -32,13 +32,29 @@ def stamp(g, name, p=None, dx=0.0, dy=0.0, width=None):
 
 # --- Currency ----------------------------------------------------------------
 
-@glyph('Euro', '€', letter_width(10, 2), kind='cap')
+def _bars_inset(p):
+    from .currency import bar_inset
+    return bar_inset(p)
+
+
+def _bars_limit(p):
+    from .currency import PAIR_T_MIN, pair_t
+    return PAIR_T_MIN * p.sh / pair_t(p)
+
+
+BARS = (Squint('bars', _bars_limit),)   # as currency.BARS: the bars thin until their white reads
+
+
+@glyph('Euro', '€', lambda p: letter_width(10, 2)(p) + max(0.0, _bars_inset(p) - p.m), kind='cap', squint=BARS)
 def Euro(g):
-    """C with two bars through its waist, reaching out past its left side."""
+    """C with two bars through its waist, running out past its back by a
+    bar's own reach (currency.bar_out) and into its counter; the pair keeps
+    the white of every barred sign (currency.bar_pair)."""
+    from .currency import bar_hang, bar_pair, inset_letter
     p = g.p
-    w = stamp(g, 'C', dx=p.m, width=g.W - p.m)
-    for y in (0.4 * p.cap, 0.6 * p.cap):
-        g.stroke((0, y), (0.6 * g.W, y))
+    o = max(p.m, _bars_inset(p))
+    inset_letter(g, 'C', o, g.W - o)
+    bar_pair(g, p.cap / 2, -bar_hang(p), o + 0.6 * (g.W - o))
 
 
 @glyph('cent', '¢', letter_width(8, 2), kind='lower',
@@ -61,12 +77,25 @@ def sterling(g):
     g.stroke(f.P(0.5, 6), f.P(6, 6))
 
 
-@glyph('yen', '¥', letter_width(10, 2), kind='cap')
+@glyph('yen', '¥', letter_width(10, 2), kind='cap', squint=BARS)
 def yen(g):
+    """Y with two bars across its stem, in the room under its arms: centred
+    a third of the way up, but a stroke's white under where the arms meet
+    the stem's sides, and over the baseline; they run out past the stem by
+    a bar's own reach."""
+    from shapely.geometry import LineString
+    from .currency import bar_out, bar_pair, pair, wmin
     p = g.p
     stamp(g, 'Y', width=g.W)
-    for y in (0.25 * p.cap, 0.42 * p.cap):
-        g.stroke((g.W * 0.2, y), (g.W * 0.8, y))
+    xc = g.W / 2
+    y_arm = p.cap
+    for x in (xc - p.sv / 2 - 1, xc + p.sv / 2 + 1):        # just outside the stem's sides
+        cut = g.extra[-1].intersection(LineString([(x, -1), (x, p.cap + 1)]))
+        y_arm = min([y_arm] + [s.bounds[1] for s in getattr(cut, 'geoms', [cut]) if not s.is_empty])
+    t, gap = pair(g)
+    band = 2 * t + gap
+    yc = max(min(p.cap / 3, y_arm - wmin(p) - band / 2), band / 2 + wmin(p))
+    bar_pair(g, yc, xc - p.sv / 2 - bar_out(p), xc + p.sv / 2 + bar_out(p))
 
 
 @glyph('currency', '¤', letter_width(8, 2), kind=('punct', 1.0))

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 
-from ..draw import B, glyph
+from ..draw import B, Squint, glyph
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
 from .letterframe import STEEP, Frame, growing_width, letter_width
@@ -428,15 +428,26 @@ def numbersign(g):
         g.stroke((0, y), (W, y))
 
 
-@punct('dollar', '$', 9, 2)
+def dollar_stem(p, sh, through):
+    """(bottom, top) of the dollar's stem as runs: through the S while the
+    counters it splits read when a reader squints; at the weights where
+    they would close to slivers beside it (draw.Squint moves the dollar's
+    'stem' to 0), only above and below the S, as heavy faces draw it."""
+    top, bot = p.cap + 1.5 * p.m, -1.5 * p.m
+    if through:
+        return [(bot, top)]
+    return [(bot, sh / 2), (p.cap - sh / 2, top)]
+
+
+@glyph('dollar', '$', letter_width(9, 2), kind=('punct', 1.0), squint=(Squint('stem', lambda p: 0.0),))
 def dollar(g):
     from .caps import S
     S(g)
     p = g.p
-    f = Frame(g, 9, 'cap')
-    top, bot = p.cap + 1.5 * p.m, -1.5 * p.m
-    g.stroke((g.W / 2, bot), (g.W / 2, top))
-    g.clip = (0, bot, g.W, top)
+    runs = dollar_stem(p, g.sh, g.free('stem', 1.0) >= 0.5)
+    for y0, y1 in runs:
+        g.stroke((g.W / 2, y0), (g.W / 2, y1))
+    g.clip = (0, runs[0][0], g.W, runs[-1][1])
 
 
 def _ring(g, x0, y0, x1, y1, w=None, leg=None):

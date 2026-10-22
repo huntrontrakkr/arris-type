@@ -229,12 +229,15 @@ def _mono_fit(key, fn, width, p, kind=None):
     tol = 0.5                           # font units
 
     def fits(q):
-        # its natural body; and unless it is a letter (letters fill the cell
-        # they are given), its ink, which a clip box may hide from the body
+        # a letter's sign fills the cell it is given, as letters do, and is
+        # condensed only if its ink will not fit, bars hanging into half the
+        # cell's margin either side (currency.bar_hang); any other sign, its
+        # natural body and its ink, which a clip box may hide from the body
+        if kind in LETTER_KINDS:
+            a, b = _ink_x(fn, q, cell)
+            return b - a <= p.fig_w + (p.fig_adv - p.fig_w) / 2 + tol
         if width(q) > p.fig_w + tol:
             return False
-        if kind in LETTER_KINDS:
-            return True
         a, b = _ink_x(fn, q, cell)
         return b - a <= p.fig_w + tol
 
@@ -276,7 +279,7 @@ def shift(g, dx, dy):
         g.clip = (x0 + dx, y0 + dy, x1 + dx, y1 + dy)
 
 
-def sign(name, ch, width, kind=('punct', 1.0), solid=False, openings=()):
+def sign(name, ch, width, kind=('punct', 1.0), solid=False, openings=(), squint=()):
     """Register a sign. ``width``: its body (a function of the parameters,
     or a number of modules for a body of one stem). In the monospaced cut a
     sign whose ink is wider than the cell is condensed into it
@@ -306,7 +309,7 @@ def sign(name, ch, width, kind=('punct', 1.0), solid=False, openings=()):
             g.p = p if (k < 1 or s < 1) and False else g.p
         wrapped.__module__ = fn.__module__
         wrapped.__name__ = fn.__name__
-        glyph(name, ch, body, kind=kind, solid=solid, openings=openings)(wrapped)
+        glyph(name, ch, body, kind=kind, solid=solid, openings=openings, squint=squint)(wrapped)
         return fn
     return deco
 

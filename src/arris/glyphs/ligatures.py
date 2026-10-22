@@ -520,7 +520,8 @@ def _dollar_wrap(g, left, right):
     as itself and where it stands: the < chevron's lower arm runs on along
     its 2:1 until it lands on the S's bottom bar, the > chevron's upper arm
     until it lands on the top bar, and the S gives up the beak there. One
-    stroke runs through both points; the dollar's stem crosses it."""
+    stroke runs through both points; the dollar's stem crosses it as it
+    crosses the dollar's own S (punct.dollar_stem)."""
     from .figures import beak_depth
     p = g.p
     a = axis(p)
@@ -547,7 +548,10 @@ def _dollar_wrap(g, left, right):
         pts += [B(x8, y11), (x8, p.cap - d)]
     g.stroke(*pts, start='v' if left else 'flat', end='v' if right else 'flat')
     xc = s0 + ws / 2
-    g.stroke((xc, -1.5 * p.m), (xc, p.cap + 1.5 * p.m), start='h', end='h')
+    from .punct import dollar_stem
+    through = d_sub.overrides.get('stem', 1.0) >= 0.5          # as the dollar's own stem runs
+    for y0, y1 in dollar_stem(p, g.sh, through):
+        g.stroke((xc, y0), (xc, y1), start='h' if y0 < 0 else 'flat', end='h' if y1 > p.cap else 'flat')
 
 
 liga('<$>')(lambda g: _dollar_wrap(g, True, True))

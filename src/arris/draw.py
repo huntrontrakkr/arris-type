@@ -35,6 +35,18 @@ class Opening:
     max_ratio: float | None = None   # cap on the watch's share, if it is generous
 
 
+@dataclass(frozen=True)
+class Squint:
+    """White that must read when a reader squints: the holes and slots of
+    the drawing (``vision.narrow_whites``) within the zones it marks
+    (``Glyph.zones``; anywhere if it marks none) keep, under the blur, as
+    much as they do at Regular, or ``vision.READS``, whichever is less. If
+    they would not, the glyph's free variable ``free`` moves from its
+    default toward ``limit(p)`` until they do, or as far as the limit."""
+    free: str
+    limit: Callable[[Params], float]
+
+
 @dataclass
 class Spec:
     name: str
@@ -45,12 +57,14 @@ class Spec:
     openings: tuple = ()
     solid: bool = False                # has a solid part by design (the pilcrow's bowl)
     cell: bool = False                 # a terminal cell's drawing: stays upright in the italic (font.place)
+    squint: tuple = ()                 # Squint rules
 
 
-def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False, cell=False):
+def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False, cell=False, squint=()):
     def deco(fn):
         w = width if callable(width) else (lambda p, w=width: getattr(p, w))
-        REGISTRY[name] = Spec(name, ord(char) if char else None, fn, w, kind, tuple(openings), solid, cell)
+        REGISTRY[name] = Spec(name, ord(char) if char else None, fn, w, kind, tuple(openings), solid, cell,
+                              tuple(squint))
         return fn
     return deco
 
@@ -79,6 +93,7 @@ class Glyph:
     parts: dict = field(default_factory=dict)        # name -> stroke indices
     defaults_used: dict = field(default_factory=dict)
     extra_chamfers: list = field(default_factory=list)   # chamfer record of stamped glyphs (see add_glyph)
+    zones: list = field(default_factory=list)   # (x0, y0, x1, y1) boxes whose white the Squint rule watches
 
     def free(self, name: str, default: float) -> float:
         """A free variable of the drawing (see Opening)."""
@@ -315,6 +330,31 @@ def _heritage_ratio(spec, k):
     return _RATIOS[key]
 
 
+def _squint(g) -> float:
+    """How light the faintest hole or slot in the glyph's marked zones
+    stays under the squint (see Squint); 1 if it has none."""
+    from shapely.geometry import box
+    from .vision import narrow_whites
+    zones = [box(*z) for z in g.zones]
+    return min((d for q, kind, d in narrow_whites(g.rings(), g.p.sv, g.p.cap)
+                if kind in ('hole', 'slot') and (not zones or any(q.intersects(z) for z in zones))), default=1.0)
+
+
+_SQUINT: dict = {}
+SQUINT_SLACK = 0.02   # what the Regular reference allows for the raster
+
+
+def _squint_reference(spec, p) -> float:
+    """What a glyph's white keeps under the squint at Regular, in the same
+    cut, capped at vision.READS: the least it may keep at any weight."""
+    from .instances import params
+    from .vision import READS
+    key = (spec.name, p.mono)
+    if key not in _SQUINT:
+        _SQUINT[key] = min(READS, _squint(_build(spec, params(400).with_(mono=p.mono), 0.0, 0.0, {}))) - SQUINT_SLACK
+    return _SQUINT[key]
+
+
 def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
     spec = REGISTRY[name]
     if p.slant and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
@@ -355,6 +395,21 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                     a = mid
             overrides['sh_auto'] = b
             g = _build(spec, p, ot, ob, overrides, width)
+    for sq in spec.squint:
+        want = _squint_reference(spec, p)
+        if sq.free not in g.defaults or _squint(g) >= want:
+            continue
+        a, b = g.defaults[sq.free], sq.limit(p)
+        far = _build(spec, p, ot, ob, {**overrides, sq.free: b}, width)
+        if _squint(far) >= want:
+            for _ in range(10):  # bisection: a fuses, b reads
+                mid = (a + b) / 2
+                if _squint(_build(spec, p, ot, ob, {**overrides, sq.free: mid}, width)) >= want:
+                    b = mid
+                else:
+                    a = mid
+        overrides[sq.free] = b
+        g = _build(spec, p, ot, ob, overrides, width)
     # (the heritage drawing is never lightened; composites rely on their parts' own rules)
     if _is_symbol(spec) and p.floor and g.strokes and not g.extra:
         want = _white_reference(spec, p)
