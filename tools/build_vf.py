@@ -65,7 +65,10 @@ print('aligned;', len(frozen), 'glyphs could not vary:', frozen[:10])
 # kerning: the same pairs in every master, each master's own values
 kernable = [n for n in names if REGISTRY[n].kind in ('cap', 'lower') or n in KERN_PUNCT]
 pairs_by = {w: kerns({n: (placed[w][n][0], round(placed[w][n][1])) for n in kernable}, ps[w], light(ps[w]))
-            for w in MASTERS}
+            for w in MASTERS if w[1] == 0}
+for w in MASTERS:                       # grade keeps every advance, kerning included
+    if w[1] != 0:
+        pairs_by[w] = pairs_by[(w[0], 0, w[2])]
 all_pairs = set().union(*pairs_by.values())
 print(len(all_pairs), 'kerning pairs')
 
@@ -89,6 +92,15 @@ for w, nm in NAMES.items():
     inst.familyName, inst.styleName, inst.location = family, nm, {'Weight': w, 'Grade': 0, 'Watch': 0}
     doc.addInstance(inst)
 vf, _, _ = varlib_build(doc)
+from fontTools.otlLib.builder import buildStatTable
+buildStatTable(vf, [
+    {'tag': 'wght', 'name': 'Weight',
+     'values': [{'value': w, 'name': nm, 'flags': 0x2 if w == 400 else 0} for w, nm in NAMES.items()]},
+    {'tag': 'GRAD', 'name': 'Grade', 'values': [{'value': 0, 'name': 'Normal', 'flags': 0x2}]},
+    {'tag': 'WTCH', 'name': 'Watch', 'values': [{'value': 0, 'name': 'Measured', 'flags': 0x2},
+                                                {'value': 100, 'name': 'Watch'}]},
+])
+vf['name'].names = [nm for nm in vf['name'].names if nm.platformID != 1]   # Windows names only
 out = Path('build') / 'Arris[GRAD,WTCH,wght].ttf'
 vf.save(out)
 print('wrote', out)

@@ -208,7 +208,7 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     glyphs['.notdef'], adv = _notdef(p)
     hmtx['.notdef'] = (adv, 40)
     glyphs['space'] = TTGlyphPen(None).glyph()
-    hmtx['space'] = (round(space if space is not None else 0.45 * p.xh), 0)
+    hmtx['space'] = (round(space if space is not None else (p.fig_adv if p.mono else 0.45 * p.xh)), 0)
     keep = placed is not None
     placed = dict(placed or {})
     for n in names:
@@ -248,7 +248,7 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     fb.setupOS2(sTypoAscender=m.asc, sTypoDescender=m.desc, sTypoLineGap=m.gap,
                 usWinAscent=max(m.asc, ymax), usWinDescent=max(-m.desc, -ymin), sxHeight=m.xh,
                 sCapHeight=m.cap, usWeightClass=weight,
-                fsSelection=0x80 | {'Regular': 0x40, 'Bold': 0x20}.get(style, 0),
+                fsSelection=0x80 | (0x20 if style == 'Bold' else 0x40),
                 achVendID='NONE', version=4)
     fb.setupPost(isFixedPitch=1 if p.mono else 0)
     fb.font['head'].fontRevision = float(version)
@@ -257,7 +257,10 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     os2.recalcUnicodeRanges(fb.font)
     _nonhinting(fb.font)
     if p.mono:
+        fb.font['OS/2'].panose.bFamilyType = 2
         fb.font['OS/2'].panose.bProportion = 9
+    if style == 'Bold':
+        fb.font['head'].macStyle |= 1
     if fea:
         from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
         addOpenTypeFeaturesFromString(fb.font, fea)
