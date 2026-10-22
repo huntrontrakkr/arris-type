@@ -40,3 +40,31 @@ def test_watch_pixels_match():
         mask = watch_mask(rings_to_shapely(draw(n, HERITAGE).rings()))
         ref = np.array([(masters[i][j >> 3] >> (j & 7)) & 1 for j in range(27 * 36)], np.uint8).reshape(36, 27)
         assert int((mask != ref).sum()) == 0, n
+
+
+def test_shipped_watch_semibold_is_the_watch():
+    """Arris Watch SemiBold, through the same instance pipeline the fonts are
+    built with, rasterises to the watch's masters: 60 units per module, 3 px
+    per module."""
+    from shapely import affinity
+
+    from arris.instances import HERITAGE_OPTICS, params
+    p = params(600, optics=HERITAGE_OPTICS)
+    masters = json.loads((heritage.ROOT / 'heritage' / 'chamfer-clock.json').read_text())
+    for i, n in enumerate(NAMES):
+        ink = affinity.scale(rings_to_shapely(draw(n, p).rings()), 1 / 60, 1 / 60, origin=(0, 0))
+        ref = np.array([(masters[i][j >> 3] >> (j & 7)) & 1 for j in range(27 * 36)], np.uint8).reshape(36, 27)
+        assert int((watch_mask(ink) != ref).sum()) == 0, n
+
+
+def test_watch_axis_at_100_is_the_watch():
+    """The variable font's Watch axis at 100, SemiBold, draws the same figures."""
+    from shapely import affinity
+
+    from arris.instances import params
+    p = params(600, watch=1.0)
+    masters = json.loads((heritage.ROOT / 'heritage' / 'chamfer-clock.json').read_text())
+    for i, n in enumerate(NAMES):
+        ink = affinity.scale(rings_to_shapely(draw(n, p).rings()), 1 / 60, 1 / 60, origin=(0, 0))
+        ref = np.array([(masters[i][j >> 3] >> (j & 7)) & 1 for j in range(27 * 36)], np.uint8).reshape(36, 27)
+        assert int((watch_mask(ink) != ref).sum()) == 0, n
