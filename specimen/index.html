@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arris</title>
+<style>
+@font-face { font-family: Arris; src: url(fonts/Arris-VF.woff2) format('woff2');
+  font-weight: 100 900; font-display: block; }
+@font-face { font-family: 'Arris Mono'; src: url(fonts/ArrisMono-Regular.woff2) format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Arris Mono'; src: url(fonts/ArrisMono-Bold.woff2) format('woff2'); font-weight: 700; }
+:root { --wght: 600; --grad: 0; --wtch: 0; --size: 96px; --ink: #111; --paper: #f4f2ec; --dim: #8a877f; }
+body.dark { --ink: #f2efe6; --paper: #101214; --dim: #6f716f; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink);
+  font-family: Arris, sans-serif; font-variation-settings: 'wght' 420, 'GRAD' var(--grad), 'WTCH' 0; }
+header, section { padding: 28px 40px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
+h1 { font-size: 64px; margin: 0; font-variation-settings: 'wght' 900, 'GRAD' var(--grad), 'WTCH' 0; letter-spacing: 0.01em; }
+h2 { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 0 0 14px;
+  font-variation-settings: 'wght' 600, 'GRAD' var(--grad), 'WTCH' 0; }
+p.lede { max-width: 60ch; font-size: 19px; line-height: 1.45; color: var(--ink); }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 28px;
+  position: sticky; top: 0; background: var(--paper); z-index: 2; padding: 16px 40px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); font-size: 14px; }
+.controls label { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.controls input[type=range] { flex: 1; accent-color: #c4562b; }
+.controls .feats { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--dim); }
+.controls .feats label { justify-content: flex-start; color: var(--ink); }
+.live { font-size: var(--size); line-height: 1.12; outline: none; word-break: break-word;
+  font-variation-settings: 'wght' var(--wght), 'GRAD' var(--grad), 'WTCH' var(--wtch); }
+.clock { font-size: 200px; line-height: 1; letter-spacing: 0;
+  font-variation-settings: 'wght' var(--wght), 'GRAD' var(--grad), 'WTCH' var(--wtch); font-feature-settings: 'calt' 1; }
+.weights div { font-size: 44px; line-height: 1.25; white-space: nowrap; overflow: hidden; }
+.weights span { display: inline-block; width: 150px; font-size: 13px; color: var(--dim); font-variation-settings: 'wght' 500; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 2px; font-size: 40px; }
+.grid div { aspect-ratio: 1; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  font-variation-settings: 'wght' var(--wght), 'GRAD' var(--grad), 'WTCH' var(--wtch); }
+.langs div { font-size: 30px; line-height: 1.4; font-variation-settings: 'wght' var(--wght), 'GRAD' var(--grad), 'WTCH' var(--wtch); }
+.langs span { display: inline-block; width: 120px; font-size: 13px; color: var(--dim); }
+.mono { font-family: 'Arris Mono'; font-size: 22px; line-height: 1.5; white-space: pre; overflow-x: auto; }
+.feature-row { display: grid; grid-template-columns: 180px 1fr 1fr; gap: 12px; align-items: baseline; font-size: 34px;
+  font-variation-settings: 'wght' var(--wght), 'GRAD' var(--grad), 'WTCH' var(--wtch); }
+.feature-row code { font-family: 'Arris Mono'; font-size: 14px; color: var(--dim); }
+.note { color: var(--dim); font-size: 14px; max-width: 70ch; line-height: 1.45; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Arris</h1>
+  <p class="lede">A typeface grown from the Chamfer clock figures of the Dymaxion watch face: a drawing on a
+  module grid, one rule for corners, and nothing drawn by hand that the rule can generate. At the SemiBold
+  weight with Watch at 100, its figures are the watch's figures, pixel for pixel.</p>
+</header>
+
+<div class="controls">
+  <label>Weight <input id="wght" type="range" min="100" max="900" value="600"><output id="wght-o">600</output></label>
+  <label>Grade <input id="grad" type="range" min="-100" max="100" value="0"><output id="grad-o">0</output></label>
+  <label>Watch <input id="wtch" type="range" min="0" max="100" value="0"><output id="wtch-o">0</output></label>
+  <label>Size <input id="size" type="range" min="16" max="240" value="96"><output id="size-o">96</output></label>
+  <div class="feats">
+    <label><input type="checkbox" id="dark"> light on dark</label>
+    <label><input type="checkbox" data-f="pnum"> pnum</label>
+    <label><input type="checkbox" data-f="zero"> zero</label>
+    <label><input type="checkbox" data-f="ss01"> ss01 (dotted zero)</label>
+    <label><input type="checkbox" data-f="frac"> frac</label>
+    <label><input type="checkbox" data-f="case"> case</label>
+    <label><input type="checkbox" data-f="calt" checked> calt (time colon)</label>
+    <label><input type="checkbox" data-f="kern" checked> kern</label>
+  </div>
+</div>
+
+<section>
+  <h2>Clock</h2>
+  <div class="clock" id="clock">12:45</div>
+  <p class="note">A colon between figures becomes the watch's time colon (calt). Figures are tabular by default,
+  so the time never shifts as it changes.</p>
+</section>
+
+<section>
+  <h2>Type here</h2>
+  <div class="live" contenteditable="true" spellcheck="false">Hamburgefonstiv 0123456789<br>The quick brown fox jumps over the lazy dog.</div>
+</section>
+
+<section class="weights">
+  <h2>Weights</h2>
+  <div style="font-variation-settings:'wght' 100,'GRAD' var(--grad),'WTCH' var(--wtch)"><span>Thin 100</span>Hamburgefonstiv 12:45</div>
+  <div style="font-variation-settings:'wght' 200,'GRAD' var(--grad),'WTCH' var(--wtch)"><span>ExtraLight 200</span>Hamburgefonstiv 12:45</div>
+  <div style="font-variation-settings:'wght' 300,'GRAD' var(--grad),'WTCH' var(--wtch)"><span>Light 300</span>Hamburgefonstiv 12:45</div>
+  <div style="font-variation-settings:'wght' 400,'GRAD' var(--grad),'WTCH' var(--wtch)"><span>Regular 400</span>Hamburgefonstiv 12:45</div>
+  <div style="font-variation-settings:'wght' 500,'GRAD' var(--grad),'WTCH' var(--wtch)"><span>Medium 500</span>Hamburgefonstiv 12:45</div>
+  <div style="font-variation-settings:'wght' 600,'GRAD' var(--grad),'WTCH' var(--wtch)"><span>SemiBold 600</span>Hamburgefonstiv 12:45</div>
+  <div style="font-variation-settings:'wght' 700,'GRAD' var(--grad),'WTCH' var(--wtch)"><span>Bold 700</span>Hamburgefonstiv 12:45</div>
+  <div style="font-variation-settings:'wght' 800,'GRAD' var(--grad),'WTCH' var(--wtch)"><span>ExtraBold 800</span>Hamburgefonstiv 12:45</div>
+  <div style="font-variation-settings:'wght' 900,'GRAD' var(--grad),'WTCH' var(--wtch)"><span>Black 900</span>Hamburgefonstiv 12:45</div>
+</section>
+
+<section>
+  <h2>Features</h2>
+  <div class="feature-row"><code>tnum / pnum</code><span>1111.07 / 7.11</span><span style="font-feature-settings:'pnum'">1111.07 / 7.11</span></div>
+  <div class="feature-row"><code>zero, ss01</code><span style="font-feature-settings:'zero'">0x10 2009</span><span style="font-feature-settings:'ss01'">0x10 2009</span></div>
+  <div class="feature-row"><code>frac</code><span style="font-feature-settings:'frac'">1/2 3/4 15/16</span><span>½ ¼ ¾</span></div>
+  <div class="feature-row"><code>sups, subs</code><span style="font-feature-settings:'sups'">E=mc2 x10</span><span style="font-feature-settings:'subs'">H2O CO2</span></div>
+  <div class="feature-row"><code>case</code><span>(HELLO) -A- «B»</span><span style="font-feature-settings:'case'">(HELLO) -A- «B»</span></div>
+  <div class="feature-row"><code>ordn</code><span style="font-feature-settings:'ordn'">1a 2o</span><span>ª º</span></div>
+</section>
+
+<section class="langs">
+  <h2>Languages</h2>
+  <div><span>English</span>Sphinx of black quartz, judge my vow.</div>
+  <div><span>German</span>Zwölf Boxkämpfer jagen Viktor quer über den großen Sylter Deich.</div>
+  <div><span>French</span>Voix ambiguë d'un cœur qui, au zéphyr, préfère les jattes de kiwis.</div>
+  <div><span>Polish</span>Pchnąć w tę łódź jeża lub ośm skrzyń fig.</div>
+  <div><span>Turkish</span>Pijamalı hasta yağız şoföre çabucak güvendi.</div>
+  <div><span>Czech</span>Příliš žluťoučký kůň úpěl ďábelské ódy.</div>
+  <div><span>Russian</span>Съешь же ещё этих мягких французских булок, да выпей чаю.</div>
+  <div><span>Ukrainian</span>Чуєш їх, доцю, га? Кумедна ж ти, прощайся без ґольфів!</div>
+  <div><span>Greek</span>Ξεσκεπάζω την ψυχοφθόρα βδελυγμία.</div>
+</section>
+
+<section>
+  <h2>Characters</h2>
+  <div class="grid" id="grid"></div>
+</section>
+
+<section>
+  <h2>Arris Mono</h2>
+  <div class="mono">fn wake(at: Time) -&gt; Alarm {
+    let next = at + 0x1F * MINUTE;  // Il1| O0o
+    if next.hour() &gt;= 12 { Alarm::pm(next) } else { Alarm::am(next) }
+}</div>
+</section>
+
+<section>
+  <p class="note">Built from the source in this repository: <code>tools/build_vf.py</code> and
+  <code>tools/build_fonts.py</code>. The design is explained in <code>docs/DESIGN.md</code>.</p>
+</section>
+
+<script>
+const root = document.documentElement;
+for (const id of ['wght', 'grad', 'wtch', 'size']) {
+  const el = document.getElementById(id), out = document.getElementById(id + '-o');
+  const set = () => { root.style.setProperty('--' + id, id === 'size' ? el.value + 'px' : el.value); out.textContent = el.value; };
+  el.addEventListener('input', set); set();
+}
+document.getElementById('dark').addEventListener('change', e => document.body.classList.toggle('dark', e.target.checked));
+const feats = () => {
+  const on = [...document.querySelectorAll('[data-f]')].map(c => `'${c.dataset.f}' ${c.checked ? 1 : 0}`).join(', ');
+  for (const el of document.querySelectorAll('.live, .clock')) el.style.fontFeatureSettings = on;
+};
+document.querySelectorAll('[data-f]').forEach(c => c.addEventListener('change', feats)); feats();
+const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' +
+  '.,:;!?¡¿-–—_\'"‘’“”‚„()[]{}/\\|+−=×÷<>±≤≥≠~^`°•·…«»‹›#$%&@*€£¥¢¤©®™§¶‰†‡№∞√←↑→↓↖↗↘↙↔↕' +
+  'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ' +
+  'ĄąĆćČčĎďĐđĘęĚěĞğİıŁłŃńŇňŐőŒœŘřŚśŞşŠšŢţŤťŮůŰűŸŹźŻżŽžȘșȚț' +
+  'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюяЄІЇҐєіїґЂЉЊЋЏђљњћџЎў' +
+  'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρσςτυφχψωΆΈΉΊΌΎΏάέήίόύώ';
+const grid = document.getElementById('grid');
+for (const ch of chars) { const d = document.createElement('div'); d.textContent = ch; grid.appendChild(d); }
+</script>
+</body>
+</html>
