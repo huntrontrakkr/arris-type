@@ -100,14 +100,17 @@ by a combining mark shows as the composed letter does:
   and for stacking one a stack gap beyond their ink.
 
 Italic anchors are measured on the upright drawing and sheared, so marks
-follow the slant. Checked against the composed letters: base plus marks,
-positioned by these anchors, lands within a unit (mean outline
-difference) of every composed letter whose design is the generic one, at
-Regular and Black, upright; within about 3 units in the italic, where marks
-that touch their base (cedilla, ogonek, horn) meet curved corners. The
+follow the slant. Checked against the composed letters (base plus marks,
+positioned by these anchors, against the composed glyph; mean outline
+difference): at Regular every composed letter of the generic design lands
+within 1.3 units upright and 4 in the italic, the largest being marks that
+touch their base (cedilla, ogonek, horn), whose junction the composed
+letter fills and two overlapping glyphs cannot; at Black within 5 upright
+and 6 in the italic. The
 rest differ by design: the caron as an apostrophe (ď ľ Ľ ť), the cedilla
-as a comma (ģ ķ ļ ņ ŗ ţ), the Greek capitals' tonos, and Ǻ, whose stack is
-lightened.
+as a comma (ģ ķ ļ ņ ŗ ţ), the Greek capitals' tonos, the stacks the line
+rule lightens (which mark positioning, stacking separate glyphs, does not),
+and ỡ at heavy weights, whose tilde steps left of the horn.
 
 Features:
 
@@ -133,9 +136,14 @@ Features:
 
 * Kerning is flat pairs (`kerning.py`), so its size grows with the square
   of the letters: Regular's kerning went from 20,450 pairs to 40,945 and
-  the file from 116 to 227 KB. Kerning composed letters by their base's
-  classes would undo most of that.
-* Mono: the marks' zero advance means `hhea.numberOfHMetrics` cannot
-  shrink (fontbakery WARN), as the marks sit in the middle of the glyph
-  order.
+  the file from 116 to 227 KB; the variable font's pairs from 54,520 to
+  131,944, its GPOS from 358 to 886 KB and the file from 1.0 to 1.9 MB.
+  Kerning composed letters by their base's classes would undo most of that.
+* Mono: the marks' zero advance, in the middle of the glyph order, keeps
+  `hhea.numberOfHMetrics` at 567 (it was 2; fontbakery warned about it
+  before too).
 * The compatibility digraphs in Mono are small letters (about half size).
+* Variable font: the digraphs interpolate less well than the rest (Ǉ ǈ ǉ
+  up to 12 units at 300, where the inks' minimum distance starts to bind),
+  as do the combining comma and dot below where their depth limit starts
+  to bind (8 units), as their composed letters' marks already do.
