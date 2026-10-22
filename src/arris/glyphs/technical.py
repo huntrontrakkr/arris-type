@@ -363,7 +363,7 @@ def _benzene_w(p):
     """⌬'s body: three quarters of the cap height, or room for its ring
     (its counter nine tenths of a stem) with half a stem of white about it."""
     q = _light(p)
-    return max(0.75 * q.cap, 2 * 2.35 * q.sv) + q.sv
+    return max(0.75 * q.cap, 2 * 2.6 * q.sv) + q.sv
 
 
 @tech(u(0x232C), '⌬', _benzene_w)
@@ -378,9 +378,14 @@ def benzene(g):
     hh = w                                                  # a 2:1 slope from the point to the top's end
     g.stroke((c - w, a), (c - w / 2, a + hh), (c + w / 2, a + hh), (c + w, a), (c + w / 2, a - hh),
              (c - w / 2, a - hh), closed=True)
-    gap = max(0.5 * p.sv, 0.75 * p.m)
-    r = min(max(0.45 * w, 0.9 * p.sv), w - g.sh / 2 - gap - p.sv / 2)
-    _ring(g, c - r, a - r, c + r, a + r, leg=0.45 * r)
+    # the ring: clear of the hexagon's top and of its 2:1 sides (where its
+    # upright side ends) by half a stem and more, which the italic's curves need
+    gap = max(0.5 * p.sv, 0.75 * p.m) + 0.25 * p.sv
+    wss = p.ss / STEEP[1]
+    t = 0.75 * p.sv                                          # a lighter ring, as a small one is
+    r = min(max(0.45 * w, 0.9 * p.sv), w - g.sh / 2 - gap - t / 2,
+            (w - wss / 2 - t / 2 - gap) / 1.207)
+    _ring(g, c - r, a - r, c + r, a + r, w=t, leg=0.586 * r)
 
 
 @tech(u(0x238B), '⎋', lambda p: 0.85 * p.cap + p.sv)
