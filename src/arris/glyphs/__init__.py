@@ -12,5 +12,7 @@ BASES.update({chr(cp): name for cp, name in ALIASES.items()})
 ACCENTED = marks.compose(CHARS, BASES)
 
 from . import terminal, shapes, dingbats  # noqa: E402,F401  (terminal cells, geometric shapes, dingbats)
+from . import genpunct, supsubs, currency, letterlike, numberforms  # noqa: E402,F401  (docs/coverage/symbols-plus.md)
+ALIASES.update(genpunct.ALIASES | letterlike.ALIASES | numberforms.ALIASES)
 from . import features  # noqa: E402,F401  (variants of everything above)
 from . import ligatures  # noqa: E402,F401  (the monospaced cut's programming ligatures)
