@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+research-fonts/
+build/
+.pytest_cache/
