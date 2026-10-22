@@ -8,21 +8,39 @@ easy to turn off in editors), longest sequences first, with guards so a
 ligature never forms inside a longer run of the same characters (`--->`,
 `<=<`, `====`).
 
-The drawings are Arris: operators on the math axis, the arrowheads of
-`symbols.arrow_head`, the bars of `=`, chevrons at 45 degrees, dots of
-`Params.dot`. A ligature reads as the characters it replaces, only joined:
-`->` is a hyphen grown into an arrow, `==` one long double bar, `!=` the
-double bar struck through, `:=` the colon raised to sit on the bars.
+A ligature exists only where joining says something the characters set
+apart cannot, and is built, like Fira Code's, from a few parts shared by
+every sequence (``docs/DESIGN.md``, section 8):
+
+* **Arrows**: one head, a single 45-degree chevron whose point stays sharp
+  under the corner rule, 0.88 of the cap height; shafts on the axis that
+  end inside it; the font's own `|` where an arrow starts or stops at a
+  bar. An arrow keeps the hyphen's margins at both ends.
+* **Equality**: the bars of `=` run through; `!=` strikes them.
+* **Tags**: the 2:1 slash with 2:1 chevrons the other way, whose arms
+  meet it square (`</>`); the pipe closed by a chevron into a triangle
+  (`|>`).
+* **`#` and brackets**: the bracket centred on `#`, the bars of `#`
+  running on into it; the brace's elbows are where the bars meet it.
+* **Pairs** of narrow signs (`||` `::` `!!` `..`): moved toward each other
+  until half a cell of white is left between them. Wide signs (`&&`,
+  `??`) are already closer than that and are left as they are.
 """
 from __future__ import annotations
 
-from ..draw import REGISTRY, glyph
+from ..draw import REGISTRY, B, glyph
 from ..params import SQRT2
 from .punct import axis, dot
-from .symbols import arrow_head
 
 LIGATURES: list[tuple[str, tuple[str, ...]]] = []   # (glyph name, component glyph names), longest first at build
 COMPONENTS: dict[str, tuple[str, ...]] = {}         # glyph name -> component glyph names
+
+HEAD = 0.44          # an arrowhead's half-height, of the cap height (Fira Code's: 0.88 of it in all)
+DOUBLE = 0.6         # a double head's second chevron: this share of the head behind the first, plus its stroke
+PAIR_WHITE = 0.5     # white left between a pair's signs, of a cell
+TAG_CHEVRON = 0.6    # a tag chevron's height, of its slash's
+TRIANGLE = 0.55      # a pipe triangle's half-height, of the cap height
+BRACE_RUN = 0.5      # the `#{` brace's point: run over rise of its diagonals (the slash's 2:1)
 
 
 def _names(seq: str) -> tuple[str, ...]:
@@ -56,7 +74,9 @@ def lig_spacer(g):
     """The empty cell a ligature draws over."""
 
 
-# --- Geometry shared by the drawings ---------------------------------------
+# --- Shared geometry ----------------------------------------------------------
+# A ligature's frame runs from its first cell's body (x = 0) to its last
+# cell's (x = W); cell i's body is [i * fig_adv, i * fig_adv + fig_w].
 
 def cell(g, i):
     """(left, centre, right) of the i-th cell's body, in the ligature's frame."""
@@ -65,114 +85,160 @@ def cell(g, i):
     return left, left + p.fig_w / 2, left + p.fig_w
 
 
+def _sub(name, p):
+    from ..draw import draw
+    return draw(name, p)
+
+
+def _at(g, sub, i):
+    """x where ``sub`` sits when set in cell i as itself."""
+    return i * g.p.fig_adv + (g.p.fig_w - sub.W) / 2
+
+
+def edge(p):
+    """The margin an arrow or a run of bars keeps at the ligature's ends:
+    the hyphen's own, so `->` starts where `-` starts."""
+    return (p.fig_w - _sub('hyphen', p).W) / 2
+
+
 def bars_offset(g):
     """Half the distance between the bars of `=`."""
     return (g.sh + max(0.8 * g.sh, g.p.m)) / 2
 
 
-def head(g, tip, sign, size=None):
-    """Two barbs from the tip, pointing right (sign 1) or left (-1)."""
+def tag_h(p):
+    """Half the height of `<` (punct._chevron): the tags' slash."""
+    return REGISTRY['less'].width(p) - p.sv / 2
+
+
+def _ink_of(sub, dx=0.0, dy=0.0):
+    from shapely import affinity
+    from ..geom import rings_to_shapely
+    return affinity.translate(rings_to_shapely(sub.rings()), dx, dy)
+
+
+def _runs(ink, x=None, y=None):
+    """The ink's runs across the vertical line at x, as (low, high) in y;
+    or across the horizontal line at y, as (left, right) in x."""
+    from shapely.geometry import LineString
+    x0, y0, x1, y1 = ink.bounds
+    line = LineString([(x, y0 - 1), (x, y1 + 1)]) if x is not None else LineString([(x0 - 1, y), (x1 + 1, y)])
+    k = 1 if x is not None else 0
+    out = []
+    cut = ink.intersection(line)
+    for seg in getattr(cut, 'geoms', [cut]):
+        cs = list(getattr(seg, 'coords', []))
+        if len(cs) >= 2:
+            out.append((min(c[k] for c in cs), max(c[k] for c in cs)))
+    return sorted(out)
+
+
+# --- Arrows -----------------------------------------------------------------
+
+def head_h(p):
+    return HEAD * p.cap
+
+
+def head(g, tip, sign):
+    """An arrowhead: one 45-degree chevron with its point at ``tip``,
+    pointing right (sign 1) or left (-1). Drawn as a single stroke, its
+    point is a right angle between two diagonals, which the corner rule
+    keeps sharp; the barbs end square to themselves."""
     x, y = tip
-    L = (size or arrow_head(g.p)) / SQRT2
-    for s in (1, -1):
-        g.stroke((x, y), (x - sign * L, y + s * L))
+    h = head_h(g.p)
+    g.stroke((x - sign * h, y + h), (x, y), (x - sign * h, y - h))
 
 
-def chevron(g, tip, sign, reach):
-    """`<` (sign -1) or `>` (sign 1) with its tip at ``tip``."""
-    x, y = tip
-    g.stroke((x - sign * reach, y + reach), (x, y), (x - sign * reach, y - reach), start='v', end='v')
-
-
-def reach(g):
-    """The reach of `<` and `>` (from punct._chevron)."""
+def _tip(g, sign):
+    """The centreline point of a head at the ligature's right (sign 1) or
+    left (-1) end, so the head's ink ends at the hyphen's margin."""
     p = g.p
-    return p.fig_w - p.sv / 2
+    inset = edge(p) + p.sd / SQRT2                              # the point's ink lies sd/sqrt2 past its centreline
+    return g.W - inset if sign > 0 else inset
 
 
-# --- Arrows ---------------------------------------------------------------
+def _bar_at(g, i):
+    """The font's `|`, as itself in cell i; returns its centre x."""
+    bar = _sub('bar', g.p)
+    x = _at(g, bar, i)
+    g.add_glyph(bar, x, 0.0)
+    return x + bar.W / 2
 
-def _single(g, left_head=False, right_head=True, bars=1, start_bar=False, end_bar=False, double_head=False):
+
+def _arrow(g, bars=1, right=True, left=False, double=False, start_bar=False, end_bar=False):
+    """Every straight arrow: a shaft of one or two bars on the axis, a head
+    at either end or both, a second chevron behind a head (`->>`), a bar at
+    the start or the end (`|->`, `<-|`). A single shaft runs to the point,
+    inside the head; a double shaft's bars end on the head's arms, as `=`
+    meets `>` in `=>`."""
     p, W = g.p, g.W
     a = axis(p)
-    x0, x1 = p.sv / 2, W - p.sv / 2
-    off = bars_offset(g)
-    L = arrow_head(p)
+    h = head_h(p)
+    x0, x1 = edge(p), W - edge(p)
+    if start_bar:
+        x0 = _bar_at(g, 0)
+    if end_bar:
+        x1 = _bar_at(g, len(COMPONENTS[g.name]) - 1)
+    back = DOUBLE * h + 2 * SQRT2 * p.sd                       # the second chevron: the white between grows with the stroke
+    tips = []
+    if right:
+        tips.append((_tip(g, 1), 1))
+    if left:
+        tips.append((_tip(g, -1), -1))
+    for t, s in tips:
+        head(g, (t, a), s)
+        if double:
+            head(g, (t - s * back, a), s)
+        if s > 0:
+            x1 = t
+        else:
+            x0 = t
     if bars == 1:
         g.stroke((x0, a), (x1, a))
     else:
-        # the bars stop where they meet the barbs (a barb at height off is off in from the tip)
-        R = max(L / SQRT2, off + 1.5 * p.sv)
-        bx0 = x0 + (off if left_head else 0.0)
-        bx1 = x1 - (off if right_head else 0.0)
+        off = bars_offset(g)
         for y in (a - off, a + off):
-            g.stroke((bx0, y), (bx1, y))
-        L = R * SQRT2
-    if right_head:
-        head(g, (x1, a), 1, L)
-        if double_head:
-            head(g, (x1 - 0.6 * L, a), 1, L)
-    if left_head:
-        head(g, (x0, a), -1, L)
-        if double_head:
-            head(g, (x0 + 0.6 * L, a), -1, L)
-    h = max(L / SQRT2, off + 1.5 * p.sv) if bars > 1 else L / SQRT2
-    if start_bar:
-        g.stroke((x0, a - h), (x0, a + h))
-    if end_bar:
-        g.stroke((x1, a - h), (x1, a + h))
+            g.stroke((x0 + (off if left else 0.0), y), (x1 - (off if right else 0.0), y))
 
 
-liga('->', '-->')(lambda g: _single(g))
-liga('<-', '<--')(lambda g: _single(g, left_head=True, right_head=False))
-liga('<->', '<-->')(lambda g: _single(g, left_head=True))
-liga('=>', '==>')(lambda g: _single(g, bars=2))
-liga('<==')(lambda g: _single(g, bars=2, left_head=True, right_head=False))
-liga('<=>', '<==>')(lambda g: _single(g, bars=2, left_head=True))
-liga('|->')(lambda g: _single(g, start_bar=True))
-liga('<-|')(lambda g: _single(g, left_head=True, right_head=False, end_bar=True))
-liga('|=>')(lambda g: _single(g, bars=2, start_bar=True))
-liga('->>')(lambda g: _single(g, double_head=True))
-liga('<<-')(lambda g: _single(g, left_head=True, right_head=False, double_head=True))
+liga('->', '-->')(lambda g: _arrow(g))
+liga('<-', '<--')(lambda g: _arrow(g, right=False, left=True))
+liga('<->', '<-->')(lambda g: _arrow(g, left=True))
+liga('=>', '==>')(lambda g: _arrow(g, bars=2))
+liga('<==')(lambda g: _arrow(g, bars=2, right=False, left=True))
+liga('<=>', '<==>')(lambda g: _arrow(g, bars=2, left=True))
+liga('|->')(lambda g: _arrow(g, start_bar=True))
+liga('<-|')(lambda g: _arrow(g, right=False, left=True, end_bar=True))
+liga('|=>')(lambda g: _arrow(g, bars=2, start_bar=True))
+liga('->>')(lambda g: _arrow(g, double=True))
+liga('<<-')(lambda g: _arrow(g, right=False, left=True, double=True))
 
 
-@liga('~>', '~~>')
-def wave_arrow(g):
-    """A wavy shaft (the tilde's 45-degree steps) into a head."""
+def _wave(g, sign):
+    """`~>`, `~~>`, `<~`: the tilde's step (up at 45 degrees, along, down,
+    along) at the tilde's own period, leaving and rejoining the axis, into
+    the arrows' head."""
     p, W = g.p, g.W
     a = axis(p)
-    x0, x1 = p.sv / 2, W - p.sv / 2
-    L = arrow_head(p)
-    amp = max(p.m, 0.6 * p.sv)
-    pts, x, up = [(x0, a)], x0, True
-    end = x1 - L / SQRT2 * 0.6
-    while x + 2 * amp < end:
-        x += 2 * amp
-        pts.append((x - amp, a + (amp if up else -amp)))
-        pts.append((x, a))
-        up = not up
-    pts.append((x1, a))
+    d = REGISTRY['asciitilde'].width(p) / 4                  # the tilde's step (punct.asciitilde)
+    tip, start = _tip(g, 1), edge(p)
+    run = tip - head_h(p) - start                            # the shaft's room behind the barbs
+    n = max(1, int(run // (4 * d)))
+    x0 = start + (run - 4 * d * n) / 2
+    pts = [(start, a)] if x0 > start + 1 else []
+    for i in range(n):
+        x = x0 + 4 * d * i
+        pts += [(x, a), (x + d / 2, a + d / 2), (x + 3 * d / 2, a + d / 2),
+                (x + 5 * d / 2, a - d / 2), (x + 7 * d / 2, a - d / 2)]
+    pts += [(x0 + 4 * d * n, a), (tip, a)]
+    if sign < 0:
+        pts = [(W - x, y) for x, y in pts]
     g.stroke(*pts)
-    head(g, (x1, a), 1, L)
+    head(g, ((W - tip) if sign < 0 else tip, a), sign)
 
 
-@liga('<~')
-def wave_arrow_left(g):
-    p, W = g.p, g.W
-    a = axis(p)
-    x0, x1 = p.sv / 2, W - p.sv / 2
-    L = arrow_head(p)
-    amp = max(p.m, 0.6 * p.sv)
-    pts, x, up = [(x1, a)], x1, True
-    end = x0 + L / SQRT2 * 0.6
-    while x - 2 * amp > end:
-        x -= 2 * amp
-        pts.append((x + amp, a + (amp if up else -amp)))
-        pts.append((x, a))
-        up = not up
-    pts.append((x0, a))
-    g.stroke(*pts)
-    head(g, (x0, a), -1, L)
+liga('~>', '~~>')(lambda g: _wave(g, 1))
+liga('<~')(lambda g: _wave(g, -1))
 
 
 # --- Equality and comparison ---------------------------------------------
@@ -181,8 +247,9 @@ def _bars(g, n, x0=None, x1=None):
     p, W = g.p, g.W
     a = axis(p)
     off = bars_offset(g)
-    x0 = 0.0 if x0 is None else x0
-    x1 = W if x1 is None else x1
+    m = (p.fig_w - _sub('equal', p).W) / 2                  # `=`'s own margin
+    x0 = m if x0 is None else x0
+    x1 = W - m if x1 is None else x1
     ys = [a - off, a + off] if n == 2 else [a - 2 * off, a, a + 2 * off]
     for y in ys:
         g.stroke((x0, y), (x1, y))
@@ -191,30 +258,16 @@ def _bars(g, n, x0=None, x1=None):
 
 def _strike(g, ys):
     """The 2:1 slash of `!=` across bars at heights ys."""
-    p, W = g.p, g.W
     lo, hi = min(ys) - 2.2 * g.sh, max(ys) + 2.2 * g.sh
-    cx = W / 2
+    cx = g.W / 2
     run = (hi - lo) / 2
     g.stroke((cx - run / 2, lo), (cx + run / 2, hi), start='h', end='h')
 
 
 liga('==')(lambda g: _bars(g, 2))
 liga('===')(lambda g: _bars(g, 3))
-
-
-@liga('!=', '/=')
-def not_equal(g):
-    _strike(g, _bars(g, 2))
-
-
-@liga('!==')
-def not_identical(g):
-    _strike(g, _bars(g, 3))
-
-
-@liga('=/=')
-def not_equal_long(g):
-    _strike(g, _bars(g, 2))
+liga('!=', '/=', '=/=')(lambda g: _strike(g, _bars(g, 2)))
+liga('!==')(lambda g: _strike(g, _bars(g, 3)))
 
 
 def _compare(g, mirror):
@@ -238,138 +291,181 @@ liga('<=')(lambda g: _compare(g, False))
 liga('>=')(lambda g: _compare(g, True))
 
 
-# --- Colons, dots, pipes ---------------------------------------------------
+# --- Pairs: narrow signs drawn closer --------------------------------------
 
-@liga('::')
-def double_colon(g):
+def _pitch(g, name):
+    """Centre to centre for a pair of ``name``: half a cell of white
+    between them (never more than their cells' own)."""
+    p = g.p
+    return min(p.fig_adv, _sub(name, p).W + PAIR_WHITE * p.fig_adv)
+
+
+def _row(g, name, n, xc=None, dy=0.0):
+    """n copies of ``name`` at the pair pitch, centred at xc (or in the
+    ligature); returns their centres."""
+    sub = _sub(name, g.p)
+    pitch = _pitch(g, name)
+    xc = g.W / 2 if xc is None else xc
+    xs = [xc + (i - (n - 1) / 2) * pitch for i in range(n)]
+    for x in xs:
+        g.add_glyph(sub, x - sub.W / 2, dy)
+    return xs
+
+
+def pair(*seqs):
+    for seq in seqs:
+        liga(seq)(lambda g: _row(g, COMPONENTS[g.name][0], len(COMPONENTS[g.name])))
+
+
+pair('||', '|||', '::', ':::', '..', '...', '!!', ';;')
+
+
+def _raised(g, n, xc):
+    """n colons' dots raised to the bars of `=` (`:=` `=:` `::=`), at the
+    pair pitch; returns the extreme dots' outer edges (left, right)."""
     p = g.p
     s = p.dot()
-    for i in (0, 1):
-        _, c, _ = cell(g, i)
-        x = c + (1 - 2 * i) * 0.18 * p.fig_adv              # drawn toward each other
-        dot(g, x, 0)
-        dot(g, x, p.xh - s)
+    a = axis(p)
+    off = bars_offset(g)
+    pitch = _pitch(g, 'colon')
+    xs = [xc + (i - (n - 1) / 2) * pitch for i in range(n)]
+    for x in xs:
+        for y in (a - off, a + off):
+            dot(g, x, y - s / 2)
+    return xs[0] - s / 2, xs[-1] + s / 2
 
 
-@liga(':::')
-def triple_colon(g):
-    p = g.p
-    s = p.dot()
-    for i in (0, 1, 2):
-        _, c, _ = cell(g, i)
-        x = c + (1 - i) * 0.18 * p.fig_adv
-        dot(g, x, 0)
-        dot(g, x, p.xh - s)
+def _gap(p):
+    return max(p.m, 0.6 * p.dot())
 
 
 @liga(':=')
 def colon_equal(g):
-    """The colon raised so its dots sit on the bars' axis."""
-    p = g.p
-    s = p.dot()
-    a = axis(p)
-    off = bars_offset(g)
-    _, c0, r0 = cell(g, 0)
-    x = c0 + 0.15 * p.fig_adv
-    for y in (a - off, a + off):
-        dot(g, x, y - s / 2)
-    _bars(g, 2, x0=x + s / 2 + max(p.m, 0.6 * s), x1=g.W)
+    """The colon raised so its dots sit on the bars."""
+    _, right = _raised(g, 1, cell(g, 0)[1] + 0.15 * g.p.fig_adv)
+    _bars(g, 2, x0=right + _gap(g.p))
 
 
 @liga('=:')
 def equal_colon(g):
-    p = g.p
-    s = p.dot()
-    a = axis(p)
-    off = bars_offset(g)
-    _, c1, _ = cell(g, 1)
-    x = c1 - 0.15 * p.fig_adv
-    for y in (a - off, a + off):
-        dot(g, x, y - s / 2)
-    _bars(g, 2, x0=0.0, x1=x - s / 2 - max(p.m, 0.6 * s))
+    left, _ = _raised(g, 1, cell(g, 1)[1] - 0.15 * g.p.fig_adv)
+    _bars(g, 2, x1=left - _gap(g.p))
 
 
 @liga('::=')
 def double_colon_equal(g):
     p = g.p
-    s = p.dot()
-    a = axis(p)
-    off = bars_offset(g)
-    xs = [cell(g, 0)[1] + 0.2 * p.fig_adv, cell(g, 1)[1] - 0.1 * p.fig_adv]
-    for x in xs:
-        for y in (a - off, a + off):
-            dot(g, x, y - s / 2)
-    _bars(g, 2, x0=xs[-1] + s / 2 + max(p.m, 0.6 * s), x1=g.W)
+    _, right = _raised(g, 2, cell(g, 1)[0] - 0.05 * p.fig_adv)
+    _bars(g, 2, x0=right + _gap(p))
 
 
-def _dots(g, n):
-    p, W = g.p, g.W
-    s = p.dot()
-    gap = (W - n * s) / (n - 1) if n > 1 else 0
-    gap = min(gap, 2.2 * s * 2)
-    span = n * s + (n - 1) * gap
-    x = (W - span) / 2 + s / 2
-    for _ in range(n):
-        dot(g, x, 0)
-        x += s + gap
-
-
-liga('..')(lambda g: _dots(g, 2))
-liga('...')(lambda g: _dots(g, 3))
-
-
-@liga('..<')
-def range_lt(g):
+@liga('..<', '..=')
+def range_op(g):
+    """`..<` `..=`: the pair of dots, then the sign as itself."""
     p = g.p
-    s = p.dot()
-    for i in (0, 1):
-        dot(g, cell(g, i)[1] + (0.15 - 0.1 * i) * p.fig_adv, 0)
-    _, c2, r2 = cell(g, 2)
-    chevron(g, (c2 - reach(g) / 2 + p.sv / 2, axis(p)), -1, reach(g) / 2)
+    last = _sub(COMPONENTS[g.name][-1], p)
+    x = _at(g, last, 2)
+    g.add_glyph(last, x, 0.0)
+    _row(g, 'period', 2, xc=x / 2)
 
 
-@liga('..=')
-def range_eq(g):
-    p = g.p
-    for i in (0, 1):
-        dot(g, cell(g, i)[1] + (0.15 - 0.1 * i) * p.fig_adv, 0)
-    _bars(g, 2, x0=cell(g, 2)[0], x1=g.W)
+# --- Pipes and triangles -----------------------------------------------------
 
-
-@liga('||')
-def double_bar(g):
-    p = g.p
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
-    gap = max(1.2 * p.m, 1.2 * p.sv)
-    for x in (g.W / 2 - gap / 2 - p.sv / 2, g.W / 2 + gap / 2 + p.sv / 2):
-        g.stroke((x, bot), (x, top))
-    g.clip = (0, bot, g.W, top)
-
-
-def _pipe_tri(g, left, right):
-    """`|>`, `<|`, `<|>`: a bar with chevrons joined to its ends (a
-    triangle, the pipe drawn as an arrow)."""
+def _pipe_tri(g, left, right, bars=0):
+    """`|>`, `<|`, `<|>`, `||>`, `<||`: the pipe closed into a triangle by a
+    chevron at the tags' 2:1, its arms ending on the pipe's ends; `||>` and
+    `<||` stand another pipe beside it, at the pair pitch."""
     p, W = g.p, g.W
     a = axis(p)
-    h = min(reach(g), 0.42 * p.cap)
-    xb = W / 2
-    g.stroke((xb, a - h), (xb, a + h))
-    if right:
-        g.stroke((xb, a + h), (xb + h, a), (xb, a - h))
-    if left:
-        g.stroke((xb, a + h), (xb - h, a), (xb, a - h))
+    h = TRIANGLE * p.cap
+    pitch = _pitch(g, 'bar')
+    span = 2 * h * (left + right) + bars * pitch
+    xb = (W - span) / 2 + (2 * h if left else 0) + (bars * pitch if not left else 0)
+    if left and right:
+        g.stroke((xb, a + h), (xb + 2 * h, a), (xb, a - h), (xb - 2 * h, a), closed=True)
+        g.stroke((xb, a - h), (xb, a + h))
+    elif right:
+        g.stroke((xb, a + h), (xb + 2 * h, a), (xb, a - h), closed=True)
+    else:
+        g.stroke((xb, a + h), (xb - 2 * h, a), (xb, a - h), closed=True)
+    for i in range(1, bars + 1):
+        x = xb - i * pitch if right else xb + i * pitch
+        g.stroke((x, a - h), (x, a + h))
 
 
 liga('|>')(lambda g: _pipe_tri(g, False, True))
 liga('<|')(lambda g: _pipe_tri(g, True, False))
 liga('<|>')(lambda g: _pipe_tri(g, True, True))
+liga('||>')(lambda g: _pipe_tri(g, False, True, bars=1))
+liga('<||')(lambda g: _pipe_tri(g, True, False, bars=1))
 
 
-# --- Plus, minus, slashes, chevrons, comments -------------------------------
+# --- Tags and comments ---------------------------------------------------------
+
+def _tag(g, path):
+    """`</`, `/>`, `</>`: the slash at its 2:1, as tall as `<`, and
+    chevrons at the 2:1 the other way, shorter, whose arms run square into
+    the slash (a 2:1 arm is perpendicular to the 2:1 slash): `<`'s lower
+    arm meets it near its foot, `>`'s upper arm near its top, and the slash
+    runs on past both."""
+    p, W = g.p, g.W
+    a = axis(p)
+    hs = tag_h(p)
+    hc = TAG_CHEVRON * hs
+    left, right = path[0] == '<', path[-1] == '>'
+    j1, j2 = -hc / 2, hc / 2                                     # the slash at a - hc and a + hc (its centre at 0)
+    lo = min([-hs / 2] + ([j1 - 2 * hc] if left else []))
+    hi = max([hs / 2] + ([j2 + 2 * hc] if right else []))
+    xm = (W - (hi - lo)) / 2 - lo
+    g.stroke((xm - hs / 2, a - hs), (xm + hs / 2, a + hs), start='h', end='h')
+    if left:
+        x = xm + j1
+        g.stroke((x, a + hc), (x - 2 * hc, a), (x, a - hc), start='v')
+    if right:
+        x = xm + j2
+        g.stroke((x, a + hc), (x + 2 * hc, a), (x, a - hc), end='v')
+
+
+liga('</')(lambda g: _tag(g, '</'))
+liga('/>')(lambda g: _tag(g, '/>'))
+liga('</>')(lambda g: _tag(g, '</>'))
+
+
+@liga('<>')
+def diamond(g):
+    """`<>`: the tags' two chevrons closed into one flat lozenge."""
+    p, W = g.p, g.W
+    a = axis(p)
+    hc = min(TAG_CHEVRON * tag_h(p), (W - 2 * p.sd) / 4)
+    x = W / 2
+    g.stroke((x, a + hc), (x - 2 * hc, a), (x, a - hc), (x + 2 * hc, a), closed=True)
+
+
+@liga('<!--')
+def html_comment(g):
+    """`<!--`: an arrow back to the `!`, then the dashes run together into
+    one line."""
+    p, W = g.p, g.W
+    a = axis(p)
+    gap = max(1.5 * p.sv, p.m)
+    ex = _sub('exclam', p)
+    xe = _at(g, ex, 1)
+    g.add_glyph(ex, xe, 0.0)
+    tip = _tip(g, -1)
+    head(g, (tip, a), -1)
+    g.stroke((tip, a), (xe - gap, a))
+    g.stroke((xe + ex.W + gap, a), (W - edge(p), a))
+
 
 @liga('--')
 def double_hyphen(g):
-    g.stroke((g.p.sv / 2, axis(g.p)), (g.W - g.p.sv / 2, axis(g.p)))
+    """`--`: two dashes, each grown to fill its cell, a stroke apart: still
+    two (one line would read as an em dash)."""
+    p, W = g.p, g.W
+    a = axis(p)
+    gap = max(p.sv, p.m)
+    for x0, x1 in ((edge(p), W / 2 - gap / 2), (W / 2 + gap / 2, W - edge(p))):
+        g.stroke((x0, a), (x1, a))
 
 
 @liga('++')
@@ -377,7 +473,7 @@ def double_plus(g):
     p, W = g.p, g.W
     a = axis(p)
     h = p.fig_w / 2 - p.sv / 2
-    g.stroke((0, a), (W, a))
+    g.stroke((edge(p), a), (W - edge(p), a))
     for i in (0, 1):
         _, c, _ = cell(g, i)
         x = c + (1 - 2 * i) * 0.12 * p.fig_adv
@@ -405,12 +501,12 @@ liga('///')(lambda g: _slashes(g, 3))
 
 def _chevrons(g, n, sign):
     p, W = g.p, g.W
-    r = 0.75 * reach(g)
+    r = 0.75 * (p.fig_w - p.sv / 2)
     pitch = min(p.fig_adv * 0.75, r + 1.6 * p.sv)
     span = r + (n - 1) * pitch
     x = (W - span) / 2 + (r if sign > 0 else 0)
     for _ in range(n):
-        chevron(g, (x, axis(p)), sign, r)
+        g.stroke((x - sign * r, axis(p) + r), (x, axis(p)), (x - sign * r, axis(p) - r), start='v', end='v')
         x += pitch
 
 
@@ -422,110 +518,101 @@ liga('<<<')(lambda g: _chevrons(g, 3, -1))
 
 @liga('/*', '*/')
 def comment(g):
-    """The slash, and the asterisk raised to the slash's middle: the
-    comment's mark reads as one sign."""
-    p, W = g.p, g.W
-    opening = g.name.startswith('slash')
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
-    run = (top - bot) / 2
+    """The slash as itself, and the font's own asterisk raised to the
+    slash's middle: the comment's mark reads as one sign."""
+    p = g.p
+    opening = COMPONENTS[g.name][0] == 'slash'
+    sl, st = _sub('slash', p), _sub('asterisk', p)
     i_slash, i_star = (0, 1) if opening else (1, 0)
-    _, cs, _ = cell(g, i_slash)
-    g.stroke((cs - run / 2, bot), (cs + run / 2, top), start='h', end='h')
-    _, ca, _ = cell(g, i_star)
-    h = p.fig_w / 2 - p.sv / 2
-    yc = (top + bot) / 2
-    g.stroke((ca, yc - h), (ca, yc + h))
-    d = h / SQRT2 * 1.1
-    g.stroke((ca - d, yc - d), (ca + d, yc + d))
-    g.stroke((ca - d, yc + d), (ca + d, yc - d))
-    g.clip = (0, bot, W, top)
+    xs = _at(g, sl, i_slash) + (1 if opening else -1) * 0.1 * p.fig_adv
+    g.add_glyph(sl, xs, 0.0)
+    iss, ist = _ink_of(sl), _ink_of(st)
+    dy = (iss.bounds[1] + iss.bounds[3]) / 2 - (ist.bounds[1] + ist.bounds[3]) / 2
+    g.add_glyph(st, _at(g, st, i_star) - (1 if opening else -1) * 0.1 * p.fig_adv, dy)
 
 
-# --- Tightened sequences ---------------------------------------------------
+# --- `#` run into a bracket ------------------------------------------------------
 
-TIGHT_WHITE = 0.25   # pulled parts keep this much of the heaviest stroke between them, or merge
-_JOINED: dict = {}
-
-
-def _joined_at_regular(comps, pull, mono):
-    """Which neighbours overlap when pulled together at Regular (the
-    weight the sequence is designed at); parts that only graze there are
-    given their white instead."""
-    key = (tuple(comps), pull, mono)
-    if key not in _JOINED:
-        from shapely import affinity
-        from ..draw import draw
-        from ..geom import rings_to_shapely
-        from ..instances import params
-        p = params(400).with_(mono=mono)
-        n = len(comps)
-        ink = []
-        for i, comp in enumerate(comps):
-            sub = draw(comp, p)
-            x = i * p.fig_adv + (p.fig_w - sub.W) / 2 + ((n - 1) / 2 - i) * pull * p.fig_adv
-            ink.append(affinity.translate(rings_to_shapely(sub.rings()), x))
-        r = TIGHT_WHITE * max(p.sv, p.sh, p.sd, p.ss) / 2          # overlapping, not just grazing
-        _JOINED[key] = [a.buffer(-r).intersects(b.buffer(-r)) for a, b in zip(ink, ink[1:])]
-    return _JOINED[key]
+def _hash(g):
+    """`#` as drawn, its bars' (centre y, thickness), low to high, its
+    right stem's right edge, and the white between its stems, all in its
+    own frame."""
+    hs = _sub('numbersign', g.p)
+    ink = _ink_of(hs)
+    bars = [((lo + hi) / 2, hi - lo) for lo, hi in _runs(ink, x=ink.bounds[2] - 1)]
+    stems = _runs(ink, y=ink.bounds[1] + 1)
+    return hs, bars, stems[-1][1], stems[1][0] - stems[0][1]
 
 
-def tight(*seqs, pull=0.22):
-    """Sequences that read better closer together (`&&`, `</>`, `#{`): each
-    component drawn as itself, pulled toward the sequence's middle by
-    ``pull`` of a cell. Regular decides which neighbours join (`&&` and
-    `??` overlap there); the rest keep TIGHT_WHITE of the heaviest stroke
-    between them at every weight, since a hairline of white closes at heavy
-    weights and the italic's curved corners would make the outlines touch.
-    Where the full pull leaves less, it eases until that white is reached."""
-    def fn(g):
-        from shapely import affinity
-        from ..draw import draw
-        from ..geom import rings_to_shapely
-        p = g.p
-        comps = COMPONENTS[g.name]
-        n = len(comps)
-        subs = [draw(comp, p) for comp in comps]
-        ink = [rings_to_shapely(s.rings()) for s in subs]
-        white = TIGHT_WHITE * max(p.sv, p.sh, p.sd, p.ss)
-
-        def xs(f):
-            return [i * p.fig_adv + (p.fig_w - s.W) / 2 + ((n - 1) / 2 - i) * f * pull * p.fig_adv
-                    for i, s in enumerate(subs)]
-
-        joined = _joined_at_regular(comps, pull, p.mono)
-
-        def clear(f):
-            placed = [affinity.translate(s, x) for s, x in zip(ink, xs(f))]
-            return all(j or a.distance(b) >= white for a, b, j in zip(placed, placed[1:], joined))
-
-        f = 1.0
-        if not clear(1.0):
-            lo, hi = 0.0, 1.0
-            for _ in range(12):
-                mid = (lo + hi) / 2
-                lo, hi = (mid, hi) if clear(mid) else (lo, mid)
-            f = lo
-        for sub, x in zip(subs, xs(f)):
-            g.add_glyph(sub, x, 0.0)
-    for seq in seqs:
-        liga(seq)(fn)
+def _hash_join(g, bracket):
+    """`#{` `#[` `#(`: the bracket centred on `#` (between its bars), the
+    bars of `#` running on to the bracket's spine. The spine stands as far
+    from `#`'s right stem as `#`'s stems stand apart, so the bars close one
+    more square. The brace's elbows are where the bars meet it, its point
+    centred between them on diagonals at the slash's 2:1 (at 45 degrees,
+    bar and diagonal would make a K); the point keeps clear of the stem."""
+    p, W = g.p, g.W
+    hs, bars, right_stem, stems_white = _hash(g)
+    (y_lo, _), (y_hi, _) = bars[0], bars[-1]
+    mid = (y_lo + y_hi) / 2
+    if bracket == 'braceleft':
+        reach = (y_hi - y_lo) / 2                                # the point's diagonals run bar to bar
+        clear = max(stems_white, BRACE_RUN * reach + p.sd / SQRT2 + 0.5 * p.sv)
+        spine = right_stem + clear + p.sv / 2
+        hook = 1.5 * p.sv                                        # (punct._brace)
+        top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+        half = (top - bot) / 2
+        dx = (W - (spine + hook)) / 2
+        g.add_glyph(hs, dx, 0.0)
+        s = spine + dx
+        g.stroke((s + hook, mid + half - g.sh / 2), B(s, mid + half - g.sh / 2), (s, y_hi),
+                 (s - BRACE_RUN * reach, mid), (s, y_lo), B(s, mid - half + g.sh / 2), (s + hook, mid - half + g.sh / 2))
+        g.clip = (-W, mid - half, 2 * W, mid + half)
+    else:
+        br = _sub(bracket, p)
+        ib = _ink_of(br)
+        cy = (ib.bounds[1] + ib.bounds[3]) / 2
+        spine_in = _runs(ib, y=cy)[0][0] + p.sv / 2              # the bracket's spine, in its own frame
+        spine = right_stem + stems_white + p.sv / 2
+        dx = (W - (spine - spine_in + br.W)) / 2
+        g.add_glyph(hs, dx, 0.0)
+        g.add_glyph(br, dx + spine - spine_in, mid - cy)
+        s = spine + dx
+    for y, th in bars:
+        g.stroke((dx + hs.W - th, y, th), (s, y))
 
 
-tight('&&', '??', '!!', ';;')
-tight('<>', '</', '/>', '#{', '#[', '#(', '#!', '#?', '#_', pull=0.18)
-tight('</>', '<!--', '|||', '||>', '<||', '<$>', '<*>', '<+>', pull=0.16)
+liga('#{')(lambda g: _hash_join(g, 'braceleft'))
+liga('#[')(lambda g: _hash_join(g, 'bracketleft'))
+liga('#(')(lambda g: _hash_join(g, 'parenleft'))
+
+
+@liga('#_')
+def hash_underscore(g):
+    """`#_`: the left stem of `#` runs down into the underscore, which
+    starts under it; the corner they make takes the corner rule."""
+    p = g.p
+    hs, us = _sub('numbersign', p), _sub('underscore', p)
+    xh, xu = _at(g, hs, 0), _at(g, us, 1)
+    g.add_glyph(hs, xh, 0.0)
+    g.add_glyph(us, xu, 0.0)
+    ih, iu = _ink_of(hs, xh), _ink_of(us, xu)
+    low = ih.bounds[1]
+    x0, x1 = _runs(ih, y=low + 1)[0]                            # the left stem's foot
+    xc = (x0 + x1) / 2
+    yu = (iu.bounds[1] + iu.bounds[3]) / 2
+    g.stroke((xc, low + (x1 - x0)), (xc, yu), (iu.bounds[0] + p.sv, yu))
 
 
 # --- Alternates: plain comparisons (ss03) and character variants -----------
 
 def _plain(g):
     """The components as themselves, in their own cells."""
-    from ..draw import draw
     p = g.p
     comps = g.name.split('.')[0].split('_')
     for i, comp in enumerate(comps):
-        sub = draw(comp, p)
-        g.add_glyph(sub, i * p.fig_adv + (p.fig_w - sub.W) / 2, 0.0)
+        sub = _sub(comp, p)
+        g.add_glyph(sub, _at(g, sub, i), 0.0)
 
 
 PLAIN = ('less_equal', 'greater_equal')
@@ -537,7 +624,6 @@ for _n in PLAIN:
 def a_cv01(g):
     """The single-storey a (the italic's), upright."""
     from .letterframe import Frame
-    from ..draw import B
     f = Frame(g, 8, 'lower')
     g.stroke(f.P(7, 0), f.P(7, 9))
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)

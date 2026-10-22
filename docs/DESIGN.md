@@ -459,18 +459,47 @@ substitution is contextual (`calt`, on by default; editors can turn it
 off), longest sequences first, and it never forms when an operator
 character touches the sequence on either side, so `<=<`, `>>=`, `//=`,
 `||=` and `---->` stay as their characters while `|->`, `!==` and `...`,
-which are ligatures themselves, still form. The drawings are Arris's own:
-the arrowheads of the arrow symbols, the bars of `=`, 45-degree chevrons,
-dots of `Params.dot`. `->` `<-` `<->` `-->` `<--` `=>` `<=>` `==>` `<==`
-`|->` `<-|` `|=>` `->>` `<<-` `~>` `~~>` `<~` become arrows; `==` `===`
-join; `!=` `/=` `!==` `=/=` strike through; `<=` `>=` become ≤ ≥; `::`
-`:::` `:=` `=:` `::=` `..` `...` `..<` `..=` set their dots evenly and on
-the bars; `||` `|>` `<|` `<|>` `++` `--` `//` `///` `/*` `*/` `>>` `<<`
-`>>>` `<<<` join. In the monospaced cut the hyphen sits on the math axis,
-in line with `+ = < >` and the arrows it grows into. Sequences that only
-want to sit closer (`&&` `??` `<>` `</>` `<!--` `#{` `#[` `#!` `|||` `<$>`
-`<*>`) are drawn as their own characters pulled toward each other.
-`ss03` turns `<=` `>=` back into their characters (for languages where
+which are ligatures themselves, still form.
+
+A ligature exists only where joining says something the characters set
+apart cannot, and each is built, as Fira Code's are, from a few parts
+shared by every sequence (`glyphs/ligatures.py`), measured against Fira
+Code's own:
+
+* **Arrows** (`->` `-->` `<-` `<--` `<->` `<-->` `=>` `==>` `<==` `<=>`
+  `<==>` `|->` `<-|` `|=>` `->>` `<<-` `~>` `~~>` `<~` `<!--`): one head,
+  a single 45-degree chevron 0.88 of the cap height, whose point the
+  corner rule keeps sharp (two diagonals at a right angle); the shaft on
+  the axis runs to the point, inside the head, and a double shaft's bars
+  end on the head's arms. Arrows keep the hyphen's margins at both ends,
+  a stop bar is the font's own full `|`, and a second chevron (`->>`)
+  stands behind the first by a share of the head plus its stroke, so the
+  white between them grows with the weight. A wavy shaft is the tilde's
+  own step at the tilde's period.
+* **Equality**: `==` `===` join the bars of `=` at `=`'s margins; `!=`
+  `/=` `!==` `=/=` strike them; `<=` `>=` become ≤ ≥.
+* **Tags**: in `</` `/>` `</>` the slash keeps its 2:1 and the chevrons
+  take the 2:1 the other way, shorter, so each arm meets the slash at a
+  right angle and the slash runs on past the joint; `<>` closes the same
+  chevrons into a flat lozenge; `|>` `<|` `<|>` `||>` `<||` close the pipe
+  into a triangle at the same 2:1.
+* **`#` and brackets**: in `#[` `#(` the bracket is centred on `#` and
+  the bars of `#` run on to its spine, which stands as far from `#` as
+  `#`'s stems stand apart: one more square. In `#{` the bars meet the
+  brace at its elbows and its point sits centred between them, on
+  diagonals at the slash's 2:1 (at 45 degrees, bar and diagonal would read
+  as a K). In `#_` the left stem of `#` runs down into the underscore.
+* **Pairs** of narrow signs (`||` `|||` `::` `:::` `..` `...` `!!` `;;`,
+  and the dots of `:=` `=:` `::=` `..<` `..=`) move toward each other until
+  half a cell of white is left between them. Wide signs are already closer
+  than that, so `&&` `??` `#!` `<$>` stay as their characters: pulled
+  tighter, Arris's dense `&` and `?` run together.
+* `--` stays two dashes (one line would read as an em dash); `++` `//`
+  `///` `>>` `<<` `>>>` `<<<` set their signs at an even pitch; `/*` `*/`
+  raise the font's own asterisk to the slash's middle.
+
+In the monospaced cut the hyphen sits on the math axis, in line with
+`+ = < >` and the arrows it grows into. `ss03` turns `<=` `>=` back into their characters (for languages where
 they are arrows); `cv01` is the single-storey a (both cuts), `cv02` the
 plain zero.
 
