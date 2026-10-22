@@ -507,11 +507,13 @@ def _bracket_piece(g, part, mirror):
 
 
 def _brace_piece(g, part, mirror):
+    """Brace pieces: the spine in the middle of the body, where the one
+    extension piece (U+23AA, shared by both braces) stands."""
     p = g.p
     W = g.W
     asc, desc = line_top(p)
     top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
-    xs = W - p.sv / 2 - p.sv                                # the brace's spine
+    xs = W / 2                                              # the brace's spine
     reach_ = max(xs - p.sv / 2, p.sd + 0.5 * p.sv)          # never too short for its stroke
     xp = xs - reach_
     mid = (asc + desc) / 2
