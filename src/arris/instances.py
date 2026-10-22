@@ -2,8 +2,8 @@
 
 Axes:
   wght  100-900  stem weight; SemiBold (600) is the watch's heritage weight
-  GRAD  -50-150  grade: thicker or thinner strokes in the same widths and
-                 spacing, for light-on-dark text (see docs/DESIGN.md)
+  GRAD  -100-100 grade: strokes up to a fifth thinner or thicker in the same
+                 widths and spacing, for light-on-dark text (docs/DESIGN.md)
 
 Everything optical (stroke ratios by direction, edge breaks, overshoots) is
 derived here from the stem and the correction constants in ``OPTICS``, which
@@ -71,11 +71,29 @@ def stem(wght: float) -> float:
 
 
 FIG_GROWTH = 1.5  # figure width gained per unit of stem
-GRAD_UNIT = 0.25   # stem units per GRAD unit (GRAD 100 adds 25 units)
+GRAD_SHARE = 0.002  # grade: GRAD 100 thickens strokes by a fifth, -100 thins them by a fifth
 
 
-def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Params = Params()) -> Params:
-    sv = stem(wght) + grad * GRAD_UNIT
+def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Params = Params(),
+           watch: float = 0.0) -> Params:
+    """Parameters for a weight, a grade, and a balance between the measured
+    optics (watch = 0) and the watch's own proportions (watch = 1)."""
+    if watch:
+        a, b = optics, HERITAGE_OPTICS
+        mix = lambda x, y: x + (y - x) * watch
+        optics = Optics(h_light=mix(a.h_light, b.h_light), h_heavy=mix(a.h_heavy, b.h_heavy),
+                        d_light=mix(a.d_light, b.d_light), d_heavy=mix(a.d_heavy, b.d_heavy),
+                        s_light=mix(a.s_light, b.s_light), s_heavy=mix(a.s_heavy, b.s_heavy),
+                        c_ratio=mix(a.c_ratio, b.c_ratio), leg=mix(a.leg, b.leg))
+    p = _params(wght, optics, base)
+    if grad:
+        k = 1 + grad * GRAD_SHARE
+        p = p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, grade_k=k)
+    return p
+
+
+def _params(wght, optics, base):
+    sv = stem(wght)
     # Figures stay tabular within a weight but widen with it, so heavier
     # strokes do not eat the counters whole; the watch weight keeps 540.
     d = stem(wght) - 120.0

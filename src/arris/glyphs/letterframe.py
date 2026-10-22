@@ -94,7 +94,7 @@ def k_arms(g, x_stem: float, W: float, top: float, branch: bool = False):
     k = p.sd / SQRT2
     a_arm = W - top + p.c - k                               # arm: x - y = a_arm
     a_leg = W + p.c - k                                     # leg: x + y = a_leg
-    xj = x_stem + p.sv
+    xj = x_stem + p.sv * 0.999                             # (overlapping the stem by a hair)
     if not branch and 2 * xj + p.sv > a_arm + a_leg + 2 * k + 1e-6:
         y_hi, y_lo = xj - a_arm, a_leg - xj
         mid = [(xj, y_hi), (xj, y_lo)] if y_hi > y_lo + 1e-9 else [(xj, y_hi)]

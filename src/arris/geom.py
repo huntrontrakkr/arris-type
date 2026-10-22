@@ -148,7 +148,10 @@ def stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
         return _stroke_polygon(stroke, thick, c)
     except ValueError:
         if not any(n.bowl for n in stroke.nodes):
-            raise
+            # a stroke thicker than it is long (a short diagonal at the very
+            # heaviest settings): repair it and log it
+            REPAIRED.append(stroke)
+            return _stroke_polygon(stroke, thick, c, repair=True)
     lo, hi = 0.0, 1.0
     for _ in range(30):
         mid = (lo + hi) / 2

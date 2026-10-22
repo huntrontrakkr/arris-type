@@ -83,7 +83,8 @@ def zero_dot(g):
     REGISTRY['zero'].fn(g)
     p, W, H = g.p, g.W, g.p.cap
     if not p.mono:                                          # (Mono's zero is dotted already)
-        g.stroke((W / 2, H / 2 - p.sv / 2), (W / 2, H / 2 + p.sv / 2))
+        from .figures import zero_dot
+        zero_dot(g)
 
 
 # --- The time colon ------------------------------------------------------

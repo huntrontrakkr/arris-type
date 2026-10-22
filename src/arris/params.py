@@ -29,12 +29,20 @@ class Params:
     fig_w: float = 540.0       # tabular figure body (9 modules)
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
     mono: bool = False         # monospaced: every glyph on the figures' pitch
+    grade_k: float = 1.0       # grade: strokes scaled by this, widths and spacing untouched
 
     def with_(self, **kw) -> 'Params':
         return replace(self, **kw)
 
     def scaled(self, k: float) -> 'Params':
-        return Params(**{f: (getattr(self, f) * k if f != 'mono' else self.mono) for f in self.__dataclass_fields__})
+        keep = ('mono', 'grade_k')
+        return Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})
+
+    def ungraded(self) -> 'Params':
+        k = self.grade_k
+        if k == 1.0:
+            return self
+        return self.with_(sv=self.sv / k, sh=self.sh / k, sd=self.sd / k, ss=self.ss / k, c=self.c / k, grade_k=1.0)
 
 
 def outer_leg(p: Params, sv: float | None = None, sh: float | None = None) -> float:

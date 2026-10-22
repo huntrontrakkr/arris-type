@@ -1,8 +1,12 @@
-"""Build the variable font: weight axis from masters at Thin, Regular,
-SemiBold and Black, made point-compatible by ``arris.variable.align``, then
-checked against exact drawings at the weights in between.
+"""Build the variable font, made point-compatible by ``arris.variable.align``
+and checked against exact drawings at locations between the masters.
 
-usage: build_vf.py [watch]
+Axes:
+  wght  100-900  weight
+  GRAD  -100-100 grade: strokes thinner or thicker, every width and space kept
+  WTCH  0-100    the watch's own proportions (diagonals as wide across as a
+                 stem, horizontals as heavy as verticals) instead of the
+                 measured optics
 """
 import sys
 import tempfile
@@ -18,23 +22,31 @@ import arris.glyphs  # noqa: F401
 from arris.draw import REGISTRY
 from arris.font import KERN_PUNCT, build, light, place
 from arris.glyphs.features import fea
-from arris.instances import HERITAGE_OPTICS, NAMES, OPTICS, params
+from arris.instances import NAMES, params
 from arris.kerning import kerns
 from arris.variable import align
 
-MASTERS = [100, 200, 400, 600, 750, 900]
-DEFAULT = 400
-CHECK = [150, 300, 500, 700, 800]
+# (wght, GRAD, WTCH)
+MASTERS = [(w, 0, 0) for w in (100, 200, 400, 600, 750, 900)] + \
+    [(w, g, 0) for w in (100, 400, 900) for g in (-100, 100)] + \
+    [(w, 0, 100) for w in (100, 400, 600, 900)]
+DEFAULT = (400, 0, 0)
+CHECK = [(150, 0, 0), (300, 0, 0), (500, 0, 0), (700, 0, 0), (800, 0, 0),
+         (400, 50, 0), (700, -50, 0), (600, 0, 50), (300, 0, 100), (800, 50, 100)]
 
-watch = 'watch' in sys.argv[1:]
-family = 'Arris Watch' if watch else 'Arris'
-optics = HERITAGE_OPTICS if watch else OPTICS
+family = 'Arris'
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 names = FIGS + [n for n in REGISTRY if n not in FIGS]
 
-ps = {w: params(w, optics=optics) for w in MASTERS}
-placed = {w: {n: place(n, ps[w]) for n in names} for w in MASTERS}
-print('placed masters')
+
+def P(loc):
+    w, g, t = loc
+    return params(w, g, watch=t / 100)
+
+
+ps = {m: P(m) for m in MASTERS}
+placed = {m: {n: place(n, ps[m]) for n in names} for m in MASTERS}
+print('placed', len(MASTERS), 'masters')
 
 aligned = {w: {} for w in MASTERS}
 frozen = []
@@ -59,32 +71,34 @@ print(len(all_pairs), 'kerning pairs')
 
 tmp = Path(tempfile.mkdtemp())
 doc = DesignSpaceDocument()
-ax = AxisDescriptor()
-ax.tag, ax.name, ax.minimum, ax.default, ax.maximum = 'wght', 'Weight', min(MASTERS), DEFAULT, max(MASTERS)
-doc.addAxis(ax)
-for w in MASTERS:
-    path = tmp / f'master-{w}.ttf'
-    pairs = {pr: pairs_by[w].get(pr, 0) for pr in all_pairs}
-    build(str(path), names, ps[w], family=family, style=NAMES.get(w, f'W{w}'), weight=w, fea=fea(),
-          placed=aligned[w], kern_pairs=pairs)
+for tag, name, lo, df, hi in (('wght', 'Weight', 100, 400, 900), ('GRAD', 'Grade', -100, 0, 100),
+                              ('WTCH', 'Watch', 0, 0, 100)):
+    ax = AxisDescriptor()
+    ax.tag, ax.name, ax.minimum, ax.default, ax.maximum = tag, name, lo, df, hi
+    doc.addAxis(ax)
+for i, m in enumerate(MASTERS):
+    path = tmp / f'master-{i}.ttf'
+    pairs = {pr: pairs_by[m].get(pr, 0) for pr in all_pairs}
+    build(str(path), names, ps[m], family=family, style=NAMES.get(m[0], f'W{m[0]}'), weight=m[0], fea=fea(),
+          placed=aligned[m], kern_pairs=pairs)
     src = SourceDescriptor()
-    src.path, src.location = str(path), {'Weight': w}
+    src.path, src.location = str(path), {'Weight': m[0], 'Grade': m[1], 'Watch': m[2]}
     doc.addSource(src)
 for w, nm in NAMES.items():
     inst = InstanceDescriptor()
-    inst.familyName, inst.styleName, inst.location = family, nm, {'Weight': w}
+    inst.familyName, inst.styleName, inst.location = family, nm, {'Weight': w, 'Grade': 0, 'Watch': 0}
     doc.addInstance(inst)
 vf, _, _ = varlib_build(doc)
-out = Path('build') / f"{family.replace(' ', '')}[wght].ttf"
+out = Path('build') / 'Arris[GRAD,WTCH,wght].ttf'
 vf.save(out)
 print('wrote', out)
 
 # --- check: the variable font against exact drawings between the masters ----
 worst = []
 for w in CHECK:
-    inst = instantiateVariableFont(TTFont(out), {'wght': w})
+    inst = instantiateVariableFont(TTFont(out), {'wght': w[0], 'GRAD': w[1], 'WTCH': w[2]})
     glyf = inst['glyf']
-    p = params(w, optics=optics)
+    p = P(w)
     for n in names:
         rings, adv = place(n, p)
         exact = Polygon()

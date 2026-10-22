@@ -60,7 +60,15 @@ def zero(g):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
     g.stroke(B(xl, yb - g.ob), B(xr, yb - g.ob), B(xr, yt + g.ot), B(xl, yt + g.ot), closed=True)
     if p.mono:                                              # code wants 0 apart from O
-        g.stroke((W / 2, H / 2 - p.sv / 2), (W / 2, H / 2 + p.sv / 2))
+        zero_dot(g)
+
+
+def zero_dot(g):
+    """The dot inside a zero: a stem square, but never more than half the
+    counter, so it never touches the walls."""
+    p, W, H = g.p, g.W, g.p.cap
+    s = min(p.sv, 0.5 * (W - 2 * p.sv))
+    g.stroke((W / 2, H / 2 - s / 2, s), (W / 2, H / 2 + s / 2))
 
 
 def _notch_white(g):

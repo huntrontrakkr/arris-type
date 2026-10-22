@@ -58,6 +58,21 @@ def place(name: str, p: Params, tune=None):
     """(rings shifted into place, advance) for a glyph."""
     from .spacing import bearings
     t = (tune or {}).get(name, {})
+    if p.grade_k != 1.0:
+        # Grade changes strokes only: space the glyph as its ungraded self,
+        # then draw the graded strokes in the same body at the same place.
+        p0 = p.ungraded()
+        g0 = draw(name, p0, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
+        r0, adv = place(name, p0, tune)
+        dx = min(x for r in r0 for x, _ in r) - min(x for r in g0.rings() for x, _ in r) if r0 else 0.0
+        # glyphs no wider than a couple of stems (I, i, dots) thicken outward,
+        # centred where they were; everything else keeps its body
+        W = g0.W
+        if W <= 2.5 * p0.sv:
+            W = REGISTRY[name].width(p)
+            dx += (g0.W - W) / 2
+        g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0), width=W)
+        return [[(x + dx, y) for x, y in r] for r in g.rings()], adv
     g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
     rings = g.rings()
     spec = REGISTRY[name]
