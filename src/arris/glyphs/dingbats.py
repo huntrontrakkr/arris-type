@@ -712,9 +712,10 @@ def diamond_white(g):
 
 
 def _stem_foot(g, cx, y_top, y0, S):
-    """A suit's stem and its foot: a short trapezoid on the 2:1."""
+    """A suit's stem and its foot: a short trapezoid on the 2:1, flaring a
+    tenth of the suit and two fifths of the stem each side (light at Thin)."""
     sw = max(g.p.sv, g.p.floor)
-    f = 0.2 * S
+    f = 0.1 * S + 0.4 * sw
     solid(g, [(cx - f, y0), (cx + f, y0), (cx + sw / 2, y0 + 2 * (f - sw / 2)), (cx + sw / 2, y_top),
               (cx - sw / 2, y_top), (cx - sw / 2, y0 + 2 * (f - sw / 2))])
 
