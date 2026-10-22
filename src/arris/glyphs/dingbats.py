@@ -28,7 +28,7 @@ from ..draw import B, REGISTRY, draw
 from ..params import SQRT2
 from .letterframe import heft
 from .punct import axis
-from .shapes import (OCT, block, disc, fit, ink_of, inradius, large, oct_chords, oct_pts, outline, pen, ring,
+from .shapes import (OCT, block, disc, fit, ink_of, inradius, large, oct_chords, oct_pts, outline, pen, ring, slanted,
                      shape, size_of, solid, sq_pts, tri_pts, widths, xl)
 
 HEAVY = 1.6
@@ -176,7 +176,7 @@ def _spokes(g, n, r0, r1, k=1.0):
         axial = abs(u[0]) < 1e-9 or abs(u[1]) < 1e-9
         w = k * (g.p.sv if abs(u[0]) < 1e-9 else (g.sh if abs(u[1]) < 1e-9 else g.p.sd))
         start = (cx + u[0] * r0, cy + u[1] * r0) if r0 else (cx, cy)
-        g.stroke((*start, w), (cx + u[0] * r1, cy + u[1] * r1))
+        g.stroke((*start, slanted(g, w, u)), (cx + u[0] * r1, cy + u[1] * r1))
 
 
 HEX = (90, 270, math.degrees(math.atan2(1, 2)), 180 - math.degrees(math.atan2(1, 2)),
@@ -196,7 +196,7 @@ def asterisk_heavy(g):
         u = (math.cos(math.radians(a)), math.sin(math.radians(a)))
         r = R - t / 4 if abs(u[0]) < 1e-9 else R
         w = k * (g.p.sv if abs(u[0]) < 1e-9 else g.p.ss)
-        g.stroke((cx, cy, w), (cx + u[0] * r, cy + u[1] * r), end='flat' if abs(u[0]) < 1e-9 else 'v')
+        g.stroke((cx, cy, slanted(g, w, u)), (cx + u[0] * r, cy + u[1] * r), end='flat' if abs(u[0]) < 1e-9 else 'v')
     g.clip = (cx - R, cy - R, cx + R, cy + R)
 
 
@@ -651,7 +651,7 @@ def _face(smile):
         for sx in (-1, 1):
             block(g, cx + sx * 0.17 * S, cy + 0.1 * S, min(e, 0.14 * S))
         w = 0.22 * S
-        y0, y1 = cy - 0.2 * S, cy - 0.06 * S                 # (clear of the ring)
+        y0, y1 = (cy - 0.22 * S, cy - 0.04 * S) if smile else (cy - 0.2 * S, cy - 0.06 * S)   # (clear of ring and eyes)
         leg = 0.08 * S
         if smile:
             g.stroke((cx - w, y1), B(cx - w, y0, leg), B(cx + w, y0, leg), (cx + w, y1))
@@ -734,7 +734,7 @@ def _spade(g, black):
         pen(g, pts)
         outline(g, pts)
     notch = 2 * body_c - (body_c + 0.9 * 0.92 * S / 2 - 0.12 * 0.92 * S)   # the turned notch's point
-    _stem_foot(g, cx, max(y_bot + 0.05 * S, notch + max(g.p.sv, g.p.floor)), cy - H / 2 - 0.06 * S, S)
+    _stem_foot(g, cx, max(y_bot + 0.05 * S, notch + max(g.p.sv, g.p.floor)), cy - 0.6 * S, S)          # (the foot clear of the lobes)
 
 
 @shape('♠', 'L', solid=True)
@@ -742,7 +742,7 @@ def spade_black(g):
     _spade(g, True)
 
 
-@shape('♤', 'L')
+@shape('♤', 'L', solid=True)                                  # (a solid foot)
 def spade_white(g):
     _spade(g, False)
 
@@ -758,7 +758,7 @@ def _club(g, black):
         t = max(min(g.p.sv, 0.2 * d), g.p.floor)
         solid(g, tre.difference(tre.buffer(-t, join_style='mitre')))
     y_bot = tre.bounds[1]
-    _stem_foot(g, cx, cy + 0.0 * S, cy - 0.45 * S - 0.06 * S, S)
+    _stem_foot(g, cx, cy + 0.0 * S, cy - 0.6 * S, S)
 
 
 @shape('♣', 'L', solid=True)
@@ -766,7 +766,7 @@ def club_black(g):
     _club(g, True)
 
 
-@shape('♧', 'L')
+@shape('♧', 'L', solid=True)                                  # (a solid foot)
 def club_white(g):
     _club(g, False)
 

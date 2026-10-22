@@ -79,6 +79,14 @@ def pen(g, pts, keep=0.5):
     return g.p
 
 
+def slanted(g, w, d):
+    """An explicit stroke width w in direction d, set for the italic's shear
+    as geom.Thickness sets every stroke by direction (so it comes out w
+    across, times cos(slant)); w itself in the upright."""
+    from ..geom import Thickness
+    return Thickness(w, w, w, w, g.p.slant, floor=g.p.floor)(d)
+
+
 def widths(g):
     """(vertical, horizontal, 45-degree) thickness of the glyph's pen."""
     p = g.p
@@ -303,9 +311,9 @@ def _hatch(g, horizontal=False, vertical=False, down=False, up=False, n=3):
     for i in range(-m, m + 1):
         c = i * k
         if down:                                                         # upper left to lower right
-            lines.append([(cx + c - S, cy + S, td), (cx + c + S, cy - S)])
+            lines.append([(cx + c - S, cy + S, slanted(g, td, (1, -1))), (cx + c + S, cy - S)])
         if up:
-            lines.append([(cx + c - S, cy - S, td), (cx + c + S, cy + S)])
+            lines.append([(cx + c - S, cy - S, slanted(g, td, (1, 1))), (cx + c + S, cy + S)])
     solid(g, ink_of(g, lines).intersection(region))
 
 
