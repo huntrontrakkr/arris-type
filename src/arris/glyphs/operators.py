@@ -56,8 +56,18 @@ RINGW = growing_width(8, 1, 2.6)               # circled and squared operators: 
 
 
 def eq_gap(g):
-    """White between stacked bars: the equal sign's."""
-    return max(0.8 * g.sh, g.p.m)
+    """White between stacked bars: the equal sign's (punct.eq_white)."""
+    from .punct import eq_white
+    return eq_white(g)
+
+
+def kv(g):
+    """Half a 2:1 stroke's extent up and down past its centreline: a
+    chevron's arms reach this far beyond their ends."""
+    import math
+    from ..draw import _thickness
+    from .punct import SLOPE
+    return _thickness(g.p, g.sh)((2, 1)) / (2 * math.cos(SLOPE))
 
 
 def kd(p):
@@ -143,38 +153,48 @@ class Tilde:
 
 
 class Chevron:
-    """The < chevron, pointing left (or right), reaching h across and h up
-    and down; ``h`` None: as large as the stack lets it be. It stands at
-    the right of the body (left, pointing right), as <='s does; ``x1``
-    moves its open end."""
+    """The < chevron (punct._chevron), pointing left (or right): 2:1 arms
+    reaching 2h across and h up and down; ``h`` None: the < itself, or as
+    large as the stack lets it be. It stands at the right of the body
+    (left, pointing right), as <='s does; ``x1`` moves its open end."""
 
     def __init__(self, right=False, h=None, x1=None):
         self.right, self.h, self.x1 = right, h, x1
 
     def height(self, g):
-        return 2 * self.size(g) + 2 * kd(g.p)
+        return 2 * self.size(g) + 2 * kv(g)
 
     def size(self, g):
-        return self.h if self.h is not None else 0.7 * (g.W - g.p.sv / 2)
+        if self.h is not None:
+            return self.h
+        from .punct import chevron_geometry
+        return chevron_geometry(g)[1] / 2
 
     def draw(self, g, yc):
         W = g.W if self.x1 is None else self.x1
         h = self.size(g)
-        pts = [(W, yc + h), (W - h, yc), (W, yc - h)]
+        pts = [(W, yc + h), (W - 2 * h, yc), (W, yc - h)]
         if self.right:
             pts = [(g.W - x, y) for x, y in pts]
         g.stroke(*pts, start='v', end='v')
 
 
 class Curly(Chevron):
-    """The precedes sign's chevron: the < chevron's 45-degree arms, running
-    out level for the last quarter of its reach."""
+    """The precedes sign's chevron: the < chevron's 2:1 arms, running out
+    level for the last quarter of its reach."""
+
+    def size(self, g):
+        if self.h is not None:
+            return self.h
+        from .punct import chevron_geometry
+        return 0.38 * chevron_geometry(g)[1]
 
     def draw(self, g, yc):
+        from .punct import chevron_geometry
         W = g.W
         h = self.size(g)
-        A = min(1.3 * h, W - kd(g.p))
-        pts = [(W, yc + h), (W - A + h, yc + h), (W - A, yc), (W - A + h, yc - h), (W, yc - h)]
+        A = min(2.6 * h, W - chevron_geometry(g)[0])
+        pts = [(W, yc + h), (W - A + 2 * h, yc + h), (W - A, yc), (W - A + 2 * h, yc - h), (W, yc - h)]
         if self.right:
             pts = [(W - x, y) for x, y in pts]
         g.stroke(*pts, start='v', end='v')
@@ -213,9 +233,9 @@ def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
         if flex:
             fixed = sum(c.height(g) for c in comps if c not in flex) + gapf() * (len(comps) - 1)
             room = le_height(g) - fixed
-            each = (room / len(flex) - 2 * kd(p)) / 2
+            each = (room / len(flex) - 2 * kv(g)) / 2
             for c in flex:
-                c.h_fit = max(each, 1.5 * p.sv)
+                c.h_fit = max(each, 0.75 * p.sv)
         ext = [_extent(c, g) for c in comps]
         return ext, sum(y1 - y0 for y0, y1 in ext) + gapf() * (len(comps) - 1)
 
@@ -264,11 +284,9 @@ def _draw(c, g, yc):
 
 
 def le_height(g):
-    """The less-than-or-equal sign's height: its chevron, the white and
-    the bar."""
-    p = g.p
-    h = 0.7 * (g.W - p.sv / 2)
-    return 2 * h + 2 * kd(p) + max(0.8 * g.sh, 0.6 * p.m) + g.sh
+    """The less-than-or-equal sign's height: its chevron (the < itself),
+    the equal sign's white and the bar."""
+    return Chevron().height(g) + eq_gap(g) + g.sh
 
 
 def negate(g, half=None, x=None, y=None):
@@ -673,8 +691,8 @@ def greaterequiv(g):
 def _lg(g, first_right):
     """< over > (or > over <), centred on the body, together as tall as <=."""
     p = g.p
-    h = max((le_height(g) - eq_gap(g) - 4 * kd(p)) / 4, 1.5 * kd(p))
-    xr = (g.W + h) / 2
+    h = max((le_height(g) - eq_gap(g) - 4 * kv(g)) / 4, 1.5 * kv(g))
+    xr = (g.W + 2 * h) / 2
     stack(g, [Chevron(first_right, h, x1=xr), Chevron(not first_right, h, x1=xr)])
 
 

@@ -94,8 +94,9 @@ def cover():
     word = ''.join(f'<span style="font-weight:{w}">{c}</span>' for c, w in zip('Arris', weights))
     body = f"""
 <div class="wrap">
-  <div class="kicker label">A typeface grown from the figures of a watch</div>
+  <div class="kicker label">A typeface in nine weights, upright, italic and mono</div>
   <h1>{word}</h1>
+  <div class="tag">a chamfered sans</div>
   <div class="row">
     <div><span class="accent">Thin → Black</span><br>Upright, Italic, Mono, Watch</div>
     <div><span class="accent">wght GRAD WTCH</span><br>Three variable axes</div>
@@ -105,7 +106,8 @@ def cover():
 </div>"""
     css = """
 .s-cover .wrap { position:absolute; left:96px; right:96px; top:150px; bottom:110px; display:flex; flex-direction:column; justify-content:space-between; }
-.s-cover h1 { font-size: 520px; line-height: .8; letter-spacing: -0.02em; margin-left: -20px; }
+.s-cover h1 { font-size: 480px; line-height: .8; letter-spacing: -0.02em; margin-left: -20px; }
+.s-cover .tag { font-size: 72px; font-style: italic; font-weight: 300; color: var(--dim); margin-top: -40px; }
 .s-cover .row { display:flex; gap: 80px; align-items:flex-end; font: 400 30px/1.35 'Arris'; }
 .s-cover .row > div { min-width: 340px; }
 .s-cover .clock { margin-left:auto; font-size: 150px; font-weight: 600; font-variation-settings: 'WTCH' 100; color: var(--accent); line-height: .8; }
@@ -126,9 +128,9 @@ def origin():
     </div>
   </div>
   <div class="text">
-    <div class="label accent">The Chamfer figures</div>
-    <h2>Ten pixel figures on a watch face became an alphabet.</h2>
-    <p>Dymaxion's figures are drawn on a twelve-row grid with two-pixel strokes, every exposed corner cut at forty-five degrees. Arris keeps every quirk they have: the 2's notch, the 3's waist, the 4's clip, the 1's flag. At SemiBold, with the watch's own stroke balance, its figures are those pixels.</p>
+    <div class="label accent">Where it starts</div>
+    <h2>Ten figures on a watch face, every corner cut.</h2>
+    <p>Arris began as a watch’s clock figures. It keeps their quirks, the notch in the 2, the waist in the 3, and carries them through a whole alphabet.</p>
   </div>
 </div>"""
     css = """
@@ -375,15 +377,15 @@ def waterfall():
 def editorial():
     body = """
 <div class="hed">
-  <div class="label accent">Feature · Type design</div>
-  <h1>The figures that grew an alphabet</h1>
-  <div class="dek"><i>How ten pixel numerals on a wrist became a type family with nine weights, three axes and two thousand characters.</i></div>
+  <div class="label accent">Travel · Rail</div>
+  <h1>The night train is back, and it is full</h1>
+  <div class="dek"><i>Sleeper services that were cut a decade ago now sell out weeks ahead. We rode the 22:47 from Vienna to Hamburg to find out why.</i></div>
 </div>
 <div class="cols">
-  <p><span class="drop">A</span> watch face has room for very little: ten figures, a colon, a few letters for the day. Dymaxion’s were drawn on a grid twelve pixels tall with strokes two pixels wide, and every corner the grid left exposed was cut at forty-five degrees. That single rule gave them their character: a notch where the 2 turns, a waist in the 3, a clipped corner on the 4.</p>
-  <p>Arris takes the rule and the quirks seriously. The pixels become centrelines, the corners a rule the outline engine applies at any weight, so a Thin keeps its steps and a Black keeps its openings. Letters reuse the figures’ moves: the 3’s waist sits in B, the 2’s notch in Z, the beaks of 2, 3 and 5 in C, G, J and S.</p>
-  <blockquote>“Measured optics are the default; the watch’s balance is a setting.”</blockquote>
-  <p>The italic is not a slanted roman. Its chamfers become curves, its k loops, its s turns on a diagonal, and an entry flag borrowed from the 1 starts the strokes that need one. The monospaced cut keeps the figures’ pitch, and joins its programming ligatures the way the best code faces do.</p>
+  <p><span class="drop">A</span>t a quarter to eleven the platform at Wien Hauptbahnhof is busier than the concourse. Families with folded pushchairs, a cyclist wheeling a bike toward the luggage car, two students sharing a bag of oranges: everyone is looking for coach 34, where the couchettes start.</p>
+  <p>The compartments are small and very clean. Six bunks fold down from the walls, each with a reading light, a hook and a bottle of water; breakfast is a roll, butter, jam and coffee, delivered at 07:10. Nobody complains about the size. The point, says the attendant, is that you wake up somewhere else.</p>
+  <blockquote>“You fall asleep in one country and wake up in another. That still feels like magic.”</blockquote>
+  <p>Demand has outrun supply on most of the network. New carriages are arriving through next year, and three more routes open in the spring: Brussels to Prague, Amsterdam to Zürich, and a summer service along the Adriatic coast. Book early, bring earplugs, and ask for a lower bunk.</p>
 </div>"""
     css = """
 .s-editorial .hed { position:absolute; left:96px; top:130px; width: 1730px; }
@@ -468,6 +470,22 @@ def vietnamese():
     return body, 'Marks stack a gap apart and lighten as a unit before they would leave the line', css
 
 
+def _code(lines):
+    """Lines of (text, class) runs as numbered code."""
+    out = []
+    for i, ln in enumerate(lines, 1):
+        code = ''.join(f'<span class="{c}">{esc(t)}</span>' if c else esc(t) for t, c in ln)
+        out.append(f'<div class="ln"><span class="no">{i}</span>{code}</div>')
+    return ''.join(out)
+
+
+CODE_CSS = """
+.kw {{ color: {kw}; }} .ty {{ color: {ty}; }} .st {{ color: {st}; }} .cm {{ color: {cm}; font-style: italic; }}
+.nu {{ color: {nu}; }} .fn {{ color: {fn}; }} .tg {{ color: {tg}; }} .at {{ color: {at}; }}
+.no {{ display:inline-block; width: 64px; color: {no}; }}
+"""
+
+
 def _code_html():
     K, T, S, C, N, F = 'kw', 'ty', 'st', 'cm', 'nu', 'fn'
     lines = [
@@ -512,6 +530,121 @@ def code():
 .s-code .cm { color: #5d7086; font-style: italic; } .s-code .nu { color: #bd93f9; } .s-code .fn { color: #7cf29a; }
 """
     return body, 'Ligatures on (calt): -> => != !== <= >= ..= |> <$> <*> #{ /*', css
+
+
+@slide('code-python', 'paper', 'Python')
+def code_python():
+    K, T, S, C, N, F = 'kw', 'ty', 'st', 'cm', 'nu', 'fn'
+    lines = [
+        [('# stations.py', C)],
+        [('from', K), (' dataclasses ', ''), ('import', K), (' dataclass', '')],
+        [],
+        [('@dataclass', F), ('(frozen=', ''), ('True', K), (')', '')],
+        [('class', K), (' ', ''), ('Reading', T), (':', '')],
+        [('    station: ', ''), ('str', T)],
+        [('    temp_c: ', ''), ('float', T)],
+        [],
+        [('def', K), (' ', ''), ('warmest', F), ('(rs: ', ''), ('list', T), ('[', ''), ('Reading', T), ('])', ''), (' -> ', ''), ('Reading', T), (' | ', ''), ('None', K), (':', '')],
+        [('    ', ''), ('return', K), (' ', ''), ('max', F), ('(rs, key=', ''), ('lambda', K), (' r: r.temp_c, default=', ''), ('None', K), (')', '')],
+        [],
+        [('hot = [r ', ''), ('for', K), (' r ', ''), ('in', K), (' readings ', ''), ('if', K), (' r.temp_c >= ', ''), ('30', N), (' ', ''), ('and', K), (' r.station != ', ''), ('"Oslo"', S), (']', '')],
+        [('print', F), ('(', ''), ('f"{len(hot)} of {len(readings)} stations at 30 °C or more"', S), (')', '')],
+        [('assert', K), (' ', ''), ('2', N), (' ** ', ''), ('10', N), (' == ', ''), ('1_024', N), ('   ', ''), ('# ints stay exact', C)],
+    ]
+    body = f"""
+<div class="win">
+  <div class="tabs mono"><span class="on">stations.py</span><span>test_stations.py</span></div>
+  <div class="code mono">{_code(lines)}</div>
+  <div class="out mono"><span class="dim">$</span> python stations.py<br>3 of 41 stations at 30 °C or more</div>
+</div>"""
+    css = """
+.s-code-python .win { position:absolute; inset: 120px 96px 100px 96px; background:#fbf8f1; border: 2px solid var(--line); }
+.s-code-python .tabs { display:flex; font-size: 22px; border-bottom: 2px solid var(--line); }
+.s-code-python .tabs span { padding: 18px 30px; color: var(--dim); }
+.s-code-python .tabs .on { color: var(--ink); background:#fff; border-right: 2px solid var(--line); }
+.s-code-python .code { padding: 22px 40px; font-size: 29px; line-height: 1.42; white-space: pre; color:#1d1c19; }
+.s-code-python .out { position:absolute; left:0; right:0; bottom:0; padding: 22px 40px; background:#151412; color:#f3eee3; font-size: 26px; line-height: 1.5; }
+""" + CODE_CSS.format(kw='#c2410c', ty='#2f5cd6', st='#1f7a6c', cm='#9a9384', nu='#9333ea', fn='#b4235a', tg='#2f5cd6', at='#c2410c', no='#c9c1b0')
+    return body, 'Arris Mono on paper: -> != >= == become arrows and signs; ** and 1_024 stay as written', css
+
+
+@slide('code-react', 'violet', 'TypeScript and JSX')
+def code_react():
+    K, T, S, C, N, F, G, A = 'kw', 'ty', 'st', 'cm', 'nu', 'fn', 'tg', 'at'
+    lines = [
+        [('// Badge.tsx', C)],
+        [('import', K), (' { useMemo } ', ''), ('from', K), (' ', ''), ('"react"', S), (';', '')],
+        [],
+        [('type', K), (' ', ''), ('Props', T), (' = { count?: ', ''), ('number', T), ('; label: ', ''), ('string', T), (' };', '')],
+        [],
+        [('export const', K), (' ', ''), ('Badge', F), (' = ({ count = ', ''), ('0', N), (', label }: ', ''), ('Props', T), (') => {', '')],
+        [('  const', K), (' text = ', ''), ('useMemo', F), ('(() => (count > ', ''), ('99', N), (' ? ', ''), ('"99+"', S), (' : ', ''), ('String', T), ('(count)), [count]);', '')],
+        [('  if', K), (' (count === ', ''), ('0', N), (' && !label) ', ''), ('return', K), (' ', ''), ('null', K), (';', '')],
+        [('  return', K), (' (', '')],
+        [('    <', ''), ('section', G), (' ', ''), ('className', A), ('=', ''), ('"badge"', S), (' ', ''), ('aria-live', A), ('=', ''), ('"polite"', S), ('>', '')],
+        [('      <', ''), ('span', G), ('>', ''), ('{label}', ''), ('</', ''), ('span', G), ('>', '')],
+        [('      <', ''), ('b', G), (' ', ''), ('hidden', A), ('={count !== ', ''), ('0', N), (' ? ', ''), ('undefined', K), (' : ', ''), ('true', K), ('}>{text}</', ''), ('b', G), ('>', '')],
+        [('      <', ''), ('hr', G), (' />', '')],
+        [('    </', ''), ('section', G), ('>', '')],
+        [('  );', '')],
+        [('};', '')],
+    ]
+    body = f"""
+<div class="win">
+  <div class="tabs mono"><span class="on">Badge.tsx</span><span>Badge.test.tsx</span><span>index.ts</span></div>
+  <div class="code mono">{_code(lines)}</div>
+</div>"""
+    css = """
+.s-code-react .win { position:absolute; inset: 120px 96px 100px 96px; background:#120c22; border: 2px solid var(--line); }
+.s-code-react .tabs { display:flex; font-size: 22px; border-bottom: 2px solid var(--line); }
+.s-code-react .tabs span { padding: 18px 30px; color: var(--dim); }
+.s-code-react .tabs .on { color: var(--ink); background:#1b1330; border-right: 2px solid var(--line); }
+.s-code-react .code { padding: 24px 40px; font-size: 30px; line-height: 1.45; white-space: pre; }
+""" + CODE_CSS.format(kw='#ff5fae', ty='#7de0ff', st='#ffd36b', cm='#7c6aa0', nu='#c4a7ff', fn='#7cf29a', tg='#ff9e5e', at='#7de0ff', no='#3d3060')
+    return body, 'Tags close as one sign: </ and /> join; => === !== become arrows and bars', css
+
+
+@slide('code-functional', 'amber', 'Elixir and Haskell')
+def code_functional():
+    K, T, S, C, N, F = 'kw', 'ty', 'st', 'cm', 'nu', 'fn'
+    ex = [
+        [('defmodule', K), (' ', ''), ('Sensor', T), (' ', ''), ('do', K)],
+        [('  @spec', F), (' average([', ''), ('number', T), ('])', ''), (' :: ', ''), ('float', T)],
+        [('  def', K), (' average(readings) ', ''), ('do', K)],
+        [('    readings', '')],
+        [('    |> ', ''), ('Enum', T), ('.reject(&is_nil/', ''), ('1', N), (')', '')],
+        [('    |> ', ''), ('Enum', T), ('.map(', ''), ('fn', K), (' r -> r * ', ''), ('1.0', N), (' ', ''), ('end', K), (')', '')],
+        [('    |> ', ''), ('then', F), ('(&(', ''), ('Enum', T), ('.sum(&', ''), ('1', N), (') / length(&', ''), ('1', N), (')))', '')],
+        [('  end', K)],
+        [('end', K)],
+        [],
+        [('IO', T), ('.puts(', ''), ('"mean: #{Sensor.average([21, nil, 23])}"', S), (')', '')],
+    ]
+    hs = [
+        [('module', K), (' ', ''), ('Main', T), (' ', ''), ('where', K)],
+        [],
+        [('parse', F), (' :: ', ''), ('String', T), (' -> ', ''), ('Maybe', T), (' ', ''), ('Int', T)],
+        [('parse', F), (' = readMaybe', '')],
+        [],
+        [('total', F), (' :: [', ''), ('String', T), ('] -> ', ''), ('Maybe', T), (' ', ''), ('Int', T)],
+        [('total', F), (' xs = sum <$> traverse parse xs', '')],
+        [],
+        [('pair', F), (' = (,) <$> ', ''), ('Just', T), (' ', ''), ('1', N), (' <*> ', ''), ('Just', T), (' ', ''), ('2', N)],
+        [('main', F), (' = print (total [', ''), ('"3"', S), (', ', ''), ('"4"', S), ('])', '')],
+    ]
+    body = f"""
+<div class="two">
+  <div class="win"><div class="tabs mono"><span class="on">sensor.ex</span></div><div class="code mono">{_code(ex)}</div></div>
+  <div class="win"><div class="tabs mono"><span class="on">Main.hs</span></div><div class="code mono">{_code(hs)}</div></div>
+</div>"""
+    css = """
+.s-code-functional .two { position:absolute; inset: 120px 96px 100px 96px; display:grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+.s-code-functional .win { background:#14110b; border: 2px solid var(--line); }
+.s-code-functional .tabs { display:flex; font-size: 22px; border-bottom: 2px solid var(--line); }
+.s-code-functional .tabs span { padding: 18px 30px; color: var(--accent); }
+.s-code-functional .code { padding: 26px 30px; font-size: 27px; line-height: 1.55; white-space: pre; color: #f6e7c8; }
+""" + CODE_CSS.format(kw='#ff6a2a', ty='#ffd36b', st='#9fe08a', cm='#7a5a1a', nu='#f6a6ff', fn='#ffb000', tg='#ffb000', at='#ffb000', no='#4a3a18')
+    return body, 'Pipelines and applicatives: |> <$> <*> :: -> #{ in one family', css
 
 
 @slide('ligatures', 'night', 'Programming ligatures')
@@ -759,17 +892,97 @@ def swiss():
     return body, None, css
 
 
+@slide('riso', 'paper', 'Overprint')
+def riso():
+    shapes = [('R', 900, 1100, -60, -170, '#0078bf', 0), ('a', 300, 900, 760, 120, '#ff48b0', 0),
+              ('8', 700, 760, 1180, -120, '#ffe600', 0), ('&', 900, 520, 980, 470, '#0078bf', 0),
+              ('g', 100, 820, 300, 260, '#ff48b0', 1)]
+    out = ''.join(f'<span style="font-weight:{w};font-size:{sz}px;left:{x}px;top:{y}px;color:{c};'
+                  f'font-style:{"italic" if it else "normal"}">{esc(ch)}</span>' for ch, w, sz, x, y, c, it in shapes)
+    noise = ('<svg class="grain" width="1920" height="1080"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.9" '
+             'numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0"/></filter>'
+             '<rect width="1920" height="1080" filter="url(#g)"/></svg>')
+    body = f'<div class="ov">{out}</div>{noise}<div class="note label">Black, Light, Bold, Thin Italic · three inks</div>'
+    css = """
+.s-riso .ov span { position:absolute; line-height: 1; mix-blend-mode: multiply; opacity: .92; }
+.s-riso .grain { position:absolute; inset:0; mix-blend-mode: multiply; opacity: .35; }
+.s-riso .note { position:absolute; right: 96px; bottom: 96px; color: #151412; }
+"""
+    return body, None, css
+
+
+@slide('maze', 'slate', '10 PRINT')
+def maze():
+    import random
+    rng = random.Random(10)
+    cols, rows = 48, 10
+    lines = []
+    for r in range(rows):
+        cells = []
+        for c in range(cols):
+            hue = 170 + 150 * (c / cols) + 20 * (r / rows)
+            ch = '╱' if rng.random() < 0.5 else '╲'
+            cells.append(f'<span style="color:hsl({hue:.0f} 85% 68%)">{ch}</span>')
+        lines.append(''.join(cells))
+    body = f'<pre class="mz mono">{chr(10).join(lines)}</pre><div class="cmd mono">10 PRINT CHR$(205.5+RND(1)); : GOTO 10</div>'
+    css = """
+.s-maze .mz { position:absolute; left: 96px; top: 130px; font-size: 62px; line-height: 1.2; font-weight: 300; }
+.s-maze .cmd { position:absolute; left: 96px; bottom: 100px; font-size: 30px; color: var(--ink); }
+"""
+    return body, 'The box-drawing diagonals run corner to corner, so the maze joins cell to cell', css
+
+
+@slide('landscape', 'violet', 'Blocks')
+def landscape():
+    import math
+    cols, rows = 96, 24
+    sun_c, sun_r, sun_rad = 64.0, 10.5, 6.5
+    def far(c):
+        return 13.5 + 2.6 * math.sin(c / 7.0) + 1.4 * math.sin(c / 2.9 + 1.3)
+    def near(c):
+        return 17.0 + 2.2 * math.sin(c / 9.0 + 2.0) + 1.1 * math.sin(c / 3.7)
+    lines = []
+    for r in range(rows):
+        cells = []
+        for c in range(cols):
+            y = r + 0.5
+            ch, col = ' ', '#17102a'
+            dx, dy = (c - sun_c) / 2.08, (y - sun_r)
+            if y >= near(c):
+                ch, col = ('▄' if y - near(c) < 0.5 else '█'), '#0c0718'
+            elif y >= far(c):
+                ch, col = ('▄' if y - far(c) < 0.5 else '▓'), '#5b2a86'
+            elif math.hypot(dx, dy) < sun_rad:
+                band = int(y) % 3 == 2 and y > sun_r
+                ch, col = (' ' if band else '█'), '#ffb000'
+            elif r >= 6:
+                t = min((r - 6) / 9, 1.0)                      # bands, denser and warmer toward the horizon
+                ch = '░' if t < 0.34 else '▒' if t < 0.67 else '▓'
+                col = f'hsl({(285 + 105 * t) % 360:.0f} 80% {40 + 14 * t:.0f}%)'
+            elif (c * 37 + r * 11) % 53 == 0:
+                ch, col = '·', '#f4ecff'
+            cells.append(f'<span style="color:{col}">{ch}</span>' if ch != ' ' else ' ')
+        lines.append(''.join(cells))
+    body = f'<pre class="ls mono">{chr(10).join(lines)}</pre>'
+    css = """
+.s-landscape .ls { position:absolute; left: 96px; top: 120px; font-size: 31px; line-height: 1.2; }
+"""
+    return body, 'Block elements and shades: full, half, ░ ▒ ▓', css
+
+
 @slide('colophon', 'night', 'Colophon')
 def colophon():
     stats = [('9', 'weights'), ('3', 'axes'), ('2,150', 'characters'), ('69', 'ligatures'), ('6', 'families')]
     s = ''.join(f'<div><div class="n">{a}</div><div class="label">{b}</div></div>' for a, b in stats)
     body = f"""
 <div class="name">Arris</div>
+<div class="tag">a chamfered sans</div>
 <div class="stats">{s}</div>
-<div class="small mono">Grown from Dymaxion’s Chamfer figures · drawn by a stroke engine, every corner under one rule · fontbakery: 0 failures</div>"""
+<div class="small mono">Arris · Arris Italic · Arris Mono · Arris Watch · variable wght GRAD WTCH</div>"""
     css = """
-.s-colophon .name { position:absolute; left: 80px; top: 120px; font-size: 380px; font-weight: 200; line-height: 1; }
-.s-colophon .stats { position:absolute; left: 96px; right: 96px; top: 600px; display:flex; justify-content:space-between; }
+.s-colophon .name { position:absolute; left: 80px; top: 100px; font-size: 380px; font-weight: 200; line-height: 1; }
+.s-colophon .tag { position:absolute; left: 96px; top: 470px; font-size: 64px; font-style: italic; font-weight: 300; color: var(--dim); }
+.s-colophon .stats { position:absolute; left: 96px; right: 96px; top: 640px; display:flex; justify-content:space-between; }
 .s-colophon .n { font-size: 130px; font-weight: 700; color: var(--accent); line-height: 1; }
 .s-colophon .stats .label { margin-top: 14px; }
 .s-colophon .small { position:absolute; left: 96px; bottom: 120px; font-size: 22px; color: var(--dim); }
@@ -838,4 +1051,7 @@ if __name__ == '__main__':
     gone = missing_chars(pages)
     if gone:
         print('missing:', ' '.join(gone))
+    if only is None:                                   # a full render: no slide left over from an older numbering
+        for f in (OUT / 'slides').glob('*.png'):
+            f.unlink()
     render(pages, pdf=only is None)

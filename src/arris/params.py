@@ -53,8 +53,15 @@ class Params:
     def dot(self) -> float:
         """A dot's size (a period, a tittle, a dieresis, a comma's head): the
         stem's square, but never less than twice the stroke floor, so dots
-        still read at the lightest weights."""
-        return max(self.sv, 2 * self.floor)
+        still read at the lightest weights. In the monospaced cut, where code
+        turns on . , : ; and their dots sit alone in a cell, they are half as
+        big again at Regular, easing to a fifth more at Black (a dot looks
+        lighter than a stroke of its width)."""
+        s = max(self.sv, 2 * self.floor)
+        if self.mono:
+            heavy = min(max((self.sv - 120.0) / 55.0, 0.0), 1.0)
+            s = max(self.sv * (1.5 - 0.3 * heavy), 2 * self.floor)
+        return s
 
     def scaled(self, k: float) -> 'Params':
         keep = ('mono', 'grade_k', 'slant', 'raw')

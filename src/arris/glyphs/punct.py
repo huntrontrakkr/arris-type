@@ -237,26 +237,46 @@ def bracketright(g):
     _bracket(g, mirror=True)
 
 
+BEAK = 0.5        # the brace's beak: its centreline depth, in stems
+
+
+def _brace_parts(p, sh):
+    """(hook, beak depth, point ink) of the brace: hooks a stem and a half
+    from the spine's centre, a beak half a stem deep whose 2:1 point runs
+    on past it by its stroke's own reach."""
+    from ..draw import _thickness
+    t = _thickness(p, sh)((2, 1))
+    return 1.5 * p.sv, max(BEAK * p.sv, 2 * p.floor), t / (2 * math.sin(SLOPE))
+
+
+def brace_width(p):
+    hook, d, tip = _brace_parts(p, p.sh)
+    w = hook + d + tip
+    return min(w, p.fig_w) if p.mono else w
+
+
 def _brace(g, mirror=False):
+    """Hooks at the ends, long straight spines, and a small sharp beak at
+    the middle on the shallow 2:1: a brace, distinct from ( and from <."""
     p = g.p
     W = g.W
     top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
     mid = (top + bot) / 2
-    xs = W - p.sv / 2 - p.sv                               # the brace's spine
-    xp = p.sv / 2                                           # its point
-    reach = xs - xp
+    hook, d, tip = _brace_parts(p, g.sh)
+    xs = max(W - hook, tip + d)                             # the spine (the hook gives way in a narrow cell)
+    xp = xs - d                                             # the beak's point
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
-    g.stroke(T(W, top - g.sh / 2), B(*T(xs, top - g.sh / 2)), T(xs, mid + reach), T(xp, mid),
-             T(xs, mid - reach), B(*T(xs, bot + g.sh / 2)), T(W, bot + g.sh / 2))
+    g.stroke(T(W, top - g.sh / 2), B(*T(xs, top - g.sh / 2)), T(xs, mid + d / 2), T(xp, mid),
+             T(xs, mid - d / 2), B(*T(xs, bot + g.sh / 2)), T(W, bot + g.sh / 2))
     g.clip = (0, bot, W, top)
 
 
-@punct('braceleft', '{', 6, 1)
+@punct('braceleft', '{', 6, 1, width=brace_width)
 def braceleft(g):
     _brace(g)
 
 
-@punct('braceright', '}', 6, 1)
+@punct('braceright', '}', 6, 1, width=brace_width)
 def braceright(g):
     _brace(g, mirror=True)
 
@@ -318,10 +338,22 @@ def minus(g):
     g.stroke((0, axis(p)), (W, axis(p)))
 
 
+def eq_white(g):
+    """White between the bars of = (and of every sign stacked from them):
+    1.6 bars, two modules at the lightest weights, so the pair never clogs
+    into one stroke at text sizes."""
+    return max(1.6 * g.sh, 2 * g.p.m)
+
+
+def eq_offset(g):
+    """Half the distance between the bars of =, centre to centre."""
+    return (g.sh + eq_white(g)) / 2
+
+
 @punct('equal', '=', 8, 1)
 def equal(g):
     p, W = g.p, g.W
-    off = (g.sh + max(0.8 * g.sh, p.m)) / 2
+    off = eq_offset(g)
     for y in (axis(p) - off, axis(p) + off):
         g.stroke((0, y), (W, y))
 
@@ -345,14 +377,29 @@ def divide(g):
     dot(g, W / 2, a - g.sh / 2 - gap - p.dot())
 
 
-def _chevron(g, mirror=False, half=None):
+SLOPE = math.atan2(1, 2)       # chevrons run at the shallow 2:1
+
+
+def chevron_geometry(g, W=None):
+    """(point x, reach) of the < chevron across a body W wide: its arms at
+    2:1 end cut square at the body's right edge, and its point's ink (which
+    runs 1/(2 sin) of the stroke past the centreline's point) at the left
+    edge. Half its height is half its reach: the chevron fills the operator
+    box, as + does."""
+    from ..draw import _thickness
+    W = g.W if W is None else W
+    t = _thickness(g.p, g.sh)((2, 1))
+    x_tip = t / (2 * math.sin(SLOPE))
+    return x_tip, W - x_tip
+
+
+def _chevron(g, mirror=False):
     p, W = g.p, g.W
     a = axis(p)
-    k = p.sd / SQRT2
-    h = W - p.sv / 2 if half is None else half
+    x_tip, reach = chevron_geometry(g)
+    v = reach / 2
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
-    g.stroke(T(W, a + h), T(W - h, a), T(W, a - h), start='v', end='v')
-    g.clip = (0, a - h - p.sv, W, a + h + p.sv)
+    g.stroke(T(W, a + v), T(x_tip, a), T(W, a - v), start='v', end='v')
 
 
 @punct('less', '<', 8, 1)
@@ -633,14 +680,18 @@ def logicalnot(g):
 
 
 def _lessequal(g, mirror):
+    """The < chevron itself over a bar, the equal sign's white between,
+    the pair centred on the axis."""
     p, W = g.p, g.W
-    k = p.sd / SQRT2
-    h = 0.7 * (W - p.sv / 2)
-    gap = max(0.8 * g.sh, 0.6 * p.m)
-    a = axis(p) + (g.sh + gap) / 2                          # the pair centres on the axis
+    x_tip, reach = chevron_geometry(g)
+    v = reach / 2
+    from ..draw import _thickness
+    kv = _thickness(p, g.sh)((2, 1)) / (2 * math.cos(SLOPE))     # the arms' ink past their centreline ends, vertically
+    white = eq_white(g)
+    a = axis(p) + (white + g.sh) / 2                         # the chevron's centre
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
-    g.stroke(T(W, a + h), T(W - 2 * h * 0 - h, a), T(W, a - h), start='v', end='v')
-    yb = a - h - k - gap - g.sh / 2
+    g.stroke(T(W, a + v), T(x_tip, a), T(W, a - v), start='v', end='v')
+    yb = a - v - kv - white - g.sh / 2
     g.stroke((0, yb), (W, yb))
 
 

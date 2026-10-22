@@ -328,7 +328,8 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     ps = f'{family}-{style}'.replace(' ', '')
     fb.setupNameTable({'familyName': fam1, 'styleName': sub1, 'uniqueFontIdentifier': f'{ps};{version}',
                        'fullName': f'{family} {style}', 'psName': ps, 'version': f'Version {version}',
-                       'typographicFamily': family, 'typographicSubfamily': style}, mac=False)
+                       'typographicFamily': family, 'typographicSubfamily': style,
+                       'description': f'{family}, a chamfered sans.'}, mac=False)
     fb.setupOS2(sTypoAscender=m.asc, sTypoDescender=m.desc, sTypoLineGap=m.gap,
                 usWinAscent=max(m.win_asc, ymax), usWinDescent=max(m.win_desc, -ymin), sxHeight=m.xh,
                 sCapHeight=m.cap, usWeightClass=weight,

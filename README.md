@@ -1,13 +1,10 @@
 # Arris
 
-A typeface grown from the Chamfer clock figures of the
+A chamfered sans: octagonal and monoline, every outer corner cut at 45
+degrees, in nine weights, upright, italic and mono, with three variable
+axes. An *arris* is the sharp edge where two faces meet; a chamfer is what
+you get when you break it. Its figures are the Chamfer clock figures of the
 [Dymaxion watch face](https://github.com/huntrontrakkr/dymaxion-watch-face).
-
-An *arris* is the sharp edge where two faces meet; a chamfer is what you get
-when you break it. Arris is built the way the watch figures were: a drawing on
-a module grid, one rule for corners, and nothing drawn by hand that the rule
-can generate. At the watch's weight its figures are the watch's figures,
-pixel for pixel.
 
 ![Weights](proofs/figures-weights.png)
 
@@ -20,7 +17,7 @@ pixel for pixel.
 | **Arris** | Proportional letters, tabular figures. Measured optics. Nine weights. |
 | **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem). |
 | **Arris Italic**, **Arris Mono Italic** | Slanted ten degrees, every chamfer a curve, every point the upright keeps sharp kept sharp; a single-storey a and a descending f. Nine weights each. |
-| **Arris Mono** | Every glyph on the figures' 10-module pitch: slabbed I, footed i l r, dotted zero, and programming ligatures (`->` `=>` `!=` `===` `<=` `::` `:=` `|>` `//` …) that keep the grid. |
+| **Arris Mono** | Every glyph on the figures' 10-module pitch: slabbed I, footed i l r, dotted zero, and programming ligatures (`->` `=>` `!=` `===` `<=` `:=` `|>` `</>` `<$>` `#{` …) that keep every character in its cell. |
 | **Arris[GRAD,WTCH,wght]**, **Arris-Italic[GRAD,WTCH,wght]** | Variable: weight 100–900, grade −100–100, watch proportions 0–100; linked as one family on the `ital` axis. |
 
 Coverage, about 2,150 code points (details in `docs/coverage/`):
