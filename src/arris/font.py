@@ -95,11 +95,16 @@ def _place(name: str, p: Params, tune=None, record: bool = False):
             dx += (g0.W - W) / 2
         g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0), width=W)
         rings, rec = g.outline(record)
-        return [[(x + dx, y) for x, y in r] for r in rings], _shift_record(rec, dx), adv
+        return _body(name, p, rings, dx, W), _shift_record(rec, dx), adv
     g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
     rings, rec = g.outline(record)
     spec = REGISTRY[name]
-    if spec.kind == 'fig' or p.mono:
+    if spec.kind == 'mark':
+        # a combining mark takes no room: it hangs over the glyph before it
+        # (where mark positioning, ``anchors``, moves it to its base)
+        adv = 0.0
+        dx = -g.W / 2 - mark_over(p)
+    elif spec.kind == 'fig' or p.mono:
         adv = p.fig_adv
         dx = (adv - g.W) / 2
     elif isinstance(spec.kind, tuple) and spec.kind[0] == 'punct':
@@ -120,7 +125,27 @@ def _place(name: str, p: Params, tune=None, record: bool = False):
         rsb = max(rsb, (fx1 - xmax) - reach)
         dx = lsb - xmin
         adv = lsb + (xmax - xmin) + rsb
-    return [[(x + dx, y) for x, y in r] for r in rings], _shift_record(rec, dx), adv
+    return _body(name, p, rings, dx, g.W), _shift_record(rec, dx), adv
+
+
+# Where each placed glyph's body went, (name, params) -> (x offset, body
+# width, upright rings in place): mark positioning (``anchors``) centres
+# marks on bodies and measures upright outlines, as the composed accented
+# letters do.
+BODIES: dict = {}
+
+
+def _body(name, p, rings, dx, W):
+    out = [[(x + dx, y) for x, y in r] for r in rings]
+    BODIES[name, p] = (dx, W, out)
+    return out
+
+
+def mark_over(p: Params) -> float:
+    """Where a combining mark hangs without mark positioning: over the
+    middle of the glyph before it (an n's advance, or a monospaced cell)."""
+    from .glyphs.letterframe import letter_width
+    return p.fig_adv / 2 if p.mono else letter_width(8, 2)(p) / 2 + light(p)
 
 
 def spacing(name: str, p: Params):
@@ -250,6 +275,8 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
         else:
             glyphs[n] = _raw_glyph(_contours(rings, keep)) if keep else _tt_glyph(_contours(rings), 0)
         hmtx[n] = (round(adv), 0)
+    from .anchors import fea as mark_fea                     # mark positioning: anchors from the outlines
+    fea = (fea or '') + mark_fea(names, placed, p)
     if kern_pairs is not None:
         from .kerning import fea as kern_fea
         fea = (fea or '') + kern_fea(kern_pairs)
