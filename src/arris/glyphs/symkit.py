@@ -80,7 +80,10 @@ TIGHT_MIN = 0.55    # of a stem: the least white between two letters of one sign
 
 
 def _condensed(p, k):
-    return p.with_(m=k * p.m, sv=k * p.sv, sh=k * p.sh, sd=k * p.sd, ss=k * p.ss, leg=k * p.leg, c=k * p.c)
+    """Every width of the drawing times k (module, strokes, corners, the
+    figures' body): the same sign, narrower and lighter."""
+    return p.with_(m=k * p.m, sv=k * p.sv, sh=k * p.sh, sd=k * p.sd, ss=k * p.ss, leg=k * p.leg, c=k * p.c,
+                   fig_w=k * p.fig_w, fig_adv=k * p.fig_adv)
 
 
 def _layout(names, p, zone):
@@ -202,9 +205,10 @@ def _body(width, p, kind):
     return width(p)
 
 
-def _ink_x(fn, width, p, kind=None):
+def _ink_x(fn, p, W):
+    """The extent of a sign's ink, drawn with parameters p in a body W."""
     from ..draw import Glyph
-    g = Glyph(p, W=_body(width, p, kind))
+    g = Glyph(p, W=W)
     fn(g)
     xs = [x for r in g.rings() for x, _ in r]
     return (min(xs), max(xs)) if xs else (0.0, g.W)
@@ -220,14 +224,22 @@ def _mono_fit(key, fn, width, p, kind=None):
     smaller by s about the axis; then centred on its ink."""
     if (key, p) in _FIT:
         return _FIT[(key, p)]
-    cell = _body(width, p, kind)
-    x0, x1 = _ink_x(fn, width, p, kind)
-    k, s = 1.0, 1.0
-    if max(x1 - x0, width(p)) > p.fig_w + 1e-6:
-        def fits(q):                    # its ink, and its body (ink a clip box may hide)
-            a, b = _ink_x(fn, width, q, kind)
-            return max(b - a, width(q)) <= p.fig_w
+    from ..draw import LETTER_KINDS
+    cell = _body(width, p, kind)        # the body it is drawn in, whatever it is condensed by
+    tol = 0.5                           # font units
 
+    def fits(q):
+        # its natural body; and unless it is a letter (letters fill the cell
+        # they are given), its ink, which a clip box may hide from the body
+        if width(q) > p.fig_w + tol:
+            return False
+        if kind in LETTER_KINDS:
+            return True
+        a, b = _ink_x(fn, q, cell)
+        return b - a <= p.fig_w + tol
+
+    k, s = 1.0, 1.0
+    if not fits(p):
         if fits(_condensed(p, K_MIN)):
             lo, hi = K_MIN, 1.0
             for _ in range(14):
@@ -245,7 +257,7 @@ def _mono_fit(key, fn, width, p, kind=None):
     q = _scaled(q, s) if s < 1 else q
     dx, dy = 0.0, (1 - s) * p.cap / 2
     if k < 1 or s < 1:
-        a, b = _ink_x(fn, width, q, kind)
+        a, b = _ink_x(fn, q, cell)
         dx = (cell - (a + b)) / 2
     _FIT[(key, p)] = (k, s, dx, dy)
     return _FIT[(key, p)]

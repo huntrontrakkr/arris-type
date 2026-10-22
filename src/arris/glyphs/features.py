@@ -135,7 +135,8 @@ def _fraction(name, ch, num, den):
     def width(p):
         ps = small(p)
         return 2 * ps.fig_w + REGISTRY['fraction'].width(p) + 0.6 * p.m
-    glyph(name, ch, width, kind=('punct', 0.6))(fn)
+    from .symkit import sign                # (condensed into the monospaced cell, as ⅓ ⅛ are)
+    sign(name, ch, width, kind=('punct', 0.6))(fn)
 
 
 _fraction('onehalf', '½', 'one', 'two')
