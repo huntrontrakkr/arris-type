@@ -466,7 +466,12 @@ join; `!=` `/=` `!==` `=/=` strike through; `<=` `>=` become ≤ ≥; `::`
 `:::` `:=` `=:` `::=` `..` `...` `..<` `..=` set their dots evenly and on
 the bars; `||` `|>` `<|` `<|>` `++` `--` `//` `///` `/*` `*/` `>>` `<<`
 `>>>` `<<<` join. In the monospaced cut the hyphen sits on the math axis,
-in line with `+ = < >` and the arrows it grows into.
+in line with `+ = < >` and the arrows it grows into. Sequences that only
+want to sit closer (`&&` `??` `<>` `</>` `<!--` `#{` `#[` `#!` `|||` `<$>`
+`<*>`) are drawn as their own characters pulled toward each other.
+`ss03` turns `<=` `>=` back into their characters (for languages where
+they are arrows); `cv01` is the single-storey a (both cuts), `cv02` the
+plain zero.
 
 ## 9. Metrics
 

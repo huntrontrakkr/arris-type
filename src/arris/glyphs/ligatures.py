@@ -437,6 +437,78 @@ def comment(g):
     g.clip = (0, bot, W, top)
 
 
+# --- Tightened sequences ---------------------------------------------------
+
+def tight(*seqs, pull=0.22):
+    """Sequences that read better closer together (`&&`, `</>`, `#{`): each
+    component drawn as itself, pulled toward the sequence's middle by
+    ``pull`` of a cell."""
+    def fn(g):
+        from ..draw import draw
+        p = g.p
+        comps = g.name[:-len('.liga')].split('_')
+        n = len(comps)
+        for i, comp in enumerate(comps):
+            sub = draw(comp, p)
+            shift = ((n - 1) / 2 - i) * pull * p.fig_adv
+            g.add_glyph(sub, i * p.fig_adv + (p.fig_w - sub.W) / 2 + shift, 0.0)
+    for seq in seqs:
+        liga(seq)(fn)
+
+
+tight('&&', '??', '!!', ';;')
+tight('<>', '</', '/>', '#{', '#[', '#(', '#!', '#?', '#_', pull=0.18)
+tight('</>', '<!--', '|||', '||>', '<||', '<$>', '<*>', '<+>', pull=0.16)
+
+
+# --- Alternates: plain comparisons (ss03) and character variants -----------
+
+def _plain(g):
+    """The components as themselves, in their own cells."""
+    from ..draw import draw
+    p = g.p
+    comps = g.name.split('.')[0].split('_')
+    for i, comp in enumerate(comps):
+        sub = draw(comp, p)
+        g.add_glyph(sub, i * p.fig_adv + (p.fig_w - sub.W) / 2, 0.0)
+
+
+PLAIN = ('less_equal', 'greater_equal')
+for _n in PLAIN:
+    glyph(f'{_n}.ss03', None, _body(2), kind=('liga', 2))(_plain)
+
+
+@glyph('a.cv01', None, lambda p: REGISTRY['a'].width(p), kind='lower')
+def a_cv01(g):
+    """The single-storey a (the italic's), upright."""
+    from .letterframe import Frame
+    from ..draw import B
+    f = Frame(g, 8, 'lower')
+    g.stroke(f.P(7, 0), f.P(7, 9))
+    g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+
+
+@glyph('zero.cv02', None, 'fig_w', kind='fig')
+def zero_cv02(g):
+    """The plain zero, without the monospaced cut's dot."""
+    p0 = g.p
+    g.p = p0.with_(mono=False)
+    REGISTRY['zero'].fn(g)
+    g.p = p0
+
+
+def alternates_fea(mono: bool) -> str:
+    def cv(tag, label, sub):
+        return (f'feature {tag} {{\n    cvParameters {{\n        FeatUILabelNameID {{ name "{label}"; }};\n'
+                f'    }};\n    {sub}\n}} {tag};')
+    out = [cv('cv01', 'Single-storey a', 'sub a by a.cv01;'),
+           cv('cv02', 'Plain zero', 'sub zero by zero.cv02;')]
+    if mono:
+        subs = '\n'.join(f'    sub {n}.liga by {n}.ss03;' for n in PLAIN)
+        out.append(f'feature ss03 {{\n    featureNames {{ name "Plain comparisons"; }};\n{subs}\n}} ss03;')
+    return '\n'.join(out) + '\n'
+
+
 # --- Feature code ---------------------------------------------------------
 
 OPERATORS = '-<>=!|:.+*/~&?^%#$\\'

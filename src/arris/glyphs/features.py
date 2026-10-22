@@ -236,7 +236,9 @@ feature case {{
 {case}
 }} case;
 """
+    from .ligatures import alternates_fea
     if mono:
         from .ligatures import fea as ligature_fea
         text += ligature_fea()
+    text += alternates_fea(mono)        # after the ligatures: ss03 replaces what calt made
     return text
