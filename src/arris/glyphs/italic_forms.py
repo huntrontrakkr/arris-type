@@ -190,16 +190,20 @@ def a_ital(g):
     x-height and leaves on the t's foot."""
     f = Frame(g, 8, 'lower')
     _free(g)
-    g.stroke(f.P(7, 9), *tail(g, f, f.X(7)))
+    # the bowl's foot runs on past the stem into the exit (a corner on the
+    # stem would cut across the bowl)
+    g.stroke(f.P(7, 9), f.P(7, 1))
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    g.stroke(f.P(7, 1), tail_end(g, f, f.X(7)))
 
 
 @ital('d', 8, 2)
 def d_ital(g):
     f = Frame(g, 8, 'asc')
     _free(g)
-    g.stroke(f.P(7, 13), *tail(g, f, f.X(7)))
+    g.stroke(f.P(7, 13), f.P(7, 1))
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    g.stroke(f.P(7, 1), tail_end(g, f, f.X(7)))
 
 
 @ital('b', 8, 2)
