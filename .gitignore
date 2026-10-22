@@ -5,3 +5,4 @@ research-fonts/
 build/
 .pytest_cache/
 scratch/
+.claude/
