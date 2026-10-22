@@ -392,17 +392,100 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
         u = MultiPolygon([u])
     rings = []
     min_hole = (MIN_COUNTER * thick.v) ** 2
+    moved: dict = {}
     for poly in u.geoms:
         poly = orient(poly, sign=1.0)
-        rings.append(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt))
+        rings.append(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt), POLISH * c, moved))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_ring_rule(list(hole.coords), c, +1, rec, butt))
+            rings.append(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt), POLISH * c, moved))
+    if rec is not None and moved:
+        _follow(rec, moved)
     return rings
 
 
 MIN_COUNTER = 0.2   # pinholes (under a fifth of a stem, squared) fill in
+POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
+
+
+def _polish(pts, eps, moved):
+    """Slivers out of a finished ring: what stroke unions and clips leave
+    behind, much shorter than any cut the design makes (a chamfer is at
+    least 1.4 legs, a pixel step a module), and visible only as sloppiness
+    at large sizes.
+
+    * a short edge between two edges running the same way (a jog: two
+      strokes that should share a line miss it by a few units; a clipped
+      stroke's leftover cap): its vertex on the shorter side goes, so the
+      longer edge keeps its line;
+    * a short edge where the edges either side turn a corner (a micro-flat
+      in place of a point): the two edges meet at their intersection.
+
+    A spike (edges either side running back on each other) is left as it
+    is. ``moved`` collects old point -> new point for the chamfer record."""
+    pts = list(pts)
+    skip = set()
+    while len(pts) > 3:
+        n = len(pts)
+        best = None
+        for i in range(n):
+            a, b = pts[i], pts[(i + 1) % n]
+            L = _len(_sub(b, a))
+            if L < eps and (a, b) not in skip and (best is None or L < best[0]):
+                best = (L, i)
+        if best is None:
+            break
+        _, i = best
+        j, k, h = (i + 1) % n, (i + 2) % n, (i - 1) % n
+        prev, a, b, nxt = pts[h], pts[i], pts[j], pts[k]
+        e_in, e_out = _sub(a, prev), _sub(nxt, b)
+        if _len(e_in) < 1e-9 or _len(e_out) < 1e-9:
+            skip.add((a, b))
+            continue
+        u_in, u_out = _unit(e_in), _unit(e_out)
+        turn = abs(math.degrees(math.atan2(_cross(u_in, u_out), _dot(u_in, u_out))))
+        if turn < 15:                                         # a jog or a kink
+            if _len(e_in) < _len(e_out):
+                moved[a] = b
+                del pts[i]
+            else:
+                moved[b] = a
+                del pts[j]
+        elif turn < 165:                                      # a micro-flat at a corner
+            q = _meet_pts(prev, a, b, nxt)
+            if q is None or _len(_sub(q, _mul(_add(a, b), 0.5))) > 2 * eps:
+                skip.add((a, b))
+                continue
+            moved[a] = q
+            moved[b] = q
+            pts[i] = q
+            del pts[j]
+        else:
+            skip.add((a, b))
+    return pts
+
+
+def _meet_pts(p0, p1, q0, q1):
+    """Where the line through p0, p1 meets the line through q0, q1."""
+    d1, d2 = _sub(p1, p0), _sub(q1, q0)
+    den = _cross(d1, d2)
+    if abs(den) < 1e-12:
+        return None
+    t = _cross(_sub(q0, p0), d2) / den
+    return _add(p0, _mul(d1, t))
+
+
+def _follow(rec, moved):
+    """Chamfer record entries whose points the polish moved, moved too."""
+    def near(pt):
+        for old, new in moved.items():
+            if abs(old[0] - pt[0]) < 1e-6 and abs(old[1] - pt[1]) < 1e-6:
+                return new
+        return pt
+    for i, r in enumerate(rec):
+        if r and r[0] == 'chord':
+            rec[i] = ('chord', near(r[1]), near(r[2]))
 
 
 def rings_to_shapely(rings):

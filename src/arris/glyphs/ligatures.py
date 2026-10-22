@@ -384,52 +384,59 @@ def double_colon_equal(g):
     _bars(g, 2, x0=right + _gap(g.p))
 
 
-# --- Pipes and triangles: the chevron's arms run back to the pipe ------------------
+# --- Pipes and triangles: simple triangles --------------------------------------
 
 def _pipe_x(g, i):
-    sub, x = _stamp(g, 'bar', i)
-    return x + sub.W / 2
+    """The centre of the pipe of cell i, as it stands alone."""
+    sub = _sub('bar', g.p)
+    return _at(g, sub, i) + sub.W / 2
+
+
+def _triangle(g, i, sign, xp):
+    """A simple triangle: the chevron of cell i (its point and its 2:1, as
+    the plain < or > has them), its arms run back to the pipe's place at xp
+    and closed by an upright there, as tall as the arms reach."""
+    tip, _, _ = _chev(g, i, sign)
+    a = axis(g.p)
+    t = abs(tip - xp) / 2
+    g.stroke((xp, a + t), (tip, a), (xp, a - t), closed=True)
+    return t
 
 
 @liga('|>')
 def pipe_right(g):
-    xp = _pipe_x(g, 0)
-    tip, _, _ = _chev(g, 1, 1)
-    t = (tip - xp) / 2
-    _chevron_to(g, 1, 1, upper=t, lower=t)
+    _triangle(g, 1, 1, _pipe_x(g, 0))
 
 
 @liga('<|')
 def pipe_left(g):
-    xp = _pipe_x(g, 1)
-    tip, _, _ = _chev(g, 0, -1)
-    t = (xp - tip) / 2
-    _chevron_to(g, 0, -1, upper=t, lower=t)
+    _triangle(g, 0, -1, _pipe_x(g, 1))
 
 
 @liga('<|>')
 def pipe_both(g):
-    xp = _pipe_x(g, 1)
+    """Both triangles as one lozenge with the upright through it."""
+    xp, a = _pipe_x(g, 1), axis(g.p)
     tl, _, _ = _chev(g, 0, -1)
     tr, _, _ = _chev(g, 2, 1)
-    _chevron_to(g, 0, -1, upper=(xp - tl) / 2, lower=(xp - tl) / 2)
-    _chevron_to(g, 2, 1, upper=(tr - xp) / 2, lower=(tr - xp) / 2)
+    t = min(xp - tl, tr - xp) / 2
+    g.stroke((xp, a + t), (tr, a), (xp, a - t), (tl, a), closed=True)
+    g.stroke((xp, a - t), (xp, a + t))
 
 
 @liga('||>')
 def pipes_right(g):
-    _pipe_x(g, 0)
-    xp = _pipe_x(g, 1)
-    tip, _, _ = _chev(g, 2, 1)
-    _chevron_to(g, 2, 1, upper=(tip - xp) / 2, lower=(tip - xp) / 2)
+    """The triangle, and the other pipe an upright as tall as its side."""
+    t = _triangle(g, 2, 1, _pipe_x(g, 1))
+    x, a = _pipe_x(g, 0), axis(g.p)
+    g.stroke((x, a - t), (x, a + t))
 
 
 @liga('<||')
 def pipes_left(g):
-    xp = _pipe_x(g, 1)
-    _pipe_x(g, 2)
-    tip, _, _ = _chev(g, 0, -1)
-    _chevron_to(g, 0, -1, upper=(xp - tip) / 2, lower=(xp - tip) / 2)
+    t = _triangle(g, 0, -1, _pipe_x(g, 1))
+    x, a = _pipe_x(g, 2), axis(g.p)
+    g.stroke((x, a - t), (x, a + t))
 
 
 # --- Tags: the chevron's arm runs on to the slash -----------------------------------

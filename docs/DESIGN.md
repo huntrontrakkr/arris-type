@@ -470,9 +470,10 @@ proves each against its characters on the cell grid):
 
 * **Tags and pipes**: in `</` `/>` `</>` the chevron's arm runs on along
   its 2:1 until it meets the slash, square to it (a 2:1 arm is
-  perpendicular to the 2:1 slash); in `|>` `<|` `<|>` `||>` `<||` the
-  chevron's arms run back to the pipe, a large triangle with the plain
-  chevron's point and angle; in `<>` the two chevrons' arms meet.
+  perpendicular to the 2:1 slash); `|>` `<|` `<|>` `||>` `<||` are simple
+  triangles, the chevron's arms run back to the pipe's place and closed
+  there by an upright as tall as they reach (the plain chevron's point and
+  angle); in `<>` the two chevrons' arms meet.
 * **`<$>`** (`<$` `$>`): the chevron's arm runs on until it lands on the
   dollar S's bar, which gives up its beak there; one stroke turns through
   both points, the dollar's stem crossing it.
