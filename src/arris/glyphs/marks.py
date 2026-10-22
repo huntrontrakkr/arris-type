@@ -171,8 +171,8 @@ def compose(chars, base_names):
         if not all(m in ABOVE or m in BELOW for m in marks):
             continue
         bname = base_names.get(base)
-        if any(m in ABOVE for m in marks) and base in 'ij':
-            bname = base_names.get({'i': 'ı', 'j': 'ȷ'}[base])
+        if any(m in ABOVE for m in marks) and bname in ('i', 'j'):
+            bname = {'i': 'dotlessi', 'j': 'uni0237'}[bname]
         if bname is None or bname not in REGISTRY:
             continue
         name = _name(ch)

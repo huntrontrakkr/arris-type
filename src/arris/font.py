@@ -147,6 +147,10 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     for n in names:
         if REGISTRY[n].unicode is not None:
             cmap[REGISTRY[n].unicode] = n
+    from .glyphs import ALIASES
+    for cp, n in ALIASES.items():
+        if n in names and cp not in cmap:
+            cmap[cp] = n
     fb.setupCharacterMap(cmap)
     glyphs, hmtx = {}, {}
     glyphs['.notdef'], adv = _notdef(p)

@@ -13,7 +13,7 @@ from ..geom import rings_to_shapely
 from ..params import SQRT2
 from .caps import big
 from .figures import beak_depth
-from .letterframe import Frame, letter_width
+from .letterframe import Frame, k_arms, letter_width
 
 
 def stamp(g, name, dx=0.0, dy=0.0, width=None):
@@ -176,14 +176,9 @@ def napostrophe(g):
 @glyph('kgreenlandic', 'ĸ', letter_width(8, 1), kind='lower')
 def kgreenlandic(g):
     f = Frame(g, 8, 'lower')
-    p, W, k = f.p, f.W, f.k
-    xh = p.xh
     g.stroke(f.P(1, 0), f.P(1, 9))
-    a_arm = W - xh + p.c - k
-    a_leg = W + p.c - k
-    xm = (a_arm + a_leg) / 2
-    g.stroke((xh + a_arm, xh), (xm, xm - a_arm), (a_leg, 0), start='h', end='h')
-    g.stroke((xm, xm - a_arm), (f.X(1), xm - a_arm))
+    for pts, a, b in k_arms(g, f.X(1), f.W, f.p.xh):
+        g.stroke(*pts, start=a, end=b)
 
 
 @glyph('longs', 'ſ', letter_width(7, 1), kind='lower')

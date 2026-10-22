@@ -10,7 +10,7 @@ from __future__ import annotations
 from ..draw import B, Opening, glyph
 from ..params import SQRT2
 from .figures import beak_depth, jog
-from .letterframe import Frame, letter_width
+from .letterframe import Frame, k_arms, letter_width
 
 
 def low(char, wm, stems, width=None, openings=()):
@@ -141,21 +141,10 @@ def j(g):
 @low('k', 8, 1)
 def k(g):
     f = Frame(g, 8, 'asc')
-    p, W, k_ = f.p, f.W, f.k
-    xh = p.xh
     g.stroke(f.P(1, 0), f.P(1, 13))
-    a_arm = W - xh + p.c - k_                               # arm: x - y
-    a_leg = W + p.c - k_                                    # leg: x + y
-    xj = f.X(1) + p.sv
-    y_hi, y_lo = xj - a_arm, a_leg - xj
-    if 2 * xj + p.sv <= a_arm + a_leg + 2 * k_ + 1e-6:
-        xm = (a_arm + a_leg) / 2
-        mid = [(xm, xm - a_arm)]
-        g.stroke((xm, xm - a_arm), (f.X(1), xm - a_arm))
-    else:
-        mid = [(xj, y_hi), (xj, y_lo)] if y_hi > y_lo + 1e-9 else [(xj, y_hi)]
-    g.stroke((xh + a_arm, xh), *mid, (a_leg, 0), start='h', end='h')
-    g.clip = (0, -p.desc, W, p.asc)
+    for pts, a, b in k_arms(g, f.X(1), f.W, f.p.xh):
+        g.stroke(*pts, start=a, end=b)
+    g.clip = (0, -f.p.desc, f.W, f.p.asc)
 
 
 @low('l', 4, 1)

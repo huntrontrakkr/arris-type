@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from ..draw import B, Opening, glyph
 from .figures import beak_depth, jog
-from .letterframe import STEEP, Frame, letter_width
+from .letterframe import STEEP, Frame, k_arms, letter_width
 
 
 def cap(char, wm, stems, width=None, openings=()):
@@ -116,23 +116,9 @@ def J(g):
 @cap('K', 9, 1)
 def K(g):
     f = Frame(g, 9)
-    p, W, H, k = f.p, f.W, f.p.cap, f.k
     g.stroke(f.P(1, 0), f.P(1, 12))
-    # Arm and leg leave the body's right corners one edge break in, and meet
-    # in a short vertical beside the stem (the master's 2x2 junction).
-    a_arm = W - H + p.c - k                                 # arm: x - y = a_arm
-    a_leg = W + p.c - k                                     # leg: x + y = a_leg
-    xj = f.X(1) + p.sv
-    y_hi, y_lo = xj - a_arm, a_leg - xj
-    # The short vertical holds only while the arm's and leg's outer edges
-    # still reach it; heavier, they meet first, and the point ties back.
-    if 2 * xj + p.sv <= a_arm + a_leg + 2 * k + 1e-6:
-        xm = (a_arm + a_leg) / 2
-        mid = [(xm, xm - a_arm)]
-        g.stroke((xm, xm - a_arm), (f.X(1), xm - a_arm))    # tie the point into the stem
-    else:
-        mid = [(xj, y_hi), (xj, y_lo)]
-    g.stroke((H + a_arm, H), *mid, (a_leg, 0), start='h', end='h')
+    for pts, a, b in k_arms(g, f.X(1), f.W, f.p.cap):
+        g.stroke(*pts, start=a, end=b)
 
 
 @cap('L', 8, 1)
