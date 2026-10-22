@@ -194,8 +194,13 @@ def fea() -> str:
     figs = ' '.join(FIGS)
     sm = {s: ' '.join(f'{n}.{s}' for n in FIGS) for s in ('sups', 'subs', 'numr', 'dnom', 'pnum')}
     case = '\n'.join(f'    sub {n} by {n}.case;' for n in CASE)
+    from ..draw import FEATURE_CODE, LANGSYS
+    langsys = ''.join(f'languagesystem {t};\n' for t in dict.fromkeys(LANGSYS))
+    extra = ''.join(FEATURE_CODE)                           # (locl first: its lookups run before the rest)
     return f"""languagesystem DFLT dflt;
 languagesystem latn dflt;
+{langsys}
+{extra}
 
 @figs = [{figs}];
 @pnum = [{sm['pnum']}];
