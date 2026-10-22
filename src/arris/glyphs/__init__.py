@@ -1,5 +1,5 @@
 """All glyph modules, registered in dependency order."""
-from . import figures, caps, lower, punct  # noqa: F401
+from . import figures, caps, lower, punct, extra_latin  # noqa: F401
 from . import marks
 
 # Accented letters: Latin-1, Latin Extended-A, and Romanian's comma letters.
