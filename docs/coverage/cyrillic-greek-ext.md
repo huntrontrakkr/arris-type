@@ -111,8 +111,9 @@ feature. `tools/hbspec.py` takes `lang=xx` to proof it.
   already the g that they write. Their upright б stays the Russian б.
 * Ԅ ԅ Ԇ ԇ (Komi) are not drawn.
 * At heavy weights the sampi's lower stroke meets the baseline (Ϡ) or
-  runs into the descender (ϡ), and is cut there; the variable font
-  follows that cut less closely than elsewhere (about 30 units of mean
-  outline difference between masters).
+  runs into the descender (ϡ), and is cut there; the variable fonts
+  follow that cut less closely than anything else of this topic (mean
+  outline difference up to 33 units upright and 43 italic, at weight 800
+  with grade and watch balance; the font's worst before was 36).
 * The kerning (measured for every pair of letters) roughly doubles with
   these letters: about 43,000 pairs at Regular against 20,000 before.
