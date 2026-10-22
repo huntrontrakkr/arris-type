@@ -93,7 +93,7 @@ Shared moves live in `glyphs/symkit.py`. Proofs: `proofs/symbols-plus-*.png`.
 * ₦ at Black and at the grade +100 corner: its two counters stay open but
   tight (a third of a stem).
 * Interpolation: the variable font draws every new glyph (0 could not
-  vary), but 183 of their 2230 checked locations differ from the exact
+  vary), but 188 of their 2230 checked locations differ from the exact
   drawing by more than 3 units (existing glyphs: 220 of 5570), worst 31.9
   units at (800, 50, 100), where the max() switches of growing white and
   thinning bar pairs meet three axes.
