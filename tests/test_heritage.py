@@ -11,9 +11,9 @@ from arris.geom import rings_to_shapely
 from arris.params import HERITAGE
 
 NAMES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
-# Figures whose heritage drawing has no pixel wobble must come out identical;
-# the rest were deliberately straightened (2, 4, 7 spines; the 1's flag).
-EXACT = {'zero', 'five', 'six', 'nine'}
+# Every figure but the 7 is the zone master under the Chamfer rule, exactly;
+# the 7 is the watch's straightened seven (its zone master's leg wobbles).
+EXACT = set(NAMES) - {'seven'}
 
 
 def watch_mask(poly, k=3, ss=8):
@@ -39,8 +39,4 @@ def test_watch_pixels_match():
     for i, n in enumerate(NAMES):
         mask = watch_mask(rings_to_shapely(draw(n, HERITAGE).rings()))
         ref = np.array([(masters[i][j >> 3] >> (j & 7)) & 1 for j in range(27 * 36)], np.uint8).reshape(36, 27)
-        diff = int((mask != ref).sum())
-        if n in EXACT:
-            assert diff == 0, (n, diff)
-        else:
-            assert diff < 100, (n, diff)  # straightened, not redrawn
+        assert int((mask != ref).sum()) == 0, n

@@ -46,6 +46,7 @@ class Glyph:
     ot: float = 0.0   # overshoot above the top line (solved per glyph)
     ob: float = 0.0   # overshoot below the baseline
     W: float = 0.0    # body width
+    sh_k: float = 1.0  # horizontal thickness factor (tight stacks of bars)
     clip: tuple[float, float, float, float] | None = None   # keep ink inside (x0, y0, x1, y1)
 
     def stroke(self, *pts, closed=False, start='flat', end='flat'):
@@ -65,7 +66,18 @@ class Glyph:
         if self.clip is not None:
             from shapely.geometry import box as _box
             box = _box(*self.clip)
-        return ink(self.strokes, Thickness(p.sv, p.sh, p.sd), p.c, self.extra, box)
+        return ink(self.strokes, Thickness(p.sv, self.sh, p.sd, p.ss), p.c, self.extra, box)
+
+    @property
+    def sh(self) -> float:
+        return self.p.sh * self.sh_k
+
+    def stack(self, n: int, height: float, ratio: float = 0.9):
+        """Thin the horizontals where n bars share ``height`` so that each
+        counter between them stays at least ``ratio`` times a bar."""
+        fit = height / (n + (n - 1) * ratio)
+        self.sh_k = min(1.0, fit / self.p.sh)
+        return self.sh
 
 
 def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0) -> Glyph:

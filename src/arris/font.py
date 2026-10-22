@@ -13,9 +13,6 @@ from .params import Params
 
 UPM = 1000
 
-# Provisional sidebearings by side shape (font units); optical spacing replaces these.
-SIDES = {'stem': 60, 'round': 48, 'diag': 15, 'open': 24, 'arm': 15}
-
 
 @dataclass
 class Metrics:
@@ -44,17 +41,41 @@ def glyph_contours(name: str, p: Params, tune=None):
     return out
 
 
-def spacing(name: str, p: Params):
-    """(left side bearing, advance) for a glyph body of the registry width."""
+# Optical spacing: the H's sidebearing as a fraction of its counter, and how
+# deep into a side's white the eye counts it (fraction of the zone height).
+SPACE = 0.27
+DEPTH = 0.2
+
+
+def light(p: Params) -> float:
+    """Target mean white per side: the H's sidebearing."""
+    h_counter = (9 * p.m + (p.sv - 120)) - 2 * p.sv
+    return SPACE * h_counter
+
+
+def place(name: str, p: Params, tune=None):
+    """(rings shifted into place, advance) for a glyph."""
+    from .spacing import bearings
+    t = (tune or {}).get(name, {})
+    g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
+    rings = g.rings()
     spec = REGISTRY[name]
-    w = spec.width(p)
     if spec.kind == 'fig':
         adv = p.fig_adv
-        return (adv - w) / 2, adv
-    if isinstance(spec.kind, tuple) and spec.kind[0] == 'cap':
-        l, r = SIDES[spec.kind[1]], SIDES[spec.kind[2]]
-        return l, l + w + r
-    raise ValueError(f'no spacing rule for kind {spec.kind!r}')
+        dx = (adv - g.W) / 2
+    else:
+        zone = (0.0, p.cap)
+        lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * (zone[1] - zone[0]),
+                                        floor=-0.25 * p.m)
+        dx = lsb - xmin
+        adv = lsb + (xmax - xmin) + rsb
+    return [[(x + dx, y) for x, y in r] for r in rings], adv
+
+
+def spacing(name: str, p: Params):
+    """(left side bearing, advance) of the glyph body (used by proofs)."""
+    rings, adv = place(name, p)
+    return 0.0, adv
 
 
 def _tt_glyph(contours, lsb):

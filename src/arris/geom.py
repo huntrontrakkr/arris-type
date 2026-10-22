@@ -63,21 +63,29 @@ def _meet(p1, d1, p2, d2):
     return _add(p1, _mul(d1, t))
 
 
-class Thickness:
-    """Stroke thickness as a function of direction.
+STEEP_DEG = math.degrees(math.atan2(2, 1))   # the 2:1 slope, 63.43 degrees
 
-    Interpolates linearly in angle between horizontal (``h``), 45 degrees
-    (``d``) and vertical (``v``); steeper or shallower slopes fall between.
+
+class Thickness:
+    """Stroke thickness (measured perpendicular) as a function of direction.
+
+    Knots: horizontal ``h``, 45 degrees ``d``, the 2:1 slope ``s`` and vertical
+    ``v``, linear in angle between them. In the watch's pixel drawings every
+    diagonal is a staircase as wide across as a stem, so there ``d`` is
+    v*sin(45) and ``s`` is v*sin(63.4).
     """
 
-    def __init__(self, v: float, h: float, d: float):
+    def __init__(self, v: float, h: float, d: float, s: float | None = None):
         self.v, self.h, self.d = v, h, d
+        self.s = s if s is not None else d + (v - d) * (STEEP_DEG - 45) / 45
 
     def __call__(self, direction) -> float:
         phi = math.degrees(math.atan2(abs(direction[1]), abs(direction[0])))  # 0 = horizontal
         if phi <= 45:
             return self.h + (self.d - self.h) * phi / 45
-        return self.d + (self.v - self.d) * (phi - 45) / 45
+        if phi <= STEEP_DEG:
+            return self.d + (self.s - self.d) * (phi - 45) / (STEEP_DEG - 45)
+        return self.s + (self.v - self.s) * (phi - STEEP_DEG) / (90 - STEEP_DEG)
 
 
 def _expand(stroke: Stroke):
@@ -115,12 +123,12 @@ def _cap_point(p, d, side_pt, kind):
 
 
 def stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
-    """The ink of one stroke. If a closed stroke's counter is too small for its
-    bowl chamfers (very heavy weights), the bowls shrink until it fits."""
+    """The ink of one stroke. If a stroke's bowl chamfers do not fit inside it
+    (very heavy weights), the bowls shrink until they do."""
     try:
         return _stroke_polygon(stroke, thick, c)
     except ValueError:
-        if not stroke.closed or not any(n.bowl for n in stroke.nodes):
+        if not any(n.bowl for n in stroke.nodes):
             raise
     lo, hi = 0.0, 1.0
     for _ in range(30):
@@ -198,8 +206,28 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
     return poly
 
 
+def _dir_class(u) -> str:
+    ax, ay = abs(u[0]), abs(u[1])
+    if ax < 1e-6 or ay < 1e-6:
+        return 'axis'
+    if abs(ax - ay) < 1e-6:
+        return 'diag'
+    return 'steep'
+
+
 def _ring_rule(coords, c, convex_sign):
-    """Apply the corner rule to one ring (ink on the left of travel)."""
+    """The corner rule on one ring (ink on the left of travel), as the watch's
+    pixel rule behaves:
+
+    * a right angle between a horizontal and a vertical edge: a 45-degree chord
+      of leg c, cutting it if convex and filling it if concave;
+    * a right angle between two 45-degree edges: left sharp (beaks, waists);
+    * a 45-degree angle between an axis edge and a 45-degree edge, convex (a
+      diagonal's capped end) or concave (a crotch): a chord square to the
+      diagonal, reaching c*sqrt2 along it and 2c along the axis edge;
+    * a convex corner where a 2:1 edge meets a cap: a chord of leg c;
+    * anything else (135-degree turns, the bends of gables): left alone.
+    """
     pts = [tuple(p) for p in coords[:-1]]
     # drop duplicate and collinear points
     changed = True
@@ -218,12 +246,15 @@ def _ring_rule(coords, c, convex_sign):
         a, b, q = pts[i - 1], pts[i], pts[(i + 1) % n]
         u1, u2 = _unit(_sub(b, a)), _unit(_sub(q, b))
         turn = math.degrees(math.atan2(_cross(u1, u2), _dot(u1, u2)))  # + = left = convex
-        if abs(abs(turn) - 90) < 1.0:
-            kinds.append('right')
-        elif turn > 90 + 1.0:
-            kinds.append('acute')
-        else:
-            kinds.append(None)
+        k1, k2 = _dir_class(u1), _dir_class(u2)
+        kind = None
+        if k1 == k2 == 'axis' and abs(abs(turn) - 90) < 1.0:
+            kind = 'right'
+        elif {k1, k2} == {'axis', 'diag'} and abs(abs(turn) - 135) < 1.0:
+            kind = 'acute'
+        elif 'steep' in (k1, k2) and 'diag' not in (k1, k2) and turn > 45:
+            kind = 'steep'
+        kinds.append(kind)
     out = []
     for i in range(n):
         a, b, q = pts[i - 1], pts[i], pts[(i + 1) % n]
@@ -233,18 +264,16 @@ def _ring_rule(coords, c, convex_sign):
         # How much of each adjacent edge this corner may use.
         room_in = _len(e_in) * (0.5 if kinds[i - 1] else 1.0)
         room_out = _len(e_out) * (0.5 if kinds[(i + 1) % n] else 1.0)
-        if k == 'right':
+        if k in ('right', 'steep'):
             r = min(c, room_in, room_out)
             out += [_sub(b, _mul(u_in, r)), _add(b, _mul(u_out, r))]
         elif k == 'acute':
-            # chord perpendicular to the diagonal edge, length c*sqrt2
-            diag_in = 0.01 < abs(u_in[0]) < 0.99
             leg = c * math.sqrt(2)
-            if diag_in:
-                bb = min(leg, room_in)
+            if _dir_class(u_in) == 'diag':
+                bb = min(leg, room_in, room_out / math.sqrt(2))
                 out += [_sub(b, _mul(u_in, bb)), _add(b, _mul(u_out, bb * math.sqrt(2)))]
             else:
-                bb = min(leg, room_out)
+                bb = min(leg, room_out, room_in / math.sqrt(2))
                 out += [_sub(b, _mul(u_in, bb * math.sqrt(2))), _add(b, _mul(u_out, bb))]
         else:
             out.append(b)

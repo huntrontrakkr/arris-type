@@ -8,7 +8,7 @@ The language, from the figures and the watch's 5x7 Draft capitals:
 * Diagonals that cross the full height run at 2:1 (N Z, like the 4 and 7).
 * A diagonal leaving a stem or bar leaves from its corner (the elbow).
 
-Widths are given in modules at the heritage (Bold) weight and grow by the
+Widths are given in modules at the heritage (SemiBold) weight and grow by the
 stem's change, so counters keep most of their size across weights.
 """
 from __future__ import annotations
@@ -20,11 +20,11 @@ from ..geom import Thickness
 from ..params import SQRT2, inner_leg, outer_leg
 from .figures import STEEP, beak_depth
 
-BOLD_STEM = 120.0
+HERITAGE_STEM = 120.0
 
 
 def cap_width(mods):
-    return lambda p: mods * p.m + (p.sv - BOLD_STEM)
+    return lambda p: mods * p.m + (p.sv - HERITAGE_STEM)
 
 
 def frame(g, W):
@@ -46,7 +46,7 @@ def caps(name, char, mods, sides):
 
 
 def steep_t(p):
-    return Thickness(p.sv, p.sh, p.sd)(STEEP)
+    return p.ss
 
 
 # --- Bowls -----------------------------------------------------------------

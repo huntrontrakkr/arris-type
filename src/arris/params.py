@@ -18,11 +18,12 @@ class Params:
     m: float = 60.0            # module
     cap: float = 720.0         # cap and figure height (12 modules)
     xh: float = 540.0          # x-height (9 modules)
-    asc: float = 780.0         # ascender of b d h k l (13 modules)
+    asc: float = 760.0         # ascender of b d h k l (1.056 cap, as Roboto)
     desc: float = 210.0        # descender depth of g j p q y (3.5 modules)
     sv: float = 120.0          # vertical stem
     sh: float = 120.0          # horizontal stroke
     sd: float = 120.0 / SQRT2  # 45-degree stroke, measured perpendicular
+    ss: float = 120.0 * 2 / math.sqrt(5)  # 2:1 stroke, measured perpendicular
     leg: float = 90.0          # bowl corner: centreline chamfer leg
     c: float = 30.0            # edge break on every right-angled corner
     fig_w: float = 540.0       # tabular figure body (9 modules)
@@ -46,8 +47,9 @@ def inner_leg(p: Params) -> float:
     return max(p.c, p.leg - (p.sv + p.sh) / 2 + p.sd / SQRT2)
 
 
-# The watch figures, in modules: two-module strokes, 45-degree strokes only
-# 1/sqrt2 of that, 1.5-module bowl legs, half-module edge breaks.
-HERITAGE = Params(m=1, cap=12, xh=9, asc=13, desc=3.5, sv=2, sh=2, sd=SQRT2,
-                  leg=1.5, c=0.5, fig_w=9, fig_adv=10)
+# The watch figures, in modules: two-module strokes; every diagonal as wide
+# across as a stem (so 45-degree strokes are only 1/sqrt2 of it), 1.5-module
+# bowl legs, half-module edge breaks.
+HERITAGE = Params(m=1, cap=12, xh=9, asc=12.667, desc=3.5, sv=2, sh=2, sd=SQRT2,
+                  ss=4 / math.sqrt(5), leg=1.5, c=0.5, fig_w=9, fig_adv=10)
 HERITAGE_UNITS = HERITAGE.scaled(60)
