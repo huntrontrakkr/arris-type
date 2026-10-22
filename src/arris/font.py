@@ -125,7 +125,8 @@ def _place(name: str, p: Params, tune=None, record: bool = False):
         dx = (adv - g.W) / 2
     elif isinstance(spec.kind, tuple) and spec.kind[0] == 'punct':
         xs = [x for r in rings for x, _ in r] or [0.0, g.W]
-        side = PUNCT_SIDE * light(p) * spec.kind[1]
+        k = spec.kind[1]
+        side = k(p) if callable(k) else PUNCT_SIDE * light(p) * k      # a glyph may set its own side
         dx = side - min(xs)
         adv = side + (max(xs) - min(xs)) + side
     else:

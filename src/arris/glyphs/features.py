@@ -92,10 +92,17 @@ def zero_dot(g):
 
 # --- The time colon ------------------------------------------------------
 
-@glyph('colon.tf', None, lambda p: p.dot(), kind=('punct', 0.0))
+def _figure_side(p):
+    return (p.fig_adv - p.fig_w) / 2
+
+
+@glyph('colon.tf', None, lambda p: p.dot(), kind=('punct', _figure_side))
 def colon_tf(g):
     """The watch clock's colon: dots centred a sixth of a module above the
-    figures' middle, their centres five modules apart."""
+    figures' middle, their centres five modules apart, with a figure's
+    sidebearing each side, so the white beside the dots is the white
+    between two figures (on the watch, 3 pixels each side of the colon
+    and between the figures alike)."""
     p = g.p
     s = p.dot()
     yc = p.cap / 2 + p.cap / 72

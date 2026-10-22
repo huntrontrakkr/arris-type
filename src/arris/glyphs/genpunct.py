@@ -24,7 +24,8 @@ from .letterframe import STEEP, Frame, growing_width, letter_width
 from .punct import _bracket, axis, dot, dot_w, punct, stem_w
 from .symkit import MIRROR, sign, stamp_t
 
-ALIASES = {0x2015: 'emdash', 0x2024: 'period', 0x2027: 'periodcentered'}
+ALIASES = {0x2015: 'emdash', 0x2024: 'period', 0x2027: 'periodcentered',
+           0x02BB: 'quoteleft', 0x02BC: 'quoteright'}   # modifier letters: Uzbek oʻ gʻ, the apostrophe ʼ
 
 
 def white(p, mod=1.0, stem=0.75):
