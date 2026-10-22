@@ -76,6 +76,11 @@ Every added part is a function used by every letter that carries it:
   with the cursive ц's tick, ҭ the italic т (an m) with it, ԥ and ҧ the
   italic п (an n) with the tick or the hook. Composed letters (ӣ ӯ ӥ...)
   take their bases' italics.
+* **Mouths** (Ә Ҽ Ҿ Ҩ, where a beak faces a bar or a loop) keep three
+  quarters of their share of the stem, the beak shortening as the
+  figures' do (`MOUTH`); Ҩ, whose height stacks a beak, a mouth and a
+  loop, keeps 0.4 and then lowers its loop as far as the loop's own
+  counter allows.
 * **Crowded cells degrade cleanly**: where a loop, a hook's u or a beak's
   turn has no room (the monospaced cell at Black and grade +100), the
   part is drawn without the turn that would cross itself.
@@ -94,5 +99,9 @@ feature. `tools/hbspec.py` takes `lang=xx` to proof it.
   closely, and reads as a step on the arm.
 * Ҵ ԏ have no cursive italic (their т stays upright-shaped).
 * Ҩ ҩ are an Arris reading of the Abkhaz letter: a bowl open at the top
-  with a loop in its lower right.
-* ϰ at text sizes reads close to x (its flats are short).
+  with a loop in its lower right. In ҩ at Black with a heavy grade or the
+  watch balance there is no room for the beak over the loop, and the bowl
+  ends flat on its top bar.
+* ϰ draws its curls only where they draw as a simple outline
+  (`greek_ext._draws`); at Black with grade +100, and in the heavy
+  monospaced cells, it falls back to plain flats.
