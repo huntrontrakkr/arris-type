@@ -64,7 +64,7 @@ def place(name: str, p: Params, tune=None):
         adv = p.fig_adv
         dx = (adv - g.W) / 2
     else:
-        zone = (0.0, p.cap)
+        zone = (0.0, p.xh) if spec.kind == 'lower' else (0.0, p.cap)
         lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * (zone[1] - zone[0]),
                                         floor=-0.25 * p.m)
         dx = lsb - xmin
