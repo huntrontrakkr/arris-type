@@ -27,7 +27,7 @@ from ..params import SQRT2
 from .caps import big
 from .cyrillic import ALIASES as RU_ALIASES, ccap, mirror, sc, smallcap
 from .extra_latin import stamp
-from .figures import beak_depth, jog
+from .figures import MOUTH_SHARE, _beak_limit, beak_depth, jog
 from .letterframe import Frame, k_arms, letter_width, white_scale
 
 # Code points that are Latin or Russian letters already.
@@ -107,6 +107,20 @@ def cross_bar(g, x0, x1, y):
     g.stroke((x0, y), (x1, y))
 
 
+def beak_free(g):
+    """A beak's depth, which a mouth's opening may shorten, never past its
+    outer flank (as the 3's and 5's: figures.beak_bottom)."""
+    from ..params import outer_leg
+    p = g.p
+    return max(g.free('beak', beak_depth(p, g.sh)), outer_leg(p, sh=g.sh) + p.c)
+
+
+# A mouth, where a beak faces a bar (Ә Ҽ Ҩ), keeps three quarters of its
+# share of the stem, the beak shortening as the figures' do. Each drawing
+# records the white it leaves between the beak's tip and the bar.
+MOUTH = Opening(lambda g: g.defaults_used['mouth'], 'beak', _beak_limit, max_ratio=MOUTH_SHARE)
+
+
 # --- Capitals ------------------------------------------------------------
 
 @ccap('uni0492', 'Ғ', 7, 1, width=plus_room('uni0413', 1.5))
@@ -154,14 +168,15 @@ def Ustraightstroke(g):
     g.stroke(f.P(2.5, 3), f.P(7.5, 3))
 
 
-@ccap('uni04D8', 'Ә', 9, 2)
+@glyph('uni04D8', 'Ә', letter_width(9, 2), kind='cap', openings=[MOUTH])
 def Schwa(g):
     """Э whose lower beak runs on up into its bar: the e turned, at the
     capital height, with a beak where it opens."""
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_free(g)
     g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 1)), B(*f.P(1, 1)), f.P(1, 6))
     g.stroke(f.P(1, 6), f.P(8, 6))
+    g.defaults_used['mouth'] = (H - d) - (f.Y(6) + g.sh / 2)
 
 
 @ccap('uni0498', 'Ҙ', 9, 2)
@@ -178,8 +193,9 @@ def Esdesc(g):
 
 def lead(p):
     """How far a bar leads in to a stem from the left (Ҡ's): two modules,
-    or three quarters of a stem where that is more, so it shows as a bar."""
-    return max(2 * room(p), 0.75 * p.sv)
+    or three quarters of a stem where that is more, so it shows as a bar
+    (in the monospaced cell, half that: the K beside it needs the room)."""
+    return max(2 * room(p), 0.75 * p.sv) * (0.5 if p.mono else 1.0)
 
 
 @ccap('uni04A0', 'Ҡ', 9, 1, width=lambda p: REGISTRY['K'].width(p) + lead(p))
@@ -524,7 +540,9 @@ def _che_abkhaz(g, f, xl, xr, top, yb, ybot, beak):
     p = g.p
     g.stroke((xl, yb), (xr, yb), B(xr, top), B(xl, top), closed=True)
     if beak:
-        g.stroke((xl, yb), B(xl, ybot), B(xr, ybot), (xr, beak_depth(p)))
+        d = beak_free(g)
+        g.stroke((xl, yb), B(xl, ybot), B(xr, ybot), (xr, d))
+        g.defaults_used['mouth'] = (yb - g.sh / 2) - d
     else:
         g.stroke((xl, yb), B(xl, ybot), (xr, ybot))
     x1 = xl - p.sv / 2 - room(p)
@@ -537,33 +555,65 @@ def _che_abkhaz(g, f, xl, xr, top, yb, ybot, beak):
     g.clip = (min(x0, x1 - L - p.sv), y0, x1_, y1)
 
 
-@ccap('uni04BC', 'Ҽ', 11, 2)
+@glyph('uni04BC', 'Ҽ', letter_width(11, 2), kind='cap', openings=[MOUTH])
 def Cheabkhasian(g):
     f = Frame(g, 11)
     _che_abkhaz(g, f, f.X(3.5), f.X(10), f.Y(11), f.Y(6), f.Y(1), beak=True)
 
 
-@ccap('uni04BE', 'Ҿ', 11, 2)
+@glyph('uni04BE', 'Ҿ', letter_width(11, 2), kind='cap', openings=[MOUTH])
 def Chedescabkhasian(g):
     f = Frame(g, 11)
     _che_abkhaz(g, f, f.X(3.5), f.X(10), f.Y(11), f.Y(6), f.Y(1), beak=True)
     drop(g, (f.X(3.5) + f.X(10)) / 2)
 
 
-@ccap('uni04A8', 'Ҩ', 11, 3)
+def _ha_mouth(g):
+    return g.defaults_used['mouth']
+
+
+def _ha_loop_limit(p):
+    """The lowest the loop's top may come: its counter keeps half a stem."""
+    return 1.5 * p.sh + 0.5 * p.sv
+
+
+# Ҩ stacks a beak, a mouth and a loop in its height, more than the x-height
+# holds at Black: its mouth keeps 0.4 of a stem, the beak shortening first,
+# then the loop coming down as far as its own counter allows.
+@glyph('uni04A8', 'Ҩ', letter_width(11, 3), kind='cap',
+       openings=[Opening(_ha_mouth, 'beak', _beak_limit, max_ratio=0.4),
+                 Opening(_ha_mouth, 'loop', _ha_loop_limit, max_ratio=0.4)])
 def Haabkhasian(g):
     """A big bowl open at the top, a closed loop inside its lower right,
-    the foot running on past the loop."""
+    the foot running on past the loop. Its mouth (the beak over the loop)
+    shortens the beak, then lowers the loop. Where even the shortest beak
+    over the lowest loop would leave less of a mouth than that (the small
+    letter at Black and a heavy grade), or the bowl is too narrow to turn
+    down (the monospaced cell), the bowl ends flat on its top bar."""
+    from ..params import outer_leg
     f = Frame(g, 11)
     p = g.p
     xr = f.X(10)
-    xm = min(f.X(6), xr - p.sv - room(p))                   # the loop keeps a module of white
+    xm = (f.X(1) + xr) / 2                                  # the loop as wide as the bowl beside it
     xl = f.X(1)
-    start = [(xm, f.Y(11) - beak_depth(p) + g.sh / 2), B(xm, f.Y(11))]
-    if xm - xl < p.sv + 2 * p.c:                            # (a crowded cell: no room to turn down)
+    d = beak_free(g)
+    y_loop = f.Y(6.5)
+    yl = min(g.free('loop', y_loop), y_loop)
+    start = [(xm, p.cap - d), B(xm, f.Y(11))]
+    g.defaults_used['mouth'] = (p.cap - d) - (yl + g.sh / 2)
+    best = (p.cap - outer_leg(p) - p.c) - (min(y_loop, _ha_loop_limit(p)) + p.sh / 2)
+    corner = B(xl, f.Y(11))
+    if xm - xl < p.sv + 2 * p.c or best < 0.4 * p.sv:
         start = [(xm, f.Y(11))]
-    g.stroke(*start, B(xl, f.Y(11)), B(xl, f.Y(1)), (g.W, f.Y(1)))
-    g.stroke((xm, f.Y(1)), (xm, f.Y(6.5)), B(xr, f.Y(6.5)), (xr, f.Y(1)))
+        g.defaults_used['mouth'] = 1e4
+        if xm - xl < p.leg + g.sh:                          # too short a bar to chamfer
+            corner = (xl, f.Y(11))
+    g.stroke(*start, corner, B(xl, f.Y(1)), (g.W, f.Y(1)))
+    if xr - xm >= p.sv + 2 * p.c:
+        g.stroke((xm, f.Y(1)), (xm, yl), B(xr, yl), (xr, f.Y(1)))
+    else:                                                   # (a crowded cell: the loop closes up)
+        g.stroke((xm, f.Y(1)), (xm, yl), (xr, yl))
+        g.stroke((xr, yl), (xr, f.Y(1)))
 
 
 def komi_hook(g, f, x, y_top, rise):
@@ -743,16 +793,15 @@ def hahook(g):
     hook(g, f, Wx - p.sv / 2, g.sh, reach=3.0)
 
 
-@glyph('uni049F', 'ҟ', letter_width(8, 1), kind='lower')
+@glyph('uni049F', 'ҟ', lambda p: REGISTRY['k'].width(p) + room(p), kind='lower')
 def kastroke(g):
-    """The k (upright in the italic too), Ħ's bar through its ascender."""
-    f = Frame(g, 8, 'asc')
+    """The k (its upright drawing in the italic too: the looped k is
+    Latin), Ħ's bar through its ascender."""
+    from ..draw import _build
     p = g.p
-    xs = f.X(1.75)
-    g.stroke((xs, 0), (xs, p.asc))
-    for pts, a, b in k_arms(g, xs, f.W, p.xh):
-        g.stroke(*pts, start=a, end=b)
-    cross_bar(g, 0, xs + p.sv / 2 + room(p), (p.xh + p.asc) / 2 + p.m / 2)
+    dx = room(p)
+    g.add_glyph(_build(REGISTRY['k'], p, 0.0, 0.0, {}, g.W - dx), dx)
+    cross_bar(g, 0, dx + p.sv + room(p), (p.xh + p.asc) / 2 + p.m / 2)
 
 
 @glyph('uni0495', 'ҕ', letter_width(8, 2), kind='lower')

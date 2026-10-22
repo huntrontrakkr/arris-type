@@ -105,16 +105,23 @@ def pi_symbol(g):
     g.stroke((f.W / 2, f.Y(1)), (f.W / 2, f.Y(5)))
 
 
-@glow('uni03F0', 'ϰ', 8, 2)
+@glow('uni03F0', 'ϰ', 10, 2)
 def kappa_symbol(g):
-    """An x whose falling stroke leaves on a flat at the top left and lands
-    on one at the bottom right (both strokes at the 7's 2:1 slope)."""
-    f = Frame(g, 8, 'lower')
+    """An x whose falling stroke curls at both ends: it leaves a beak at
+    the top left along a flat, and lands on a flat that turns up into a
+    beak at the bottom right (both strokes at the 7's 2:1 slope)."""
+    from .figures import beak_depth
+    f = Frame(g, 10, 'lower')
     p, W = f.p, f.W
     yt, yb = f.Y(8), f.Y(1)
     run = (yt - yb) / 2
     xa = (W - run) / 2
-    g.stroke((0, yt), (xa, yt), (xa + run, yb), (W, yb))
+    d = beak_depth(p) - g.sh / 2                            # the beak's stub, below the flat's centre
+    x0, x1 = p.sv / 2, W - p.sv / 2
+    if xa - x0 >= p.leg + g.sh:
+        g.stroke((x0, yt - d), B(x0, yt), (xa, yt), (xa + run, yb), B(x1, yb), (x1, yb + d))
+    else:                                                   # flats too short to curl (a crowded cell)
+        g.stroke((x0, yt), (xa, yt), (xa + run, yb), (x1, yb))
     x0 = W / 2 - p.xh / 4
     g.stroke((x0, 0), (x0 + p.xh / 2, p.xh), start='h', end='h')
 
@@ -131,20 +138,18 @@ def rho_symbol(g):
 
 # --- Lunate sigmas, reversed and dotted ---------------------------------------
 
-def _dot_in(g, x, y):
-    s = g.p.dot()
-    g.stroke((x, y - s / 2, s), (x, y + s / 2))
-
-
 def _lunate(name, ch, base, kind, rev, dot):
     def fn(g, base=base, rev=rev, dot=dot):
         REGISTRY[base].fn(g)
         if rev:
             mirror(g)
         if dot:
+            # in the middle of the bowl, half a stem clear of its sides and
+            # beaks (a speck where a heavy grade leaves no room)
             p = g.p
             top = p.cap if kind == 'cap' else p.xh
-            _dot_in(g, g.W / 2 + (-0.15 if rev else 0.15) * g.W, top / 2)
+            s_ = min(p.dot(), max(g.W - 3 * p.sv, p.floor))
+            g.stroke((g.W / 2, top / 2 - s_ / 2, s_), (g.W / 2, top / 2 + s_ / 2))
     glyph(name, ch, lambda p, b=base: REGISTRY[b].width(p), kind=kind)(fn)
 
 
