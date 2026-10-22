@@ -11,9 +11,11 @@ light), not the area rule, which would pull a period into its neighbours.
 """
 from __future__ import annotations
 
+import math
+
 from ..draw import B, glyph
 from ..params import SQRT2
-from .figures import beak_depth
+from .figures import beak_depth, heaviness
 from .letterframe import STEEP, Frame, growing_width, letter_width
 
 
@@ -445,17 +447,41 @@ def at(g):
     g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
 
 
-@punct('asterisk', '*', 7, 1, width=growing_width(7, 1, 2.5))
+SPOKE = math.atan2(1, 2)       # the asterisk's slanted spokes: the shallow 2:1
+SPOKE_WHITE = 0.5              # the share of a spoke that keeps white beside it, at least
+
+
+def _asterisk_r(p):
+    """The asterisk's radius (centre to a spoke's end): in the monospaced cut
+    0.35 of the cap height (the asterisk 0.7 of it tall, as code faces set
+    it, on the axis between the operands of `a*b`); in the proportional cut
+    0.27, raised to the cap height as text sets it. It grows toward
+    Black (three tenths), where the strokes need the room."""
+    return (0.35 if p.mono else 0.27) * p.cap * (1 + 0.3 * heaviness(p))
+
+
+@punct('asterisk', '*', 7, 1,
+       width=lambda p: 2 * _asterisk_r(p) * math.cos(SPOKE) + max(p.sv, p.sd))
 def asterisk(g):
+    """Six spokes, near sixty degrees apart in the figures' own directions:
+    the vertical and the four shallow 2:1 slopes, crossing at the centre,
+    each cut square at its end. The strokes keep their weight unless the
+    white between two spokes would begin outside the inner (1 - SPOKE_WHITE)
+    of their length; past that (toward Black) they lighten, so the
+    asterisk stays a star rather than a knot."""
+    from ..draw import _thickness
+    from .shapes import slanted
     p, W = g.p, g.W
-    h = W / 2 - p.sv / 4
-    yc = p.cap - h
+    r = _asterisk_r(p)
+    t_max = 2 * math.sin(SPOKE) * (1 - SPOKE_WHITE) * r       # white begins at t / (2 sin SPOKE) from the centre
+    th = _thickness(p, g.sh)
     xc = W / 2
-    g.stroke((xc, yc - h), (xc, yc + h))
-    d = h / SQRT2 * 1.1
-    g.stroke((xc - d, yc - d), (xc + d, yc + d))
-    g.stroke((xc - d, yc + d), (xc + d, yc - d))
-    g.clip = (0, yc - h, W, p.cap)
+    yc = axis(p) if p.mono else p.cap - r
+    g.stroke((xc, yc - r, slanted(g, min(max(p.sv, p.floor), t_max), (0, 1))), (xc, yc + r))
+    c, s_ = r * math.cos(SPOKE), r * math.sin(SPOKE)
+    for sy in (1, -1):
+        d = (2, sy)
+        g.stroke((xc - c, yc - sy * s_, slanted(g, min(th(d), t_max), d)), (xc + c, yc + sy * s_))
 
 
 @punct('asciicircum', '^', 8, 1)

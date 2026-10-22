@@ -1222,11 +1222,13 @@ def _inner_bars(g, x, y, half, n, r=None):
 
 
 def _inner_asterisk(g, x, y, half):
-    """Three spokes, the asterisk's: one upright, two at 45 degrees."""
-    d = half / SQRT2
+    """Six spokes, the asterisk's: the vertical and the shallow 2:1 slopes."""
+    import math
+    from .punct import SPOKE
+    c, s = half * math.cos(SPOKE), half * math.sin(SPOKE)
     g.stroke((x, y - half), (x, y + half))
-    g.stroke((x - d, y - d), (x + d, y + d))
-    g.stroke((x - d, y + d), (x + d, y - d))
+    g.stroke((x - c, y - s), (x + c, y + s))
+    g.stroke((x - c, y + s), (x + c, y - s))
 
 
 for cp, (nm, inner) in CIRCLED.items():
@@ -1412,7 +1414,7 @@ def setminus(g):
     g.stroke((w / 2, a + h), (g.W - w / 2, a - h), start='h', end='h')
 
 
-@op('asteriskmath', '∗', width=growing_width(7, 1, 2.5))
+@op('asteriskmath', '∗', width=lambda p: REGISTRY['asterisk'].width(p))
 def asteriskmath(g):
     """The asterisk, centred on the axis."""
     REGISTRY['asterisk'].fn(g)
