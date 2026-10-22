@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 
 from ..draw import B, glyph
-from ..params import SQRT2, outer_leg
+from ..params import SQRT2, inner_leg, outer_leg
 
 STEEP = (1 / math.sqrt(5), 2 / math.sqrt(5))  # the 2:1 slope, as a unit vector
 
@@ -27,16 +27,21 @@ def frame(g):
     return p, W, H, u, v, xl, xr, yb, yt
 
 
+def beak_depth(p):
+    """How far a beak terminal reaches below the bowl's top (or above its
+    bottom). Its outer flank under the corner chamfer is one edge break long,
+    so the corner rule turns it into a point; at weights where that would leave
+    the inner flank shorter than an edge break, the inner flank sets the depth.
+    At the heritage weight both flanks are exactly one edge break."""
+    return max(outer_leg(p) + p.c, p.sh + inner_leg(p) + p.c)
+
+
 def beak_top(g):
-    """Height of a top-left beak: the outer flank under the corner chamfer is
-    exactly one edge break long, so the corner rule turns it into a point."""
-    p = g.p
-    return p.cap + g.ot - outer_leg(p) - p.c
+    return g.p.cap + g.ot - beak_depth(g.p)
 
 
 def beak_bottom(g):
-    p = g.p
-    return -g.ob + outer_leg(p) + p.c
+    return -g.ob + beak_depth(g.p)
 
 
 def steep_thickness(p):

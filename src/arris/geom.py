@@ -21,6 +21,7 @@ from dataclasses import dataclass
 import shapely
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.geometry.polygon import orient
+from shapely.validation import explain_validity
 
 EPS = 1e-7
 
@@ -114,6 +115,29 @@ def _cap_point(p, d, side_pt, kind):
 
 
 def stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
+    """The ink of one stroke. If a closed stroke's counter is too small for its
+    bowl chamfers (very heavy weights), the bowls shrink until it fits."""
+    try:
+        return _stroke_polygon(stroke, thick, c)
+    except ValueError:
+        if not stroke.closed or not any(n.bowl for n in stroke.nodes):
+            raise
+    lo, hi = 0.0, 1.0
+    for _ in range(30):
+        mid = (lo + hi) / 2
+        try:
+            _stroke_polygon(_scale_bowls(stroke, mid), thick, c)
+            lo = mid
+        except ValueError:
+            hi = mid
+    return _stroke_polygon(_scale_bowls(stroke, lo * 0.98), thick, c)
+
+
+def _scale_bowls(stroke: Stroke, k: float) -> Stroke:
+    return Stroke(tuple(Node(n.x, n.y, n.bowl * k) for n in stroke.nodes), stroke.closed, stroke.start, stroke.end)
+
+
+def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
     pts, bowls = _expand(stroke)
     closed = stroke.closed
     m = len(pts)
@@ -164,11 +188,13 @@ def stroke_polygon(stroke: Stroke, thick: Thickness, c: float) -> Polygon:
         rings = [left, right]
         polys = [Polygon(r) for r in rings]
         outer, inner = sorted(polys, key=lambda p: -abs(p.area))
+        if not inner.is_valid or not outer.is_valid:
+            raise ValueError('counter too small for its bowls')
         poly = Polygon(outer.exterior.coords, [inner.exterior.coords])
     else:
         poly = Polygon(left + right[::-1])
     if not poly.is_valid:
-        raise ValueError(f'stroke outline is not simple: {shapely.validation.explain_validity(poly)}')
+        raise ValueError(f'stroke outline is not simple: {explain_validity(poly)}')
     return poly
 
 

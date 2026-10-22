@@ -32,3 +32,22 @@ def supersample(fn, k=4, **kw):
     kw['pad'] = kw.get('pad', 40) * k
     img = fn(**kw)
     return img.resize((img.width // k, img.height // k), Image.LANCZOS)
+
+
+def render_svg(items, scale=0.25, pad=40, gap=40, height=800, baseline=250, ink='#000', paper='#fff'):
+    """Like ``render`` but through cairo: exact, antialiased."""
+    import io
+    import cairosvg
+    W = pad * 2 + (sum(a for _, a in items) + gap * max(len(items) - 1, 0)) * scale
+    H = pad * 2 + (height + baseline) * scale
+    paths, x0 = [], pad
+    for rings, adv in items:
+        for r in rings:
+            pts = [(x0 + x * scale, pad + (height - y) * scale) for x, y in r]
+            paths.append('M' + 'L'.join(f'{x:.2f},{y:.2f}' for x, y in pts) + 'Z')
+        x0 += (adv + gap) * scale
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}">'
+           f'<rect width="100%" height="100%" fill="{paper}"/>'
+           f'<path fill="{ink}" fill-rule="nonzero" d="{" ".join(paths)}"/></svg>')
+    png = cairosvg.svg2png(bytestring=svg.encode())
+    return Image.open(io.BytesIO(png)).convert('L')
