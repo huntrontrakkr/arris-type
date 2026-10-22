@@ -22,6 +22,7 @@ from .punct import axis, dot
 from .symbols import arrow_head
 
 LIGATURES: list[tuple[str, tuple[str, ...]]] = []   # (glyph name, component glyph names), longest first at build
+COMPONENTS: dict[str, tuple[str, ...]] = {}         # glyph name -> component glyph names
 
 
 def _names(seq: str) -> tuple[str, ...]:
@@ -41,6 +42,9 @@ def liga(*seqs):
         for seq in seqs:
             names = _names(seq)
             name = '_'.join(names) + '.liga'
+            if len(name) > 31:                  # legacy limit: the AGL's code-point form
+                name = 'uni' + ''.join(f'{ord(ch):04X}' for ch in seq) + '.liga'
+            COMPONENTS[name] = names
             glyph(name, None, _body(len(seq)), kind=('liga', len(seq)))(fn)
             LIGATURES.append((name, names))
         return fn
@@ -478,7 +482,7 @@ def tight(*seqs, pull=0.22):
         from ..draw import draw
         from ..geom import rings_to_shapely
         p = g.p
-        comps = g.name[:-len('.liga')].split('_')
+        comps = COMPONENTS[g.name]
         n = len(comps)
         subs = [draw(comp, p) for comp in comps]
         ink = [rings_to_shapely(s.rings()) for s in subs]
