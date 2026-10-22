@@ -578,16 +578,7 @@ def large_circle(g):
     ring(g, cx, cy, g.W)
 
 
-@shape('◌', 'L')
-def dotted_circle(g):
-    """Eight dots round an octagon, at its sides' middles."""
-    cx, cy = _centre(g)
-    s = min(g.p.dot(), 0.18 * g.W)                         # (dots stay apart at Black)
-    r = g.W / 2 - s / 2
-    for k in range(8):
-        a = math.radians(45 * k)
-        q = r if k % 2 == 0 else r * 0.92                     # the diagonal sides sit in a little
-        block(g, cx + q * math.cos(a), cy + q * math.sin(a), s)
+# ◌ is the mark carrier in latin_plus, an x-height across
 
 
 @shape('◎', 'L')

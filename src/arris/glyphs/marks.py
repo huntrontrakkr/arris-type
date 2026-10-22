@@ -174,11 +174,161 @@ ABOVE = {'̀': grave, '́': acute, '̂': circumflex, '̃': tilde, '̄': macron,
          '̆': breve, '̇': dotaccent, '̈': dieresis, '̊': ring, '̋': hungarumlaut,
          '̌': caron}
 BELOW = {'̦': commabelow, '̧': cedilla, '̨': ogonek}
+# Marks joined to the base itself (the Vietnamese horn): fn(g, x, case),
+# reading the base's ink (g.extra[0]). A monospaced cell narrows the base
+# by as much as such a mark reaches past the cell's edge.
+ATTACHED: dict = {}
+# Pairs of marks above where the second stands beside the first, at its
+# upper right, instead of on top of it (Vietnamese tone marks on the
+# circumflex).
+BESIDE: set = set()
 
 # Letters whose cedilla is written as a comma: Latvian's, and the T and t,
 # whose cedilla Romanian writes as a comma (and which, hung from the T's
 # stem, would turn the letter into a J).
 CEDILLA_AS_COMMA = set('KkLlNnRrGgTt')
+
+STACK_GAP = 0.6     # white between stacked marks, of the marks' gap
+LIGHTEST = 0.5      # the furthest a stack of marks lightens and shrinks to stay inside the line
+
+
+def line_top(p):
+    """The top of the line: the font's Windows ascent (``font.Metrics``),
+    above which a renderer may clip."""
+    from ..font import Metrics
+    m = Metrics()
+    return (m.win_asc - 2) * p.cap / m.cap
+
+
+def accent_params(p, k):
+    """Marks drawn lighter and smaller by k: strokes, module and edge breaks
+    together, so a mark keeps its proportions as it shrinks."""
+    if k == 1.0:
+        return p
+    return p.with_(m=p.m * k, sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, leg=p.leg * k)
+
+
+def mark_ink(g, n0=0):
+    """The finished ink (corner rule and all) of a glyph's strokes from the n0-th on."""
+    from ..draw import _thickness
+    from ..geom import ink, rings_to_shapely
+    return rings_to_shapely(ink(g.strokes[n0:], _thickness(g.p, g.sh), g.p.c))
+
+
+def raw_ink(g, n0=0):
+    """The ink of a glyph's strokes from the n0-th on before the corner rule:
+    what the glyph's union sees, so parts apart here stay apart."""
+    import shapely
+    from ..draw import _thickness
+    from ..geom import stroke_polygon
+    th = _thickness(g.p, g.sh)
+    return shapely.union_all([stroke_polygon(s, th, g.p.c) for s in g.strokes[n0:]])
+
+
+RAW_CLEAR = 1.0     # font units: marks whose raw strokes come nearer would fuse in the union
+
+
+def _nearest_clear(scratch, n0, draw_at, others, sg, reach):
+    """The least t in [0, reach] for which the mark drawn by draw_at(t)
+    stands ``sg`` clear of ``others`` (finished ink) and does not touch
+    them before the corner rule (raw ink)."""
+    fin, raw = others
+
+    def clear(t):
+        del scratch.strokes[n0:]
+        draw_at(t)
+        return ((not sg or mark_ink(scratch, n0).distance(fin) >= sg - 1e-6)
+                and raw_ink(scratch, n0).distance(raw) >= RAW_CLEAR)
+    if clear(0.0):
+        del scratch.strokes[n0:]
+        return 0.0
+    lo, hi = 0.0, reach
+    for _ in range(20):
+        mid = (lo + hi) / 2
+        if clear(mid):
+            hi = mid
+        else:
+            lo = mid
+    del scratch.strokes[n0:]
+    return hi
+
+
+def stack_above(p, marks, x, top, case, W, room=None, avoid=None):
+    """Where the marks above a base go: ([(mark, x, y)], the stack's top).
+
+    The first stands a gap above the base's highest ink; each next one a
+    stack gap above the ink of those before it (measured, so a dieresis
+    carries a macron lower than an acute would). A pair in ``BESIDE`` puts
+    the second mark at the first's upper right instead: drawn where the
+    first is, then moved out at 45 degrees, square to the circumflex's
+    right arm, until it stands a stack gap clear. Marks never come so near
+    that their strokes would fuse. ``avoid`` (finished, raw ink): what the
+    stack keeps a stack gap from, moving left if it must (a horn).
+    ``room`` (x0, x1): the whole stack shifts sideways, if it must, to stay
+    inside it (a monospaced cell)."""
+    from ..draw import Glyph
+    scratch = Glyph(p, W=W)
+    places = []
+    y = top + gap(p)
+    sg = STACK_GAP * gap(p)
+    reach = 4 * size(p, case) + 2 * p.sv
+    prev = None
+    for m in marks:
+        n0 = len(scratch.strokes)
+        before = (mark_ink(scratch), raw_ink(scratch)) if n0 else None
+        if (prev, m) in BESIDE and places:
+            x0, y0 = places[-1][1:]
+            t = _nearest_clear(scratch, n0, lambda t: ABOVE[m](scratch, x0 + t, y0 + t, case), before, sg, reach)
+            xm, ym = x0 + t, y0 + t
+        else:
+            xm, ym = x, y
+            if before is not None:                          # stacked: never fused to what is below
+                t = _nearest_clear(scratch, n0, lambda t: ABOVE[m](scratch, x, y + t, case), before, 0.0, reach)
+                ym = y + t
+        ABOVE[m](scratch, xm, ym, case)
+        places.append((m, xm, ym))
+        y = mark_ink(scratch).bounds[3] + sg
+        prev = m
+    if not places:
+        return places, top
+    if avoid is not None:
+        t = _nearest_clear(scratch, 0, lambda t: [ABOVE[m](scratch, xm - t, ym, case) for m, xm, ym in places],
+                           avoid, sg, reach)
+        places = [(m, xm - t, ym) for m, xm, ym in places]
+        del scratch.strokes[:]
+        for m, xm, ym in places:
+            ABOVE[m](scratch, xm, ym, case)
+    if room is not None:
+        x0, _, x1, _ = mark_ink(scratch).bounds
+        shift = min(0.0, room[1] - x1) or max(0.0, room[0] - x0)
+        places = [(m, xm + shift, ym) for m, xm, ym in places]
+    return places, mark_ink(scratch).bounds[3]
+
+
+def clear_below(base_ink, p, fn, x, case, W):
+    """Where a mark below goes: under the body's centre, or, where the
+    base's ink below the baseline (a descender's hook) would crowd it, to
+    the right, as far as it must go to keep a gap clear."""
+    from shapely.geometry import box
+
+    from ..draw import Glyph
+    scratch = Glyph(p, W=W)
+    hook = base_ink.intersection(box(-1e4, -1e4, 1e4, -1e-3))  # (a cedilla is meant to touch the base)
+    if hook.is_empty:
+        return x
+
+    def clearance(xm):
+        del scratch.strokes[:]
+        fn(scratch, xm, 0, case)
+        return mark_ink(scratch).distance(hook)
+    want = gap(p)
+    if clearance(x) >= 0.9 * want:
+        return x
+    step = 0.1 * p.m
+    xm = x
+    while clearance(xm) < want and xm < x + 2 * W:
+        xm += step
+    return xm
 
 
 def _name(ch):
@@ -194,7 +344,7 @@ def compose(chars, base_names):
         if len(d) < 2:
             continue
         base, marks = d[0], d[1:]
-        if not all(m in ABOVE or m in BELOW for m in marks):
+        if not all(m in ABOVE or m in BELOW or m in ATTACHED for m in marks):
             continue
         bname = base_names.get(base)
         if any(m in ABOVE for m in marks) and bname in ('i', 'j'):
@@ -214,24 +364,34 @@ def _register(name, ch, bname, base, marks):
     case = 'uc' if base.isupper() else 'lc'
 
     def fn(g, bname=bname, marks=marks, base=base, case=case):
-        from ..draw import draw
-        from ..geom import rings_to_shapely
+        from ..draw import Glyph, draw
         # The base, finished (openings solved, clipped and cut), then the marks.
         p = g.p
-        base_glyph = draw(bname, p, g.ot, g.ob)
+        # a monospaced cell gives a mark joined on the right (the horn) the
+        # room it needs past the cell's edge: the base narrows by that much
+        room = 0.0
+        if p.mono and any(m in ATTACHED for m in marks):
+            trial = Glyph(p, W=g.W)
+            trial.add_glyph(draw(bname, p, g.ot, g.ob))
+            for m in marks:
+                if m in ATTACHED:
+                    ATTACHED[m](trial, g.W / 2, case)
+            room = max(0.0, mark_ink(trial).bounds[2] - (g.W + p.fig_adv) / 2)
+        base_glyph = draw(bname, p, g.ot, g.ob, width=(g.W - room) if room else None)
         rings = base_glyph.rings()
         top = max(y for r in rings for _, y in r)
         g.extra, g.clip = [], None
         g.add_glyph(base_glyph)
-        x = g.W / 2
-        y = top + gap(p)
+        x = (g.W - room) / 2
+        above = []
         for m in marks:
             if m in ABOVE:
                 if m == '\u030c' and base in 'dlLt':
                     _caron_apostrophe(g, base)
                     continue
-                ABOVE[m](g, x, y, case)
-                y += size(p, case) + 0.6 * gap(p)
+                above.append(m)
+            elif m in ATTACHED:
+                ATTACHED[m](g, x, case)
             elif m == '\u0327' and base in CEDILLA_AS_COMMA:
                 if base == 'g':
                     commaabove(g, x, top + gap(p), case)
@@ -240,9 +400,42 @@ def _register(name, ch, bname, base, marks):
             elif m == '\u0328':
                 ogonek(g, _ogonek_x(g, base), 0, case)
             else:
-                BELOW[m](g, x, 0, case)
+                BELOW[m](g, clear_below(g.extra[0], p, BELOW[m], x, case, g.W), 0, case)
+        if not above:
+            return
+        cell = (-(p.fig_adv - g.W) / 2, g.W + (p.fig_adv - g.W) / 2) if p.mono else None
+        # marks joined to the base (a horn) are kept clear of
+        avoid = (mark_ink(g), raw_ink(g)) if g.strokes and any(m in ATTACHED for m in marks) else None
+        draw_above(g, above, x, top, case, cell, avoid)
 
     glyph(name, ch, spec.width, kind=spec.kind)(fn)
+
+
+def draw_above(g, above, x, top, case, cell=None, avoid=None):
+    """Draw marks above into g, stacked (``stack_above``) over ink reaching
+    ``top``. A stack that would rise past the line's top lightens and
+    shrinks, as heavy faces draw their accents, as far as it must (never
+    past LIGHTEST)."""
+    from ..draw import Glyph
+    p = g.p
+    k, q = 1.0, p
+    places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
+    if hi > line_top(p):
+        lo, k = LIGHTEST, 1.0
+        for _ in range(16):
+            mid = (lo + k) / 2
+            if stack_above(accent_params(p, mid), above, x, top, case, g.W, cell, avoid)[1] <= line_top(p):
+                lo = mid
+            else:
+                k = mid
+        k = lo
+        q = accent_params(p, k)
+        places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
+    target = g if k == 1.0 else Glyph(q, W=g.W)
+    for m, xm, ym in places:
+        ABOVE[m](target, xm, ym, case)
+    if target is not g:
+        g.add_glyph(target)
 
 
 def _ogonek_x(g, base):
