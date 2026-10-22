@@ -879,7 +879,7 @@ def field():
 def swiss():
     body = """
 <div class="a">a</div>
-<div class="blk b1"><div class="label">Arris</div><p>A geometric sans grown from the figures of a watch. Chamfered corners, octagonal bowls, a notch where the 2 turns.</p></div>
+<div class="blk b1"><div class="label">Arris</div><p>A chamfered sans grown from the figures of a watch. Chamfered corners, octagonal bowls, a notch where the 2 turns.</p></div>
 <div class="blk b2"><div class="label">Weights</div><p>100 200 300 400 500 600 700 800 900</p></div>
 <div class="blk b3"><div class="label">Axes</div><p>wght · GRAD · WTCH</p></div>"""
     css = """
