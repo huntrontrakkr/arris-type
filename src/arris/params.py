@@ -50,6 +50,12 @@ class Params:
             p = replace(p, **before)
         return p
 
+    def dot(self) -> float:
+        """A dot's size (a period, a tittle, a dieresis, a comma's head): the
+        stem's square, but never less than twice the stroke floor, so dots
+        still read at the lightest weights."""
+        return max(self.sv, 2 * self.floor)
+
     def scaled(self, k: float) -> 'Params':
         keep = ('mono', 'grade_k', 'slant', 'raw')
         out = Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})

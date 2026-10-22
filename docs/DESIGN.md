@@ -201,7 +201,10 @@ negative grade at Thin, the watch balance's light diagonals at Thin. The
 floor lives in the parameters (`Params.floor`): every derived set of
 parameters clamps its strokes to it as it is made, so the geometry that
 places a stroke and the stroke itself agree. It binds only at the lightest
-settings; from ExtraLight up every stroke is already above it.
+settings; from ExtraLight up every stroke is already above it. Dots (the
+period, a tittle, a dieresis, a comma's head) have a floor of their own,
+twice the stroke floor (`Params.dot`): a stem's square at Thin is a speck,
+and Thin faces draw their dots about twice their stems.
 
 Mouths, where a beak faces a bar, keep three quarters of their share;
 closed counters and the gaps under the 5's and 6's arms keep half. The 5's

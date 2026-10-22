@@ -25,10 +25,14 @@ def stem_w(n=1):
     return lambda p: n * p.sv
 
 
+def dot_w(n=1):
+    return lambda p: n * p.dot()
+
+
 def dot(g, x, y0):
-    """A stem-square dot standing on y0, centred on x."""
-    s = g.p.sv
-    g.stroke((x, y0), (x, y0 + s))
+    """A square dot standing on y0, centred on x (Params.dot)."""
+    s = g.p.dot()
+    g.stroke((x, y0, s), (x, y0 + s))
 
 
 def dot_gap(p):
@@ -36,7 +40,7 @@ def dot_gap(p):
     return max(0.8 * p.sv, 0.5 * p.m)
 
 
-@punct('period', '.', 2, width=stem_w())
+@punct('period', '.', 2, width=dot_w())
 def period(g):
     f = Frame(g, 2, 'lower')
     dot(g, f.X(1), 0)
@@ -47,38 +51,38 @@ def _comma(g, f, x, y_top, stub=None, s=None):
     ``stub`` is the dot's height above the turn (a stem and a half); ``s``
     its thickness (the stem's, unless a mark must be lighter to fit)."""
     p = g.p
-    s = p.sv if s is None else s
+    s = p.dot() if s is None else s
     y_turn = y_top - (1.5 * s if stub is None else stub)
     g.stroke((x, y_top, s), (x, y_turn, s * p.sd / p.sv), (x - 0.75 * s, y_turn - 0.75 * s), end='h')
 
 
-@punct('comma', ',', 3, width=lambda p: 1.5 * p.sv)
+@punct('comma', ',', 3, width=dot_w(1.5))
 def comma(g):
     f = Frame(g, 3, 'lower')
-    _comma(g, f, g.W - g.p.sv / 2, g.p.sv)
+    _comma(g, f, g.W - g.p.dot() / 2, g.p.dot())
 
 
-@punct('colon', ':', 2, width=stem_w())
+@punct('colon', ':', 2, width=dot_w())
 def colon(g):
     f = Frame(g, 2, 'lower')
     dot(g, f.X(1), 0)
-    dot(g, f.X(1), g.p.xh - g.p.sv)
+    dot(g, f.X(1), g.p.xh - g.p.dot())
 
 
-@punct('semicolon', ';', 3, width=lambda p: 1.5 * p.sv)
+@punct('semicolon', ';', 3, width=dot_w(1.5))
 def semicolon(g):
     f = Frame(g, 3, 'lower')
-    x = g.W - g.p.sv / 2
-    _comma(g, f, x, g.p.sv)
-    dot(g, x, g.p.xh - g.p.sv)
+    x = g.W - g.p.dot() / 2
+    _comma(g, f, x, g.p.dot())
+    dot(g, x, g.p.xh - g.p.dot())
 
 
-@punct('exclam', '!', 2, width=stem_w())
+@punct('exclam', '!', 2, width=dot_w())
 def exclam(g):
     f = Frame(g, 2, 'lower', top=g.p.cap)
     p = g.p
     dot(g, f.X(1), 0)
-    g.stroke((f.X(1), p.sv + dot_gap(p)), (f.X(1), p.cap))
+    g.stroke((f.X(1), p.dot() + dot_gap(p)), (f.X(1), p.cap))
 
 
 @punct('question', '?', 9, 2)
@@ -89,7 +93,7 @@ def question(g):
     # The 2's bowl, its right side turning back into a short stem at the centre.
     xs = f.X(4)
     g.stroke((f.X(1), p.cap - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6)), (xs, f.Y(6)),
-             (xs, p.sv + dot_gap(p)))
+             (xs, p.dot() + dot_gap(p)))
     dot(g, xs, 0)
 
 
@@ -121,7 +125,7 @@ def underscore(g):
 def quotesingle(g):
     f = Frame(g, 2, 'lower', top=g.p.cap)
     p = g.p
-    g.stroke((f.X(1), p.cap - 2 * p.sv), (f.X(1), p.cap))
+    g.stroke((f.X(1), p.cap - 2 * p.dot()), (f.X(1), p.cap))
 
 
 @punct('quotedbl', '"', 6, 2)
@@ -129,56 +133,58 @@ def quotedbl(g):
     f = Frame(g, 6, 'lower', top=g.p.cap)
     p = g.p
     for x in (f.X(1), f.X(5)):
-        g.stroke((x, p.cap - 2 * p.sv), (x, p.cap))
+        g.stroke((x, p.cap - 2 * p.dot()), (x, p.cap))
 
 
-@punct('quoteright', '’', 3, width=lambda p: 1.5 * p.sv)
+@punct('quoteright', '’', 3, width=dot_w(1.5))
 def quoteright(g):
     f = Frame(g, 3, 'lower', top=g.p.cap)
-    _comma(g, f, g.W - g.p.sv / 2, g.p.cap)
+    _comma(g, f, g.W - g.p.dot() / 2, g.p.cap)
 
 
-@punct('quoteleft', '‘', 3, width=lambda p: 1.5 * p.sv)
+@punct('quoteleft', '‘', 3, width=dot_w(1.5))
 def quoteleft(g):
     f = Frame(g, 3, 'lower', top=g.p.cap)
     p = g.p
-    s = p.sv
+    s = p.dot()
     # the comma turned half round: tail up-right, dot below
     x = s / 2
     y_bot = p.cap - 2.25 * s
     y_turn = y_bot + 1.5 * s
-    g.stroke((x, y_bot), (x, y_turn), (x + 0.75 * s, y_turn + 0.75 * s), end='h')
+    g.stroke((x, y_bot, s), (x, y_turn, s * p.sd / p.sv), (x + 0.75 * s, y_turn + 0.75 * s), end='h')
 
 
-@punct('quotedblright', '”', 7, width=lambda p: 3.5 * p.sv)
+@punct('quotedblright', '”', 7, width=dot_w(3.5))
 def quotedblright(g):
     f = Frame(g, 7, 'lower', top=g.p.cap)
-    for x in (1.5 * g.p.sv - g.p.sv / 2, g.W - g.p.sv / 2):
+    s = g.p.dot()
+    for x in (s, g.W - s / 2):
         _comma(g, f, x, g.p.cap)
 
 
-@punct('quotedblleft', '“', 7, width=lambda p: 3.5 * p.sv)
+@punct('quotedblleft', '“', 7, width=dot_w(3.5))
 def quotedblleft(g):
     f = Frame(g, 7, 'lower', top=g.p.cap)
     p = g.p
-    s = p.sv
+    s = p.dot()
     for x in (s / 2, s / 2 + 2 * s):
         y_bot = p.cap - 2.25 * s
         y_turn = y_bot + 1.5 * s
-        g.stroke((x, y_bot), (x, y_turn), (x + 0.75 * s, y_turn + 0.75 * s), end='h')
+        g.stroke((x, y_bot, s), (x, y_turn, s * p.sd / p.sv), (x + 0.75 * s, y_turn + 0.75 * s), end='h')
 
 
-@punct('quotesinglbase', '‚', 3, width=lambda p: 1.5 * p.sv)
+@punct('quotesinglbase', '‚', 3, width=dot_w(1.5))
 def quotesinglbase(g):
     f = Frame(g, 3, 'lower')
-    _comma(g, f, g.W - g.p.sv / 2, g.p.sv)
+    _comma(g, f, g.W - g.p.dot() / 2, g.p.dot())
 
 
-@punct('quotedblbase', '„', 7, width=lambda p: 3.5 * p.sv)
+@punct('quotedblbase', '„', 7, width=dot_w(3.5))
 def quotedblbase(g):
     f = Frame(g, 7, 'lower')
-    for x in (1.5 * g.p.sv - g.p.sv / 2, g.W - g.p.sv / 2):
-        _comma(g, f, x, g.p.sv)
+    s = g.p.dot()
+    for x in (s, g.W - s / 2):
+        _comma(g, f, x, s)
 
 
 def _paren(g, f, mirror=False):
@@ -331,7 +337,7 @@ def divide(g):
     g.stroke((0, a), (W, a))
     gap = dot_gap(p) * 0.75
     dot(g, W / 2, a + g.sh / 2 + gap)
-    dot(g, W / 2, a - g.sh / 2 - gap - p.sv)
+    dot(g, W / 2, a - g.sh / 2 - gap - p.dot())
 
 
 def _chevron(g, mirror=False, half=None):
@@ -492,17 +498,17 @@ def bullet(g):
     g.stroke((W / 2, y - W / 2, W), (W / 2, y + W / 2))
 
 
-@punct('periodcentered', '·', 2, width=stem_w())
+@punct('periodcentered', '·', 2, width=dot_w())
 def periodcentered(g):
     p = g.p
-    dot(g, p.sv / 2, p.xh / 2 - p.sv / 2)
+    dot(g, p.dot() / 2, p.xh / 2 - p.dot() / 2)
 
 
-@punct('ellipsis', '…', 8, width=lambda p: 3 * p.sv + 2 * (1.2 * p.sv))
+@punct('ellipsis', '…', 8, width=dot_w(3 + 2 * 1.2))
 def ellipsis(g):
     p = g.p
     for i in range(3):
-        dot(g, p.sv / 2 + i * 2.2 * p.sv, 0)
+        dot(g, p.dot() / 2 + i * 2.2 * p.dot(), 0)
 
 
 def _guil_reach(p):
@@ -553,13 +559,13 @@ def guillemotright(g):
     _guil(g, 2, True)
 
 
-@punct('exclamdown', '¡', 2, width=stem_w())
+@punct('exclamdown', '¡', 2, width=dot_w())
 def exclamdown(g):
     f = Frame(g, 2, 'lower')
     p = g.p
     top = p.xh
-    dot(g, f.X(1), top - p.sv)
-    g.stroke((f.X(1), top - p.sv - dot_gap(p)), (f.X(1), top - p.cap))
+    dot(g, f.X(1), top - p.dot())
+    g.stroke((f.X(1), top - p.dot() - dot_gap(p)), (f.X(1), top - p.cap))
     g.clip = (0, top - p.cap, g.W, top)
 
 

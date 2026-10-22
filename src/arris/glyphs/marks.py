@@ -31,8 +31,8 @@ def size(p, case):
 
 
 def _dot(g, x, y):
-    s = g.p.sv
-    g.stroke((x, y), (x, y + s))
+    s = g.p.dot()
+    g.stroke((x, y, s), (x, y + s))
 
 
 def acute(g, x, y, case, sign=1):
@@ -65,7 +65,7 @@ def caron(g, x, y, case):
 
 def dieresis(g, x, y, case):
     p = g.p
-    d = p.sv + max(1.2 * p.m, 0.8 * p.sv)
+    d = p.dot() + max(1.2 * p.m, 0.8 * p.dot())
     _dot(g, x - d / 2, y)
     _dot(g, x + d / 2, y)
 

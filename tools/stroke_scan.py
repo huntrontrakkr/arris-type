@@ -199,8 +199,9 @@ def scan(p, names):
             issues.append((n, f'BELOW THE STROKE FLOOR over {run:.0f} units (floor {p.floor:.0f})'))
         elif lo < FLOOR * t_min:
             issues.append((n, f'lighter than its weight: {lo:.0f} ({FLOOR * t_min:.0f})'))
-        if hi > CEILING * t_max and not REGISTRY[n].solid:
-            issues.append((n, f'swells to {hi:.0f} (ceiling {CEILING * t_max:.0f})'))
+        ceiling = max(CEILING * t_max, 1.1 * p.dot())        # dots and comma heads are drawn bigger at Thin
+        if hi > ceiling and not REGISTRY[n].solid:
+            issues.append((n, f'swells to {hi:.0f} (ceiling {ceiling:.0f})'))
     return issues
 
 

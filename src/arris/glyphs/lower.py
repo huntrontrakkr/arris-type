@@ -127,8 +127,9 @@ def _dot(g, f, x):
     """The tittle: a square as wide as the stem, centred between x-height and
     ascender, but never closer to the x-height than 0.4 of a stem."""
     p = g.p
-    yc = max((p.xh + p.asc) / 2, p.xh + 0.4 * p.sv + p.sv / 2)
-    g.stroke((x, yc - p.sv / 2), (x, yc + p.sv / 2))
+    s = p.dot()
+    yc = max((p.xh + p.asc) / 2, p.xh + 0.4 * s + s / 2)
+    g.stroke((x, yc - s / 2, s), (x, yc + s / 2))
 
 
 def _mono_foot(g, f, x, u):

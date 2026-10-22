@@ -89,15 +89,16 @@ def zero_dot(g):
 
 # --- The time colon ------------------------------------------------------
 
-@glyph('colon.tf', None, lambda p: p.sv, kind=('punct', 0.0))
+@glyph('colon.tf', None, lambda p: p.dot(), kind=('punct', 0.0))
 def colon_tf(g):
     """The watch clock's colon: dots centred a sixth of a module above the
     figures' middle, their centres five modules apart."""
     p = g.p
+    s = p.dot()
     yc = p.cap / 2 + p.cap / 72
     half = 2.5 * p.cap / 12
     for y in (yc - half, yc + half):
-        g.stroke((p.sv / 2, y - p.sv / 2), (p.sv / 2, y + p.sv / 2))
+        g.stroke((s / 2, y - s / 2, s), (s / 2, y + s / 2))
 
 
 # --- Fraction slash and precomposed fractions ------------------------------
