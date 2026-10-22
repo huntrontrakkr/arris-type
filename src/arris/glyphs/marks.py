@@ -231,18 +231,26 @@ def _ogonek_x(g, base):
 
 
 def _caron_apostrophe(g, base):
-    """The caron on d, l, L and t is written as an apostrophe beside the stem."""
+    """The caron on d, l, L and t is written as an apostrophe beside the stem.
+
+    It stands right of the stem, its top on the ascender (cap height on a
+    capital), its tail clear of the stem by a gap. Where ink lies under it
+    (the t's crossbar) its stub shortens so the tail stays clear above that
+    ink, down to a third of a stem, as heavy faces draw it."""
+    from shapely.geometry import box
+
     from .punct import _comma
     p = g.p
+    ink = g.extra[0]
+    top = p.cap if base.isupper() else p.asc
     gap = max(p.m, 0.6 * p.sv)
-    # clear of the ink beside it by a gap: its tail reaches 0.75 of a stem left
-    # of its centre, its dot half a stem
-    from shapely.geometry import box
-    base = g.extra[0]
-    y0 = (p.cap if base == 'L' else p.asc) - 2.25 * p.sv
-    band = g.extra[0].intersection(box(-1e4, y0, 1e4, p.asc + 1))
-    right = band.bounds[2] if not band.is_empty else 0.0
-    if base == 'L':
-        right = p.sv
-    x = right + gap + 0.75 * p.sv + p.sd / SQRT2          # its tail's far edge clears the ink by the gap
-    _comma(g, None, x, p.cap if base == 'L' else p.asc)
+    # the stem: the base's ink above the x-height and its bars
+    stem = ink.intersection(box(-1e4, p.xh + g.sh, 1e4, top + 1))
+    right = stem.bounds[2] if not stem.is_empty else p.sv
+    reach = 0.75 * p.sv + p.sd / SQRT2                      # the tail's far edge, left of the stub's centre
+    x = right + gap + reach
+    below = ink.intersection(box(x - reach, -1e4, x + p.sv / 2, top - 1e-3))
+    floor = below.bounds[3] if not below.is_empty else -1e4
+    clear = max(p.c, 0.5 * p.m)
+    stub = min(1.5 * p.sv, max(top - floor - clear - 0.75 * p.sv, p.sv / 3))
+    _comma(g, None, x, top, stub=stub)

@@ -42,11 +42,12 @@ def period(g):
     dot(g, f.X(1), 0)
 
 
-def _comma(g, f, x, y_top):
-    """A dot whose foot turns down-left at 45 degrees: the comma's tail."""
+def _comma(g, f, x, y_top, stub=None):
+    """A dot whose foot turns down-left at 45 degrees: the comma's tail.
+    ``stub`` is the dot's height above the turn (a stem and a half)."""
     p = g.p
     s, k = p.sv, p.sd / SQRT2
-    y_turn = y_top - s - 0.5 * s
+    y_turn = y_top - (1.5 * s if stub is None else stub)
     g.stroke((x, y_top), (x, y_turn), (x - 0.75 * s, y_turn - 0.75 * s), end='h')
 
 
