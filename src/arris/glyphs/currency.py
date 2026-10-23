@@ -489,32 +489,44 @@ def rupee(g):
 
 @cur('uni20B4', '₴', lambda p: letter_width(9, 2)(p) + 2 * bar_inset(p), squint=BARS)
 def hryvnia(g):
-    """The 2 with a beak at its foot: a top beak and bowl, a 45-degree spine
-    with the 2's notch, a bottom bowl rising to a beak; two bars across."""
+    """The reversed S of the hryvnia, open: a top hook (beak, bowl, a
+    45-degree spine) that ends on the upper bar, and a bottom hook that
+    leaves the lower bar the same way; between the bars nothing, so the
+    white there is whole at every weight. A beak shortens to keep a
+    stroke's white from its bar rather than run into it."""
     f = Frame(g, 9)
     p, W, H = f.p, f.W, f.p.cap
     d = beak_depth(p)
     o, hang = bar_inset(p), bar_hang(p)
-    xl, xr = f.X(1) + o, f.X(8) - o                          # the 2's body, the bars running out past it
+    xl, xr = f.X(1) + o, f.X(8) - o                          # the body, the bars running out past it
     yt, yb = f.Y(11), f.Y(1)
-    J = jog(p)
-    run = (xr - xl - J) / 2
+    run = (xr - xl) / 2                                      # the spine: one 45-degree run, corner to corner
     ym = (yt + yb) / 2
     y_hi, y_lo = ym + run, ym - run
-    x1 = xr - run
+    # the pair between the hooks' strokes. Where the room holds the pair
+    # with a stroke's white (wmin) in each hook and between, as drawn; where
+    # it does not (toward Black), bars and whites share it in five equal
+    # parts, so the sign stays open stripes and never closes into slabs
+    room = yt - yb - g.sh
     t, gap = pair(g)
-    off = t + gap
-    # the upper bar over the notch, unless that brings the lower one within a
-    # stroke's white of the bottom beak, where it would close the bowl to a sliver
-    yc = max(ym - off / 2, d + wmin(p) + t + gap / 2)
-    yu, yl = yc + off / 2, yc - off / 2
-    # a beak the pair cannot clear by a stroke's white (at heavy weights the
-    # beaks take a third of the height) runs on into the bar it meets
-    top = H - d if (H - d) - (yu + t / 2) >= wmin(p) else yu
-    foot = d if yl - t / 2 - d >= wmin(p) else yl
-    g.stroke((xl, top), B(xl, yt), B(xr, yt), (xr, y_hi), (x1, ym, min(J, g.sh)), (x1 - J, ym),
-             (xl, y_lo), B(xl, yb), B(xr, yb), (xr, foot))
-    bar_pair(g, yc, -hang, W + hang)
+    if room - 2 * t - 2 * wmin(p) < gap:
+        t = gap = min(t, room / 5)
+    gap = min(gap, (room - 2 * t) / 3)
+    yu, yl = ym + (t + gap) / 2, ym - (t + gap) / 2
+    x_at = lambda y: xl + (y - y_lo)                         # on the spine
+    # each beak keeps a stroke's white from its bar; where even a module of
+    # beak cannot, there is none, and the hook ends in its corner
+    hi_beak = max(H - d, yu + t / 2 + wmin(p))
+    lo_beak = min(d, yl - t / 2 - wmin(p))
+    beak_hi = hi_beak <= yt - g.sh / 2 - p.m
+    beak_lo = lo_beak >= yb + g.sh / 2 + p.m
+    top = [(xl, hi_beak), B(xl, yt)] if beak_hi else [(xl, yt)]
+    foot = [B(xr, yb), (xr, lo_beak)] if beak_lo else [(xr, yb)]
+    g.stroke(*top, B(xr, yt), (xr, y_hi), (x_at(yu), yu), start='flat' if beak_hi else 'v', end='h')
+    g.stroke((x_at(yl), yl), (xl, y_lo), B(xl, yb), *foot, start='h', end='flat' if beak_lo else 'v')
+    for y in (yl, yu):
+        g.stroke((-hang, y, t), (W + hang, y))
+    mark_bars(g, -hang, W + hang, yl, yu)
 
 
 def _cross_pair(p):

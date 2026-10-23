@@ -368,20 +368,38 @@ def _register(name, ch, bname, base, marks):
         from ..draw import Glyph, draw
         # The base, finished (openings solved, clipped and cut), then the marks.
         p = g.p
-        # a monospaced cell gives a mark joined on the right (the horn) the
-        # room it needs past the cell's edge: the base narrows by that much
+        # a monospaced cell gives the marks that stand beside or under the
+        # base (a horn, d's and l's apostrophe, a dot under y's tail) the room
+        # they need inside the cell: the base is drawn narrower by as much as
+        # they would run out of it, its strokes as they are (ogoneks and
+        # slashes keep to half the margin by their own drawing)
         room = 0.0
-        if p.mono and any(m in ATTACHED for m in marks):
-            trial = Glyph(p, W=g.W)
-            trial.add_glyph(draw(bname, p, g.ot, g.ob))
-            for m in marks:
-                if m in ATTACHED:
-                    ATTACHED[m](trial, g.W / 2, case)
-            room = max(0.0, mark_ink(trial).bounds[2] - (g.W + p.fig_adv) / 2)
+        if p.mono and any(m in ATTACHED or m in BELOW or (m == '\u030c' and base in 'dlLt') for m in marks):
+            import shapely
+            edge = (g.W + p.fig_adv) / 2                    # the cell's right edge, from the body's origin
+            for _ in range(4):
+                trial = Glyph(p, W=g.W)
+                compose(trial, room)
+                parts = list(trial.extra) + ([mark_ink(trial)] if trial.strokes else [])
+                over = shapely.union_all(parts).bounds[2] - edge
+                if over < 0.5:
+                    break
+                room += over
+            # never so narrow that the base's counter closes (d at Black):
+            # past that the mark may reach into the cell's margin
+            from .letterframe import least_white
+            room = max(0.0, min(room, g.W - 2 * p.sv - least_white(p)))
+        g.extra, g.clip = [], None
+        compose(g, room)
+        if room:
+            _into_cell(g)
+
+    def compose(g, room, bname=bname, marks=marks, base=base, case=case):
+        from ..draw import draw
+        p = g.p
         base_glyph = draw(bname, p, g.ot, g.ob, width=(g.W - room) if room else None)
         rings = base_glyph.rings()
         top = max(y for r in rings for _, y in r)
-        g.extra, g.clip = [], None
         g.add_glyph(base_glyph)
         x = (g.W - room) / 2
         above = []
@@ -410,6 +428,25 @@ def _register(name, ch, bname, base, marks):
         draw_above(g, above, x, top, case, cell, avoid)
 
     glyph(name, ch, spec.width, kind=spec.kind)(fn)
+
+
+def _into_cell(g):
+    """In the monospaced cell, a glyph whose ink still runs out of the cell
+    on one side moves into the room the other side has (the body is centred
+    in the cell, not the ink)."""
+    import shapely
+    from .symkit import shift
+    p = g.p
+    parts = list(g.extra) + ([mark_ink(g)] if g.strokes else [])
+    a, _, b, _ = shapely.union_all(parts).bounds
+    lo, hi = -(p.fig_adv - g.W) / 2, g.W + (p.fig_adv - g.W) / 2
+    dx = 0.0
+    if b > hi:
+        dx = -min(b - hi, max(0.0, a - lo))
+    elif a < lo:
+        dx = min(lo - a, max(0.0, hi - b))
+    if dx:
+        shift(g, dx, 0.0)
 
 
 def draw_above(g, above, x, top, case, cell=None, avoid=None):
@@ -454,8 +491,13 @@ def _caron_apostrophe(g, base):
     from shapely.geometry import box
 
     from .punct import _comma
-    p = g.p
+    from ..draw import Glyph
+    from .figures import heaviness
+    p0 = g.p
     ink = g.extra[0]
+    # in the monospaced cell the apostrophe is drawn lighter toward Black (as
+    # a stack of marks lightens), so a d keeps its counter beside it
+    p = accent_params(p0, 1 - 0.5 * heaviness(p0)) if p0.mono else p0
     top = p.cap if base.isupper() else p.asc
     gap = max(p.m, 0.6 * p.sv)
     # the stem: the base's ink above the x-height and its bars
@@ -467,4 +509,9 @@ def _caron_apostrophe(g, base):
     floor = below.bounds[3] if not below.is_empty else -1e4
     clear = max(p.c, 0.5 * p.m)
     stub = min(1.5 * p.sv, max(top - floor - clear - 0.75 * p.sv, p.sv / 3))
-    _comma(g, None, x, top, stub=stub)
+    if p is p0:
+        _comma(g, None, x, top, stub=stub)
+    else:
+        target = Glyph(p, W=g.W)
+        _comma(target, None, x, top, stub=stub)
+        g.add_glyph(target)

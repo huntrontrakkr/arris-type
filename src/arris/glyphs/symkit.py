@@ -188,7 +188,7 @@ def width_of(name, pf=None, extra=0.0):
 
 # --- Signs in the monospaced cell ---------------------------------------------
 
-K_MIN = 0.35        # the most a sign is condensed before it is drawn smaller instead
+K_MIN = 0.7         # the most a sign is condensed before it is drawn smaller instead (past this, strokes go hairline)
 
 
 def _scaled(p, s):

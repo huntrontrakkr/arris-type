@@ -9,18 +9,6 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
   (the rule's floor is 0.55): the Mono cell leaves little room for a
   letter, two bars and their white. Try thinner bars only in Mono, or a
   narrower inset with the letter condensed further.
-- **Letters that hang out of their Mono cell** (`/tmp/monofit.py`-style
-  check: placed ink past the advance). At Black: ď 415 units, ľ 226,
-  ŀ 218, ỵ 141; Ø ø Ǿ ǿ 30 (the slash); Ҽ ҽ Ҿ ҿ Ҏ ҏ 20–32; Ą ą Ę ę ų 16
-  (the ogonek). The caron-apostrophe and the middle dot need to sit inside
-  the cell; slashes and ogoneks may hang into half the margin at most.
-  Worth a tool of its own (a Mono cell scan) next to the stroke scan.
-- **Mono signs condensed to fit are lighter than their weight**: № ‰ ∬ ∭
-  (stroke scan reports them). Consider drawing them smaller rather than
-  thinner past some condensing, or Mono-specific constructions.
-- **₴ at heavy weights**: where no pair of bars fits between its beaks,
-  the beaks run into the bars and the bowls close. Review the look against
-  the user's eye; an alternative is shallower beaks for this sign only.
 - **Squint scan review** (≈370 glyphs flagged at Black, most of them the
   arch notches of n h m and their relatives, which are designed). Go
   through the rest by family and fix the real fusions:
@@ -36,9 +24,6 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
   and two modules (operators.TALL) with the equal sign's 1.6 bars of white;
   struck stacks (≢ `!==` `!=`) are a module and a half shorter at each end
   so the slash can run past them. Review the look at Black.
-- **δ reads as 6** in maths (the presentation's "∃δ > 0"): the octagonal
-  bowl and hooked top are the 6's. Run it through `tools/letter_confusion.py`
-  against 6, ∂ and σ, and give δ a distinct top (a tail or an open loop).
 - **Make the squint rule general where it is safe**: today only glyphs
   that declare a free variable use it (barred signs, $). Candidates: the
   symbol lightening rule (holes, not just feature counts), with care not
@@ -53,6 +38,12 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
   right by accident). A nonzero-winding fill fixes it (tried 2026-10-22)
   but changes which characters that layer picks: re-check the garden
   slide with the user when fixing.
+  Tried again 2026-10-23 with the tone gain at 0.85 and 1.3: neither
+  gives back the approved look (bands of `@ $`), so it stays as is until
+  the user decides.
+- **ď in Mono Bold** reaches 44 units past its cell (Regular and Black
+  fit): the base narrows only as far as its counter allows and the
+  apostrophe lightens toward Black; at Bold neither is quite enough.
 
 - **Sloppiness pass**: `tools/jog_scan.py` for the remaining near-miss
   steps at Black (keep designed steps; fix the ones a few units apart).

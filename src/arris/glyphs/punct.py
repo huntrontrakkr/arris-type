@@ -488,17 +488,25 @@ def percent(g):
 def ampersand(g):
     f = Frame(g, 10, 'cap')
     p, W, H, k = g.p, g.W, g.p.cap, p_k(g)
-    # upper loop: a small octagon, its lower corners large (the 8's)
+    # the leg's line: x + y = a, down to the baseline at the right
+    a = W + p.c - k
+    # upper loop: a small octagon, its lower right corner large (the 8's);
+    # its lower left corner cut exactly on the leg's line, so the leg runs
+    # on out of the loop's side through that chamfer (no second diagonal
+    # beside it, nothing poking out of the loop)
+    x2, yl = f.X(2), f.Y(6.5)
+    cut = a - x2 - yl
     big = p.leg + p.m
-    g.stroke(B(*f.P(2, 6.5), big), B(*f.P(6, 6.5), big), B(*f.P(6, 11)), B(*f.P(2, 11)), closed=True)
-    # lower bowl: from the loop's lower left, round the bottom, open at the right
-    a = W + p.c - k                                          # the leg: x + y = a
-    g.stroke(f.P(2, 8.5), f.P(2, 6.5), B(*f.P(1, 5.5), p.m / 2), B(*f.P(1, 1)), (a - f.Y(1), f.Y(1)))
-    # the leg: 45 degrees from inside the loop down to the baseline at the right
-    y0 = f.Y(8.5)
-    g.stroke((a - y0, y0), (a, 0), start='h', end='h')
-    # the arm, up from the leg at the right
-    g.stroke((f.X(8), a - f.X(8) - p.sv), f.P(8, 5.5))
+    g.stroke(B(x2, yl, cut), B(*f.P(6, 6.5), big), B(*f.P(6, 11)), B(*f.P(2, 11)), closed=True)
+    # the leg: from the loop's side, along the chamfer, down to the baseline
+    g.stroke((x2, yl + cut), (a, 0), start='v', end='h')
+    # lower bowl: off the loop's side where the leg leaves it, out at 45
+    # degrees, round the bottom, open at the right
+    y0 = yl + cut
+    xb = f.X(1)
+    g.stroke((x2, y0), B(xb, y0 - (x2 - xb), p.m / 2), B(xb, f.Y(1)), (a - f.Y(1), f.Y(1)), start='v')
+    # the arm, up from the leg's centreline at the right
+    g.stroke((f.X(8), a - f.X(8)), f.P(8, 5.5))
 
 
 def p_k(g):

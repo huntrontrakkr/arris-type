@@ -155,11 +155,20 @@ def Ldot(g):
 @glyph('ldot', 'ŀ', width_of('l', 0.5), kind='lower')
 def ldot(g):
     p = g.p
-    sub = draw('l', p, width=(g.W - 2 * p.m) if p.mono else None)
+    gap = max(p.m, 0.6 * p.sv)
+    # in the monospaced cell the l narrows (to 0.85 of its own at most) so
+    # that it and the dot fit the cell, and the pair then moves into it
+    lw = None
+    if p.mono:
+        lw = max(min(g.W - 2 * p.m, p.fig_adv - gap - 1.5 * p.sv), 0.85 * REGISTRY['l'].width(p))
+    sub = draw('l', p, width=lw)
     w = stamp(g, 'l', width=sub.W if p.mono else None)
     # beside the stem, over the tail
-    x = (sub.defaults_used['stem'] if not p.mono else w) + p.sv / 2 + max(p.m, 0.6 * p.sv) + p.sv / 2
+    x = (sub.defaults_used['stem'] if not p.mono else w) + p.sv / 2 + gap + p.sv / 2
     g.stroke((x, p.xh / 2 - p.sv / 2), (x, p.xh / 2 + p.sv / 2))
+    if p.mono:                                               # the dot inside the cell: the pair moves left
+        from .marks import _into_cell
+        _into_cell(g)
 
 
 # --- Pairs -------------------------------------------------------------------

@@ -140,7 +140,16 @@ def gamma(g):
 
 @glow('uni03B4', 'δ', 8, 2)
 def delta(g):
-    REGISTRY['uni0431'].fn(g)
+    """An o under a hooked ascender: from the bowl's top a 45-degree
+    stroke up to the left, turning at the ascender into a short top bar to
+    the right. Not the 6 (whose stem stands on the bowl's left side), nor
+    the soft sign's be (б), whose flag it used to borrow."""
+    f = Frame(g, 8, 'asc')
+    p = f.p
+    g.clip = (0, -p.desc, f.W, p.asc)
+    g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
+    xl, yt, yb = f.X(1), f.Y(12), f.Y(8)
+    g.stroke((xl + (yt - yb), yb), B(xl, yt), f.P(6, 12), start='h')
 
 
 @glow('uni03B5', 'ε', 8, 2)
