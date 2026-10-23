@@ -1116,6 +1116,86 @@ def _rose_stipple(path, height, F, crop=(0.0, 0.0, 1.0, 0.835), adv=0.630):
     return chars, colours, cols * cw, alpha_im.resize((int(cols * cw), int(rows * ch)), Image.LANCZOS)
 
 
+def _rose_ascii(path, height, F, crop=(0.0, 0.0, 1.0, 0.835), sub=(6, 12)):
+    """The plate as ASCII in Arris Mono at F px: each cell the glyph whose
+    shape best matches the engraving's lines and light (heavy ones too, the
+    @ and $). Returns (chars, colours) on the same footing as the stipple."""
+    import colorsys
+    import numpy as np
+    from PIL import Image, ImageFilter
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import typeart as ta
+    im = Image.open(path).convert('RGB')
+    W0, H0 = im.size
+    im = im.crop((int(crop[0] * W0), int(crop[1] * H0), int(crop[2] * W0), int(crop[3] * H0)))
+    a = np.asarray(im, dtype=np.float32) / 255
+    border = np.concatenate([a[:12].reshape(-1, 3), a[:, :12].reshape(-1, 3), a[:, -12:].reshape(-1, 3)])
+    paper = np.median(border, 0)
+    alpha = np.clip((np.sqrt(((a - paper) ** 2).sum(2)) - 0.12) / 0.12, 0, 1)
+    alpha[:, :int(0.04 * alpha.shape[1])] = 0
+    alpha[:, -int(0.04 * alpha.shape[1]):] = 0
+    alpha_im = Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.MedianFilter(7))
+    cw, ch = 0.578 * F, 1.2 * F
+    width = height * im.width / im.height
+    cols, rows = int(width // cw), int(height // ch)
+    glyphs = ta.glyph_grids(BUILD / 'ArrisMono-Regular.ttf', [chr(c) for c in range(32, 127)], sub)
+    big = (cols * sub[0], rows * sub[1])
+    Lim = im.convert('L').resize(big, Image.LANCZOS)
+    L = np.asarray(Lim, dtype=np.float32) / 255
+    A = np.asarray(alpha_im.resize(big, Image.LANCZOS), dtype=np.float32) / 255
+    lo, hi = np.percentile(L[A > 0.5], [2, 99.5])
+    Ln = np.clip((L - lo) / (hi - lo), 0, 1)
+    Lb = np.asarray(Lim.filter(ImageFilter.GaussianBlur(2)), dtype=np.float32) / 255
+    gy, gx = np.gradient(Lb)
+    E = np.hypot(gx, gy)
+    E = np.clip(E / np.percentile(E[A > 0.5], 97), 0, 1)
+    chars = ta.shapes(A * np.clip(0.10 + 0.55 * E + 0.38 * Ln, 0, 1) * 0.6, glyphs)
+    rgb = np.asarray(im.resize((cols, rows), Image.LANCZOS), dtype=np.float32) / 255
+    acell = np.asarray(alpha_im.resize((cols, rows), Image.LANCZOS), dtype=np.float32) / 255
+    colours = []
+    for r in range(rows):
+        row = []
+        for c in range(cols):
+            if acell[r, c] < 0.3 or chars[r][c] == ' ':
+                row.append(None)
+                continue
+            row.append(tuple(float(v) for v in rgb[r, c]))
+        colours.append(row)
+    return chars, colours
+
+
+def _glitch(chars, colours, x0, y0, F, seed):
+    """The ASCII rose laid over its stipple self, broken: horizontal slices
+    of a few rows, about a third of them kept, each shoved sideways and
+    turned to another hue, half their characters dropped."""
+    import colorsys
+    import random
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import typeart as ta
+    rng = random.Random(seed)
+    ch = 1.2 * F
+    out, r = [], 0
+    while r < len(chars):
+        n = rng.randint(1, 5)
+        if rng.random() < 0.5:
+            dx = rng.choice([-1, 1]) * rng.uniform(10, 64)
+            rot = rng.choice([0.28, 0.42, 0.55, 0.72])                    # turns of the hue wheel
+            lines = []
+            for k in range(r, min(r + n, len(chars))):
+                runs = []
+                for c, cell in zip(chars[k], colours[k]):
+                    if cell is None or rng.random() > 0.66:
+                        runs.append(' ')
+                        continue
+                    h, l_, s_ = colorsys.rgb_to_hls(*cell)
+                    rr, gg, bb = colorsys.hls_to_rgb((h + rot) % 1.0, min(0.80, 0.45 + 0.5 * l_), max(0.9, s_))
+                    runs.append(f'<span style="color:{ta.hexc((rr * 255, gg * 255, bb * 255))}">{esc(c)}</span>')
+                lines.append(''.join(runs))
+            out.append(f'<pre class="gl mono" style="left:{x0 + 16 + dx:.0f}px;top:{y0 - 12 + r * ch:.0f}px">' + '\n'.join(lines) + '</pre>')
+        r += n
+    return ''.join(out)
+
+
 def _garden():
     """The collage: Cassini's Saturn in Braille dots, Redouté's roses over it
     in ASCII, a tracking overlay. Returns html pieces and geometry."""
@@ -1140,13 +1220,15 @@ def _garden():
     lum = np.pad(lum, ((0, max(0, srows * 4 - gh)), (0, max(0, scols * 2 - gw))))[:srows * 4, :scols * 2]
     cellum = np.asarray(sat.convert('L').resize((scols, srows), Image.LANCZOS), dtype=np.float64) / 255
 
-    # the roses, laid over the planet
-    roses = []
+    # the roses, laid over the planet, and their ASCII selves broken over them
+    roses, glitch = [], []
     for path, height, cx, cy, fx, fy in ((SOURCES / 'redoute-rosa-gallica-flore-giganteo.jpg', 900, 700, 470, 0.46, 0.31),
-                                          (SOURCES / 'redoute-rosa-gallica-regalis.jpg', 600, 1530, 330, 0.50, 0.25)):
+                                          (SOURCES / 'redoute-rosa-gallica-regalis.jpg', 600, 1520, 372, 0.50, 0.25)):
         chars, colours, width, amask = _rose_stipple(path, height, 10.0)
         x0, y0 = cx - fx * width, cy - fy * height
         roses.append((chars, colours, x0, y0, amask))
+        achars, acols = _rose_ascii(path, height, 15.0)
+        glitch.append(_glitch(achars, acols, x0, y0, 15.0, seed=len(glitch) + 7))
 
     # knock the planet out behind the roses
     ko = Image.new('L', (1920, 1080), 0)
@@ -1191,7 +1273,7 @@ def _garden():
         if i % 3 != 2:
             track.append((bx, by))
     geo = dict(sx0=sx0, sy0=sy0, sF=sF, gcx=gcx, gcy=gcy, ship=(sx, sy))
-    return sat_html, rose_html, dots(grat, 'gr'), dots(trail, 'tr'), dots(track, 'tk'), geo
+    return sat_html, rose_html, ''.join(glitch), dots(grat, 'gr'), dots(trail, 'tr'), dots(track, 'tk'), geo
 
 
 def _signal(cols=40):
@@ -1212,7 +1294,7 @@ def _signal(cols=40):
 
 @slide('garden', 'void', 'Garden in orbit')
 def garden():
-    sat, roses, grat, trail, track, g = _garden()
+    sat, roses, glitch, grat, trail, track, g = _garden()
     plain = re.sub(r'style="color:[^"]*"', '', sat)
     rose_layers = ''.join(f'<pre class="rose mono" style="left:{x0:.0f}px;top:{y0:.0f}px">{h}</pre>' for h, x0, y0 in roses)
     sx, sy = g['ship']
@@ -1225,6 +1307,7 @@ def garden():
 </div>
 <div class="hud">{grat}{trail}{track}</div>
 {rose_layers}
+{glitch}
 <div class="ship" style="left:{sx - 9:.0f}px;top:{sy - 13:.0f}px">◆</div>
 <pre class="ret mono" style="left:{sx - 52:.0f}px;top:{sy - 52:.0f}px">┌─        ─┐
 
@@ -1244,7 +1327,9 @@ def garden():
   <div class="h">SIG ▸ 8.4 GHz · S/N 31 dB</div>
   <pre class="w">{_signal()}</pre>
   <div class="q">YOU CAN’T STOP THE SIGNAL</div>
+  <div class="la">SIGNVM SISTERE NON POTES</div>
 </div>
+<div class="jp" lang="ja">シグナルは止められない</div>
 <div class="tc mono"><span class="rec">●</span> REC · FRM 0041 · 03:47:12.08 UTC</div>
 <pre class="lost mono">┌       ┐
    ◇
@@ -1255,6 +1340,7 @@ def garden():
 <div class="spec"><i>Rosa gallica</i> · flore giganteo</div>
 <div class="reg r1">+</div><div class="reg r2">+</div><div class="reg r3">+</div><div class="reg r4">+</div>
 <div class="scan"></div>"""
+    jp = (SOURCES / 'fonts' / 'DotGothic16-Regular.ttf').as_uri()
     css = f"""
 .s-garden {{ background: #03020a; }}
 .s-garden .glow {{ position:absolute; border-radius: 50%; filter: blur(40px); pointer-events:none; }}
@@ -1273,19 +1359,25 @@ def garden():
 .s-garden .ret {{ position:absolute; font-size: 18px; line-height: 1.2; color: #6fd3ff; text-shadow: 0 0 8px rgba(0,163,255,.8); }}
 .s-garden .lbl {{ position:absolute; font-size: 15px; line-height: 1.45; color: #8fd8ff; letter-spacing: .04em; text-shadow: 0 0 8px rgba(0,163,255,.55); }}
 .s-garden .lbl .b {{ color: #e6f8ff; }}
-.s-garden .lat {{ position:absolute; font-size: 15px; color: #b6ffcf; letter-spacing: .06em; }}
+.s-garden .lat {{ position:absolute; font-size: 15px; color: #b6ffcf; letter-spacing: .06em; background: rgba(3, 2, 10, .82); padding: 4px 10px 4px 6px; }}
 .s-garden .lat .x {{ color: #39ff14; font-size: 22px; vertical-align: -3px; margin-right: 8px; }}
 .s-garden .sig {{ position:absolute; left: 96px; bottom: 70px; color: #6fd3ff; text-shadow: 0 0 8px rgba(0,163,255,.7); }}
 .s-garden .sig .h {{ font-size: 14px; letter-spacing: .08em; margin-bottom: 6px; }}
 .s-garden .sig .w {{ font-size: 16px; line-height: 1.2; color: #39c6ff; }}
 .s-garden .sig .q {{ font-size: 13px; letter-spacing: .32em; margin-top: 10px; color: #c9f0ff; }}
+.s-garden .sig .la {{ font: italic 300 15px/1 'Arris'; letter-spacing: .26em; margin-top: 9px; color: #c8ff3a; text-shadow: 0 0 8px rgba(200,255,58,.35); }}
+@font-face {{ font-family: 'DotGothic16'; src: url('{jp}'); }}
+.s-garden .jp {{ position:absolute; right: 44px; top: 330px; writing-mode: vertical-rl; font: 24px/1 'DotGothic16'; letter-spacing: .32em;
+                color: #8fdcff; text-shadow: 0 0 8px #00a3ff, 0 0 22px rgba(0,163,255,.7); }}
+.s-garden .gl {{ position:absolute; font-size: 15px; line-height: 1.2; font-weight: 500; mix-blend-mode: screen; opacity: .95;
+               text-shadow: 0 0 6px rgba(0, 229, 255, .25); }}
 .s-garden .tc {{ position:absolute; right: 96px; top: 92px; font-size: 14px; letter-spacing: .1em; color: #6c8f80; }}
 .s-garden .tc .rec {{ color: #ff2bd6; text-shadow: 0 0 8px #ff2bd6; }}
 .s-garden .latin {{ position:absolute; right: 96px; bottom: 72px; font: italic 300 30px/1 'Arris'; color: #c8ff3a; letter-spacing: .02em; text-shadow: 0 0 10px rgba(200,255,58,.35); }}
 .s-garden .spec {{ position:absolute; left: 96px; top: 372px; font: 400 17px/1 'Arris'; color: #ff8ad8; letter-spacing: .03em; }}
 .s-garden .reg {{ position:absolute; font: 200 30px/1 'Arris Mono'; color: #2d4a3a; }}
-.s-garden .lost {{ position:absolute; left: 1716px; top: 128px; font-size: 16px; line-height: 1.2; color: rgba(111, 211, 255, .45); }}
-.s-garden .lostl {{ position:absolute; right: 96px; top: 200px; text-align: right; font-size: 13px; line-height: 1.5; letter-spacing: .06em; color: #ff5fae;
+.s-garden .lost {{ position:absolute; left: 1716px; top: 118px; font-size: 16px; line-height: 1.2; color: rgba(111, 211, 255, .45); }}
+.s-garden .lostl {{ position:absolute; right: 96px; top: 184px; text-align: right; font-size: 13px; line-height: 1.5; letter-spacing: .06em; color: #ff5fae;
                    text-shadow: -2px 0 rgba(0, 229, 255, .6), 2px 0 rgba(255, 0, 200, .5); }}
 .s-garden .lostl span {{ color: #6c8f80; text-shadow: none; }}
 .s-garden .scale {{ position:absolute; left: 1150px; top: 872px; display:flex; align-items:center; gap: 12px; font-size: 13px; color: #6c8f80; letter-spacing: .06em; }}

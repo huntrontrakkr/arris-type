@@ -48,7 +48,7 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
 
 - **Sloppiness pass**: `tools/jog_scan.py` for the remaining near-miss
   steps at Black (keep designed steps; fix the ones a few units apart).
-- **Presentation**: regenerate after every full rebuild (37 slides).
+- **Presentation**: regenerate after every full rebuild (40 slides).
 
 ## Exploring
 
