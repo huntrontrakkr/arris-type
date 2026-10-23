@@ -267,9 +267,10 @@ def brace_width(p):
 
 
 def _brace(g, mirror=False):
-    """A square bracket's ends (flat arms, square corners) on a spine that
-    breaks at the middle into a point on the shallow 2:1: a brace, told
-    from ( by its flat arms, from [ by its point, from < by its spine."""
+    """Flat arms that leave the spine with a curl (half their length on the
+    shallow 2:1), on a spine that breaks at the middle into a point on the
+    shallow 2:1: a brace, told from ( by its flat arms, from [ by its curl
+    and point, from < by its spine."""
     p = g.p
     W = g.W
     top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
@@ -278,8 +279,14 @@ def _brace(g, mirror=False):
     xs = max(W - hook, tip + d)                             # the spine (the arm gives way in a narrow cell)
     xp = xs - d                                             # the point
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
-    g.stroke(T(W, top - g.sh / 2), T(xs, top - g.sh / 2), T(xs, mid + d / 2), T(xp, mid),
-             T(xs, mid - d / 2), T(xs, bot + g.sh / 2), T(W, bot + g.sh / 2))
+    # the arms leave the spine on the shallow 2:1 for half their length, then
+    # run flat: a curl at each end, and still a brace's arm (not the
+    # parenthesis's diagonal)
+    yt, yb = top - g.sh / 2, bot + g.sh / 2
+    L = W - xs
+    r = L / 4
+    g.stroke(T(W, yt), T(xs + L / 2, yt), T(xs, yt - r), T(xs, mid + d / 2), T(xp, mid),
+             T(xs, mid - d / 2), T(xs, yb + r), T(xs + L / 2, yb), T(W, yb))
     g.clip = (0, bot, W, top)
 
 
