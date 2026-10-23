@@ -62,6 +62,7 @@ body { font-family: 'Arris'; -webkit-font-smoothing: antialiased; }
 .violet { --bg: #17102a; --ink: #f4ecff; --dim: #7c6aa0; --accent: #ff5fae; --accent2: #7de0ff; --line: #2a2045; }
 .bone   { --bg: #e9e4d8; --ink: #1d2a2e; --dim: #8a8f86; --accent: #1f7a6c; --accent2: #d0602c; --line: #cfc8b8; }
 .slate  { --bg: #0d1520; --ink: #e6edf5; --dim: #5d7086; --accent: #7cf29a; --accent2: #ff79c6; --line: #1b2836; }
+.void   { --bg: #04030b; --ink: #e8fff0; --dim: #3f6a52; --accent: #39ff14; --accent2: #ff2bd6; --line: #10241a; }
 """
 
 
@@ -1061,163 +1062,241 @@ def maze():
     return body, 'The box-drawing diagonals run corner to corner, so the maze joins cell to cell', css
 
 
-def _braille_planet(cols=118, rows=28):
-    """A ringed planet in Braille dots: 2 x 4 dots a cell, lit from the upper
-    left, ordered-dithered; (char, colour) per cell."""
+SOURCES = ROOT / 'presentation' / 'sources'
+
+
+def _rose_stipple(path, height, F, crop=(0.0, 0.0, 1.0, 0.835), adv=0.630):
+    """A Redouté plate lifted off its paper and set as Braille stipple in
+    Arris Mono at F px, ``height`` px tall: his engraving was dots, and so is
+    this (Floyd-Steinberg onto the dot lattice, light as density); petals
+    mapped to a hot gradient, leaves to a neon one. Returns (chars, colours,
+    width px, alpha image at that size)."""
+    import colorsys
+    import numpy as np
+    from PIL import Image, ImageFilter
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import typeart as ta
+    im = Image.open(path).convert('RGB')
+    W0, H0 = im.size
+    im = im.crop((int(crop[0] * W0), int(crop[1] * H0), int(crop[2] * W0), int(crop[3] * H0)))
+    a = np.asarray(im, dtype=np.float32) / 255
+    border = np.concatenate([a[:12].reshape(-1, 3), a[:, :12].reshape(-1, 3), a[:, -12:].reshape(-1, 3)])
+    paper = np.median(border, 0)
+    alpha = np.clip((np.sqrt(((a - paper) ** 2).sum(2)) - 0.12) / 0.12, 0, 1)
+    alpha[:, :int(0.04 * alpha.shape[1])] = 0                       # the plate's edges
+    alpha[:, -int(0.04 * alpha.shape[1]):] = 0
+    alpha_im = Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.MedianFilter(7))
+    cw, ch = adv * F, 1.2 * F                                       # Arris Mono Bold: its bigger dots, its own advance
+    width = height * im.width / im.height
+    cols, rows = int(width // cw), int(height // ch)
+    gw, gh = cols * 2, rows * 4
+    L = np.asarray(im.convert('L').resize((gw, gh), Image.LANCZOS), dtype=np.float32) / 255
+    A = np.asarray(alpha_im.resize((gw, gh), Image.LANCZOS), dtype=np.float32) / 255
+    lo, hi = np.percentile(L[A > 0.5], [2, 99.5])
+    Ln = np.clip((L - lo) / (hi - lo), 0, 1)
+    chars = ta.braille(A * (0.28 + 0.72 * Ln ** 0.85))
+    rgb = np.asarray(im.resize((cols, rows), Image.LANCZOS), dtype=np.float32) / 255
+    acell = np.asarray(alpha_im.resize((cols, rows), Image.LANCZOS), dtype=np.float32) / 255
+    petal = [(0, (176, 22, 116)), (0.3, (244, 42, 176)), (0.55, (255, 74, 222)), (0.78, (255, 152, 112)), (1, (255, 242, 208))]
+    leaf = [(0, (24, 128, 64)), (0.35, (44, 226, 112)), (0.65, (110, 255, 64)), (1, (232, 255, 166))]
+    colours = []
+    for r in range(rows):
+        row = []
+        for c in range(cols):
+            if acell[r, c] < 0.2 or chars[r][c] == '⠀':
+                row.append(None)
+                continue
+            h, l_, _ = colorsys.rgb_to_hls(*rgb[r, c])
+            green = float(np.clip(1 - abs(h * 360 - 105) / 55, 0, 1))
+            t = float(np.clip((l_ - 0.05) / 0.45, 0, 1))
+            cp, cl = ta.gradient(petal, t), ta.gradient(leaf, t)
+            row.append(ta.hexc(tuple(cp[i] + (cl[i] - cp[i]) * green for i in range(3))))
+        colours.append(row)
+    chars = [''.join(c_ if col else '⠀' for c_, col in zip(line, cl)) for line, cl in zip(chars, colours)]
+    return chars, colours, cols * cw, alpha_im.resize((int(cols * cw), int(rows * ch)), Image.LANCZOS)
+
+
+def _garden():
+    """The collage: Cassini's Saturn in Braille dots, Redouté's roses over it
+    in ASCII, a tracking overlay. Returns html pieces and geometry."""
     import math
-    import random
-    bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+    import numpy as np
+    from PIL import Image, ImageFilter
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import typeart as ta
+
+    # Saturn, at its own proportions: 13 px Braille, dots on a near-square lattice
+    sF = 13.0
+    scw, sch = 0.578 * sF, 1.2 * sF
+    sat = Image.open(SOURCES / 'saturn-cassini-2004-10-06.jpg').convert('RGB')
+    sw = 1880.0
+    sh = sw * sat.height / sat.width                                       # the photograph's own aspect
+    sx0, sy0 = 70.0, 40.0
+    scols, srows = int(sw // scw), int(sh // sch)
+    dot_w, dot_h = scw / 2, sch / 4                                        # 3.757 x 3.9 px
+    gw, gh = int(round(sw / dot_w)), int(round(sh / dot_h))                # dots across and down, true to aspect
+    lum = np.asarray(sat.convert('L').resize((gw, gh), Image.LANCZOS), dtype=np.float64) / 255
+    lum = np.clip((lum - 0.02) / 0.72, 0, 1) ** 0.75
+    lum = np.pad(lum, ((0, max(0, srows * 4 - gh)), (0, max(0, scols * 2 - gw))))[:srows * 4, :scols * 2]
+    cellum = np.asarray(sat.convert('L').resize((scols, srows), Image.LANCZOS), dtype=np.float64) / 255
+
+    # the roses, laid over the planet
+    roses = []
+    for path, height, cx, cy, fx, fy in ((SOURCES / 'redoute-rosa-gallica-flore-giganteo.jpg', 900, 700, 470, 0.46, 0.31),
+                                          (SOURCES / 'redoute-rosa-gallica-regalis.jpg', 600, 1530, 330, 0.50, 0.25)):
+        chars, colours, width, amask = _rose_stipple(path, height, 10.0)
+        x0, y0 = cx - fx * width, cy - fy * height
+        roses.append((chars, colours, x0, y0, amask))
+
+    # knock the planet out behind the roses
+    ko = Image.new('L', (1920, 1080), 0)
+    for _, _, x0, y0, amask in roses:
+        ko.paste(amask, (int(x0), int(y0)), amask)
+    ko = np.asarray(ko.filter(ImageFilter.MaxFilter(9)), dtype=np.float32) / 255
+    for r in range(srows):
+        for c in range(scols):
+            for dy in range(4):
+                for dx in range(2):
+                    x, y = int(sx0 + c * scw + (0.25 + 0.5 * dx) * scw), int(sy0 + r * sch + (dy + 0.5) * dot_h)
+                    if 0 <= x < 1920 and 0 <= y < 1080 and ko[y, x] > 0.15:
+                        lum[r * 4 + dy, c * 2 + dx] = 0
+    schars = ta.braille(lum)
+    satmap = [(0, (42, 15, 110)), (0.3, (123, 44, 255)), (0.5, (25, 195, 255)), (0.7, (60, 255, 122)), (0.86, (200, 255, 58)), (1, (255, 255, 255))]
+    scol = [[ta.hexc(ta.gradient(satmap, cellum[r, c] ** 0.7)) if schars[r][c] != '⠀' else None for c in range(scols)]
+            for r in range(srows)]
+    sat_html = ta.cells_html(schars, scol, esc)
+    rose_html = [(ta.cells_html(ch_, co_, esc), x0, y0) for ch_, co_, x0, y0, _ in roses]
+
+    # the globe's ellipse on the slide, for the graticule and the readout
+    gcx, gcy, grx, gry = sx0 + 0.49 * sw, sy0 + 0.575 * sh, 0.175 * sw, 0.235 * sh
+
+    def dots(pts, cls, ch='·'):
+        return ''.join(f'<span class="{cls}" style="left:{x:.0f}px;top:{y:.0f}px">{ch}</span>' for x, y in pts)
+
+    grat = []                                                              # the contact's orbit, dashed
+    for i in range(0, 220):
+        t = 2 * math.pi * i / 220
+        x = gcx + 2.55 * grx * math.cos(t) * math.cos(-0.12) - 1.05 * gry * math.sin(t) * math.sin(-0.12)
+        y = gcy + 2.55 * grx * math.cos(t) * math.sin(-0.12) + 1.05 * gry * math.sin(t) * math.cos(-0.12)
+        if i % 4 < 2:
+            grat.append((x, y))
+    # the contact off the limb, its trail and predicted track to the ring
+    sx, sy = 300.0, 205.0
+    trail = [(sx - 9 * i, sy - 4.2 * i) for i in range(1, 16)]
+    track = []
+    for i in range(1, 64):
+        t = i / 64
+        bx = (1 - t) ** 2 * sx + 2 * (1 - t) * t * 430 + t * t * 900
+        by = (1 - t) ** 2 * (sy + 58) + 2 * (1 - t) * t * 420 + t * t * 330
+        if i % 3 != 2:
+            track.append((bx, by))
+    geo = dict(sx0=sx0, sy0=sy0, sF=sF, gcx=gcx, gcy=gcy, ship=(sx, sy))
+    return sat_html, rose_html, dots(grat, 'gr'), dots(trail, 'tr'), dots(track, 'tk'), geo
+
+
+def _signal(cols=40):
+    """A signal trace in Braille: two rows of dots, a carrier with bursts."""
+    import math
+    rows = 2
+    on = [[False] * (cols * 2) for _ in range(rows * 4)]
+    for x in range(cols * 2):
+        v = 0.5 + 0.32 * math.sin(x / 2.1) * (0.4 + 0.6 * abs(math.sin(x / 17))) + 0.12 * math.sin(x * 1.7)
+        y = int(round((1 - v) * (rows * 4 - 1)))
+        on[max(0, min(rows * 4 - 1, y))][x] = True
     bits = [(0, 0, 0x01), (0, 1, 0x02), (0, 2, 0x04), (1, 0, 0x08), (1, 1, 0x10), (1, 2, 0x20), (0, 3, 0x40), (1, 3, 0x80)]
-    W, H = cols * 2, rows * 4
-    aspect = (0.578 / 2) / (1.2 / 4)                            # a dot's width over its height
-    cx, cy, R = W * 0.6, H * 0.52, H * 0.34
-    tilt, r1, r2 = 0.22, 1.35, 2.25
-    rng = random.Random(3)
-    stars = {(rng.randrange(W), rng.randrange(H)): rng.random() for _ in range(260)}
     out = []
     for r in range(rows):
-        line = []
-        for c in range(cols):
-            code, kind = 0, None
-            for dx, dy, bit in bits:
-                x, y = c * 2 + dx, r * 4 + dy
-                X, Y = (x - cx) * aspect / R, (y - cy) / R
-                # rotate the frame a little: the ring leans
-                Xr, Yr = X * math.cos(-0.35) - Y * math.sin(-0.35), X * math.sin(-0.35) + Y * math.cos(-0.35)
-                rr = math.hypot(Xr, Yr / tilt)                   # radius in the ring's plane
-                in_ring = r1 < rr < r2 and not (1.72 < rr < 1.82)
-                ring_front = in_ring and Yr > 0
-                on_planet = X * X + Y * Y < 1
-                b, k = 0.0, None
-                if on_planet and not ring_front:
-                    z = math.sqrt(max(0.0, 1 - X * X - Y * Y))
-                    lit = max(0.0, -0.55 * X - 0.45 * Y + 0.7 * z)
-                    band = 0.12 * math.sin(Y * 11 + 0.6 * math.sin(X * 3))
-                    b, k = min(1.0, 0.08 + 0.95 * lit + band * lit), 'p'
-                elif in_ring:
-                    b, k = 0.5 + 0.35 * math.sin(rr * 9.0), 'r'
-                    if not ring_front and on_planet:
-                        b, k = 0.0, None                         # behind the planet
-                elif (x, y) in stars:
-                    b, k = (1.0 if stars[(x, y)] > 0.7 else 0.0), 's'
-                if b * 16 > bayer[y % 4][x % 4] + 0.5:
-                    code |= bit
-                    kind = kind if kind in ('p', 'r') else k
-                    if k == 'r':
-                        kind = 'r' if kind != 'p' else kind
-            line.append((chr(0x2800 + code), kind))
-        out.append(line)
-    return out
+        out.append(''.join(chr(0x2800 + sum(b for dx, dy, b in bits if on[r * 4 + dy][c * 2 + dx])) for c in range(cols)))
+    return '\n'.join(out)
 
 
-@slide('braille', 'night', 'Braille')
-def braille():
-    colours = {'p': '#ffb000', 'r': '#3fd6ff', 's': '#f1ebdd', None: '#f1ebdd'}
-    lines = []
-    for row in _braille_planet():
-        runs, cur, buf = [], None, ''
-        for ch, k in row:
-            col = colours[k]
-            if col != cur and buf:
-                runs.append(f'<span style="color:{cur}">{buf}</span>')
-                buf = ''
-            cur = col
-            buf += ch
-        runs.append(f'<span style="color:{cur}">{buf}</span>')
-        lines.append(''.join(runs))
-    body = f'<pre class="bp mono">{chr(10).join(lines)}</pre>'
-    css = """
-.s-braille .bp { position:absolute; left: 96px; top: 128px; font-size: 25.3px; line-height: 1.2; font-weight: 500; }
+@slide('garden', 'void', 'Garden in orbit')
+def garden():
+    sat, roses, grat, trail, track, g = _garden()
+    plain = re.sub(r'style="color:[^"]*"', '', sat)
+    rose_layers = ''.join(f'<pre class="rose mono" style="left:{x0:.0f}px;top:{y0:.0f}px">{h}</pre>' for h, x0, y0 in roses)
+    sx, sy = g['ship']
+    body = f"""
+<div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+<div class="sky">
+  <pre class="sat ab1 mono">{plain}</pre>
+  <pre class="sat ab2 mono">{plain}</pre>
+  <pre class="sat mono">{sat}</pre>
+</div>
+<div class="hud">{grat}{trail}{track}</div>
+{rose_layers}
+<div class="ship" style="left:{sx - 9:.0f}px;top:{sy - 13:.0f}px">◆</div>
+<pre class="ret mono" style="left:{sx - 52:.0f}px;top:{sy - 52:.0f}px">┌─        ─┐
+
+
+
+└─        ─┘</pre>
+<div class="lbl mono" style="left:{sx + 86:.0f}px;top:{sy - 44:.0f}px">
+  <div class="b">TRK 041 ▸ CONTACT</div>
+  <div>RNG 1.71 AU · BRG 233.7°</div>
+  <div>Δv 412 m/s · T−04:12</div>
+  <div class="b">LOCK ▮▮▮▮▯</div>
+</div>
+<div class="lat mono" style="left:{g['gcx'] + 300:.0f}px;top:{g['gcy'] + 210:.0f}px">
+  <span class="x">+</span> LAT −12.40° · LON 233.71°
+</div>
+<div class="sig mono">
+  <div class="h">SIG ▸ 8.4 GHz · S/N 31 dB</div>
+  <pre class="w">{_signal()}</pre>
+  <div class="q">YOU CAN’T STOP THE SIGNAL</div>
+</div>
+<div class="tc mono"><span class="rec">●</span> REC · FRM 0041 · 03:47:12.08 UTC</div>
+<pre class="lost mono">┌       ┐
+   ◇
+└       ┘</pre>
+<div class="lostl mono">TRK 042 · SIGNAL LOST<br><span>LAST FIX 03:41:57 · RNG 2.06 AU</span></div>
+<div class="scale mono"><span class="t">0</span><span class="bar"></span><span class="t">100 000 km</span></div>
+<div class="latin">per aspera ad astra</div>
+<div class="spec"><i>Rosa gallica</i> · flore giganteo</div>
+<div class="reg r1">+</div><div class="reg r2">+</div><div class="reg r3">+</div><div class="reg r4">+</div>
+<div class="scan"></div>"""
+    css = f"""
+.s-garden {{ background: #03020a; }}
+.s-garden .glow {{ position:absolute; border-radius: 50%; filter: blur(40px); pointer-events:none; }}
+.s-garden .g1 {{ left: {sx - 120:.0f}px; top: {sy - 110:.0f}px; width: 240px; height: 220px; background: radial-gradient(circle, rgba(0,163,255,.55), rgba(0,163,255,0) 70%); }}
+.s-garden .g2 {{ left: 1180px; top: 560px; width: 520px; height: 360px; background: radial-gradient(circle, rgba(0,120,255,.20), rgba(0,120,255,0) 70%); }}
+.s-garden .g3 {{ left: 60px; top: 860px; width: 600px; height: 200px; background: radial-gradient(circle, rgba(0,180,255,.18), rgba(0,180,255,0) 70%); }}
+.s-garden .sat {{ position:absolute; left: {g['sx0']}px; top: {g['sy0']}px; font-size: {g['sF']}px; line-height: 1.2; font-weight: 400; }}
+.s-garden .ab1 {{ color: #ff00c8; mix-blend-mode: screen; opacity: .38; transform: translateX(-2px); }}
+.s-garden .ab2 {{ color: #00e5ff; mix-blend-mode: screen; opacity: .38; transform: translateX(2px); }}
+.s-garden .rose {{ position:absolute; font-size: 10px; line-height: 1.2; font-weight: 700; text-shadow: 0 0 6px rgba(255, 60, 214, .55), 0 0 18px rgba(255, 43, 214, .18); }}
+.s-garden .hud span {{ position:absolute; font: 400 14px/1 'Arris Mono'; transform: translate(-50%, -50%); }}
+.s-garden .gr {{ color: rgba(111, 211, 255, .55); text-shadow: 0 0 6px rgba(0,163,255,.8); }}
+.s-garden .tr {{ color: rgba(140, 220, 255, .55); }}
+.s-garden .tk {{ color: #6fd3ff; text-shadow: 0 0 8px #00a3ff, 0 0 18px rgba(0,163,255,.6); }}
+.s-garden .ship {{ position:absolute; font: 500 22px/1 'Arris'; color: #dff6ff; text-shadow: 0 0 10px #00a3ff, 0 0 24px #00a3ff, 0 0 48px rgba(0,163,255,.8); }}
+.s-garden .ret {{ position:absolute; font-size: 18px; line-height: 1.2; color: #6fd3ff; text-shadow: 0 0 8px rgba(0,163,255,.8); }}
+.s-garden .lbl {{ position:absolute; font-size: 15px; line-height: 1.45; color: #8fd8ff; letter-spacing: .04em; text-shadow: 0 0 8px rgba(0,163,255,.55); }}
+.s-garden .lbl .b {{ color: #e6f8ff; }}
+.s-garden .lat {{ position:absolute; font-size: 15px; color: #b6ffcf; letter-spacing: .06em; }}
+.s-garden .lat .x {{ color: #39ff14; font-size: 22px; vertical-align: -3px; margin-right: 8px; }}
+.s-garden .sig {{ position:absolute; left: 96px; bottom: 70px; color: #6fd3ff; text-shadow: 0 0 8px rgba(0,163,255,.7); }}
+.s-garden .sig .h {{ font-size: 14px; letter-spacing: .08em; margin-bottom: 6px; }}
+.s-garden .sig .w {{ font-size: 16px; line-height: 1.2; color: #39c6ff; }}
+.s-garden .sig .q {{ font-size: 13px; letter-spacing: .32em; margin-top: 10px; color: #c9f0ff; }}
+.s-garden .tc {{ position:absolute; right: 96px; top: 92px; font-size: 14px; letter-spacing: .1em; color: #6c8f80; }}
+.s-garden .tc .rec {{ color: #ff2bd6; text-shadow: 0 0 8px #ff2bd6; }}
+.s-garden .latin {{ position:absolute; right: 96px; bottom: 72px; font: italic 300 30px/1 'Arris'; color: #c8ff3a; letter-spacing: .02em; text-shadow: 0 0 10px rgba(200,255,58,.35); }}
+.s-garden .spec {{ position:absolute; left: 96px; top: 372px; font: 400 17px/1 'Arris'; color: #ff8ad8; letter-spacing: .03em; }}
+.s-garden .reg {{ position:absolute; font: 200 30px/1 'Arris Mono'; color: #2d4a3a; }}
+.s-garden .lost {{ position:absolute; left: 1716px; top: 128px; font-size: 16px; line-height: 1.2; color: rgba(111, 211, 255, .45); }}
+.s-garden .lostl {{ position:absolute; right: 96px; top: 200px; text-align: right; font-size: 13px; line-height: 1.5; letter-spacing: .06em; color: #ff5fae;
+                   text-shadow: -2px 0 rgba(0, 229, 255, .6), 2px 0 rgba(255, 0, 200, .5); }}
+.s-garden .lostl span {{ color: #6c8f80; text-shadow: none; }}
+.s-garden .scale {{ position:absolute; left: 1150px; top: 872px; display:flex; align-items:center; gap: 12px; font-size: 13px; color: #6c8f80; letter-spacing: .06em; }}
+.s-garden .scale .bar {{ display:inline-block; width: 240px; height: 7px; border: 1px solid #6c8f80; border-top: none; }}
+.s-garden .r1 {{ left: 40px; top: 30px; }} .s-garden .r2 {{ right: 40px; top: 30px; }}
+.s-garden .r3 {{ left: 40px; bottom: 26px; }} .s-garden .r4 {{ right: 40px; bottom: 26px; }}
+.s-garden .scan {{ position:absolute; inset:0; pointer-events:none;
+                  background: repeating-linear-gradient(to bottom, rgba(255,255,255,.035) 0 1px, transparent 1px 3px);
+                  box-shadow: inset 0 0 220px rgba(0,0,0,.85); }}
 """
-    return body, 'All 256 Braille patterns: two by four dots a cell, ordered dither', css
-
-
-def _sunset(cols=144, rows=32):
-    """A synthwave sunset as an image two pixels to a cell: sky, a striped
-    sun, two ridges, a neon grid on the ground; (top, bottom) colours per
-    cell, each pixel the mean of 4 x 4 samples, the stars single pixels."""
-    import math
-    import random
-    W, H = cols, rows * 2
-    horizon = 0.64
-    aspect = 12 / 12.4567                                  # a pixel's width over its height (cells 12 x 24.9 px)
-    rng = random.Random(5)
-    stars = {(rng.randrange(W), rng.randrange(int(H * horizon * 0.72))): rng.random() for _ in range(70)}
-
-    def mix(a, b, t):
-        t = max(0.0, min(1.0, t))
-        return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
-
-    def sky(y):
-        stops = [(0.0, (9, 3, 28)), (0.32, (40, 10, 72)), (0.52, (128, 28, 106)), (horizon, (255, 112, 64))]
-        for (y0, c0), (y1, c1) in zip(stops, stops[1:]):
-            if y <= y1:
-                return mix(c0, c1, (y - y0) / (y1 - y0))
-        return stops[-1][1]
-
-    def ridge(x, base, amp, f1, f2, ph):
-        return base - amp * (0.55 * abs(math.sin(x * f1 + ph)) + 0.3 * math.sin(x * f2 + 2 * ph) + 0.15 * math.sin(x * 23 + ph))
-
-    def colour(x, y):                                      # x, y in 0..1 (x across, y down)
-        if y >= horizon:                                   # the ground: a grid running to the sun
-            t = (y - horizon) / (1 - horizon)
-            base = mix((26, 7, 46), (7, 2, 16), t)
-            if t < 0.03:
-                return mix((255, 112, 64), base, t / 0.03)
-            depth = 1 / t
-            on_h = abs(math.sin(math.pi * depth * 1.4)) < 0.05 + 0.18 * t
-            u = (x - 0.62) / t
-            on_v = abs(math.sin(math.pi * u * 6.5)) < 0.035 + 0.06 * t
-            if on_h or on_v:
-                return mix(base, (255, 66, 214), min(1.0, 0.15 + 1.4 * t))
-            return base
-        if y > ridge(x, horizon + 0.004, 0.09, 4.1, 9.7, 0.4):  # the near ridge
-            return (13, 4, 28)
-        if y > ridge(x, horizon - 0.035, 0.12, 2.7, 6.3, 1.9):  # the far ridge
-            return (58, 20, 96)
-        sx, sy, sr = 0.62, horizon - 0.15, 0.25
-        dx, dy = (x - sx) * (W / H) * aspect, y - sy
-        if math.hypot(dx, dy) < sr:                         # the sun, cut by bands down its lower half
-            k = (dy + 0.02) / (sr + 0.02)
-            if k > 0 and (k * 7.0) % 1.0 < 0.12 + 0.55 * k:
-                return sky(y)
-            return mix((255, 226, 118), (255, 58, 130), (dy + sr) / (2 * sr))
-        return sky(y)
-
-    def pixel(px, py):
-        cx, cy = (px + 0.5) / W, (py + 0.5) / H
-        if (px, py) in stars and colour(cx, cy) == sky(cy):   # stars only on open sky
-            return '#%02x%02x%02x' % tuple(int(v) for v in mix((150, 130, 200), (250, 244, 255), stars[(px, py)]))
-        acc = [0.0, 0.0, 0.0]
-        for i in range(4):
-            for j in range(4):
-                c = colour((px + (i + 0.5) / 4) / W, (py + (j + 0.5) / 4) / H)
-                for k in range(3):
-                    acc[k] += c[k] / 16
-        return '#%02x%02x%02x' % tuple(int(max(0, min(255, v))) for v in acc)
-
-    return [[(pixel(c, 2 * r), pixel(c, 2 * r + 1)) for c in range(cols)] for r in range(rows)]
-
-
-@slide('landscape', 'violet', 'Blocks')
-def landscape():
-    lines = []
-    for row in _sunset():
-        runs, cur, n = [], None, 0
-        for cell in row:
-            if cell != cur and n:
-                runs.append(f'<span style="color:{cur[0]};background:{cur[1]}">{"▀" * n}</span>')
-                n = 0
-            cur = cell
-            n += 1
-        runs.append(f'<span style="color:{cur[0]};background:{cur[1]}">{"▀" * n}</span>')
-        lines.append(''.join(runs))
-    body = f'<pre class="ls mono">{chr(10).join(lines)}</pre>'
-    css = """
-.s-landscape .ls { position:absolute; left: 96px; top: 140px; font-size: 20.7612px; line-height: 1.2; font-weight: 400; }
-/* a cell exactly 12 px wide: every vertical edge on a whole pixel */
-"""
-    return body, 'The upper half block ▀ in two colours a cell: 144 × 64 pixels of terminal', css
+    return body, None, css
 
 
 @slide('colophon', 'night', 'Colophon')
