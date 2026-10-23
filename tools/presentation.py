@@ -1176,8 +1176,61 @@ def slingshot():
         rows.append(f'<div class="{"cheer" if kind == "cheer" else "m"}">{a}<div class="mb"><div class="nm"><b style="color:{col}">{esc(user)}</b>{badge}'
                     f'<span class="ts mono">{ts}</span></div><div class="tx">{esc(text)}</div>{post}</div></div>')
     viewers = ''.join(f'<img class="vw" src="{src(f)}">' for f in ('cat-tabby.jpg', 'eva-pettit.jpg', 'cat-grass.jpg', 'ducreux-yawning.jpg'))
+    # Jupiter's limb in the photograph as shown (fitted: a circle, to half a
+    # pixel): the horizon, a graticule over the disc as seen from above the
+    # pole, the ground track to perijove, the belts named, the Red Spot below
+    LX, LY, LR = 2280, 3466, 3288
+    pol = lambda r, a: (LX + r * math.cos(a), LY + r * math.sin(a))
+    win = lambda x, y: 40 < x < 1880 and 92 < y < 990
+    def arcpts(r, a0, a1, n=240):
+        out = [pol(r, a0 + (a1 - a0) * k / n) for k in range(n + 1)]
+        return ' '.join(f'{x:.1f},{y:.1f}' for x, y in out if win(x, y))
+    A0, A1 = math.radians(-148), math.radians(-78)
+    ov = [f'<polyline points="{arcpts(LR + 3, A0, A1)}" class="hz"/>',
+          f'<polyline points="{arcpts(LR + 26, A0, A1)}" class="hz2"/>']
+    for k in range(-148, -77):
+        a_ = math.radians(k)
+        x0, y0 = pol(LR + 3, a_)
+        if not win(x0, y0):
+            continue
+        L_ = 14 if k % 5 == 0 else 6
+        x1, y1 = pol(LR + 3 + L_, a_)
+        ov.append(f'<line x1="{x0:.1f}" y1="{y0:.1f}" x2="{x1:.1f}" y2="{y1:.1f}" class="ht"/>')
+    for deg in range(4, 44, 4):                              # latitude rings, orthographic from above the pole
+        ov.append(f'<polyline points="{arcpts(LR * math.cos(math.radians(deg)), A0, A1)}" class="gr {"gr5" if deg % 12 == 0 else ""}"/>')
+    for k in range(-148, -77, 4):                            # meridians, converging on the pole far below
+        a_ = math.radians(k)
+        pts = [pol(LR * math.cos(math.radians(t)), a_) for t in range(0, 50)]
+        pts = [q for q in pts if win(*q)]
+        if len(pts) > 1:
+            ov.append('<polyline points="' + ' '.join(f'{x:.1f},{y:.1f}' for x, y in pts) + '" class="gr"/>')
+    # the ground track: in from the south-west, grazing toward the horizon
+    trk = []
+    for k in range(0, 101):
+        t = k / 100
+        a_ = math.radians(-150 + 41 * t)
+        r = LR * math.cos(math.radians(38 - 36.5 * t ** 0.7))
+        trk.append(pol(r, a_))
+    ov.append('<polyline points="' + ' '.join(f'{x:.1f},{y:.1f}' for x, y in trk if win(x, y)) + '" class="gtk"/>')
+    for t, lab in ((0.3, 'T−08'), (0.62, 'T−04'), (1.0, 'PERIJOV')):
+        a_ = math.radians(-150 + 41 * t)
+        x, y = pol(LR * math.cos(math.radians(38 - 36.5 * t ** 0.7)), a_)
+        ov.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{5 if lab == "PERIJOV" else 3.5}" class="gp {"pj" if lab == "PERIJOV" else ""}"/>')
+        ov.append(f'<text x="{x + 10:.1f}" y="{y - 10:.1f}" class="gl {"pj" if lab == "PERIJOV" else ""}">{lab}</text>')
+    # belt names along their rings
+    for deg, name in ((10, 'NNTB · 40°N'), (22, 'NTZ · 24°N')):
+        x, y = pol(LR * math.cos(math.radians(deg)), math.radians(-113.5))
+        if win(x, y):
+            ov.append(f'<text x="{x:.1f}" y="{y - 6:.1f}" class="bl" transform="rotate(-23 {x:.1f} {y:.1f})">{name}</text>')
+    hx, hy = pol(LR + 3, math.radians(-107.5))
+    ov.append(f'<polyline points="{hx:.1f},{hy:.1f} {hx - 36:.1f},{hy - 70:.1f} {hx - 236:.1f},{hy - 70:.1f}" class="ld"/>')
+    ov.append(f'<text x="{hx - 236:.1f}" y="{hy - 78:.1f}" class="cl">HORAIZON · 1 BAR</text>')
+    ov.append(f'<text x="{hx - 236:.1f}" y="{hy - 56:.1f}" class="cl dim">18 220 km · −0.6°</text>')
+    ov.append('<g class="off"><polygon points="1200,960 1188,944 1212,944"/><text x="1222" y="958">GRS · 16 350 km</text></g>')
+    view_hud = f'<svg class="vhud" width="1920" height="1080">{"".join(ov)}</svg>'
     body = f"""
 <img class="view" src="{src('juno-pj18-jupiter.png')}">
+{view_hud}
 <div class="haze"></div>
 <div class="bore"><i></i></div>
 <div class="tape mono"><div class="ticks">{ticks}</div><div class="hd">271</div></div>
@@ -1218,8 +1271,8 @@ def slingshot():
                      filter: saturate(1.15) contrast(1.08); }
 .s-slingshot .haze { position:absolute; inset:0; background: radial-gradient(ellipse at 70% 30%, rgba(0, 120, 200, .10), transparent 50%),
                      linear-gradient(180deg, rgba(1,3,10,.35), transparent 30%, transparent 70%, rgba(1,3,10,.5)); }
-.s-slingshot .bore { position:absolute; left: 900px; top: 470px; width: 80px; height: 80px; border: 2px solid rgba(200,255,58,.9); border-radius: 50%;
-                     box-shadow: 0 0 10px rgba(200,255,58,.5); }
+.s-slingshot .bore { position:absolute; left: 900px; top: 470px; width: 80px; height: 80px; border: 1.5px solid rgba(200,255,58,.9); border-radius: 50%;
+                     }
 .s-slingshot .bore::before, .s-slingshot .bore::after { content: ''; position:absolute; top: 38px; width: 60px; height: 2px; background: rgba(200,255,58,.9); }
 .s-slingshot .bore::before { left: -70px; } .s-slingshot .bore::after { right: -70px; }
 .s-slingshot .bore i { position:absolute; left: 36px; top: 36px; width: 6px; height: 6px; background: #c8ff3a; }
@@ -1231,11 +1284,11 @@ def slingshot():
 .s-slingshot .tape .hd { position:absolute; left: 50%; bottom: 0; transform: translateX(-50%); font-size: 20px; color: #c8ff3a;
                          border: 1.5px solid #c8ff3a; padding: 2px 10px 0; background: rgba(1,3,10,.8); }
 .s-slingshot .att { position:absolute; left: 640px; top: 166px; width: 600px; display:flex; justify-content: center; gap: 30px;
-                    font-size: 13px; letter-spacing: .16em; color: rgba(220, 255, 180, .8); text-shadow: 0 0 6px #000; }
-.s-slingshot .mfd { position:absolute; background: rgba(2, 10, 18, .78); border: 1px solid rgba(95,227,255,.5); overflow: hidden;
+                    font-size: 13px; letter-spacing: .16em; color: rgba(220, 255, 180, .8); }
+.s-slingshot .mfd { position:absolute; background: rgba(6, 10, 14, .72); border: 1px solid rgba(233,251,255,.28); overflow: hidden;
                     clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
-                    box-shadow: inset 0 0 40px rgba(0, 120, 200, .2); }
-.s-slingshot .mfd .mh { position:absolute; left: 14px; top: 10px; font-size: 12px; letter-spacing: .2em; color: #5fe3ff; text-shadow: 0 0 6px #000; }
+                    }
+.s-slingshot .mfd .mh { position:absolute; left: 14px; top: 10px; font-size: 12px; letter-spacing: .2em; color: #5fe3ff; }
 .s-slingshot .mfd .mr { position:absolute; right: 16px; top: 10px; text-align: right; font-size: 12px; line-height: 1.45; letter-spacing: .12em; color: #bfeeff; }
 .s-slingshot .hud { position:absolute; left:0; top:0; }
 .s-slingshot .hud polyline, .s-slingshot .hud path, .s-slingshot .hud circle, .s-slingshot .hud rect { fill: none; }
@@ -1243,12 +1296,12 @@ def slingshot():
 .s-slingshot .hud .lat.bk, .s-slingshot .hud .lon.bk { stroke: rgba(95, 227, 255, .14); stroke-width: 1; stroke-dasharray: 2 4; }
 .s-slingshot .hud .belt.fr { stroke: rgba(255, 176, 0, .5); stroke-width: 1; } .s-slingshot .hud .belt.bk { stroke: none; }
 .s-slingshot .hud .grs { stroke: #ff5f3a; stroke-width: 1.2; }
-.s-slingshot .hud .limb { stroke: #5fe3ff; stroke-width: 2; filter: drop-shadow(0 0 6px #00b3ff); }
+.s-slingshot .hud .limb { stroke: #5fe3ff; stroke-width: 2; }
 .s-slingshot .hud .ring { stroke: rgba(95, 227, 255, .35); stroke-width: 1; stroke-dasharray: 5 5; }
 .s-slingshot .hud .hid { stroke-opacity: .25 !important; stroke-dasharray: 2 5; }
-.s-slingshot .hud .trk { stroke: #e6fbff; stroke-width: 1.6; filter: drop-shadow(0 0 4px #00b3ff); }
+.s-slingshot .hud .trk { stroke: #e6fbff; stroke-width: 1.6; }
 .s-slingshot .hud .trk.hid { stroke: #5fe3ff; filter: none; }
-.s-slingshot .hud .burn { stroke: #ffb000; stroke-width: 4; filter: drop-shadow(0 0 6px #ff8a00); }
+.s-slingshot .hud .burn { stroke: #ffb000; stroke-width: 4; }
 .s-slingshot .hud .tick { fill: #01030a; stroke: #e6fbff; stroke-width: 1.6; } .s-slingshot .hud .tick.pj { stroke: #ffb000; stroke-width: 2.4; }
 .s-slingshot .hud .vec { stroke: #c8ff3a; stroke-width: 1.6; } .s-slingshot .hud .lock { stroke: #c8ff3a; stroke-width: 1.2; stroke-dasharray: 6 8; }
 .s-slingshot .tl { position:absolute; font-size: 11px; letter-spacing: .12em; color: #bfeeff; }
@@ -1258,16 +1311,16 @@ def slingshot():
 .s-slingshot .cam .red { position:absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, transparent 35%, rgba(120, 0, 0, .55) 85%),
                          linear-gradient(rgba(60, 255, 160, .10), rgba(60, 255, 160, .10)); mix-blend-mode: normal; }
 .s-slingshot .cam .scan { position:absolute; inset:0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 3px); }
-.s-slingshot .cam .mh { color: #ffdede; } .s-slingshot .cam .rec { color: #ff3b3b; text-shadow: 0 0 6px #ff3b3b; }
-.s-slingshot .cam .bio { position:absolute; left: 14px; bottom: 10px; font-size: 11px; letter-spacing: .12em; color: #ffb3b3; text-shadow: 0 0 4px #000; }
-.s-slingshot .burnblk { position:absolute; left: 540px; top: 760px; color: #ffb000; text-shadow: 0 0 12px rgba(255,138,0,.6); }
+.s-slingshot .cam .mh { color: #ffdede; } .s-slingshot .cam .rec { color: #ff3b3b; }
+.s-slingshot .cam .bio { position:absolute; left: 14px; bottom: 10px; font-size: 11px; letter-spacing: .12em; color: #ffb3b3; }
+.s-slingshot .burnblk { position:absolute; left: 540px; top: 760px; color: #ffb000; }
 .s-slingshot .burnblk span { display:block; font-size: 12px; letter-spacing: .24em; }
 .s-slingshot .burnblk b { font: 300 64px/1 'Arris'; font-variation-settings: 'WTCH' 100; }
 .s-slingshot .gg { position:absolute; left: 532px; top: 838px; width: 264px; height: 120px; }
 .s-slingshot .gg svg { position:absolute; left: 0; top: 0; }
 .s-slingshot .gg .gbg { stroke: rgba(95,227,255,.18); stroke-width: 8; fill: none; }
-.s-slingshot .gg .gon { stroke: #5fe3ff; stroke-width: 8; fill: none; filter: drop-shadow(0 0 5px #00b3ff); }
-.s-slingshot .gg .ghot { stroke: #ffb000; stroke-width: 8; fill: none; filter: drop-shadow(0 0 6px #ff8a00); }
+.s-slingshot .gg .gon { stroke: #5fe3ff; stroke-width: 8; fill: none; }
+.s-slingshot .gg .ghot { stroke: #ffb000; stroke-width: 8; fill: none; }
 .s-slingshot .gg .g1, .s-slingshot .gg .g2 { position:absolute; top: 44px; width: 128px; text-align: center; font-size: 10px; letter-spacing: .16em; color: #bfeeff; }
 .s-slingshot .gg .g1 { left: 0; } .s-slingshot .gg .g2 { left: 136px; }
 .s-slingshot .gg b { display:block; font: 300 30px/1 'Arris'; color: #e6fbff; }
@@ -1275,10 +1328,10 @@ def slingshot():
 .s-slingshot .tline .ax { position:absolute; left: 0; right: 0; top: 20px; height: 1px; background: rgba(95,227,255,.7); }
 .s-slingshot .tline .ev { position:absolute; top: 12px; }
 .s-slingshot .tline .ev i { display:block; width: 1px; height: 16px; background: #5fe3ff; }
-.s-slingshot .tline .ev span { position:absolute; top: -18px; left: -4px; font-size: 10px; letter-spacing: .12em; white-space: nowrap; text-shadow: 0 0 4px #000; }
-.s-slingshot .tline .ev.now i { width: 2px; height: 30px; margin-top: -7px; background: #c8ff3a; box-shadow: 0 0 8px #c8ff3a; }
+.s-slingshot .tline .ev span { position:absolute; top: -18px; left: -4px; font-size: 10px; letter-spacing: .12em; white-space: nowrap; }
+.s-slingshot .tline .ev.now i { width: 2px; height: 30px; margin-top: -7px; background: #c8ff3a; }
 .s-slingshot .tline .ev.now span { color: #c8ff3a; }
-.s-slingshot .tline .ev.burn i { width: 50px; height: 5px; margin-top: 6px; background: #ffb000; box-shadow: 0 0 8px #ff8a00; }
+.s-slingshot .tline .ev.burn i { width: 50px; height: 5px; margin-top: 6px; background: #ffb000; }
 .s-slingshot .tline .ev.burn span, .s-slingshot .tline .ev.pj span { color: #ffb000; }
 .s-slingshot .flt { position:absolute; left: 830px; top: 812px; width: 500px; display:flex; justify-content: space-between; font-size: 12px; letter-spacing: .1em; color: #5fe3ff; }
 .s-slingshot .flt b { font: 400 22px 'Arris'; color: #e6fbff; margin: 0 2px 0 4px; }
@@ -1313,20 +1366,36 @@ def slingshot():
 .s-slingshot .chat .bits { font-size: 10px; color: #01030a; background: #ffb000; padding: 1px 6px; }
 .s-slingshot .chat .in { display:flex; justify-content: space-between; margin: 8px 12px 14px; padding: 9px 12px; border: 1px solid rgba(155,120,255,.45); color: #8e82b4; font-size: 13px; }
 .s-slingshot .chat .ic { color: #ff8ad8; }
-.s-slingshot .tips { position:absolute; left: 1040px; top: 228px; width: 290px; display:flex; flex-direction: column; gap: 10px; }
+.s-slingshot .tips { position:absolute; left: 664px; top: 226px; width: 290px; display:flex; flex-direction: column; gap: 10px; }
 .s-slingshot .tips .goal { padding: 10px 12px; background: rgba(12, 8, 26, .82); border: 1px solid rgba(255,176,0,.5); }
 .s-slingshot .tips .gt { font-size: 11px; letter-spacing: .16em; color: #ffb000; }
 .s-slingshot .tips .gb { height: 8px; margin: 8px 0 6px; background: rgba(255,176,0,.18); }
-.s-slingshot .tips .gb i { display:block; width: 62%; height: 100%; background: repeating-linear-gradient(90deg, #ffb000 0 8px, #ffcf5a 8px 10px); box-shadow: 0 0 8px #ff8a00; }
+.s-slingshot .tips .gb i { display:block; width: 62%; height: 100%; background: repeating-linear-gradient(90deg, #ffb000 0 8px, #ffcf5a 8px 10px); }
 .s-slingshot .tips .gn { font-size: 11px; color: #ffd9a0; text-align: right; }
 .s-slingshot .tips .tip { display:flex; gap: 10px; align-items: center; padding: 9px 12px; background: linear-gradient(90deg, rgba(255,43,214,.32), rgba(12,8,26,.85));
-                          border-left: 3px solid #ff2bd6; box-shadow: 0 0 18px rgba(255,43,214,.25); }
-.s-slingshot .tips .tip.big { background: linear-gradient(90deg, rgba(255,176,0,.36), rgba(12,8,26,.85)); border-left-color: #ffb000; box-shadow: 0 0 22px rgba(255,176,0,.3); }
+                          border-left: 3px solid #ff2bd6; }
+.s-slingshot .tips .tip.big { background: linear-gradient(90deg, rgba(255,176,0,.36), rgba(12,8,26,.85)); border-left-color: #ffb000; }
 .s-slingshot .tips .av { flex: none; width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
 .s-slingshot .tips .tt { font: 400 15px 'Arris'; color: #fff; }
 .s-slingshot .tips .tt b { font-weight: 700; }
 .s-slingshot .tips .amt { font: 700 15px 'Arris'; color: #ffd36b; }
 .s-slingshot .tips .tm { font: italic 400 14px 'Arris'; color: #f1e6ff; }
+.s-slingshot .vhud { position:absolute; left:0; top:0; }
+.s-slingshot .vhud polyline, .s-slingshot .vhud circle { fill: none; }
+.s-slingshot .vhud .hz { stroke: #e9fbff; stroke-width: 1.4; }
+.s-slingshot .vhud .hz2 { stroke: rgba(233, 251, 255, .45); stroke-width: 1; stroke-dasharray: 2 6; }
+.s-slingshot .vhud .ht { stroke: rgba(233, 251, 255, .8); stroke-width: 1; }
+.s-slingshot .vhud .gr { stroke: rgba(233, 251, 255, .26); stroke-width: 1; }
+.s-slingshot .vhud .gr5 { stroke: rgba(233, 251, 255, .45); }
+.s-slingshot .vhud .gtk { stroke: #c8ff3a; stroke-width: 1.4; stroke-dasharray: 10 6; }
+.s-slingshot .vhud .gp { stroke: #c8ff3a; stroke-width: 1.4; fill: #0b0f14; }
+.s-slingshot .vhud .gp.pj { stroke: #ffb000; }
+.s-slingshot .vhud text { font: 500 12px 'Arris Mono'; letter-spacing: .14em; fill: #e9fbff; }
+.s-slingshot .vhud .gl { fill: #c8ff3a; } .s-slingshot .vhud .gl.pj { fill: #ffb000; }
+.s-slingshot .vhud .bl { fill: rgba(233, 251, 255, .75); font-size: 11px; }
+.s-slingshot .vhud .ld { stroke: rgba(233, 251, 255, .8); stroke-width: 1; fill: none; }
+.s-slingshot .vhud .cl.dim { fill: rgba(233, 251, 255, .6); }
+.s-slingshot .vhud .off polygon { fill: #ff6f4f; } .s-slingshot .vhud .off text { fill: #ff9c80; }
 .s-slingshot .glass { position:absolute; inset:0; pointer-events:none;
    background: linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(190,230,255,.06) 38%, rgba(255,255,255,0) 44%),
                linear-gradient(115deg, rgba(255,255,255,0) 52%, rgba(190,230,255,.035) 55%, rgba(255,255,255,0) 58%),
