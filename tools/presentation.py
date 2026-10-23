@@ -346,11 +346,11 @@ def pixels():
     s = 62
     rects = ''.join(f'<rect x="{x * s}" y="{y * s}" width="{s - 3}" height="{s - 3}" rx="2" fill="{"#6b5420" if c == "#" else "#171a1d"}"/>'
                     for y, r in enumerate(rows) for x, c in enumerate(r))
-    geom = heritage.trace(rows)
+    geom = heritage.trace(rows)                         # in font units: y counts up from the bottom row
     paths = []
     for poly in getattr(geom, 'geoms', [geom]):
         for ring in [poly.exterior, *poly.interiors]:
-            pts = ' '.join(f'{x * s:.1f},{y * s:.1f}' for x, y in ring.coords)
+            pts = ' '.join(f'{x * s:.1f},{(len(rows) - y) * s:.1f}' for x, y in ring.coords)
             paths.append(f'M{pts}Z')
     svg = (f'<svg width="{9 * s}" height="{12 * s}" viewBox="-2 -2 {9 * s + 4} {12 * s + 4}">{rects}'
            f'<path d="{" ".join(paths)}" fill="none" stroke="#ffb000" stroke-width="5" fill-rule="evenodd"/></svg>')
