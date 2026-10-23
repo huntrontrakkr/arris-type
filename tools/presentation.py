@@ -176,7 +176,7 @@ def family():
 def weights():
     names = ['Thin', 'ExtraLight', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold', 'Black']
     rows = ''.join(f'<div class="r"><span class="w label">{100 * (i + 1)} {n}</span>'
-                   f'<span class="t" style="font-weight:{100 * (i + 1)}">Quartz glyphs vex 1234</span></div>'
+                   f'<span class="t" style="font-weight:{100 * (i + 1)}">Neon rain over Sector 7</span></div>'
                    for i, n in enumerate(names))
     body = f'<div class="stack">{rows}</div>'
     css = """
@@ -209,7 +209,7 @@ def axes():
 
 @slide('grade', 'night', 'Grade for dark screens')
 def grade():
-    txt = 'Light text on a dark screen glows and looks heavier. Grade takes weight off without changing a single advance width, so the line never reflows.'
+    txt = 'Light text on a dark visor glows and looks heavier. Grade takes weight off without changing a single advance width, so the HUD never reflows.'
     body = f"""
 <div class="two">
   <div class="p light"><div class="label">Ink on paper · GRAD 0</div><p style="font-variation-settings:'GRAD' 0">{txt}</p></div>
@@ -303,7 +303,7 @@ def anatomy():
                     for y, t in ((cap, 'cap height 720'), (xh, 'x-height 540'), (base, 'baseline 0')))
     body = f"""
 {lines}
-<div class="word" style="top:{base - 0.85 * size}px">Rang</div>
+<div class="word" style="top:{base - 0.85 * size}px">Rain</div>
 <div class="note n1"><span class="accent">●</span> Chamfered corners: the watch’s pixel rule</div>
 <div class="note n2"><span class="accent">●</span> The r’s notch, carried into n, m, h</div>
 <div class="note n3"><span class="accent">●</span> Bowls are octagons</div>"""
@@ -343,9 +343,9 @@ def italic():
 def italic_poster():
     body = """
 <div class="w">
-  <div class="l1">Expressive,</div>
-  <div class="l2">swift &amp;</div>
-  <div class="l3">sensible.</div>
+  <div class="l1">Electric,</div>
+  <div class="l2">wired &amp;</div>
+  <div class="l3">restless.</div>
 </div>
 <div class="side label">Arris Black Italic<br>Arris Thin Italic</div>"""
     css = """
@@ -360,7 +360,7 @@ def italic_poster():
 
 @slide('waterfall', 'paper', 'Text sizes')
 def waterfall():
-    t = 'Six spokes nearly sixty degrees apart; a figure two with a notch; quiet x-heights for long reading.'
+    t = 'Rain hissed on the maglev rails as the last courier jacked in at 03:47, her watch counting down in chamfered figures.'
     rows = ''.join(f'<div class="r"><span class="label">{s} px</span><span class="t" style="font-size:{s}px">{t}</span></div>'
                    for s in (14, 18, 24, 32, 44, 60, 84))
     body = f'<div class="stack">{rows}</div>'
@@ -377,15 +377,15 @@ def waterfall():
 def editorial():
     body = """
 <div class="hed">
-  <div class="label accent">Travel · Rail</div>
-  <h1>The night train is back, and it is full</h1>
-  <div class="dek"><i>Sleeper services that were cut a decade ago now sell out weeks ahead. We rode the 22:47 from Vienna to Hamburg to find out why.</i></div>
+  <div class="label accent">Transit · Night shift</div>
+  <h1>The rain never stops. Neither do the trains.</h1>
+  <div class="dek"><i>Couriers, coders and noodle cooks ride the 03:47 maglev from Arcology 7 to the docks. We rode along to see how.</i></div>
 </div>
 <div class="cols">
-  <p><span class="drop">A</span>t a quarter to eleven the platform at Wien Hauptbahnhof is busier than the concourse. Families with folded pushchairs, a cyclist wheeling a bike toward the luggage car, two students sharing a bag of oranges: everyone is looking for coach 34, where the couchettes start.</p>
-  <p>The compartments are small and very clean. Six bunks fold down from the walls, each with a reading light, a hook and a bottle of water; breakfast is a roll, butter, jam and coffee, delivered at 07:10. Nobody complains about the size. The point, says the attendant, is that you wake up somewhere else.</p>
-  <blockquote>“You fall asleep in one country and wake up in another. That still feels like magic.”</blockquote>
-  <p>Demand has outrun supply on most of the network. New carriages are arriving through next year, and three more routes open in the spring: Brussels to Prague, Amsterdam to Zürich, and a summer service along the Adriatic coast. Book early, bring earplugs, and ask for a lower bunk.</p>
+  <p><span class="drop">A</span>t a quarter to four the platform at Arcology 7 is busier than the market below it. Couriers in rain shells check their wrists, a vendor folds a cart of steamed buns into a backpack, two students share an umbrella and one pair of earbuds: everyone is waiting for car 34, where the sleep pods start.</p>
+  <p>The cars are narrow and very clean. Twelve pods fold out of the walls, each with a reading light, a charge port and a bottle of water; breakfast is a rice ball and black coffee, delivered at 05:10. Nobody complains about the size. The point, says the conductor, is that you wake up in another district with your data still your own.</p>
+  <blockquote>“You fall asleep under one set of neon and wake up under another. That still feels like magic.”</blockquote>
+  <p>Demand has outrun supply on most of the network. New cars arrive through next year, and three more night lines open in the spring: the Docks to the Glasshouse, Low Tide to the Spire, and a loop around the ring road. Charge your watch, bring earplugs, and ask for a lower pod.</p>
 </div>"""
     css = """
 .s-editorial .hed { position:absolute; left:96px; top:130px; width: 1730px; }
@@ -489,21 +489,21 @@ CODE_CSS = """
 def _code_html():
     K, T, S, C, N, F = 'kw', 'ty', 'st', 'cm', 'nu', 'fn'
     lines = [
-        [('// a tiny pipeline, set in Arris Mono', C)],
+        [('// count the relay chatter, set in Arris Mono', C)],
         [('use', K), (' std::collections::HashMap;', '')],
         [('', '')],
-        [('fn', K), (' ', ''), ('tally', F), ('(words: &[&', ''), ('str', T), (']) -> ', ''), ('HashMap', T), ('<&', ''), ('str', T), (', ', ''), ('usize', T), ('> {', '')],
-        [('    let', K), (' mut counts = ', ''), ('HashMap', T), ('::new();', '')],
-        [('    for', K), (' w ', ''), ('in', K), (' words.iter().filter(|w| w.len() >= ', ''), ('3', N), (') {', '')],
-        [('        *counts.entry(w).or_insert(', ''), ('0', N), (') += ', ''), ('1', N), (';', '')],
+        [('fn', K), (' ', ''), ('tally', F), ('(packets: &[&', ''), ('str', T), (']) -> ', ''), ('HashMap', T), ('<&', ''), ('str', T), (', ', ''), ('usize', T), ('> {', '')],
+        [('    let', K), (' mut seen = ', ''), ('HashMap', T), ('::new();', '')],
+        [('    for', K), (' p ', ''), ('in', K), (' packets.iter().filter(|p| p.len() >= ', ''), ('3', N), (') {', '')],
+        [('        *seen.entry(p).or_insert(', ''), ('0', N), (') += ', ''), ('1', N), (';', '')],
         [('    }', '')],
-        [('    counts', '')],
+        [('    seen', '')],
         [('}', '')],
         [('', '')],
-        [('const', K), (' ready = (a, b) => a !== b && a <= ', ''), ('0x', N), ('FF', N), (';', '')],
-        [('let', K), (' range = ', ''), ('0', N), ('..=', ''), ('9', N), ('; ', ''), ('/* ', C), ('inclusive', C), (' */', C)],
-        [('xs |> map(f) |> filter(g)   ', ''), ('-- f <$> xs <*> ys', C)],
-        [('if', K), (' x != y || y == ', ''), ('"', S), ('#{name}', S), ('"', S), (' { ', ''), ('return', K), (' x -> y }', '')],
+        [('const', K), (' armed = (ice, key) => ice !== key && key <= ', ''), ('0x', N), ('FF', N), (';', '')],
+        [('let', K), (' sectors = ', ''), ('0', N), ('..=', ''), ('9', N), ('; ', ''), ('/* ', C), ('inclusive', C), (' */', C)],
+        [('shards |> map(decrypt) |> filter(clean)   ', ''), ('-- key <$> shards <*> ice', C)],
+        [('if', K), (' node != home || id == ', ''), ('"', S), ('#{handle}', S), ('"', S), (' { ', ''), ('return', K), (' node -> home }', '')],
     ]
     out = []
     for i, ln in enumerate(lines, 1):
@@ -516,7 +516,7 @@ def _code_html():
 def code():
     body = f"""
 <div class="win">
-  <div class="tabs mono"><span class="on">tally.rs</span><span>pipeline.ts</span><span>notes.md</span></div>
+  <div class="tabs mono"><span class="on">relay.rs</span><span>uplink.ts</span><span>ice.md</span></div>
   <div class="code mono">{_code_html()}</div>
 </div>"""
     css = """
@@ -536,26 +536,26 @@ def code():
 def code_python():
     K, T, S, C, N, F = 'kw', 'ty', 'st', 'cm', 'nu', 'fn'
     lines = [
-        [('# stations.py', C)],
+        [('# relays.py', C)],
         [('from', K), (' dataclasses ', ''), ('import', K), (' dataclass', '')],
         [],
         [('@dataclass', F), ('(frozen=', ''), ('True', K), (')', '')],
-        [('class', K), (' ', ''), ('Reading', T), (':', '')],
-        [('    station: ', ''), ('str', T)],
-        [('    temp_c: ', ''), ('float', T)],
+        [('class', K), (' ', ''), ('Ping', T), (':', '')],
+        [('    node: ', ''), ('str', T)],
+        [('    latency_ms: ', ''), ('float', T)],
         [],
-        [('def', K), (' ', ''), ('warmest', F), ('(rs: ', ''), ('list', T), ('[', ''), ('Reading', T), ('])', ''), (' -> ', ''), ('Reading', T), (' | ', ''), ('None', K), (':', '')],
-        [('    ', ''), ('return', K), (' ', ''), ('max', F), ('(rs, key=', ''), ('lambda', K), (' r: r.temp_c, default=', ''), ('None', K), (')', '')],
+        [('def', K), (' ', ''), ('slowest', F), ('(ps: ', ''), ('list', T), ('[', ''), ('Ping', T), ('])', ''), (' -> ', ''), ('Ping', T), (' | ', ''), ('None', K), (':', '')],
+        [('    ', ''), ('return', K), (' ', ''), ('max', F), ('(ps, key=', ''), ('lambda', K), (' p: p.latency_ms, default=', ''), ('None', K), (')', '')],
         [],
-        [('hot = [r ', ''), ('for', K), (' r ', ''), ('in', K), (' readings ', ''), ('if', K), (' r.temp_c >= ', ''), ('30', N), (' ', ''), ('and', K), (' r.station != ', ''), ('"Oslo"', S), (']', '')],
-        [('print', F), ('(', ''), ('f"{len(hot)} of {len(readings)} stations at 30 °C or more"', S), (')', '')],
+        [('lagging = [p ', ''), ('for', K), (' p ', ''), ('in', K), (' pings ', ''), ('if', K), (' p.latency_ms >= ', ''), ('30', N), (' ', ''), ('and', K), (' p.node != ', ''), ('"spire"', S), (']', '')],
+        [('print', F), ('(', ''), ('f"{len(lagging)} of {len(pings)} relays at 30 ms or more"', S), (')', '')],
         [('assert', K), (' ', ''), ('2', N), (' ** ', ''), ('10', N), (' == ', ''), ('1_024', N), ('   ', ''), ('# ints stay exact', C)],
     ]
     body = f"""
 <div class="win">
-  <div class="tabs mono"><span class="on">stations.py</span><span>test_stations.py</span></div>
+  <div class="tabs mono"><span class="on">relays.py</span><span>test_relays.py</span></div>
   <div class="code mono">{_code(lines)}</div>
-  <div class="out mono"><span class="dim">$</span> python stations.py<br>3 of 41 stations at 30 °C or more</div>
+  <div class="out mono"><span class="dim">$</span> python relays.py<br>3 of 41 relays at 30 ms or more</div>
 </div>"""
     css = """
 .s-code-python .win { position:absolute; inset: 120px 96px 100px 96px; background:#fbf8f1; border: 2px solid var(--line); }
@@ -572,18 +572,18 @@ def code_python():
 def code_react():
     K, T, S, C, N, F, G, A = 'kw', 'ty', 'st', 'cm', 'nu', 'fn', 'tg', 'at'
     lines = [
-        [('// Badge.tsx', C)],
+        [('// Uplink.tsx', C)],
         [('import', K), (' { useMemo } ', ''), ('from', K), (' ', ''), ('"react"', S), (';', '')],
         [],
-        [('type', K), (' ', ''), ('Props', T), (' = { count?: ', ''), ('number', T), ('; label: ', ''), ('string', T), (' };', '')],
+        [('type', K), (' ', ''), ('Props', T), (' = { pings?: ', ''), ('number', T), ('; handle: ', ''), ('string', T), (' };', '')],
         [],
-        [('export const', K), (' ', ''), ('Badge', F), (' = ({ count = ', ''), ('0', N), (', label }: ', ''), ('Props', T), (') => {', '')],
-        [('  const', K), (' text = ', ''), ('useMemo', F), ('(() => (count > ', ''), ('99', N), (' ? ', ''), ('"99+"', S), (' : ', ''), ('String', T), ('(count)), [count]);', '')],
-        [('  if', K), (' (count === ', ''), ('0', N), (' && !label) ', ''), ('return', K), (' ', ''), ('null', K), (';', '')],
+        [('export const', K), (' ', ''), ('Uplink', F), (' = ({ pings = ', ''), ('0', N), (', handle }: ', ''), ('Props', T), (') => {', '')],
+        [('  const', K), (' text = ', ''), ('useMemo', F), ('(() => (pings > ', ''), ('99', N), (' ? ', ''), ('"99+"', S), (' : ', ''), ('String', T), ('(pings)), [pings]);', '')],
+        [('  if', K), (' (pings === ', ''), ('0', N), (' && !handle) ', ''), ('return', K), (' ', ''), ('null', K), (';', '')],
         [('  return', K), (' (', '')],
-        [('    <', ''), ('section', G), (' ', ''), ('className', A), ('=', ''), ('"badge"', S), (' ', ''), ('aria-live', A), ('=', ''), ('"polite"', S), ('>', '')],
-        [('      <', ''), ('span', G), ('>', ''), ('{label}', ''), ('</', ''), ('span', G), ('>', '')],
-        [('      <', ''), ('b', G), (' ', ''), ('hidden', A), ('={count !== ', ''), ('0', N), (' ? ', ''), ('undefined', K), (' : ', ''), ('true', K), ('}>{text}</', ''), ('b', G), ('>', '')],
+        [('    <', ''), ('section', G), (' ', ''), ('className', A), ('=', ''), ('"uplink"', S), (' ', ''), ('aria-live', A), ('=', ''), ('"polite"', S), ('>', '')],
+        [('      <', ''), ('span', G), ('>', ''), ('{handle}', ''), ('</', ''), ('span', G), ('>', '')],
+        [('      <', ''), ('b', G), (' ', ''), ('hidden', A), ('={pings !== ', ''), ('0', N), (' ? ', ''), ('undefined', K), (' : ', ''), ('true', K), ('}>{text}</', ''), ('b', G), ('>', '')],
         [('      <', ''), ('hr', G), (' />', '')],
         [('    </', ''), ('section', G), ('>', '')],
         [('  );', '')],
@@ -591,7 +591,7 @@ def code_react():
     ]
     body = f"""
 <div class="win">
-  <div class="tabs mono"><span class="on">Badge.tsx</span><span>Badge.test.tsx</span><span>index.ts</span></div>
+  <div class="tabs mono"><span class="on">Uplink.tsx</span><span>Uplink.test.tsx</span><span>index.ts</span></div>
   <div class="code mono">{_code(lines)}</div>
 </div>"""
     css = """
@@ -608,17 +608,17 @@ def code_react():
 def code_functional():
     K, T, S, C, N, F = 'kw', 'ty', 'st', 'cm', 'nu', 'fn'
     ex = [
-        [('defmodule', K), (' ', ''), ('Sensor', T), (' ', ''), ('do', K)],
-        [('  @spec', F), (' average([', ''), ('number', T), ('])', ''), (' :: ', ''), ('float', T)],
-        [('  def', K), (' average(readings) ', ''), ('do', K)],
-        [('    readings', '')],
+        [('defmodule', K), (' ', ''), ('Grid', T), (' ', ''), ('do', K)],
+        [('  @spec', F), (' load([', ''), ('number', T), ('])', ''), (' :: ', ''), ('float', T)],
+        [('  def', K), (' load(sectors) ', ''), ('do', K)],
+        [('    sectors', '')],
         [('    |> ', ''), ('Enum', T), ('.reject(&is_nil/', ''), ('1', N), (')', '')],
         [('    |> ', ''), ('Enum', T), ('.map(', ''), ('fn', K), (' r -> r * ', ''), ('1.0', N), (' ', ''), ('end', K), (')', '')],
         [('    |> ', ''), ('then', F), ('(&(', ''), ('Enum', T), ('.sum(&', ''), ('1', N), (') / length(&', ''), ('1', N), (')))', '')],
         [('  end', K)],
         [('end', K)],
         [],
-        [('IO', T), ('.puts(', ''), ('"mean: #{Sensor.average([21, nil, 23])}"', S), (')', '')],
+        [('IO', T), ('.puts(', ''), ('"load: #{Grid.load([21, nil, 23])}"', S), (')', '')],
     ]
     hs = [
         [('module', K), (' ', ''), ('Main', T), (' ', ''), ('where', K)],
@@ -626,16 +626,16 @@ def code_functional():
         [('parse', F), (' :: ', ''), ('String', T), (' -> ', ''), ('Maybe', T), (' ', ''), ('Int', T)],
         [('parse', F), (' = readMaybe', '')],
         [],
-        [('total', F), (' :: [', ''), ('String', T), ('] -> ', ''), ('Maybe', T), (' ', ''), ('Int', T)],
-        [('total', F), (' xs = sum <$> traverse parse xs', '')],
+        [('credits', F), (' :: [', ''), ('String', T), ('] -> ', ''), ('Maybe', T), (' ', ''), ('Int', T)],
+        [('credits', F), (' xs = sum <$> traverse parse xs', '')],
         [],
         [('pair', F), (' = (,) <$> ', ''), ('Just', T), (' ', ''), ('1', N), (' <*> ', ''), ('Just', T), (' ', ''), ('2', N)],
-        [('main', F), (' = print (total [', ''), ('"3"', S), (', ', ''), ('"4"', S), ('])', '')],
+        [('main', F), (' = print (credits [', ''), ('"300"', S), (', ', ''), ('"47"', S), ('])', '')],
     ]
     body = f"""
 <div class="two">
-  <div class="win"><div class="tabs mono"><span class="on">sensor.ex</span></div><div class="code mono">{_code(ex)}</div></div>
-  <div class="win"><div class="tabs mono"><span class="on">Main.hs</span></div><div class="code mono">{_code(hs)}</div></div>
+  <div class="win"><div class="tabs mono"><span class="on">grid.ex</span></div><div class="code mono">{_code(ex)}</div></div>
+  <div class="win"><div class="tabs mono"><span class="on">Ledger.hs</span></div><div class="code mono">{_code(hs)}</div></div>
 </div>"""
     css = """
 .s-code-functional .two { position:absolute; inset: 120px 96px 100px 96px; display:grid; grid-template-columns: 1fr 1fr; gap: 36px; }
@@ -692,18 +692,18 @@ def terminal():
 
 @slide('board', 'amber', 'Departures')
 def board():
-    flights = [('08:15', 'REYKJAVÍK', 'FI 455', 'B12', 'ON TIME'), ('08:40', 'KRAKÓW', 'LO 282', 'C04', 'BOARDING'),
-               ('09:05', 'İSTANBUL', 'TK 1980', 'D21', 'DELAYED 09:50'), ('09:20', 'HÀ NỘI', 'VN 36', 'E07', 'GATE OPEN'),
-               ('09:45', 'ALMATY', 'KC 942', 'B03', 'ON TIME'), ('10:08', 'ΑΘΗΝΑ', 'A3 611', 'C17', 'ON TIME'),
-               ('10:30', 'SOFIA', 'FB 438', 'A09', 'CANCELLED'), ('10:55', 'PRAHA', 'OK 641', 'D02', 'ON TIME')]
+    flights = [('03:15', 'REYKJAVÍK', 'MG 455', 'B12', 'ON TIME'), ('03:40', 'KRAKÓW', 'MG 282', 'C04', 'BOARDING'),
+               ('04:05', 'İSTANBUL', 'HX 1980', 'D21', 'DELAYED 04:50'), ('04:20', 'HÀ NỘI', 'HX 36', 'E07', 'DOORS OPEN'),
+               ('04:45', 'LUNA GATE', 'OR 1', 'L01', 'FUELLING'), ('05:08', 'ΑΘΗΝΑ', 'MG 611', 'C17', 'ON TIME'),
+               ('05:30', 'SECTOR 9', 'LC 438', 'A09', 'LOCKDOWN'), ('05:55', 'PRAHA', 'MG 641', 'D02', 'ON TIME')]
 
     def tiles(s, n):
         s = s.ljust(n)[:n]
         return ''.join(f'<span class="t">{esc(ch) if ch != " " else "&nbsp;"}</span>' for ch in s)
     rows = ''.join(f'<div class="r">{tiles(t, 5)}<span class="gap"></span>{tiles(d, 10)}<span class="gap"></span>{tiles(f, 7)}'
-                   f'<span class="gap"></span>{tiles(g, 3)}<span class="gap"></span><span class="st {"warn" if "DEL" in s or "CAN" in s else ""}">{tiles(s, 13)}</span></div>'
+                   f'<span class="gap"></span>{tiles(g, 3)}<span class="gap"></span><span class="st {"warn" if "DEL" in s or "CAN" in s or "LOCK" in s else ""}">{tiles(s, 13)}</span></div>'
                    for t, d, f, g, s in flights)
-    head = '<div class="h mono"><span>Time</span><span>Destination</span><span>Flight</span><span>Gate</span><span>Remarks</span></div>'
+    head = '<div class="h mono"><span>Time</span><span>Destination</span><span>Line</span><span>Gate</span><span>Remarks</span></div>'
     body = f'<div class="b">{head}{rows}</div>'
     css = """
 .s-board .b { position:absolute; left: 96px; top: 140px; }
@@ -731,10 +731,10 @@ def dash():
     body = f"""
 <div class="g">{gauge}<div class="read"><div class="v">128</div><div class="u label">km/h</div></div></div>
 <div class="side">
-  <div class="it"><div class="label">Range</div><div class="n">412<small> km</small></div></div>
+  <div class="it"><div class="label">Altitude</div><div class="n">412<small> m</small></div></div>
   <div class="it"><div class="label">Outside</div><div class="n">−4<small> °C</small></div></div>
   <div class="it"><div class="label">Next</div><div class="n">↱ 600<small> m</small></div></div>
-  <div class="it"><div class="label">Gear</div><div class="n accent2">D</div></div>
+  <div class="it"><div class="label">Lane</div><div class="n accent2">7</div></div>
 </div>"""
     css = """
 .s-dash .g { position:absolute; left: 96px; top: 150px; width: 800px; height: 800px; }
@@ -752,8 +752,8 @@ def dash():
 def watches():
     faces = [("10:08", "WED 22", "#ffb000", "#050607", 600, 100, 'oct'),
              ("21:47", "62 BPM", "#3fd6ff", "#04121a", 300, 0, 'round'),
-             ("06:30", "SUN 18°", "#151412", "#f3eee3", 800, 0, 'square'),
-             ("12:00", "100%", "#ff5fae", "#17102a", 900, 100, 'oct')]
+             ("06:30", "RAIN 18°", "#151412", "#f3eee3", 800, 0, 'square'),
+             ("12:00", "SYNC 100%", "#ff5fae", "#17102a", 900, 100, 'oct')]
     out = []
     for t, sub, ink, bg, w, wt, shape in faces:
         out.append(f'<div class="w"><div class="f {shape}" style="background:{bg};color:{ink}"><div class="t" style="font-weight:{w};'
