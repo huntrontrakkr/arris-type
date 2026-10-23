@@ -1326,10 +1326,8 @@ def garden():
 <div class="sig mono">
   <div class="h">SIG ▸ 8.4 GHz · S/N 31 dB</div>
   <pre class="w">{_signal()}</pre>
-  <div class="q">YOU CAN’T STOP THE SIGNAL</div>
   <div class="la">SIGNVM SISTERE NON POTES</div>
 </div>
-<div class="jp" lang="ja">シグナルは止められない</div>
 <div class="tc mono"><span class="rec">●</span> REC · FRM 0041 · 03:47:12.08 UTC</div>
 <pre class="lost mono">┌       ┐
    ◇
@@ -1340,7 +1338,6 @@ def garden():
 <div class="spec"><i>Rosa gallica</i> · flore giganteo</div>
 <div class="reg r1">+</div><div class="reg r2">+</div><div class="reg r3">+</div><div class="reg r4">+</div>
 <div class="scan"></div>"""
-    jp = (SOURCES / 'fonts' / 'DotGothic16-Regular.ttf').as_uri()
     css = f"""
 .s-garden {{ background: #03020a; }}
 .s-garden .glow {{ position:absolute; border-radius: 50%; filter: blur(40px); pointer-events:none; }}
@@ -1364,11 +1361,7 @@ def garden():
 .s-garden .sig {{ position:absolute; left: 96px; bottom: 70px; color: #6fd3ff; text-shadow: 0 0 8px rgba(0,163,255,.7); }}
 .s-garden .sig .h {{ font-size: 14px; letter-spacing: .08em; margin-bottom: 6px; }}
 .s-garden .sig .w {{ font-size: 16px; line-height: 1.2; color: #39c6ff; }}
-.s-garden .sig .q {{ font-size: 13px; letter-spacing: .32em; margin-top: 10px; color: #c9f0ff; }}
-.s-garden .sig .la {{ font: italic 300 15px/1 'Arris'; letter-spacing: .26em; margin-top: 9px; color: #c8ff3a; text-shadow: 0 0 8px rgba(200,255,58,.35); }}
-@font-face {{ font-family: 'DotGothic16'; src: url('{jp}'); }}
-.s-garden .jp {{ position:absolute; right: 44px; top: 330px; writing-mode: vertical-rl; font: 24px/1 'DotGothic16'; letter-spacing: .32em;
-                color: #8fdcff; text-shadow: 0 0 8px #00a3ff, 0 0 22px rgba(0,163,255,.7); }}
+.s-garden .sig .la {{ font: italic 300 15px/1 'Arris'; letter-spacing: .26em; margin-top: 12px; color: #c8ff3a; text-shadow: 0 0 8px rgba(200,255,58,.35); }}
 .s-garden .gl {{ position:absolute; font-size: 15px; line-height: 1.2; font-weight: 500; mix-blend-mode: screen; opacity: .95;
                text-shadow: 0 0 6px rgba(0, 229, 255, .25); }}
 .s-garden .tc {{ position:absolute; right: 96px; top: 92px; font-size: 14px; letter-spacing: .1em; color: #6c8f80; }}
