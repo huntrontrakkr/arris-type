@@ -162,6 +162,33 @@ def cross_open_heavy(g):
     _cross(g, HEAVY, gap=0.6)
 
 
+# --- Scissors ---------------------------------------------------------------------
+
+@shape('✂', 'L')
+def scissors(g):
+    """Black scissors, pointing right: two octagonal finger rings and two
+    blades on the 2:1 laid down (one in two) that cross at the pivot, each
+    blade starting on its ring's upright (cut along it, so it never enters
+    the finger hole) and cut square at the box's side, as the X's strokes
+    are. The rings keep their holes as white forms do (a lighter pen at
+    heavy weights) and stand a stroke apart, so the white between them stays
+    a slot the engine will not fill."""
+    S = g.W
+    cx, cy = _c(g)
+    x0, x1 = cx - S / 2, cx + S / 2
+    R = 0.36 * S                                             # a finger ring
+    lx = x0 + R / 2
+    heavy(g, S, 1.0)
+    pen(g, oct_pts(lx, cy, R), keep=0.45)                   # the finger holes stay open
+    tv, th, _ = widths(g)
+    h = R / 2 + max(0.035 * S, th / 2)                       # its centre off the axis: the rings a stroke apart
+    t = (x1 - lx) / 2 - h                                    # the tips off the axis (pivot at lx + 2h)
+    for s in (1, -1):
+        ring(g, lx, cy + s * h, R)
+        xs = lx + R / 2 - tv / 2                             # the ring's upright, on its centreline
+        g.stroke((xs, cy + s * h - s * (xs - lx) / 2), (x1, cy - s * t), start='v', end='v')
+
+
 # --- Asterisks and spoked forms ---------------------------------------------------
 
 def _spokes(g, n, r0, r1, k=1.0):

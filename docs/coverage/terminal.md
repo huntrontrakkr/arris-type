@@ -2,7 +2,7 @@
 
 Arris Mono as a terminal font: box drawing, block elements, shades,
 Braille, the Powerline glyphs, geometric shapes and a set of dingbats. The
-proportional families carry the same glyphs. 593 glyphs in three modules:
+proportional families carry the same glyphs. 594 glyphs in three modules:
 
 | Module | Block | Code points | Glyphs |
 |---|---|---|---|
@@ -12,7 +12,7 @@ proportional families carry the same glyphs. 593 glyphs in three modules:
 | | Powerline separators | U+E0B0–E0B3 | 4 |
 | | Black corner triangles ◢◣◤◥ | U+25E2–25E5 | 4 |
 | `glyphs/shapes.py` | Geometric shapes (the rest) | U+25A0–25FF | 92 |
-| `glyphs/dingbats.py` | Dingbats and symbols | ✓ ✔ ✕ ✖ ✗ ✘ ✚ ✛ ✜ ✢ ✣ ✤ ✥ ✦ ✧ ✱ ✲ ✳ ✴ ✵ ✶ ✷ ✸ ✹ ❌ ❎ ❓ ❔ ❕ ❗ ➔ ➜ ➤ ★ ☆ ☐ ☑ ☒ ☰–☷ ☺ ☹ ♠ ♣ ♥ ♦ ♤ ♧ ♡ ♢ ♩ ♪ ♫ ♬ ⚠ ⚡ ⚙ ⚐ ⚑ ⚫ ⚪ ⬆ ⬇ ⬅ ➡ ⬛ ⬜ ⬤ | 74 |
+| `glyphs/dingbats.py` | Dingbats and symbols | ✂ ✓ ✔ ✕ ✖ ✗ ✘ ✚ ✛ ✜ ✢ ✣ ✤ ✥ ✦ ✧ ✱ ✲ ✳ ✴ ✵ ✶ ✷ ✸ ✹ ❌ ❎ ❓ ❔ ❕ ❗ ➔ ➜ ➤ ★ ☆ ☐ ☑ ☒ ☰–☷ ☺ ☹ ♠ ♣ ♥ ♦ ♤ ♧ ♡ ♢ ♩ ♪ ♫ ♬ ⚠ ⚡ ⚙ ⚐ ⚑ ⚫ ⚪ ⬆ ⬇ ⬅ ➡ ⬛ ⬜ ⬤ | 75 |
 | | Powerline icons (branch, line number, lock) | U+E0A0–E0A2 | 3 |
 
 Names are AGL names where they exist (`SF100000`, `block`, `ltshade`,
@@ -136,7 +136,9 @@ the heavy asterisk spreads six spokes on the vertical and the shallow 2:1s,
 53 to 63 degrees apart; the lightning bolt is two 2:1 bands joined by the
 2's notch; the gear sets a tooth on each of an octagon's eight sides; the
 heart's lobes are octagon corners, its point 45 degrees; flags have a
-45-degree swallowtail. Three stars truly need their own angles and use
+45-degree swallowtail; the scissors are two octagonal finger rings a
+stroke apart (in a pen that keeps their holes) and two blades on the 2:1
+laid down, crossing at the pivot. Three stars truly need their own angles and use
 them: ★ ☆ (the pentagram), ✴ (eight sharp points) and ✹ (twelve).
 
 **Heavy forms** draw 1.6 times the weight's stroke, but never heavier than

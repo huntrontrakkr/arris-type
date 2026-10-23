@@ -61,11 +61,13 @@ body { font-family: 'Arris'; -webkit-font-smoothing: antialiased; }
 .chrome .k-idx b { color: var(--ink); font-weight: 500; }
 .k-xh { position: absolute; font: 200 24px/1 'Arris Mono'; color: var(--dim); }
 .k-xh1 { left: 30px; top: 24px; } .k-xh2 { right: 30px; top: 24px; } .k-xh3 { left: 30px; bottom: 22px; } .k-xh4 { right: 30px; bottom: 22px; }
-.k-strip { position: absolute; right: 38px; top: 240px; width: 20px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+.k-strip { position: absolute; right: 38px; top: 240px; bottom: 84px; width: 20px; display: flex; flex-direction: column; align-items: center; gap: 14px;
           font: 500 13px/1 'Arris Mono'; color: var(--accent); }
 .k-strip .k-bars { display: flex; flex-direction: column; gap: 2px; width: 16px; }
 .k-strip .k-bars u { display: block; background: var(--accent); }
 .k-strip .k-n { writing-mode: vertical-rl; letter-spacing: .08em; }
+.k-strip .k-x { writing-mode: vertical-rl; text-orientation: sideways; font: 400 26px/1 'Arris Mono'; color: var(--ink); margin-top: -2px; }
+.k-strip .k-cut { flex: 1; width: 2px; margin-top: -8px; background: repeating-linear-gradient(to bottom, var(--dim) 0 2px, transparent 2px 7px); }
 .k-strip .k-v { writing-mode: vertical-rl; font-size: 11px; font-weight: 400; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; color: var(--dim); }
 .caption { position: absolute; left: 96px; right: 96px; bottom: 44px; display: flex; justify-content: space-between; align-items: baseline; gap: 48px;
            font: 400 18px/1.3 'Arris Mono'; color: var(--dim); }
@@ -138,7 +140,8 @@ def page(i, n, name, palette, title, body, caption, css):
     bars = ''.join(f'<u style="height:{1 + int(c, 16) % 3}px"></u>' for c in h[6:16])
     strip = (f'<div class="k-strip"><div class="k-bars">{bars}</div><span>✕</span><span>▣</span>'
              f'<span class="k-n">{i:02d}</span><span class="k-n">{n:02d}</span>'
-             f'<span class="k-v">Arris ⁄ {kind} ⁄ “cutting corners where we can”</span></div>')
+             f'<span class="k-v">Arris ⁄ {kind} ⁄ “cutting corners where we can”</span>'
+             f'<span class="k-x">✂</span><span class="k-cut"></span></div>')
     marks = ''.join(f'<div class="k-xh k-xh{k}">+</div>' for k in range(1, 5))
     cap = (f'<div class="caption"><span>{caption}</span><span class="k-stamp">{serial} ⁄ {STAMP}</span></div>'
            if caption is not None else '')
