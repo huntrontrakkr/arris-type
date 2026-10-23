@@ -138,7 +138,7 @@ def page(i, n, name, palette, title, body, caption, css):
     bars = ''.join(f'<u style="height:{1 + int(c, 16) % 3}px"></u>' for c in h[6:16])
     strip = (f'<div class="k-strip"><div class="k-bars">{bars}</div><span>✕</span><span>▣</span>'
              f'<span class="k-n">{i:02d}</span><span class="k-n">{n:02d}</span>'
-             f'<span class="k-v">Arris ⁄ {kind} ⁄ “every corner cut on purpose”</span></div>')
+             f'<span class="k-v">Arris ⁄ {kind} ⁄ “cutting corners where we can”</span></div>')
     marks = ''.join(f'<div class="k-xh k-xh{k}">+</div>' for k in range(1, 5))
     cap = (f'<div class="caption"><span>{caption}</span><span class="k-stamp">{serial} ⁄ {STAMP}</span></div>'
            if caption is not None else '')
