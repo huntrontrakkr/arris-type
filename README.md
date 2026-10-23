@@ -56,7 +56,7 @@ uv run pytest                                   # the figures against the watch'
 uv run python tools/presentation.py             # the presentation: presentation/slides/*.png and arris.pdf
 ```
 
-The presentation (`presentation/`) is thirty-seven slides set in the built
+The presentation (`presentation/`) is forty-one slides set in the built
 fonts: the family, axes, figures and their pixel masters, the italic, text,
 languages, Mono in code and in a terminal, and applications from a
 departure board to a watch face. It renders with Playwright's Chromium.

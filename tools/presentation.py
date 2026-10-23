@@ -90,27 +90,28 @@ def page(i, n, name, palette, title, body, caption, css):
 
 @slide('cover', 'night', 'A typeface')
 def cover():
-    weights = [900, 700, 500, 300, 100]
-    word = ''.join(f'<span style="font-weight:{w}">{c}</span>' for c, w in zip('Arris', weights))
+    lines = ''.join(f'<div class="w w{w}" style="font-weight:{w}">Arris</div>' for w in (100, 300, 600, 900))
     body = f"""
-<div class="wrap">
-  <div class="kicker label">A typeface in nine weights, upright, italic and mono</div>
-  <h1>{word}</h1>
+<div class="stack">{lines}</div>
+<div class="side">
+  <div class="kicker label">A typeface in nine weights,<br>upright, italic and mono</div>
   <div class="tag">a chamfered sans</div>
-  <div class="row">
+  <div class="facts">
     <div><span class="accent">Thin → Black</span><br>Upright, Italic, Mono, Watch</div>
-    <div><span class="accent">wght GRAD WTCH</span><br>Three variable axes</div>
-    <div><span class="accent">2,150</span><br>characters, Latin Cyrillic Greek</div>
-    <div class="clock">10:08</div>
+    <div><span class="accent">wght · GRAD · WTCH</span><br>Three variable axes</div>
+    <div><span class="accent">2,150</span><br>characters: Latin, Cyrillic, Greek</div>
   </div>
+  <div class="clock">10:08</div>
 </div>"""
     css = """
-.s-cover .wrap { position:absolute; left:96px; right:96px; top:150px; bottom:110px; display:flex; flex-direction:column; justify-content:space-between; }
-.s-cover h1 { font-size: 480px; line-height: .8; letter-spacing: -0.02em; margin-left: -20px; }
-.s-cover .tag { font-size: 72px; font-style: italic; font-weight: 300; color: var(--dim); margin-top: -40px; }
-.s-cover .row { display:flex; gap: 80px; align-items:flex-end; font: 400 30px/1.35 'Arris'; }
-.s-cover .row > div { min-width: 340px; }
-.s-cover .clock { margin-left:auto; font-size: 150px; font-weight: 600; font-variation-settings: 'WTCH' 100; color: var(--accent); line-height: .8; }
+.s-cover .stack { position:absolute; left: 84px; top: 128px; }
+.s-cover .w { font-size: 228px; line-height: .88; letter-spacing: -0.01em; }
+.s-cover .w100 { color: #4d4a44; } .s-cover .w300 { color: #8f897d; } .s-cover .w600 { color: var(--ink); }
+.s-cover .w900 { color: var(--accent); }
+.s-cover .side { position:absolute; left: 1060px; right: 96px; top: 150px; bottom: 110px; display:flex; flex-direction:column; }
+.s-cover .tag { font-size: 64px; font-style: italic; font-weight: 300; margin-top: 26px; }
+.s-cover .facts { margin-top: 64px; display:flex; flex-direction:column; gap: 30px; font: 400 28px/1.35 'Arris'; }
+.s-cover .clock { margin-top: auto; font-size: 168px; font-weight: 600; font-variation-settings: 'WTCH' 100; color: var(--accent); line-height: .8; }
 """
     return body, 'Arris, Arris Mono, Arris Watch', css
 
@@ -317,6 +318,28 @@ def anatomy():
 .s-anatomy .n3 {{ left: 1340px; top: 900px; }}
 """
     return body, 'Cap height 0.72 em, x-height 0.54 em', css
+
+
+@slide('squint', 'paper', 'White that reads')
+def squint():
+    word = '8 B 0 3 5 6 9 @ ₦'
+    rows = ''.join(f'<div class="r"><span class="label">{lab}</span><span class="g" style="filter: blur({b}px)">{esc(word)}</span></div>'
+                   for lab, b in (('Sharp', 0), ('Squint', 3), ('Squint harder', 6)))
+    body = f"""
+<div class="head"><h2>Blur it, and the counters stay.</h2>
+<p>Every hole and every slot between two parts is measured under a model squint, a blur five per cent of the cap height wide.
+White that would close is opened: bars thin, rings grow, a stem steps aside.</p></div>
+<div class="rows">{rows}</div>"""
+    css = """
+.s-squint .head { position:absolute; left:96px; top:130px; width: 1500px; }
+.s-squint h2 { font-size: 84px; font-weight: 700; line-height: 1.02; }
+.s-squint .head p { font-size: 30px; line-height: 1.45; margin-top: 22px; color: #3b3832; max-width: 1300px; }
+.s-squint .rows { position:absolute; left:96px; right:96px; top: 470px; bottom: 110px; display:flex; flex-direction:column; justify-content:space-between; }
+.s-squint .r { display:flex; align-items:center; gap: 40px; }
+.s-squint .r .label { width: 230px; flex:none; }
+.s-squint .g { font-size: 140px; font-weight: 900; line-height: 1; white-space: nowrap; letter-spacing: .02em; }
+"""
+    return body, 'Arris Black; the squint rule is the vision model’s, in arris.vision', css
 
 
 @slide('italic', 'paper', 'The italic')
@@ -748,6 +771,89 @@ def dash():
     return body, 'Grade −50 on the dark display', css
 
 
+def _telemetry():
+    """A ship's console in Arris Mono, 96 cells wide: (text, class) runs per line."""
+    import math
+    W = 96
+
+    def box(title, w, rows):
+        top = [('╭─ ', 'b'), (title, 't'), (' ' + '─' * (w - 5 - len(title)) + '╮', 'b')]
+        out = [top]
+        for r in rows:
+            n = sum(len(t) for t, _ in r)
+            out.append([('│ ', 'b')] + r + [(' ' * (w - 4 - n) + ' │', 'b')])
+        out.append([('╰' + '─' * (w - 2) + '╯', 'b')])
+        return out
+
+    def spark(f, n):
+        bars = '▁▂▃▄▅▆▇█'
+        return ''.join(bars[min(7, max(0, int(f(i) * 8)))] for i in range(n))
+
+    def gauge(frac, n):
+        eighths = ' ▏▎▍▌▋▊▉█'
+        full = int(frac * n)
+        rest = int((frac * n - full) * 8)
+        return '█' * full + (eighths[rest] if full < n else '') + ' ' * max(0, n - full - 1)
+
+    core = spark(lambda i: 0.55 + 0.3 * math.sin(i / 3.1) + 0.12 * math.sin(i / 1.3), 30)
+    flux = spark(lambda i: 0.2 + 0.75 * math.exp(-((i - 21) / 4.0) ** 2) + 0.05 * math.sin(i), 30)
+    left = (box('REACTOR', 48, [[('core   ', 'l'), ('623 K ', 'v'), (core, 'g')],
+                                [('output ', 'l'), (' 87 % ', 'v'), (gauge(0.87, 30), 'g')],
+                                [('flux   ', 'l'), ('  ok  ', 'v'), (flux, 'w')]])
+            + box('LIFE SUPPORT', 48, [[('O₂     ', 'l'), ('20.9 %', 'v'), (' ', ''), (gauge(0.70, 29), 'g')],
+                                       [('CO₂    ', 'l'), (' 0.4 %', 'v'), (' ', ''), (gauge(0.08, 29), 'w')],
+                                       [('hull   ', 'l'), ('  99 %', 'v'), (' ', ''), (gauge(0.99, 29), 'g')]]))
+    right = (box('NAVIGATION', 47, [[('body   ', 'l'), ('CERES', 'v')],
+                                    [('Δv     ', 'l'), ('412 m/s', 'v'), ('  left', 'l')],
+                                    [('burn   ', 'l'), ('T−04:12', 'a'), ('  ↱ prograde', 'l')],
+                                    [('range  ', 'l'), ('1.71 AU', 'v'), ('  light +14m', 'l')]])
+             + box('LOG', 47, [[('03:47:12 ', 'l'), ('✓', 'g'), (' dock clamps released', '')],
+                               [('03:47:40 ', 'l'), ('⚠', 'w'), (' micrometeoroid flux high', '')],
+                               [('03:48:02 ', 'l'), ('✗', 'e'), (' relay SECTOR 9 lost', '')],
+                               [('03:48:30 ', 'l'), ('✓', 'g'), (' burn plan locked', '')]]))
+    lines = []
+    for i in range(max(len(left), len(right))):
+        l = left[i] if i < len(left) else [(' ' * 48, '')]
+        r = right[i] if i < len(right) else []
+        lines.append(l + [(' ', '')] + r)
+    # the burn profile: thrust over the burn, two rows of blocks stacked (16 levels)
+    n = 85
+
+    def thrust(i):
+        t = i / (n - 1)
+        ramp = min(1.0, t / 0.12) * min(1.0, (1 - t) / 0.08)
+        return max(0.0, min(1.0, ramp * (0.82 + 0.1 * math.sin(t * 19) + 0.08 * math.sin(t * 47))))
+    bars = ' ▁▂▃▄▅▆▇█'
+    hi, lo = '', ''
+    for i in range(n):
+        lv = int(round(thrust(i) * 16))
+        lo += bars[min(8, lv)]
+        hi += bars[max(0, lv - 8)]
+    axis = ''.join('┼' if i % 10 == 0 else '─' for i in range(n))
+    marks = ''.join(f'{("T 0" if k == 4 else "T" + ("−" if k < 4 else "+") + str(abs(k - 4) * 10)):<10}' for k in range(9))[:n]
+    lines += box('BURN PROFILE', 96, [[('thrust ', 'l'), (hi, 'a')],
+                                      [('  1.3 g', 'v'), (lo, 'a')],
+                                      [('       ', ''), (axis, 'b')],
+                                      [('       ', ''), (marks, 'l')]])
+    return lines
+
+
+@slide('telemetry', 'slate', 'Ship systems')
+def telemetry():
+    out = []
+    for ln in _telemetry():
+        out.append(''.join(f'<span class="{c}">{esc(t)}</span>' if c else esc(t) for t, c in ln))
+    body = f'<pre class="con mono">{chr(10).join(out)}</pre>'
+    css = """
+.s-telemetry .con { position:absolute; left: 96px; top: 150px; font-size: 31.1419px; line-height: 37px; color: var(--ink); }
+/* cells 18 px wide; rows a whole 37 px, so stacked blocks overlap a hair instead of leaving a seam */
+.s-telemetry .b { color: #2e4258; } .s-telemetry .t { color: var(--accent); } .s-telemetry .l { color: #6f86a0; }
+.s-telemetry .v { color: #f1f5fa; } .s-telemetry .g { color: #7cf29a; } .s-telemetry .w { color: #ffb000; }
+.s-telemetry .e { color: #ff79c6; } .s-telemetry .a { color: #3fd6ff; }
+"""
+    return body, 'Box drawing with round corners; sparklines and a two-row chart from the eight lower blocks; gauges in eighths', css
+
+
 @slide('watches', 'night', 'Watch faces')
 def watches():
     faces = [("10:08", "WED 22", "#ffb000", "#050607", 600, 100, 'oct'),
@@ -793,6 +899,28 @@ def compass():
 .s-compass .list { position:absolute; left: 1330px; right: 96px; top: 200px; font-size: 92px; line-height: 1.45; letter-spacing: .1em; }
 """
     return body, 'One head for every arrow: a sharp point, barbs cut square', css
+
+
+@slide('keys', 'bone', 'Keys and signs')
+def keys():
+    shortcuts = [('⌘ ⇧ B', 'Plot burn'), ('⌥ ⏎', 'Engage'), ('⎋', 'Abort burn'), ('⌃ ⌥ ⏏', 'Jettison cargo'),
+                 ('⇧ ⇥', 'Next waypoint'), ('⌘ ⌫', 'Clear log'), ('⇪', 'Lock helm'), ('⌦', 'Purge buffer')]
+    def caps(seq):
+        return ''.join(f'<span class="k">{esc(k)}</span>' for k in seq.split())
+    rows = ''.join(f'<div class="r"><span class="ks">{caps(k)}</span><span class="d">{esc(d)}</span></div>' for k, d in shortcuts)
+    signs = '← ↑ → ↓ ⌂ ⌚ ⌛ ⏳ ★ ✦ ✓ ✗ ⚠ ⚡ ◆ ● ◐ ▲ ▶ ♫ ⌬ ⌀'
+    body = f'<div class="grid">{rows}</div><div class="signs">{esc(signs)}</div>'
+    css = """
+.s-keys .grid { position:absolute; left:96px; right:96px; top: 140px; display:grid; grid-template-columns: 1fr 1fr; gap: 34px 90px; }
+.s-keys .r { display:flex; align-items:center; gap: 34px; border-bottom: 2px solid var(--line); padding-bottom: 22px; }
+.s-keys .ks { display:flex; gap: 14px; width: 330px; flex:none; }
+.s-keys .k { display:inline-flex; align-items:center; justify-content:center; min-width: 92px; height: 92px; padding: 0 16px;
+             font-size: 54px; font-weight: 500; background: #f6f2e9; color: var(--ink); border: 2px solid #c9c1ae;
+             border-bottom-width: 7px; clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px); }
+.s-keys .d { font-size: 44px; font-weight: 400; }
+.s-keys .signs { position:absolute; left:96px; right:96px; bottom: 120px; font-size: 64px; letter-spacing: .14em; color: var(--accent); }
+"""
+    return body, 'Keyboard and technical symbols, dingbats and shapes, from the same strokes', css
 
 
 @slide('math', 'ink', 'Mathematics')
@@ -933,47 +1061,170 @@ def maze():
     return body, 'The box-drawing diagonals run corner to corner, so the maze joins cell to cell', css
 
 
+def _braille_planet(cols=118, rows=28):
+    """A ringed planet in Braille dots: 2 x 4 dots a cell, lit from the upper
+    left, ordered-dithered; (char, colour) per cell."""
+    import math
+    import random
+    bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+    bits = [(0, 0, 0x01), (0, 1, 0x02), (0, 2, 0x04), (1, 0, 0x08), (1, 1, 0x10), (1, 2, 0x20), (0, 3, 0x40), (1, 3, 0x80)]
+    W, H = cols * 2, rows * 4
+    aspect = (0.578 / 2) / (1.2 / 4)                            # a dot's width over its height
+    cx, cy, R = W * 0.6, H * 0.52, H * 0.34
+    tilt, r1, r2 = 0.22, 1.35, 2.25
+    rng = random.Random(3)
+    stars = {(rng.randrange(W), rng.randrange(H)): rng.random() for _ in range(260)}
+    out = []
+    for r in range(rows):
+        line = []
+        for c in range(cols):
+            code, kind = 0, None
+            for dx, dy, bit in bits:
+                x, y = c * 2 + dx, r * 4 + dy
+                X, Y = (x - cx) * aspect / R, (y - cy) / R
+                # rotate the frame a little: the ring leans
+                Xr, Yr = X * math.cos(-0.35) - Y * math.sin(-0.35), X * math.sin(-0.35) + Y * math.cos(-0.35)
+                rr = math.hypot(Xr, Yr / tilt)                   # radius in the ring's plane
+                in_ring = r1 < rr < r2 and not (1.72 < rr < 1.82)
+                ring_front = in_ring and Yr > 0
+                on_planet = X * X + Y * Y < 1
+                b, k = 0.0, None
+                if on_planet and not ring_front:
+                    z = math.sqrt(max(0.0, 1 - X * X - Y * Y))
+                    lit = max(0.0, -0.55 * X - 0.45 * Y + 0.7 * z)
+                    band = 0.12 * math.sin(Y * 11 + 0.6 * math.sin(X * 3))
+                    b, k = min(1.0, 0.08 + 0.95 * lit + band * lit), 'p'
+                elif in_ring:
+                    b, k = 0.5 + 0.35 * math.sin(rr * 9.0), 'r'
+                    if not ring_front and on_planet:
+                        b, k = 0.0, None                         # behind the planet
+                elif (x, y) in stars:
+                    b, k = (1.0 if stars[(x, y)] > 0.7 else 0.0), 's'
+                if b * 16 > bayer[y % 4][x % 4] + 0.5:
+                    code |= bit
+                    kind = kind if kind in ('p', 'r') else k
+                    if k == 'r':
+                        kind = 'r' if kind != 'p' else kind
+            line.append((chr(0x2800 + code), kind))
+        out.append(line)
+    return out
+
+
+@slide('braille', 'night', 'Braille')
+def braille():
+    colours = {'p': '#ffb000', 'r': '#3fd6ff', 's': '#f1ebdd', None: '#f1ebdd'}
+    lines = []
+    for row in _braille_planet():
+        runs, cur, buf = [], None, ''
+        for ch, k in row:
+            col = colours[k]
+            if col != cur and buf:
+                runs.append(f'<span style="color:{cur}">{buf}</span>')
+                buf = ''
+            cur = col
+            buf += ch
+        runs.append(f'<span style="color:{cur}">{buf}</span>')
+        lines.append(''.join(runs))
+    body = f'<pre class="bp mono">{chr(10).join(lines)}</pre>'
+    css = """
+.s-braille .bp { position:absolute; left: 96px; top: 128px; font-size: 25.3px; line-height: 1.2; font-weight: 500; }
+"""
+    return body, 'All 256 Braille patterns: two by four dots a cell, ordered dither', css
+
+
+def _sunset(cols=144, rows=32):
+    """A synthwave sunset as an image two pixels to a cell: sky, a striped
+    sun, two ridges, a neon grid on the ground; (top, bottom) colours per
+    cell, each pixel the mean of 4 x 4 samples, the stars single pixels."""
+    import math
+    import random
+    W, H = cols, rows * 2
+    horizon = 0.64
+    aspect = 12 / 12.4567                                  # a pixel's width over its height (cells 12 x 24.9 px)
+    rng = random.Random(5)
+    stars = {(rng.randrange(W), rng.randrange(int(H * horizon * 0.72))): rng.random() for _ in range(70)}
+
+    def mix(a, b, t):
+        t = max(0.0, min(1.0, t))
+        return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+
+    def sky(y):
+        stops = [(0.0, (9, 3, 28)), (0.32, (40, 10, 72)), (0.52, (128, 28, 106)), (horizon, (255, 112, 64))]
+        for (y0, c0), (y1, c1) in zip(stops, stops[1:]):
+            if y <= y1:
+                return mix(c0, c1, (y - y0) / (y1 - y0))
+        return stops[-1][1]
+
+    def ridge(x, base, amp, f1, f2, ph):
+        return base - amp * (0.55 * abs(math.sin(x * f1 + ph)) + 0.3 * math.sin(x * f2 + 2 * ph) + 0.15 * math.sin(x * 23 + ph))
+
+    def colour(x, y):                                      # x, y in 0..1 (x across, y down)
+        if y >= horizon:                                   # the ground: a grid running to the sun
+            t = (y - horizon) / (1 - horizon)
+            base = mix((26, 7, 46), (7, 2, 16), t)
+            if t < 0.03:
+                return mix((255, 112, 64), base, t / 0.03)
+            depth = 1 / t
+            on_h = abs(math.sin(math.pi * depth * 1.4)) < 0.05 + 0.18 * t
+            u = (x - 0.62) / t
+            on_v = abs(math.sin(math.pi * u * 6.5)) < 0.035 + 0.06 * t
+            if on_h or on_v:
+                return mix(base, (255, 66, 214), min(1.0, 0.15 + 1.4 * t))
+            return base
+        if y > ridge(x, horizon + 0.004, 0.09, 4.1, 9.7, 0.4):  # the near ridge
+            return (13, 4, 28)
+        if y > ridge(x, horizon - 0.035, 0.12, 2.7, 6.3, 1.9):  # the far ridge
+            return (58, 20, 96)
+        sx, sy, sr = 0.62, horizon - 0.15, 0.25
+        dx, dy = (x - sx) * (W / H) * aspect, y - sy
+        if math.hypot(dx, dy) < sr:                         # the sun, cut by bands down its lower half
+            k = (dy + 0.02) / (sr + 0.02)
+            if k > 0 and (k * 7.0) % 1.0 < 0.12 + 0.55 * k:
+                return sky(y)
+            return mix((255, 226, 118), (255, 58, 130), (dy + sr) / (2 * sr))
+        return sky(y)
+
+    def pixel(px, py):
+        cx, cy = (px + 0.5) / W, (py + 0.5) / H
+        if (px, py) in stars and colour(cx, cy) == sky(cy):   # stars only on open sky
+            return '#%02x%02x%02x' % tuple(int(v) for v in mix((150, 130, 200), (250, 244, 255), stars[(px, py)]))
+        acc = [0.0, 0.0, 0.0]
+        for i in range(4):
+            for j in range(4):
+                c = colour((px + (i + 0.5) / 4) / W, (py + (j + 0.5) / 4) / H)
+                for k in range(3):
+                    acc[k] += c[k] / 16
+        return '#%02x%02x%02x' % tuple(int(max(0, min(255, v))) for v in acc)
+
+    return [[(pixel(c, 2 * r), pixel(c, 2 * r + 1)) for c in range(cols)] for r in range(rows)]
+
+
 @slide('landscape', 'violet', 'Blocks')
 def landscape():
-    import math
-    cols, rows = 96, 24
-    sun_c, sun_r, sun_rad = 64.0, 10.5, 6.5
-    def far(c):
-        return 13.5 + 2.6 * math.sin(c / 7.0) + 1.4 * math.sin(c / 2.9 + 1.3)
-    def near(c):
-        return 17.0 + 2.2 * math.sin(c / 9.0 + 2.0) + 1.1 * math.sin(c / 3.7)
     lines = []
-    for r in range(rows):
-        cells = []
-        for c in range(cols):
-            y = r + 0.5
-            ch, col = ' ', '#17102a'
-            dx, dy = (c - sun_c) / 2.08, (y - sun_r)
-            if y >= near(c):
-                ch, col = ('▄' if y - near(c) < 0.5 else '█'), '#0c0718'
-            elif y >= far(c):
-                ch, col = ('▄' if y - far(c) < 0.5 else '▓'), '#5b2a86'
-            elif math.hypot(dx, dy) < sun_rad:
-                band = int(y) % 3 == 2 and y > sun_r
-                ch, col = (' ' if band else '█'), '#ffb000'
-            elif r >= 6:
-                t = min((r - 6) / 9, 1.0)                      # bands, denser and warmer toward the horizon
-                ch = '░' if t < 0.34 else '▒' if t < 0.67 else '▓'
-                col = f'hsl({(285 + 105 * t) % 360:.0f} 80% {40 + 14 * t:.0f}%)'
-            elif (c * 37 + r * 11) % 53 == 0:
-                ch, col = '·', '#f4ecff'
-            cells.append(f'<span style="color:{col}">{ch}</span>' if ch != ' ' else ' ')
-        lines.append(''.join(cells))
+    for row in _sunset():
+        runs, cur, n = [], None, 0
+        for cell in row:
+            if cell != cur and n:
+                runs.append(f'<span style="color:{cur[0]};background:{cur[1]}">{"▀" * n}</span>')
+                n = 0
+            cur = cell
+            n += 1
+        runs.append(f'<span style="color:{cur[0]};background:{cur[1]}">{"▀" * n}</span>')
+        lines.append(''.join(runs))
     body = f'<pre class="ls mono">{chr(10).join(lines)}</pre>'
     css = """
-.s-landscape .ls { position:absolute; left: 96px; top: 120px; font-size: 31px; line-height: 1.2; }
+.s-landscape .ls { position:absolute; left: 96px; top: 140px; font-size: 20.7612px; line-height: 1.2; font-weight: 400; }
+/* a cell exactly 12 px wide: every vertical edge on a whole pixel */
 """
-    return body, 'Block elements and shades: full, half, ░ ▒ ▓', css
+    return body, 'The upper half block ▀ in two colours a cell: 144 × 64 pixels of terminal', css
 
 
 @slide('colophon', 'night', 'Colophon')
 def colophon():
-    stats = [('9', 'weights'), ('3', 'axes'), ('2,150', 'characters'), ('69', 'ligatures'), ('6', 'families')]
+    import arris.glyphs  # noqa: F401
+    from arris.glyphs.ligatures import LIGATURES
+    stats = [('9', 'weights'), ('3', 'axes'), ('2,150', 'characters'), (str(len(LIGATURES)), 'ligatures'), ('6', 'families')]
     s = ''.join(f'<div><div class="n">{a}</div><div class="label">{b}</div></div>' for a, b in stats)
     body = f"""
 <div class="name">Arris</div>
@@ -1025,7 +1276,9 @@ def render(pages, pdf=True):
     work = BUILD / 'presentation'
     work.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as pw:
-        browser = pw.chromium.launch()
+        # grayscale anti-aliasing: LCD text bleeds colour into the next pixel,
+        # which shows as fringes on block art and is no proof of a typeface
+        browser = pw.chromium.launch(args=['--disable-lcd-text'])
         pg = browser.new_page(viewport={'width': W, 'height': H})
         for i, name, h, css in pages:
             f = work / f'{i:02d}-{name}.html'
