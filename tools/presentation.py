@@ -117,7 +117,7 @@ KINDS = {
     'Family': ('◆', ['cover', 'family', 'weights', 'axes', 'grade', 'colophon']),
     'Form': ('▣', ['origin', 'charset', 'figures', 'pixels', 'anatomy', 'squint']),
     'Italic': ('◢', ['italic', 'italic-poster']),
-    'Text': ('¶', ['waterfall', 'editorial']),
+    'Text': ('¶', ['waterfall', 'editorial', 'feature']),
     'Scripts': ('◐', ['languages', 'cyrillic', 'greek', 'vietnamese']),
     'Code': ('⌨', ['code', 'code-python', 'code-react', 'code-functional', 'ligatures', 'terminal']),
     'Interface': ('◉', ['board', 'dash', 'telemetry', 'watches', 'compass', 'keys']),
@@ -447,12 +447,24 @@ def italic_poster():
   <div class="l2">wired &amp;</div>
   <div class="l3">restless.</div>
 </div>
-<div class="side label">Arris Black Italic<br>Arris Thin Italic</div>"""
+<div class="side label">Arris Black Italic<br>Arris Thin Italic</div>
+<svg width="0" height="0" style="position:absolute"><filter id="deboss" x="-5%" y="-5%" width="110%" height="110%">
+  <feOffset in="SourceAlpha" dx="7" dy="9" result="o"/><feGaussianBlur in="o" stdDeviation="5" result="b"/>
+  <feComposite operator="out" in="SourceAlpha" in2="b" result="edge"/>
+  <feFlood flood-color="#05020c" flood-opacity=".72"/><feComposite operator="in" in2="edge" result="shade"/>
+  <feOffset in="SourceAlpha" dx="2" dy="3" result="lo"/><feComposite operator="out" in="lo" in2="SourceAlpha" result="lip"/>
+  <feFlood flood-color="#ffffff" flood-opacity=".22"/><feComposite operator="in" in2="lip" result="light"/>
+  <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shade"/><feMergeNode in="light"/></feMerge>
+</filter></svg>"""
     css = """
-.s-italic-poster .w { position:absolute; left: 96px; top: 140px; font-style: italic; line-height: .86; }
-.s-italic-poster .l1 { font-size: 260px; font-weight: 900; color: var(--accent); }
-.s-italic-poster .l2 { font-size: 260px; font-weight: 100; margin-left: 260px; }
-.s-italic-poster .l3 { font-size: 260px; font-weight: 900; color: var(--accent2); margin-left: 120px; }
+.s-italic-poster .w { position:absolute; left: 96px; top: 140px; font-style: italic; line-height: .86; filter: url(#deboss); }
+.s-italic-poster .w div { color: transparent; -webkit-background-clip: text; background-clip: text; }
+.s-italic-poster .l1 { font-size: 260px; font-weight: 900;
+  background: radial-gradient(rgba(23,16,42,.38) 1.1px, transparent 1.6px) 0 0/6px 6px, var(--accent); }
+.s-italic-poster .l2 { font-size: 260px; font-weight: 100; margin-left: 260px;
+  background: radial-gradient(rgba(23,16,42,.30) 1px, transparent 1.5px) 0 0/5px 5px, var(--ink); }
+.s-italic-poster .l3 { font-size: 260px; font-weight: 900; margin-left: 120px;
+  background: radial-gradient(rgba(23,16,42,.38) 1.1px, transparent 1.6px) 3px 3px/6px 6px, var(--accent2); }
 .s-italic-poster .side { position:absolute; right: 96px; bottom: 140px; text-align:right; }
 """
     return body, None, css
@@ -497,6 +509,42 @@ def editorial():
 .s-editorial blockquote { font: italic 600 34px/1.22 'Arris'; color: var(--accent); margin: 18px 0; break-inside: avoid; }
 """
     return body, 'Headline ExtraBold, deck Italic, text Regular 25/37', css
+
+
+@slide('feature', 'paper', 'Feature')
+def feature():
+    nums = [('2,140', 'rose bushes'), ('26 h', 'to a day'), ('340 L', 'water a week'), ('11', 'years running'), ('0', 'sold')]
+    rows = ''.join(f'<div class="r"><span class="n">{a}</span><span class="d">{b}</span></div>' for a, b in nums)
+    body = f"""
+<div class="kicker label">Station life · The Glasshouse</div>
+<h1>Roses take their time at four hundred kilometres.</h1>
+<div class="dek">In the ring’s quietest module a horticulturist and two retired pilots grow the only flowers for a million kilometres. They will not tell you their secret, but they will let you water.</div>
+<div class="by mono">Words by Ines Varga · 14 min read</div>
+<div class="body">
+  <p><span class="drop">T</span>he Glasshouse is the last stop on the night line, and most riders sleep through it. Those who wake find a long white module, warm as a kitchen, where the air smells of soil for the first time in weeks. Mira Okonkwo has run it for eleven years. She keeps the lights on a twenty-six-hour day, because, she says, roses never agreed to ours.</p>
+  <p>Everything is weighed. Water comes up from the docks in sealed bladders, 340 litres a week; what the plants breathe out goes back down the line to the scrubbers. The roses are an old French variety, grown from cuttings that flew up in a lunchbox. In low spin they climb slower and their stems come out thick, almost woody, but the flowers open the same deep red.</p>
+  <p class="pull">“Up here everything is engineered. The roses are the one thing that still decides for itself.”</p>
+  <p>Two retired pilots, Hal and Teodor, take the night shift. They prune by headlamp, argue about aphids that cannot possibly exist up here, and sell nothing: every bloom goes to a hospital bed, a launch or a wedding on the ring. If you want one, come and water. Bring your own cup.</p>
+</div>
+<div class="side"><div class="label">The Glasshouse in numbers</div>{rows}</div>"""
+    css = """
+.s-feature .kicker { position:absolute; left: 96px; top: 128px; color: var(--accent); }
+.s-feature h1 { position:absolute; left: 96px; top: 166px; width: 1180px; font: 300 84px/1.02 'Arris'; letter-spacing: -0.01em; }
+.s-feature .dek { position:absolute; left: 96px; top: 362px; width: 1120px; font: italic 400 29px/1.38 'Arris'; color: #4a463e; }
+.s-feature .by { position:absolute; left: 96px; top: 506px; font-size: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.s-feature .body { position:absolute; left: 96px; top: 552px; width: 1180px; bottom: 96px; column-count: 2; column-gap: 56px;
+                   font: 400 21px/1.52 'Arris'; }
+.s-feature .body p { margin-bottom: 12px; }
+.s-feature .drop { float:left; font: 800 92px/.8 'Arris'; margin: 6px 10px 0 0; color: var(--accent); }
+.s-feature .pull { font: 600 30px/1.2 'Arris'; color: var(--accent); border-top: 3px solid var(--accent); border-bottom: 3px solid var(--accent);
+                   padding: 12px 0; margin: 16px 0; break-inside: avoid; }
+.s-feature .side { position:absolute; right: 96px; top: 166px; width: 420px; padding: 26px 28px; background: #151412; color: #f3eee3; }
+.s-feature .side .label { color: #ffb000; margin-bottom: 18px; }
+.s-feature .side .r { display:flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #3a3731; padding: 14px 0 12px; }
+.s-feature .side .n { font: 700 54px/1 'Arris'; font-feature-settings: 'tnum'; }
+.s-feature .side .d { font: 400 18px 'Arris Mono'; color: #b8b1a3; text-transform: uppercase; letter-spacing: .06em; }
+"""
+    return body, 'Headline Light, deck Italic, text Regular 21/32; tabular figures in the sidebar', css
 
 
 @slide('languages', 'paper', 'Languages')
@@ -1098,21 +1146,169 @@ def swiss():
     return body, None, css
 
 
-@slide('riso', 'paper', 'Overprint')
+def _kites():
+    """A deltoidal hexecontahedron's kites, flattened: five round one of
+    its five-fold vertices (67.78 degrees each, so 21.1 degrees are left
+    over: the slit that lets the net fold up), and a few unfolded off their
+    outer edges. Returns (kites, folds, cuts, tabs) as point lists."""
+    import math
+    alpha, L = math.radians(67.7834), 1.0
+    S = L / ((7 + math.sqrt(5)) / 6)
+    AC = L * math.cos(alpha / 2) + math.sqrt(S ** 2 - (L * math.sin(alpha / 2)) ** 2)
+
+    def kite(theta):
+        A = (0.0, 0.0)
+        B = (L * math.cos(theta + alpha / 2), L * math.sin(theta + alpha / 2))
+        C = (AC * math.cos(theta), AC * math.sin(theta))
+        D = (L * math.cos(theta - alpha / 2), L * math.sin(theta - alpha / 2))
+        return [A, B, C, D]
+
+    def reflect(P, a, b):
+        (x, y), (x1, y1), (x2, y2) = P, a, b
+        dx, dy = x2 - x1, y2 - y1
+        t = ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)
+        return (2 * (x1 + t * dx) - x, 2 * (y1 + t * dy) - y)
+
+    base = math.radians(-90 + 21.1 / 2) + alpha / 2
+    flower = [kite(base + k * alpha) for k in range(5)]
+    kites = list(flower)
+    folds = [(flower[k][1], flower[k][0]) for k in range(1, 5)]          # A-B shared between neighbours
+    extra = []
+    for k, edge in ((0, (1, 2)), (2, (2, 3)), (3, (1, 2))):              # unfolded across an outer short edge
+        K = flower[k]
+        a, b = K[edge[0]], K[edge[1]]
+        R = [reflect(P, a, b) for P in K]
+        kites.append(R)
+        extra.append((k, edge))
+        folds.append((a, b))
+    return kites, folds, AC, S
+
+
+@slide('riso', 'paper', 'Cut and fold')
 def riso():
-    shapes = [('R', 900, 1100, -60, -170, '#0078bf', 0), ('a', 300, 900, 760, 120, '#ff48b0', 0),
-              ('8', 700, 760, 1180, -120, '#ffe600', 0), ('&', 900, 520, 980, 470, '#0078bf', 0),
-              ('g', 100, 820, 300, 260, '#ff48b0', 1)]
-    out = ''.join(f'<span style="font-weight:{w};font-size:{sz}px;left:{x}px;top:{y}px;color:{c};'
-                  f'font-style:{"italic" if it else "normal"}">{esc(ch)}</span>' for ch, w, sz, x, y, c, it in shapes)
-    noise = ('<svg class="grain" width="1920" height="1080"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.9" '
-             'numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0"/></filter>'
-             '<rect width="1920" height="1080" filter="url(#g)"/></svg>')
-    body = f'<div class="ov">{out}</div>{noise}<div class="note label">Black, Light, Bold, Thin Italic · three inks</div>'
+    """A papercraft sheet on a cutting mat: part of the net of a deltoidal
+    hexecontahedron, sixty kites, five of them round a vertex, three
+    unfolded off their edges; cut lines, valley and mountain folds, glue
+    tabs, and the letters on the faces hatched in line."""
+    import math
+    kites, folds, AC, S = _kites()
+    sc, ox, oy = 430, 905, 520                                # px per long edge; the five-fold vertex
+    P = lambda q: (ox + sc * q[0], oy - sc * q[1])
+    fmt = lambda pts: ' '.join(f'{x:.1f},{y:.1f}' for x, y in map(P, pts))
+    # the outline (cut): union of the kites' edges that only one kite has
+    from collections import Counter
+    key = lambda a, b: tuple(sorted(((round(a[0], 6), round(a[1], 6)), (round(b[0], 6), round(b[1], 6)))))
+    count = Counter(key(k[i], k[(i + 1) % 4]) for k in kites for i in range(4))
+    cuts = [(k[i], k[(i + 1) % 4]) for k in kites for i in range(4) if count[key(k[i], k[(i + 1) % 4])] == 1]
+    fold_keys = {key(a, b) for a, b in folds}
+    # glue tabs on some outer edges: trapezoids, sides at 45 degrees
+    tabs = []
+    for n, (a, b) in enumerate(cuts):
+        if n % 3 != 1 or key(a, b) in fold_keys:
+            continue
+        (x1, y1), (x2, y2) = P(a), P(b)
+        dx, dy = x2 - x1, y2 - y1
+        l = math.hypot(dx, dy)
+        nx, ny = dy / l, -dx / l                                   # outward: away from the vertex
+        cx, cy = (x1 + x2) / 2 - ox, (y1 + y2) / 2 - oy
+        if nx * cx + ny * cy < 0:
+            nx, ny = -nx, -ny
+        h = 0.16 * l
+        ux, uy = dx / l, dy / l
+        tabs.append([(x1, y1), (x1 + nx * h + ux * h, y1 + ny * h + uy * h),
+                     (x2 + nx * h - ux * h, y2 + ny * h - uy * h), (x2, y2)])
+    tab_edges = {(round(t[0][0], 1), round(t[0][1], 1), round(t[3][0], 1), round(t[3][1], 1)) for t in tabs}
+    svg = []
+    svg.append('<defs><pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">'
+               '<rect width="9" height="4" fill="#1d1b17"/></pattern>'
+               '<pattern id="hatch2" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+               '<rect width="9" height="3" fill="#d2452b"/></pattern>'
+               '<filter id="lift" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="14" dy="20" stdDeviation="14" '
+               'flood-color="#04150e" flood-opacity=".55"/></filter></defs>')
+    # the card the net is cut from: kites, tabs, one filled shape lifted off the mat
+    shape = ''.join(f'<polygon points="{fmt(k)}"/>' for k in kites) + ''.join(
+        '<polygon points="' + ' '.join(f'{x:.1f},{y:.1f}' for x, y in t) + '"/>' for t in tabs)
+    svg.append(f'<g filter="url(#lift)" fill="#f4efe2">{shape}</g>')
+    tints = ['#f4efe2', '#efe7d3', '#f4efe2', '#efe7d3', '#f4efe2', '#e9dfc7', '#e9dfc7', '#e9dfc7']
+    for k, t in zip(kites, tints):
+        svg.append(f'<polygon points="{fmt(k)}" fill="{t}"/>')
+    for t in tabs:
+        pts = ' '.join(f'{x:.1f},{y:.1f}' for x, y in t)
+        svg.append(f'<polygon points="{pts}" fill="#e3d6b8"/>')
+        mx, my = sum(q[0] for q in t) / 4, sum(q[1] for q in t) / 4
+        ang = math.degrees(math.atan2(t[3][1] - t[0][1], t[3][0] - t[0][0]))
+        if ang > 90 or ang < -90:
+            ang += 180
+        svg.append(f'<text x="{mx:.1f}" y="{my:.1f}" transform="rotate({ang:.1f} {mx:.1f} {my:.1f})" class="glue">GLUE</text>')
+    # letters on the faces, hatched in line, along each kite's axis
+    word = 'ARRIS&?0'
+    for n, (k, ch) in enumerate(zip(kites, word)):
+        cx = (k[0][0] + k[1][0] + k[2][0] + k[3][0]) / 4
+        cy = (k[0][1] + k[1][1] + k[2][1] + k[3][1]) / 4
+        x, y = P((cx, cy))
+        ang = math.degrees(math.atan2(k[2][1] - k[0][1], k[2][0] - k[0][0]))
+        rot = -(ang - 90)
+        fill = 'url(#hatch2)' if n == 4 else 'url(#hatch)'
+        svg.append(f'<text x="{x:.1f}" y="{y:.1f}" transform="rotate({rot:.1f} {x:.1f} {y:.1f})" class="face" fill="{fill}" '
+                   f'stroke="#1d1b17" stroke-width="2">{esc(ch)}</text>')
+        svg.append(f'<text x="{x:.1f}" y="{y + 64:.1f}" transform="rotate({rot:.1f} {x:.1f} {y:.1f})" class="no">{n + 1:02d}</text>')
+    # folds: valley dashed, mountain dash-dot
+    for n, (a, b) in enumerate(folds):
+        (x1, y1), (x2, y2) = P(a), P(b)
+        dash = '14 9' if n < 4 else '16 6 3 6'
+        svg.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="#1d1b17" stroke-width="2.4" stroke-dasharray="{dash}"/>')
+    # cuts: solid, except where a tab carries on (that edge is a fold too)
+    for a, b in cuts:
+        (x1, y1), (x2, y2) = P(a), P(b)
+        if (round(x1, 1), round(y1, 1), round(x2, 1), round(y2, 1)) in tab_edges:
+            svg.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="#1d1b17" stroke-width="2.4" stroke-dasharray="14 9"/>')
+        else:
+            svg.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="#1d1b17" stroke-width="3"/>')
+    for t in tabs:
+        pts = ' '.join(f'{x:.1f},{y:.1f}' for x, y in t)
+        svg.append(f'<polyline points="{pts}" fill="none" stroke="#1d1b17" stroke-width="3"/>')
+    # the slit, and the scissors on it
+    (sx1, sy1), (sx2, sy2) = P(kites[0][3]), P((0, 0))
+    ang = math.degrees(math.atan2(sy2 - sy1, sx2 - sx1))
+    svg.append(f'<text x="{sx1 + (sx2 - sx1) * .38:.1f}" y="{sy1 + (sy2 - sy1) * .38:.1f}" class="scis" '
+               f'transform="rotate({ang:.1f} {sx1 + (sx2 - sx1) * .38:.1f} {sy1 + (sy2 - sy1) * .38:.1f})">✂</text>')
+    # the mat: a grid, its inch rule, its 45 and 60 degree guides
+    mat = ['<svg class="mat" width="1920" height="1080">']
+    for x in range(0, 1921, 48):
+        mat.append(f'<line x1="{x}" y1="0" x2="{x}" y2="1080" class="{"g5" if x % 240 == 0 else "g1"}"/>')
+    for y in range(0, 1081, 48):
+        mat.append(f'<line x1="0" y1="{y}" x2="1920" y2="{y}" class="{"g5" if y % 240 == 0 else "g1"}"/>')
+    for x0 in (-600, 300, 1200):
+        mat.append(f'<line x1="{x0}" y1="1080" x2="{x0 + 1080}" y2="0" class="g6"/>')
+        mat.append(f'<line x1="{x0 + 400}" y1="1080" x2="{x0 + 400 + 1080 / math.tan(math.radians(60)):.0f}" y2="0" class="g6"/>')
+    for i, x in enumerate(range(240, 1921, 240)):
+        mat.append(f'<text x="{x + 6}" y="1046" class="ru">{i + 1}</text>')
+    mat.append('</svg>')
+    body = (''.join(mat) + f'<svg class="net" width="1920" height="1080">{"".join(svg)}</svg>'
+            '<div class="sheet mono"><div class="t">D60 · Deltoidal hexecontahedron</div>'
+            '<div>Sheet 1 of 6 · faces 01–08</div>'
+            '<div class="key"><span class="k cut"></span>cut <span class="k val"></span>valley <span class="k mtn"></span>mountain</div>'
+            '<div>Score every fold. Close the slit at 01 first; the five long edges meet at one point.</div></div>')
     css = """
-.s-riso .ov span { position:absolute; line-height: 1; mix-blend-mode: multiply; opacity: .92; }
-.s-riso .grain { position:absolute; inset:0; mix-blend-mode: multiply; opacity: .35; }
-.s-riso .note { position:absolute; right: 96px; bottom: 96px; color: #151412; }
+.s-riso { background: #1f5a43; }
+.s-riso .mat, .s-riso .net { position:absolute; left:0; top:0; }
+.s-riso .mat .g1 { stroke: rgba(232, 255, 240, .10); stroke-width: 1; }
+.s-riso .mat .g5 { stroke: rgba(232, 255, 240, .22); stroke-width: 1.5; }
+.s-riso .mat .g6 { stroke: rgba(232, 255, 240, .12); stroke-width: 1; stroke-dasharray: 2 6; }
+.s-riso .mat .ru { font: 500 18px 'Arris Mono'; fill: rgba(232, 255, 240, .5); }
+.s-riso .net .face { font: 900 150px 'Arris'; text-anchor: middle; dominant-baseline: central; }
+.s-riso .net .no { font: 500 16px 'Arris Mono'; fill: #8c8577; text-anchor: middle; letter-spacing: .1em; }
+.s-riso .net .glue { font: 600 15px 'Arris Mono'; fill: #8c7d5c; text-anchor: middle; dominant-baseline: central; letter-spacing: .3em; }
+.s-riso .net .scis { font: 400 84px 'Arris Mono'; fill: #1d1b17; text-anchor: middle; dominant-baseline: central; }
+.s-riso .chrome, .s-riso .k-strip, .s-riso .k-xh { color: rgba(232, 255, 240, .7); }
+.s-riso .chrome .k-brand { color: #f4efe2; }
+.s-riso .sheet { position:absolute; left: 96px; bottom: 96px; width: 470px; padding: 22px 26px; background: #f4efe2; color: #1d1b17;
+                 font-size: 15px; line-height: 1.5; box-shadow: 10px 14px 24px rgba(4, 21, 14, .5); transform: rotate(-2deg); }
+.s-riso .sheet .t { font: 800 22px/1.2 'Arris'; text-transform: uppercase; letter-spacing: .02em; margin-bottom: 6px; }
+.s-riso .sheet .key { margin: 10px 0; display:flex; align-items:center; gap: 10px; text-transform: uppercase; letter-spacing: .1em; font-size: 13px; }
+.s-riso .sheet .k { display:inline-block; width: 46px; height: 0; border-top: 3px solid #1d1b17; }
+.s-riso .sheet .val { border-top: 3px dashed #1d1b17; }
+.s-riso .sheet .mtn { border-top: 0; height: 3px; background: repeating-linear-gradient(90deg, #1d1b17 0 14px, transparent 14px 18px, #1d1b17 18px 21px, transparent 21px 25px); }
 """
     return body, None, css
 
