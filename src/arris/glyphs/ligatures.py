@@ -288,15 +288,27 @@ def _meet_slash(tip, a, line, sign, up):
 
 # --- Equality and comparison ---------------------------------------------
 
-def _bars(g, n, x0=None, x1=None):
+def _bars(g, n, x0=None, x1=None, struck=False):
     """The bars of = run through the cells, from ='s own margin to its
-    own margin; three for ===, the same white between each."""
+    own margin; three for ===, the same white between each. A stack taller
+    than ≡ may grow (operators.TALL; STRUCK if a slash will cross it, as ≢)
+    thins its bars as ≡ does (the tight-stack rule, never below 0.7)."""
+    from .operators import STRUCK
+    from .operators import TALL as TALL_
     from .punct import eq_white
+    TALL = STRUCK if struck else TALL_
     p, W = g.p, g.W
     a = axis(p)
     m = (p.fig_w - _sub('equal', p).W) / 2
     x0 = m if x0 is None else x0
     x1 = W - m if x1 is None else x1
+    tall = lambda: n * g.sh + (n - 1) * eq_white(g)
+    if tall() > TALL(p):
+        lo, hi = 0.7, 1.0
+        for _ in range(14):
+            g.sh_k = (lo + hi) / 2
+            lo, hi = (g.sh_k, hi) if tall() <= TALL(p) else (lo, g.sh_k)
+        g.sh_k = lo
     step = g.sh + eq_white(g)
     ys = [a + (i - (n - 1) / 2) * step for i in range(n)]
     for y in ys:
@@ -305,8 +317,14 @@ def _bars(g, n, x0=None, x1=None):
 
 
 def _strike(g, ys):
-    """The 2:1 slash of != across bars at heights ys, as ≠ draws it."""
-    lo, hi = min(ys) - 2.2 * g.sh, max(ys) + 2.2 * g.sh
+    """The 2:1 slash of != across bars at heights ys, as ≠ draws it; never
+    past where ≢'s negation reaches (three quarters of a module beyond the
+    tallest stack, operators.TALL)."""
+    from .operators import TALL
+    p = g.p
+    reach = TALL(p) / 2 + 0.75 * p.m
+    lo = max(min(ys) - 2.2 * g.sh, axis(p) - reach)
+    hi = min(max(ys) + 2.2 * g.sh, axis(p) + reach)
     cx = g.W / 2
     run = (hi - lo) / 2
     g.stroke((cx - run / 2, lo), (cx + run / 2, hi), start='h', end='h')
@@ -314,8 +332,8 @@ def _strike(g, ys):
 
 liga('==')(lambda g: _bars(g, 2))
 liga('===')(lambda g: _bars(g, 3))
-liga('!=', '/=', '=/=')(lambda g: _strike(g, _bars(g, 2)))
-liga('!==')(lambda g: _strike(g, _bars(g, 3)))
+liga('!=', '/=', '=/=')(lambda g: _strike(g, _bars(g, 2, struck=True)))
+liga('!==')(lambda g: _strike(g, _bars(g, 3, struck=True)))
 
 
 def _compare(g, mirror):

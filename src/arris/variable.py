@@ -13,6 +13,12 @@ A point that exists in one master but not another is inserted into the
 others as a duplicate of its neighbour: a feature growing from nothing as
 the weight moves.
 
+A glyph that is mirror-symmetric in every master (8, A, *) is aligned by
+its left half, cut on its axis, and mirrored: aligned whole, a point
+present in some masters only can be paired with a neighbour on one side
+and the opposite neighbour on the other, and the instances between the
+masters lean.
+
 The result is checked rather than trusted. ``check`` draws the glyphs
 exactly at weights between the masters and compares them with the variable
 font's interpolation; the build reports the worst offenders.
@@ -81,14 +87,15 @@ def _match_contours(ref, other, nref, noth):
     return order
 
 
-def _dp(A, TA, B, TB):
-    """Global alignment of A (with its start fixed) against a rotation of B.
+def _dp(A, TA, B, TB, rotate=True):
+    """Global alignment of A (with its start fixed) against a rotation of B
+    (or B as it is: ``rotate`` False, for open paths).
     Returns list of (i or None, j or None) pairs."""
     n, m = len(A), len(B)
     best = None
     # candidate rotations: B starts that look like A's start
     starts = sorted(range(m), key=lambda j: math.hypot(A[0][0] - B[j][0], A[0][1] - B[j][1])
-                    + (TURN if abs(TA[0] - TB[j]) > 0.3 else 0))[:4]
+                    + (TURN if abs(TA[0] - TB[j]) > 0.3 else 0))[:4] if rotate else [0]
     for r in starts:
         Br = B[r:] + B[:r]
         Tr = TB[r:] + TB[:r]
@@ -173,10 +180,200 @@ def _add_missing_counters(masters):
     return out
 
 
+SYM = 1e-6          # a master is symmetric if its mirror misses less than this share of its ink
+SNAP = 0.01         # units: a mirrored point this close to a drawn one takes the drawn one's place
+ON_AXIS = 0.01      # units: a point this close to the axis is on it
+
+
+def _axis(rings):
+    """x of the vertical axis a master is mirror-symmetric about, or None."""
+    from shapely import affinity
+    from .geom import rings_to_shapely
+    ink = rings_to_shapely(rings)
+    if ink.is_empty:
+        return None
+    x0, _, x1, _ = ink.bounds
+    c = (x0 + x1) / 2
+    mirror = affinity.scale(ink, -1, 1, origin=(c, 0))
+    return c if ink.symmetric_difference(mirror).area <= SYM * ink.area else None
+
+
+def _half(rings, c):
+    """The left half of a master's ink, cut on x = c, as rings (ink-left)."""
+    from shapely.geometry import box
+    from shapely.geometry.polygon import orient
+    from .geom import rings_to_shapely
+    ink = rings_to_shapely(rings)
+    x0, y0, x1, y1 = ink.bounds
+    left = ink.intersection(box(x0 - 10, y0 - 10, c, y1 + 10))
+    out = []
+    for poly in getattr(left, 'geoms', [left]):
+        if poly.geom_type != 'Polygon' or poly.area < 1e-6:
+            continue
+        poly = orient(poly, 1.0)
+        for ring in [poly.exterior] + list(poly.interiors):
+            pts = [(x if abs(x - c) > ON_AXIS else c, y) for x, y in list(ring.coords)[:-1]]
+            out.append(pts)
+    return out
+
+
+def _straight(a, p, b):
+    """Whether p lies on the straight line from a to b."""
+    return abs((p[0] - a[0]) * (b[1] - a[1]) - (p[1] - a[1]) * (b[0] - a[0])) <= 1e-6 * max(
+        1.0, math.hypot(b[0] - a[0], b[1] - a[1])) ** 2
+
+
+def _arcs(half, c):
+    """A master's left half split where it was cut on the axis: (arcs,
+    side rings). An arc runs from the axis along the ink's edge back to it;
+    a side ring lies off the axis (a dot beside it)."""
+    arcs, sides = [], []
+    for r in half:
+        n = len(r)
+        on = [abs(q[0] - c) <= ON_AXIS for q in r]
+        if not any(on):
+            sides.append(r)
+            continue
+        cuts = [j for j in range(n) if on[j] and on[(j + 1) % n]]
+        if not cuts:
+            return None                                     # a half that only touches the axis
+        for t, j in enumerate(cuts):
+            start, end = (j + 1) % n, cuts[(t + 1) % len(cuts)]
+            idx = [start]
+            while idx[-1] != end:
+                idx.append((idx[-1] + 1) % n)
+            if len(idx) >= 2:
+                arcs.append([r[i] for i in idx])
+    return arcs, sides
+
+
+def _whole(arc, c):
+    """The contour an arc and its mirror make."""
+    return list(arc) + [(2 * c - x, y) for x, y in reversed(arc[1:-1])]
+
+
+def _align_open(paths, norms):
+    """Open paths, one per master, both ends on the axis: the ends pinned to
+    each other, the points between matched, a missing point filled with the
+    previous one (the start, at the head of the path)."""
+    k = len(paths)
+    inner = [p[1:-1] for p in paths]
+    ref_i = max(range(k), key=lambda i: len(inner[i]))
+    ref = inner[ref_i]
+    cols = [[None] * k for _ in ref]
+    for idx, q in enumerate(ref):
+        cols[idx][ref_i] = q
+    nref = norms[ref_i]
+    for mi in range(k):
+        if mi == ref_i or not ref:
+            continue
+        if not inner[mi]:
+            continue                                        # all of it filled below
+        B = [norms[mi](q) for q in inner[mi]]
+        refpts, last = [], None
+        for c_i, col in enumerate(cols):
+            if col[ref_i] is not None:
+                last = c_i
+            refpts.append(nref(cols[last][ref_i] if last is not None else ref[0]))
+        path = _dp(refpts, _turns(refpts) if len(refpts) > 2 else [0.0] * len(refpts),
+                   B, _turns(inner[mi]) if len(B) > 2 else [0.0] * len(B), rotate=False)
+        new = []
+        for a, b in path:
+            col = cols[a] if a is not None else [None] * k
+            col[mi] = inner[mi][b] if b is not None else None
+            new.append(col)
+        cols = new
+    out = []
+    for mi in range(k):
+        seq, prev = [paths[mi][0]], paths[mi][0]
+        for col in cols:
+            prev = col[mi] if col[mi] is not None else prev
+            seq.append(prev)
+        seq.append(paths[mi][-1])
+        out.append(seq)
+    return out
+
+
+def _mirror_align(masters):
+    """A glyph symmetric in every master, aligned by its left half and
+    mirrored, so every instance between the masters is symmetric too; or
+    None, if it is not symmetric or its halves will not align.
+
+    Each master's left half is split into arcs from the axis back to it
+    before anything is matched, so the points on the axis stay on it in
+    every master; the arcs are matched across the masters as whole
+    contours, then point by point with their ends pinned."""
+    axes = [_axis(m) for m in masters]
+    if any(c is None for c in axes):
+        return None
+    parts = [_arcs(_half(m, c), c) for m, c in zip(masters, axes)]
+    if any(pt is None for pt in parts):
+        return None
+    k = len(masters)
+    wholes = [[_whole(a, c) for a in arcs] for (arcs, _), c in zip(parts, axes)]
+    sides = [sd for _, sd in parts]
+    norms = [_norm(w + sd) if (w or sd) else None for w, sd in zip(wholes, sides)]
+    if any(nm is None for nm in norms) or len({len(w) for w in wholes}) != 1 or len({len(sd) for sd in sides}) != 1:
+        return None
+    ref_i = max(range(k), key=lambda i: sum(len(r) for r in wholes[i]))
+    out = [[] for _ in range(k)]
+    if wholes[0]:
+        orders = [_match_contours(wholes[ref_i], wholes[mi], norms[ref_i], norms[mi]) for mi in range(k)]
+        if any(o is None for o in orders):
+            return None
+        for ai in range(len(wholes[ref_i])):
+            group = [parts[mi][0][orders[mi][ai]] for mi in range(k)]
+            al = _align_open(group, norms)
+            if al is None:
+                return None
+            for mi in range(k):
+                out[mi].append(_whole(al[mi], axes[mi]))
+    if sides[0]:
+        try:
+            al = _align(sides)
+        except ValueError:
+            return None
+        for mi in range(k):
+            c = axes[mi]
+            for r in al[mi]:
+                out[mi].append(list(r))
+                out[mi].append([(2 * c - x, y) for x, y in reversed(r)])
+    # mirrored points take the drawn points' exact places (the italic finds
+    # its chamfers by position)
+    for mi in range(k):
+        drawn = [q for r in masters[mi] for q in r]
+        for ci, r in enumerate(out[mi]):
+            out[mi][ci] = [min(drawn, key=lambda d: (d[0] - q[0]) ** 2 + (d[1] - q[1]) ** 2)
+                           if any(abs(d[0] - q[0]) <= SNAP and abs(d[1] - q[1]) <= SNAP for d in drawn) else q
+                           for q in r]
+    # drop an axis point that is the middle of a straight edge in every master
+    for ci in range(len(out[0])):
+        n = len(out[0][ci])
+        keep = [not all(abs(out[mi][ci][j][0] - axes[mi]) <= ON_AXIS
+                        and _straight(out[mi][ci][j - 1], out[mi][ci][j], out[mi][ci][(j + 1) % n])
+                        for mi in range(k)) for j in range(n)]
+        if sum(keep) < 3:
+            continue
+        for mi in range(k):
+            out[mi][ci] = [q for q, kp in zip(out[mi][ci], keep) if kp]
+    if len({tuple(len(r) for r in m) for m in out}) != 1:
+        return None
+    return out
+
+
 def align(masters: list[list[list[tuple]]]):
     """masters: per master, a list of rings (ink-left). Returns the same,
     made compatible (same contour order, same point counts, same order), or
-    raises ValueError."""
+    raises ValueError. A glyph symmetric in every master is aligned by its
+    halves (``_mirror_align``), so its instances stay symmetric."""
+    if any(masters):
+        res = _mirror_align(masters)
+        if res is not None:
+            return res
+    return _align(masters)
+
+
+def _align(masters):
     k = len(masters)
     if not any(masters):
         return masters                                      # an empty glyph (a blank Braille cell) varies trivially

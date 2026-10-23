@@ -32,6 +32,10 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
     thin at heavy weights.
   - The ring below (U+0325) cannot read under the squint at any weight:
     it is as small as the room below the line allows.
+- **Stacked operators at heavy weights**: ≡ and `===` grow to the cap height
+  and two modules (operators.TALL) with the equal sign's 1.6 bars of white;
+  struck stacks (≢ `!==` `!=`) are a module and a half shorter at each end
+  so the slash can run past them. Review the look at Black.
 - **Make the squint rule general where it is safe**: today only glyphs
   that declare a free variable use it (barred signs, $). Candidates: the
   symbol lightening rule (holes, not just feature counts), with care not

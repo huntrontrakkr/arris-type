@@ -469,17 +469,26 @@ def _polish(pts, eps, moved):
       in place of a point): the two edges meet at their intersection.
 
     A spike (edges either side running back on each other) is left as it
-    is. ``moved`` collects old point -> new point for the chamfer record."""
+    is. ``moved`` collects old point -> new point for the chamfer record.
+
+    Every choice is made by geometry, never by which way the ring runs, so
+    a symmetric drawing stays symmetric: the short edges go in an order a
+    mirror image shares (length, then height, then distance from the ring's
+    middle), and a jog whose two sides are the same length closes on its
+    midpoint."""
     pts = list(pts)
     skip = set()
+    cx = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2 if pts else 0.0
     while len(pts) > 3:
         n = len(pts)
         best = None
         for i in range(n):
             a, b = pts[i], pts[(i + 1) % n]
             L = _len(_sub(b, a))
-            if L < eps and (a, b) not in skip and (best is None or L < best[0]):
-                best = (L, i)
+            if L < eps and (a, b) not in skip:
+                key = (round(L, 6), round((a[1] + b[1]) / 2, 6), round(abs((a[0] + b[0]) / 2 - cx), 6))
+                if best is None or key < best[0]:
+                    best = (key, i)
         if best is None:
             break
         _, i = best
@@ -492,7 +501,14 @@ def _polish(pts, eps, moved):
         u_in, u_out = _unit(e_in), _unit(e_out)
         turn = abs(math.degrees(math.atan2(_cross(u_in, u_out), _dot(u_in, u_out))))
         if turn < 15:                                         # a jog or a kink
-            if _len(e_in) < _len(e_out):
+            l_in, l_out = _len(e_in), _len(e_out)
+            if abs(l_in - l_out) <= 1e-6 * max(l_in, l_out):  # no shorter side: meet halfway
+                q = _mul(_add(a, b), 0.5)
+                moved[a] = q
+                moved[b] = q
+                pts[i] = q
+                del pts[j]
+            elif l_in < l_out:
                 moved[a] = b
                 del pts[i]
             else:

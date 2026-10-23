@@ -390,6 +390,16 @@ so `arris.variable.align` makes the masters compatible after the fact:
   duplicate of its neighbour, so the feature grows from nothing.
 * A counter that closes at an extreme is given to the other masters as a
   contour collapsed to a point.
+* A glyph that is mirror-symmetric in every master (537 of them: 8, A,
+  W, *, Ж, ‡, ¥ …) is aligned by its halves: each master is cut on its
+  axis into arcs from the axis back to it, the arcs are matched across the
+  masters with their ends pinned, and each contour is an arc and its
+  mirror. Aligned whole, a point present in some masters only was paired
+  with a neighbour on one side and the opposite neighbour on the other,
+  and 92 symmetric glyphs leaned between the masters (Ж by 38% of its
+  area, the 8 by 1%). Now every instance of them is symmetric. The corner
+  rule's polish makes its choices by geometry, never by the direction a
+  ring runs, so a symmetric drawing stays exactly symmetric to begin with.
 
 Nothing is trusted. `tools/build_vf.py` draws every glyph exactly at
 locations between the masters and compares the variable font's

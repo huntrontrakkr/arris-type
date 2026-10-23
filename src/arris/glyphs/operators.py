@@ -216,6 +216,7 @@ class Shape:
 
 
 TALL = lambda p: p.cap + 2 * p.m               # the tallest a stacked relation grows (about <='s)
+STRUCK = lambda p: TALL(p) - 3 * p.m            # a stack a negation crosses: room for it to run past the bars
 
 
 def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
@@ -321,7 +322,7 @@ def equivalence(g):
 
 @op(u(0x2262), '≢')
 def notidentical(g):
-    stack(g, [Bars(3)])
+    stack(g, [Bars(3)], tall=STRUCK)
     negate(g, half=_neg_half(g))
 
 
