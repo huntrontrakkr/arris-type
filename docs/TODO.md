@@ -36,6 +36,9 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
   and two modules (operators.TALL) with the equal sign's 1.6 bars of white;
   struck stacks (≢ `!==` `!=`) are a module and a half shorter at each end
   so the slash can run past them. Review the look at Black.
+- **δ reads as 6** in maths (the presentation's "∃δ > 0"): the octagonal
+  bowl and hooked top are the 6's. Run it through `tools/letter_confusion.py`
+  against 6, ∂ and σ, and give δ a distinct top (a tail or an open loop).
 - **Make the squint rule general where it is safe**: today only glyphs
   that declare a free variable use it (barred signs, $). Candidates: the
   symbol lightening rule (holes, not just feature counts), with care not

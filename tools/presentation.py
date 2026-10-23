@@ -536,26 +536,26 @@ def code():
 def code_python():
     K, T, S, C, N, F = 'kw', 'ty', 'st', 'cm', 'nu', 'fn'
     lines = [
-        [('# relays.py', C)],
+        [('# burns.py', C)],
         [('from', K), (' dataclasses ', ''), ('import', K), (' dataclass', '')],
         [],
         [('@dataclass', F), ('(frozen=', ''), ('True', K), (')', '')],
-        [('class', K), (' ', ''), ('Ping', T), (':', '')],
-        [('    node: ', ''), ('str', T)],
-        [('    latency_ms: ', ''), ('float', T)],
+        [('class', K), (' ', ''), ('Burn', T), (':', '')],
+        [('    body: ', ''), ('str', T)],
+        [('    delta_v: ', ''), ('float', T), ('   ', ''), ('# km/s', C)],
         [],
-        [('def', K), (' ', ''), ('slowest', F), ('(ps: ', ''), ('list', T), ('[', ''), ('Ping', T), ('])', ''), (' -> ', ''), ('Ping', T), (' | ', ''), ('None', K), (':', '')],
-        [('    ', ''), ('return', K), (' ', ''), ('max', F), ('(ps, key=', ''), ('lambda', K), (' p: p.latency_ms, default=', ''), ('None', K), (')', '')],
+        [('def', K), (' ', ''), ('cheapest', F), ('(bs: ', ''), ('list', T), ('[', ''), ('Burn', T), ('])', ''), (' -> ', ''), ('Burn', T), (' | ', ''), ('None', K), (':', '')],
+        [('    ', ''), ('return', K), (' ', ''), ('min', F), ('(bs, key=', ''), ('lambda', K), (' b: b.delta_v, default=', ''), ('None', K), (')', '')],
         [],
-        [('lagging = [p ', ''), ('for', K), (' p ', ''), ('in', K), (' pings ', ''), ('if', K), (' p.latency_ms >= ', ''), ('30', N), (' ', ''), ('and', K), (' p.node != ', ''), ('"spire"', S), (']', '')],
-        [('print', F), ('(', ''), ('f"{len(lagging)} of {len(pings)} relays at 30 ms or more"', S), (')', '')],
+        [('costly = [b ', ''), ('for', K), (' b ', ''), ('in', K), (' burns ', ''), ('if', K), (' b.delta_v >= ', ''), ('3.0', N), (' ', ''), ('and', K), (' b.body != ', ''), ('"Luna"', S), (']', '')],
+        [('print', F), ('(', ''), ('f"{len(costly)} of {len(burns)} burns at 3 km/s or more"', S), (')', '')],
         [('assert', K), (' ', ''), ('2', N), (' ** ', ''), ('10', N), (' == ', ''), ('1_024', N), ('   ', ''), ('# ints stay exact', C)],
     ]
     body = f"""
 <div class="win">
-  <div class="tabs mono"><span class="on">relays.py</span><span>test_relays.py</span></div>
+  <div class="tabs mono"><span class="on">burns.py</span><span>test_burns.py</span></div>
   <div class="code mono">{_code(lines)}</div>
-  <div class="out mono"><span class="dim">$</span> python relays.py<br>3 of 41 relays at 30 ms or more</div>
+  <div class="out mono"><span class="dim">$</span> python burns.py<br>3 of 41 burns at 3 km/s or more</div>
 </div>"""
     css = """
 .s-code-python .win { position:absolute; inset: 120px 96px 100px 96px; background:#fbf8f1; border: 2px solid var(--line); }
@@ -608,17 +608,17 @@ def code_react():
 def code_functional():
     K, T, S, C, N, F = 'kw', 'ty', 'st', 'cm', 'nu', 'fn'
     ex = [
-        [('defmodule', K), (' ', ''), ('Grid', T), (' ', ''), ('do', K)],
-        [('  @spec', F), (' load([', ''), ('number', T), ('])', ''), (' :: ', ''), ('float', T)],
-        [('  def', K), (' load(sectors) ', ''), ('do', K)],
-        [('    sectors', '')],
+        [('defmodule', K), (' ', ''), ('Reactor', T), (' ', ''), ('do', K)],
+        [('  @spec', F), (' mean([', ''), ('number', T), ('])', ''), (' :: ', ''), ('float', T)],
+        [('  def', K), (' mean(core_temps) ', ''), ('do', K)],
+        [('    core_temps', '')],
         [('    |> ', ''), ('Enum', T), ('.reject(&is_nil/', ''), ('1', N), (')', '')],
         [('    |> ', ''), ('Enum', T), ('.map(', ''), ('fn', K), (' r -> r * ', ''), ('1.0', N), (' ', ''), ('end', K), (')', '')],
         [('    |> ', ''), ('then', F), ('(&(', ''), ('Enum', T), ('.sum(&', ''), ('1', N), (') / length(&', ''), ('1', N), (')))', '')],
         [('  end', K)],
         [('end', K)],
         [],
-        [('IO', T), ('.puts(', ''), ('"load: #{Grid.load([21, nil, 23])}"', S), (')', '')],
+        [('IO', T), ('.puts(', ''), ('"core: #{Reactor.mean([621, nil, 623])}"', S), (')', '')],
     ]
     hs = [
         [('module', K), (' ', ''), ('Main', T), (' ', ''), ('where', K)],
@@ -626,16 +626,16 @@ def code_functional():
         [('parse', F), (' :: ', ''), ('String', T), (' -> ', ''), ('Maybe', T), (' ', ''), ('Int', T)],
         [('parse', F), (' = readMaybe', '')],
         [],
-        [('credits', F), (' :: [', ''), ('String', T), ('] -> ', ''), ('Maybe', T), (' ', ''), ('Int', T)],
-        [('credits', F), (' xs = sum <$> traverse parse xs', '')],
+        [('tonnage', F), (' :: [', ''), ('String', T), ('] -> ', ''), ('Maybe', T), (' ', ''), ('Int', T)],
+        [('tonnage', F), (' xs = sum <$> traverse parse xs', '')],
         [],
         [('pair', F), (' = (,) <$> ', ''), ('Just', T), (' ', ''), ('1', N), (' <*> ', ''), ('Just', T), (' ', ''), ('2', N)],
-        [('main', F), (' = print (credits [', ''), ('"300"', S), (', ', ''), ('"47"', S), ('])', '')],
+        [('main', F), (' = print (tonnage [', ''), ('"3000"', S), (', ', ''), ('"470"', S), ('])', '')],
     ]
     body = f"""
 <div class="two">
-  <div class="win"><div class="tabs mono"><span class="on">grid.ex</span></div><div class="code mono">{_code(ex)}</div></div>
-  <div class="win"><div class="tabs mono"><span class="on">Ledger.hs</span></div><div class="code mono">{_code(hs)}</div></div>
+  <div class="win"><div class="tabs mono"><span class="on">reactor.ex</span></div><div class="code mono">{_code(ex)}</div></div>
+  <div class="win"><div class="tabs mono"><span class="on">Cargo.hs</span></div><div class="code mono">{_code(hs)}</div></div>
 </div>"""
     css = """
 .s-code-functional .two { position:absolute; inset: 120px 96px 100px 96px; display:grid; grid-template-columns: 1fr 1fr; gap: 36px; }
@@ -693,15 +693,15 @@ def terminal():
 @slide('board', 'amber', 'Departures')
 def board():
     flights = [('03:15', 'REYKJAVÍK', 'MG 455', 'B12', 'ON TIME'), ('03:40', 'KRAKÓW', 'MG 282', 'C04', 'BOARDING'),
-               ('04:05', 'İSTANBUL', 'HX 1980', 'D21', 'DELAYED 04:50'), ('04:20', 'HÀ NỘI', 'HX 36', 'E07', 'DOORS OPEN'),
+               ('04:05', 'İSTANBUL', 'HX 1980', 'D21', 'DELAYED 04:50'), ('04:20', 'CERES', 'OR 7', 'X01', 'BURN T−04:12'),
                ('04:45', 'LUNA GATE', 'OR 1', 'L01', 'FUELLING'), ('05:08', 'ΑΘΗΝΑ', 'MG 611', 'C17', 'ON TIME'),
-               ('05:30', 'SECTOR 9', 'LC 438', 'A09', 'LOCKDOWN'), ('05:55', 'PRAHA', 'MG 641', 'D02', 'ON TIME')]
+               ('05:30', 'SECTOR 9', 'LC 438', 'A09', 'LOCKDOWN'), ('05:55', 'GANYMEDE', 'OR 12', 'X04', 'QUARANTINE')]
 
     def tiles(s, n):
         s = s.ljust(n)[:n]
         return ''.join(f'<span class="t">{esc(ch) if ch != " " else "&nbsp;"}</span>' for ch in s)
     rows = ''.join(f'<div class="r">{tiles(t, 5)}<span class="gap"></span>{tiles(d, 10)}<span class="gap"></span>{tiles(f, 7)}'
-                   f'<span class="gap"></span>{tiles(g, 3)}<span class="gap"></span><span class="st {"warn" if "DEL" in s or "CAN" in s or "LOCK" in s else ""}">{tiles(s, 13)}</span></div>'
+                   f'<span class="gap"></span>{tiles(g, 3)}<span class="gap"></span><span class="st {"warn" if any(k in s for k in ("DEL", "CAN", "LOCK", "QUAR")) else ""}">{tiles(s, 13)}</span></div>'
                    for t, d, f, g, s in flights)
     head = '<div class="h mono"><span>Time</span><span>Destination</span><span>Line</span><span>Gate</span><span>Remarks</span></div>'
     body = f'<div class="b">{head}{rows}</div>'
@@ -729,12 +729,12 @@ def dash():
                      f'y2="{400 - r1 * math.sin(a):.1f}" stroke="{"#3fd6ff" if i <= 19 else "#12303a"}" stroke-width="{8 if i % 5 == 0 else 4}"/>')
     gauge = f'<svg width="800" height="800" viewBox="0 0 800 800">{"".join(ticks)}</svg>'
     body = f"""
-<div class="g">{gauge}<div class="read"><div class="v">128</div><div class="u label">km/h</div></div></div>
+<div class="g">{gauge}<div class="read"><div class="v">412</div><div class="u label">m/s Δv left</div></div></div>
 <div class="side">
-  <div class="it"><div class="label">Altitude</div><div class="n">412<small> m</small></div></div>
-  <div class="it"><div class="label">Outside</div><div class="n">−4<small> °C</small></div></div>
-  <div class="it"><div class="label">Next</div><div class="n">↱ 600<small> m</small></div></div>
-  <div class="it"><div class="label">Lane</div><div class="n accent2">7</div></div>
+  <div class="it"><div class="label">Thrust</div><div class="n">1.3<small> g</small></div></div>
+  <div class="it"><div class="label">Reactor</div><div class="n">87<small> %</small></div></div>
+  <div class="it"><div class="label">Burn in</div><div class="n">↱ 4:12<small> min</small></div></div>
+  <div class="it"><div class="label">Dock</div><div class="n accent2">B7</div></div>
 </div>"""
     css = """
 .s-dash .g { position:absolute; left: 96px; top: 150px; width: 800px; height: 800px; }
@@ -753,7 +753,7 @@ def watches():
     faces = [("10:08", "WED 22", "#ffb000", "#050607", 600, 100, 'oct'),
              ("21:47", "62 BPM", "#3fd6ff", "#04121a", 300, 0, 'round'),
              ("06:30", "RAIN 18°", "#151412", "#f3eee3", 800, 0, 'square'),
-             ("12:00", "SYNC 100%", "#ff5fae", "#17102a", 900, 100, 'oct')]
+             ("12:00", "CERES +14m", "#ff5fae", "#17102a", 900, 100, 'oct')]
     out = []
     for t, sub, ink, bg, w, wt, shape in faces:
         out.append(f'<div class="w"><div class="f {shape}" style="background:{bg};color:{ink}"><div class="t" style="font-weight:{w};'
@@ -798,6 +798,7 @@ def compass():
 @slide('math', 'ink', 'Mathematics')
 def math_():
     eqs = ['e<sup>iπ</sup> + 1 = 0',
+           'Δv = vₑ ln(m₀ ⁄ m₁)',
            '∑ 1/n² = π²/6',
            '∫ e<sup>−x²</sup> dx = √π',
            '∀ε &gt; 0 ∃δ &gt; 0 : |x − a| &lt; δ ⇒ |f(x) − L| &lt; ε',
