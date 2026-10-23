@@ -31,6 +31,15 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
 
 ## Carried over
 
+- **Variable-font interpolation**: the build's check (exact drawings against
+  the VF between masters) still finds ≈1,150 upright and ≈1,500 italic
+  glyph-locations over 3 units of mean outline difference, worst 40–57
+  (underscoredbl, ∭ ∬, and the GRAD/WTCH corner at (800, 50, 100)). Masters
+  at 800 and 850 and the aligner's nearer-neighbour gap fill (2026-10-23)
+  fixed the 3 and the italic h; 19 italic drawings still change point count
+  between 750 and 900 (m n k f e y …). Fix those constructions (as the
+  italic tail's floor did) or add masters where the check says so.
+
 - **`tools/typeart.glyph_grids` fills the counters, not the ink**: it fills
   each ring by the sign of its area as if outer contours ran
   anticlockwise, but TrueType's run clockwise. The garden slide's ASCII

@@ -79,10 +79,17 @@ def tail(g, f, xs, y=None):
     return [B(xs, yb), tail_end(g, f, xs, yb)]
 
 
+TAIL_FLOOR = 0.7   # stems: the least an exit tail reaches, so its end keeps a flat past its chamfer
+
+
 def tail_end(g, f, xs, y=None):
-    """Where an exit tail from a stem at xs ends."""
+    """Where an exit tail from a stem at xs ends: TAIL modules of white past
+    the stem, but never under TAIL_FLOOR stems, so that toward Black (where
+    the white narrows as the stem grows) the tail's top keeps a flat beyond
+    its end's chamfer: the same construction at every weight, which the
+    variable font interpolates without a lump."""
     p = g.p
-    return (xs + p.sv / 2 + _reach(p, TAIL), f.Y(1) if y is None else y)
+    return (xs + p.sv / 2 + max(_reach(p, TAIL), TAIL_FLOOR * p.sv), f.Y(1) if y is None else y)
 
 
 # --- Stems, entries and exits ------------------------------------------------

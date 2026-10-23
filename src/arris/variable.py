@@ -10,8 +10,9 @@ points in the same order.
 counter) and position. Within a matched contour, points are matched by a
 sequence alignment on their normalised positions and turning directions.
 A point that exists in one master but not another is inserted into the
-others as a duplicate of its neighbour: a feature growing from nothing as
-the weight moves.
+others as a duplicate of the neighbour it is nearer to (where it exists):
+a feature growing from nothing, or shrinking into a corner, as the weight
+moves.
 
 A glyph that is mirror-symmetric in every master (8, A, *) is aligned by
 its left half, cut on its axis, and mirrored: aligned whole, a point
@@ -428,20 +429,31 @@ def _align(masters):
                     col[mi] = ring[b]
                     new_cols.append(col)
             cols = new_cols
-        # fill gaps with the previous real point (cyclically) per master
+        # fill each master's gaps with a duplicate of the real point on either
+        # side that the missing point is nearer to where it does exist: a
+        # feature collapsing in some masters (a step shrinking to a corner)
+        # collapses onto the point it shrinks into, not onto whichever point
+        # happens to precede it (which slid it along an edge and bent the
+        # edge in the instances between)
+        norms = [_norm(m) for m in masters]
+        rep = []
+        for col in cols:
+            mi_ = next(i for i, q in enumerate(col) if q is not None)
+            rep.append(norms[mi_](col[mi_]))
+        n_ = len(cols)
         for mi in range(k):
             seq = [c[mi] for c in cols]
             if all(q is None for q in seq):
                 raise ValueError('a master lost a whole contour')
-            first = next(i for i, q in enumerate(seq) if q is not None)
-            prev = seq[first]
-            for t in range(len(seq)):
-                i = (first + t) % len(seq)
-                if seq[i] is None:
-                    seq[i] = prev
-                else:
-                    prev = seq[i]
-            for c, q in zip(cols, seq):
+            fill = list(seq)
+            for i in range(n_):
+                if seq[i] is not None:
+                    continue
+                ip = next((i - t) % n_ for t in range(1, n_ + 1) if seq[(i - t) % n_] is not None)
+                inx = next((i + t) % n_ for t in range(1, n_ + 1) if seq[(i + t) % n_] is not None)
+                d = lambda j: math.hypot(rep[i][0] - rep[j][0], rep[i][1] - rep[j][1])
+                fill[i] = seq[ip] if d(ip) <= d(inx) else seq[inx]
+            for c, q in zip(cols, fill):
                 c[mi] = q
         for mi in range(k):
             out[mi][ci] = [c[mi] for c in cols]
