@@ -44,10 +44,39 @@ body { font-family: 'Arris'; -webkit-font-smoothing: antialiased; }
 .slide { position: relative; width: 1920px; height: 1080px; overflow: hidden; padding: 96px;
          background: var(--bg); color: var(--ink); page-break-after: always; break-after: page; }
 .mono { font-family: 'Arris Mono'; }
-.chrome { position: absolute; left: 96px; right: 96px; top: 44px; display: flex; justify-content: space-between;
-          font: 500 18px/1 'Arris Mono'; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
-.caption { position: absolute; left: 96px; right: 96px; bottom: 44px; display: flex; justify-content: space-between;
+.chrome { position: absolute; left: 96px; right: 96px; top: 38px; display: flex; justify-content: space-between; align-items: center;
+          font: 500 16px/1 'Arris Mono'; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.chrome .k-l, .chrome .k-r { display: flex; align-items: center; gap: 16px; }
+.chrome .k-tab { width: 30px; height: 30px; display: grid; place-items: center; background: var(--accent); color: var(--bg);
+               font: 900 20px/1 'Arris'; letter-spacing: 0; clip-path: polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%); }
+.chrome .k-brand { color: var(--ink); }
+.chrome .k-sl { opacity: .6; }
+.chrome .k-chip { display: inline-flex; align-items: center; height: 24px; padding: 1px; background: var(--ink); color: var(--bg);
+                font-size: 12px; letter-spacing: .1em; }
+.chrome .k-chip i { font-style: normal; width: 22px; height: 22px; display: grid; place-items: center; background: var(--bg); color: var(--ink); font-size: 17px; letter-spacing: 0; }
+.chrome .k-chip b { font-weight: 500; padding: 0 9px 0 8px; }
+.chrome .k-pager { display: flex; gap: 4px; align-items: center; }
+.chrome .k-pager s { width: 4px; height: 4px; background: var(--dim); opacity: .5; }
+.chrome .k-pager s.k-on { width: 24px; background: var(--ink); opacity: 1; }
+.chrome .k-idx b { color: var(--ink); font-weight: 500; }
+.k-xh { position: absolute; font: 200 24px/1 'Arris Mono'; color: var(--dim); }
+.k-xh1 { left: 30px; top: 24px; } .k-xh2 { right: 30px; top: 24px; } .k-xh3 { left: 30px; bottom: 22px; } .k-xh4 { right: 30px; bottom: 22px; }
+.k-strip { position: absolute; right: 38px; top: 240px; width: 20px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+          font: 500 13px/1 'Arris Mono'; color: var(--accent); }
+.k-strip .k-bars { display: flex; flex-direction: column; gap: 2px; width: 16px; }
+.k-strip .k-bars u { display: block; background: var(--accent); }
+.k-strip .k-n { writing-mode: vertical-rl; letter-spacing: .08em; }
+.k-strip .k-v { writing-mode: vertical-rl; font-size: 11px; font-weight: 400; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; color: var(--dim); }
+.caption { position: absolute; left: 96px; right: 96px; bottom: 44px; display: flex; justify-content: space-between; align-items: baseline; gap: 48px;
            font: 400 18px/1.3 'Arris Mono'; color: var(--dim); }
+.k-crop { position: absolute; border: 1px solid var(--line); background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.k-crop::before, .k-crop::after { content: ''; position: absolute; inset: -44px -1px; border-left: 1px solid var(--dim); border-right: 1px solid var(--dim);
+                              -webkit-mask: linear-gradient(#000 0 40px, transparent 40px calc(100% - 40px), #000 calc(100% - 40px)); opacity: .7; }
+.k-crop::after { inset: -1px -44px; border: 0; border-top: 1px solid var(--dim); border-bottom: 1px solid var(--dim);
+               -webkit-mask: linear-gradient(90deg, #000 0 40px, transparent 40px calc(100% - 40px), #000 calc(100% - 40px)); }
+.k-crop .k-sn { position: absolute; left: 18px; top: 18px; font: 400 12px/1 'Arris Mono'; letter-spacing: .1em; color: var(--dim); }
+.k-crop .k-codes { position: absolute; right: 18px; bottom: 16px; font: 400 12px/1.3 'Arris Mono'; letter-spacing: .1em; color: var(--dim); text-align: right; }
+.caption .k-stamp { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
 .label { font: 500 18px/1.2 'Arris Mono'; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
 .accent { color: var(--accent); }
 .accent2 { color: var(--accent2); }
@@ -81,17 +110,58 @@ def slide(name, palette, title):
     return deco
 
 
+# what each slide shows, for the tag in its chrome: (pictogram, slides)
+KINDS = {
+    'Family': ('◆', ['cover', 'family', 'weights', 'axes', 'grade', 'colophon']),
+    'Form': ('▣', ['origin', 'charset', 'figures', 'pixels', 'anatomy', 'squint']),
+    'Italic': ('◢', ['italic', 'italic-poster']),
+    'Text': ('¶', ['waterfall', 'editorial']),
+    'Scripts': ('◐', ['languages', 'cyrillic', 'greek', 'vietnamese']),
+    'Code': ('⌨', ['code', 'code-python', 'code-react', 'code-functional', 'ligatures', 'terminal']),
+    'Interface': ('◉', ['board', 'dash', 'telemetry', 'watches', 'compass', 'keys']),
+    'Signs': ('∑', ['math', 'features', 'exchange']),
+    'Poster': ('◈', ['field', 'swiss', 'riso', 'maze', 'garden']),
+}
+KIND = {name: (kind, icon) for kind, (icon, names) in KINDS.items() for name in names}
+STAMP = __import__('datetime').date.today().strftime('%m.%d.%Y')
+
+
 def page(i, n, name, palette, title, body, caption, css):
-    cap = f'<div class="caption"><span>{caption}</span><span>Arris · {i:02d}</span></div>' if caption is not None else ''
-    return (f'<section class="slide {palette} s-{name}"><div class="chrome"><span>Arris</span>'
-            f'<span>{esc(title)}</span><span>{i:02d} / {n:02d}</span></div>{body}{cap}</section>', css)
+    """A slide in the deck's chrome: a tab, the family, a tag for the kind of
+    slide and its title; a pager; crosshairs at the corners; a strip of code
+    up the right edge; a serial and the date under the caption."""
+    import hashlib
+    kind, icon = KIND[name]
+    h = hashlib.md5(name.encode()).hexdigest()
+    serial = f'SN-AR{i:02d}-{h[:6].upper()}'
+    pager = ''.join(f'<s class="{"k-on" if k == i else ""}"></s>' for k in range(1, n + 1))
+    bars = ''.join(f'<u style="height:{1 + int(c, 16) % 3}px"></u>' for c in h[6:16])
+    strip = (f'<div class="k-strip"><div class="k-bars">{bars}</div><span>✕</span><span>▣</span>'
+             f'<span class="k-n">{i:02d}</span><span class="k-n">{n:02d}</span>'
+             f'<span class="k-v">Arris ⁄ {kind} ⁄ “every corner cut on purpose”</span></div>')
+    marks = ''.join(f'<div class="k-xh k-xh{k}">+</div>' for k in range(1, 5))
+    cap = (f'<div class="caption"><span>{caption}</span><span class="k-stamp">{serial} ⁄ {STAMP}</span></div>'
+           if caption is not None else '')
+    chrome = (f'<div class="chrome"><div class="k-l"><span class="k-tab">A</span><span class="k-brand">Arris</span>'
+              f'<span class="k-chip"><i>{icon}</i><b>{kind}</b></span><span class="k-sl">/</span><span>{esc(title)}</span></div>'
+              f'<div class="k-r"><span class="k-pager">{pager}</span><span class="k-idx">[<b>{i:02d}</b>/{n:02d}]</span></div></div>')
+    return f'<section class="slide {palette} s-{name}">{chrome}{marks}{strip}{body}{cap}</section>', css
 
 
 # --- the slides --------------------------------------------------------------------------
 
+def _features():
+    """The OpenType features a reader can turn on in Arris Mono (not the
+    shaping ones the font applies by itself)."""
+    from fontTools.ttLib import TTFont
+    gsub = TTFont(BUILD / 'ArrisMono-Regular.ttf')['GSUB'].table
+    return sorted({r.FeatureTag for r in gsub.FeatureList.FeatureRecord} - {'ccmp', 'locl'})
+
+
 @slide('cover', 'night', 'A typeface')
 def cover():
     lines = ''.join(f'<div class="w w{w}" style="font-weight:{w}">Arris</div>' for w in (100, 300, 600, 900))
+    codes = '<br>'.join(t.upper() for t in _features())
     body = f"""
 <div class="stack">{lines}</div>
 <div class="side">
@@ -103,7 +173,8 @@ def cover():
     <div><span class="accent">2,150</span><br>characters: Latin, Cyrillic, Greek</div>
   </div>
   <div class="clock">10:08</div>
-</div>"""
+</div>
+<div class="k-crop cv"><span class="k-sn">SN-AR01<br>WGHT·GRAD·WTCH</span><div class="k-codes">{codes}</div></div>"""
     css = """
 .s-cover .stack { position:absolute; left: 84px; top: 128px; }
 .s-cover .w { font-size: 228px; line-height: .88; letter-spacing: -0.01em; }
@@ -112,6 +183,8 @@ def cover():
 .s-cover .side { position:absolute; left: 1060px; right: 96px; top: 150px; bottom: 110px; display:flex; flex-direction:column; }
 .s-cover .tag { font-size: 64px; font-style: italic; font-weight: 300; margin-top: 26px; }
 .s-cover .facts { margin-top: 64px; display:flex; flex-direction:column; gap: 30px; font: 400 28px/1.35 'Arris'; }
+.s-cover .cv { left: 1586px; top: 340px; width: 214px; height: 330px; }
+.s-cover .cv .k-codes { columns: 2; column-gap: 26px; }
 .s-cover .clock { margin-top: auto; font-size: 168px; font-weight: 600; font-variation-settings: 'WTCH' 100; color: var(--accent); line-height: .8; }
 """
     return body, 'Arris, Arris Mono, Arris Watch', css
@@ -1336,7 +1409,6 @@ def garden():
 <div class="scale mono"><span class="t">0</span><span class="bar"></span><span class="t">100 000 km</span></div>
 <div class="latin">per aspera ad astra</div>
 <div class="spec"><i>Rosa gallica</i> · flore giganteo</div>
-<div class="reg r1">+</div><div class="reg r2">+</div><div class="reg r3">+</div><div class="reg r4">+</div>
 <div class="scan"></div>"""
     css = f"""
 .s-garden {{ background: #03020a; }}
@@ -1368,15 +1440,12 @@ def garden():
 .s-garden .tc .rec {{ color: #ff2bd6; text-shadow: 0 0 8px #ff2bd6; }}
 .s-garden .latin {{ position:absolute; right: 96px; bottom: 72px; font: italic 300 30px/1 'Arris'; color: #c8ff3a; letter-spacing: .02em; text-shadow: 0 0 10px rgba(200,255,58,.35); }}
 .s-garden .spec {{ position:absolute; left: 96px; top: 372px; font: 400 17px/1 'Arris'; color: #ff8ad8; letter-spacing: .03em; }}
-.s-garden .reg {{ position:absolute; font: 200 30px/1 'Arris Mono'; color: #2d4a3a; }}
 .s-garden .lost {{ position:absolute; left: 1716px; top: 118px; font-size: 16px; line-height: 1.2; color: rgba(111, 211, 255, .45); }}
 .s-garden .lostl {{ position:absolute; right: 96px; top: 184px; text-align: right; font-size: 13px; line-height: 1.5; letter-spacing: .06em; color: #ff5fae;
                    text-shadow: -2px 0 rgba(0, 229, 255, .6), 2px 0 rgba(255, 0, 200, .5); }}
 .s-garden .lostl span {{ color: #6c8f80; text-shadow: none; }}
 .s-garden .scale {{ position:absolute; left: 1150px; top: 872px; display:flex; align-items:center; gap: 12px; font-size: 13px; color: #6c8f80; letter-spacing: .06em; }}
 .s-garden .scale .bar {{ display:inline-block; width: 240px; height: 7px; border: 1px solid #6c8f80; border-top: none; }}
-.s-garden .r1 {{ left: 40px; top: 30px; }} .s-garden .r2 {{ right: 40px; top: 30px; }}
-.s-garden .r3 {{ left: 40px; bottom: 26px; }} .s-garden .r4 {{ right: 40px; bottom: 26px; }}
 .s-garden .scan {{ position:absolute; inset:0; pointer-events:none;
                   background: repeating-linear-gradient(to bottom, rgba(255,255,255,.035) 0 1px, transparent 1px 3px);
                   box-shadow: inset 0 0 220px rgba(0,0,0,.85); }}
@@ -1390,18 +1459,31 @@ def colophon():
     from arris.glyphs.ligatures import LIGATURES
     stats = [('9', 'weights'), ('3', 'axes'), ('2,150', 'characters'), (str(len(LIGATURES)), 'ligatures'), ('6', 'families')]
     s = ''.join(f'<div><div class="n">{a}</div><div class="label">{b}</div></div>' for a, b in stats)
+    codes = '<br>'.join(f'{t.upper()}-{k:03d}' for k, t in enumerate(_features(), 1))
     body = f"""
 <div class="name">Arris</div>
 <div class="tag">a chamfered sans</div>
 <div class="stats">{s}</div>
-<div class="small mono">Arris · Arris Italic · Arris Mono · Arris Watch · variable wght GRAD WTCH</div>"""
+<div class="card">
+  <div class="h">Six families</div>
+  <div class="b mono">Arris · Arris Italic · Arris Mono · Arris Mono Italic · Arris Watch ·
+  Arris variable, wght 100–900, GRAD −100–100, WTCH 0–100</div>
+  <div class="row mono"><span>TTF</span><span>WOFF2</span><span>Variable</span><a>Specimen [↗]</a></div>
+</div>
+<div class="codes mono">{codes}</div>"""
     css = """
 .s-colophon .name { position:absolute; left: 80px; top: 100px; font-size: 380px; font-weight: 200; line-height: 1; }
 .s-colophon .tag { position:absolute; left: 96px; top: 470px; font-size: 64px; font-style: italic; font-weight: 300; color: var(--dim); }
 .s-colophon .stats { position:absolute; left: 96px; right: 96px; top: 640px; display:flex; justify-content:space-between; }
 .s-colophon .n { font-size: 130px; font-weight: 700; color: var(--accent); line-height: 1; }
 .s-colophon .stats .label { margin-top: 14px; }
-.s-colophon .small { position:absolute; left: 96px; bottom: 120px; font-size: 22px; color: var(--dim); }
+.s-colophon .card { position:absolute; left: 0; bottom: 0; width: 820px; height: 196px; background: var(--accent); color: var(--bg); padding: 24px 30px 0 96px; }
+.s-colophon .card .h { font: 800 34px/1 'Arris'; text-transform: uppercase; letter-spacing: .01em; }
+.s-colophon .card .b { margin-top: 14px; font-size: 15px; line-height: 1.35; letter-spacing: .06em; text-transform: uppercase; }
+.s-colophon .card .row { position:absolute; left: 96px; right: 0; bottom: 0; height: 46px; display:flex; align-items:center; gap: 34px;
+                         font-size: 15px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+.s-colophon .card .row a { margin-left: auto; align-self: stretch; display:grid; place-items:center; padding: 0 34px; background: var(--bg); color: var(--ink); }
+.s-colophon .codes { position:absolute; right: 96px; bottom: 50px; columns: 3; column-gap: 30px; font-size: 12px; line-height: 1.3; letter-spacing: .1em; color: var(--dim); text-align: right; }
 """
     return body, None, css
 

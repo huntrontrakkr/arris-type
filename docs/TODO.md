@@ -46,6 +46,14 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
 
 ## Carried over
 
+- **`tools/typeart.glyph_grids` fills the counters, not the ink**: it fills
+  each ring by the sign of its area as if outer contours ran
+  anticlockwise, but TrueType's run clockwise. The garden slide's ASCII
+  glitch layer was shape-matched against these inverted templates (it looks
+  right by accident). A nonzero-winding fill fixes it (tried 2026-10-22)
+  but changes which characters that layer picks: re-check the garden
+  slide with the user when fixing.
+
 - **Sloppiness pass**: `tools/jog_scan.py` for the remaining near-miss
   steps at Black (keep designed steps; fix the ones a few units apart).
 - **Presentation**: regenerate after every full rebuild (40 slides).

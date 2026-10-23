@@ -59,7 +59,10 @@ uv run python tools/presentation.py             # the presentation: presentation
 The presentation (`presentation/`) is forty slides set in the built
 fonts: the family, axes, figures and their pixel masters, the italic, text,
 languages, Mono in code and in a terminal, and applications from a
-departure board to a watch face. It renders with Playwright's Chromium.
+departure board to a watch face. Its chrome borrows from the graphic
+language of Bungie's *Marathon* (2026): a solid tab, a tag chip for the kind
+of slide, a pager, crosshairs, a strip of codes up the right edge, serials
+and date stamps. It renders with Playwright's Chromium.
 
 Fonts land in `build/`. Proof tools: `tools/master_sheet.py` (pixel
 masters), `tools/overlay.py` (constructions over masters),
