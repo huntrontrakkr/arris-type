@@ -1109,7 +1109,7 @@ def _wire_nav(cx, cy, R, W_, H_):
     for vis, run in _runs([fly(n / 2) for n in range(-30, 31)], lambda q: not hidden(q)):
         if vis:
             svg.append(f'<polyline points="{xy(run)}" class="burn"/>')
-    for n, lab in ((-60, 'T−12'), (-40, 'NOW'), (0, 'PJ'), (40, 'T+12')):
+    for n, lab in ((-60, 'T−12'), (-40, 'NAU'), (0, 'PJ'), (40, 'T+12')):
         q = fly(n)
         x, y = P(q[0], q[1])
         if hidden(q) or not (0 < x < W_ and 0 < y < H_):
@@ -1141,28 +1141,28 @@ def slingshot():
     gauges = ''.join(arc(x, 64, 52, f, c) for x, f, c in ((64, 1, 'gbg'), (64, 3.2 / 5, 'ghot'), (200, 1, 'gbg'), (200, .74, 'gon')))
     ticks = ''.join(f'<span class="{"big" if h % 10 == 0 else ""}" style="left:{(h - 241) * 12}px">'
                     f'{"<em>" + str(h) + "</em>" if h % 10 == 0 else ""}</span>' for h in range(241, 302))
-    events = [(0.06, 'ALIGN', ''), (0.22, 'JUICE', ''), (0.38, 'NOW', 'now'), (0.48, 'BURN', 'burn'), (0.62, 'PERIJOVE', 'pj'), (0.86, 'CUTOFF', '')]
+    events = [(0.06, 'LAINAP', ''), (0.22, 'JUS', ''), (0.38, 'NAU', 'now'), (0.48, 'BERN', 'burn'), (0.62, 'PERIJOV', 'pj'), (0.86, 'KATOF', '')]
     ev = ''.join(f'<div class="ev {c}" style="left:{f * 100:.0f}%"><i></i><span>{t}</span></div>' for f, t, c in events)
     # the chat: photo avatars, a few pixel ones, images posted
     av = lambda f: f'<img class="av" src="{src(f)}">'
     pix = lambda n: f'<span class="avp">{_avatar(n, 3)}</span>'
     crop = lambda f, pos: f'<span class="av" style="background-image:url({src(f)});background-position:{pos}"></span>'
     msgs = [
-        ('pin', None, 'dock_rat', '#6fd3ff', 'flight plan: slingshot, 3 g at perijove, home by Ceres-fall', None),
-        ('m', av('eva-pettit.jpg'), 'beltalowda_88', '#7cf29a', 'Oye, beratnas! juice time ⚡', None),
-        ('m', crop('redoute-rosa-gallica-flore-giganteo.jpg', '48% 28%'), 'mira.okonkwo', '#ff8ad8', 'sasa ke? why burn at perijove', None),
-        ('m', pix(3), 'dock_rat', '#6fd3ff', 'Oberth, kopeng. more Δv per kilo', 'MOD'),
-        ('m', av('eva-parmitano.jpg'), 'pilot_tanya', '#9ad6ff', '3 g? amateurs', ('stapp-sled.gif', 'GIF')),
-        ('cheer', av('cat-grass.jpg'), 'ceres_nights', '#ffd36b', 'taki bosmang, real coffee for the crew ♥', '500'),
+        ('pin', None, 'dock_rat', '#6fd3ff', 'flaitplan: slinshot, 3 g ka perijov, den gonya hom fo Ceres', None),
+        ('m', av('eva-pettit.jpg'), 'beltalowda_88', '#7cf29a', 'Oye, beratnas! taim fo jus ⚡', None),
+        ('m', crop('redoute-rosa-gallica-flore-giganteo.jpg', '48% 28%'), 'mira.okonkwo', '#ff8ad8', 'bern ka perijov, sasa ke?', None),
+        ('m', pix(3), 'dock_rat', '#6fd3ff', 'Oberth, kopeng. mo Δv fo im kilo', 'MOD'),
+        ('m', av('eva-parmitano.jpg'), 'pilot_tanya', '#9ad6ff', '3 g? dat fo inyalowda', ('stapp-sled.gif', 'GIF')),
+        ('cheer', av('cat-grass.jpg'), 'ceres_nights', '#ffd36b', 'taki bosmang, gut kofi fo to lowda ♥', '500'),
         ('m', crop('saturn-cassini-2004-10-06.jpg', '52% 50%'), 'nikos_r', '#6fd3ff', 'Μπράβο, καπετάνιε o7', None),
-        ('m', pix(11), 'linh.tran', '#ff8ad8', 'the copilot rn', ('ducreux-yawning.jpg', 'IMG')),
-        ('m', pix(12), 'hal_n_teo', '#ffd36b', 'Glasshouse says hi ♥', 'SUB 8'),
+        ('m', pix(11), 'linh.tran', '#ff8ad8', 'kopailot, nau', ('ducreux-yawning.jpg', 'IMG')),
+        ('m', pix(12), 'hal_n_teo', '#ffd36b', 'Glashaus sa oye ♥', 'SAB 8'),
     ]
     rows = []
     for k, (kind, a, user, col, text, extra) in enumerate(msgs):
         ts = f'03:{12 + k // 2:02d}'
         if kind == 'pin':
-            rows.append(f'<div class="pin"><span class="pk mono">◆ PINNED</span><b style="color:{col}">{esc(user)}</b><div>{esc(text)}</div></div>')
+            rows.append(f'<div class="pin"><span class="pk mono">◆ PIN</span><b style="color:{col}">{esc(user)}</b><div>{esc(text)}</div></div>')
             continue
         badge = ''
         post = ''
@@ -1181,28 +1181,33 @@ def slingshot():
 <div class="haze"></div>
 <div class="bore"><i></i></div>
 <div class="tape mono"><div class="ticks">{ticks}</div><div class="hd">271</div></div>
-<div class="att mono"><span>PITCH +04.2</span><span>YAW −11.0</span><span>ROLL 000.0</span></div>
+<div class="att mono"><span>PICH +04.2</span><span>YAU −11.0</span><span>ROL 000.0</span></div>
 <div class="mfd nav" style="left:{nx}px;top:{ny}px;width:{nw}px;height:{nh}px">
   <svg class="hud" width="{nw}" height="{nh}">{nav_svg}</svg>{nav_labels}
-  <div class="mh mono">NAV · FLYBY · PHASE 3/5</div>
+  <div class="mh mono">NAVI · FLAIBAI · FAS 3/5</div>
   <div class="mr mono">PJ 1.22 RJ<br>V∞ 14.1<br>e 1.55</div>
 </div>
 <div class="mfd cam" style="left:112px;top:560px;width:380px;height:300px">
   <img src="{src('nasa-b59-00723.jpg')}"><div class="red"></div><div class="scan"></div>
-  <div class="mh mono"><span class="rec">●</span> PILOT · CAM 2</div>
-  <div class="bio mono">3.2 g · HR 168 · SPO2 91% · GRAY-OUT RISK</div>
+  <div class="mh mono"><span class="rec">●</span> PAILOT · KAM 2</div>
+  <div class="bio mono">3.2 g · HARTA 168 · O2 91% · GREIAUT DANGA</div>
 </div>
-<div class="burnblk mono"><span>BURN IN</span><b>T−00:41</b></div>
+<div class="burnblk mono"><span>TAIM FO BERN</span><b>T−00:41</b></div>
 <div class="gg mono"><svg width="264" height="110">{gauges}</svg>
-  <div class="g1"><b>3.2</b>g LOAD</div><div class="g2"><b>74</b>% DRIVE</div></div>
+  <div class="g1"><b>3.2</b>g LOWD</div><div class="g2"><b>74</b>% DRAIV</div></div>
 <div class="tline mono"><div class="ax"></div>{ev}</div>
-<div class="flt mono"><span>VEL <b>61.4</b> km/s</span><span>ALT <b>18 220</b> km</span><span>Δv <b>42</b>%</span><span>OBERTH <b>+9.8</b></span></div>
+<div class="flt mono"><span>SPID <b>61.4</b> km/s</span><span>ALTO <b>18 220</b> km</span><span>Δv <b>42</b>%</span><span>OBERTH <b>+9.8</b></span></div>
+<div class="tips">
+  <div class="goal"><div class="gt mono">TIP GOL · nyu kofi masin</div><div class="gb"><i></i></div><div class="gn mono">312 / 500 ¢</div></div>
+  <div class="tip">{av('cat-tabby.jpg')}<div><div class="tt"><b>la_tormenta</b> da <span class="amt">25 ¢</span></div><div class="tm">“mo jus, kopeng!”</div></div></div>
+  <div class="tip big">{av('eva-pettit.jpg')}<div><div class="tt"><b>beltalowda_88</b> da <span class="amt">100 ¢</span></div><div class="tm">“fo Glashaus roses ♥ taki”</div></div></div>
+</div>
 <div class="chat">
-  <div class="sh">{pix(99)}<div><div class="mono s1"><span class="live">● LIVE</span> beltcast <span class="up">03:12:44</span></div>
-     <div class="s2">slingshot @ jupiter · 3 g · nobody pukes (again)</div>
-     <div class="s3 mono">{viewers}<span>14 312 watching</span></div></div></div>
+  <div class="sh">{pix(99)}<div><div class="mono s1"><span class="live">● LAIV</span> beltcast <span class="up">03:12:44</span></div>
+     <div class="s2">slinshot ka Jupita · 3 g · na mang vomit (wa?)</div>
+     <div class="s3 mono">{viewers}<span>14 312 lowda showxa</span></div></div></div>
   <div class="msgs">{''.join(rows)}</div>
-  <div class="in mono"><span>Send a message</span><span class="ic">o7 ☺ GIF</span></div>
+  <div class="in mono"><span>Sen mesaj, kopeng</span><span class="ic">o7 ☺ GIF</span></div>
 </div>
 <div class="glass"></div>
 <svg class="frame" width="1920" height="1080"><path fill-rule="evenodd" d="M0 0H1920V1080H0Z M150 92 H1770 L1880 202 V880 L1770 990 H150 L40 880 V202 Z"/>
@@ -1308,6 +1313,20 @@ def slingshot():
 .s-slingshot .chat .bits { font-size: 10px; color: #01030a; background: #ffb000; padding: 1px 6px; }
 .s-slingshot .chat .in { display:flex; justify-content: space-between; margin: 8px 12px 14px; padding: 9px 12px; border: 1px solid rgba(155,120,255,.45); color: #8e82b4; font-size: 13px; }
 .s-slingshot .chat .ic { color: #ff8ad8; }
+.s-slingshot .tips { position:absolute; left: 1040px; top: 228px; width: 290px; display:flex; flex-direction: column; gap: 10px; }
+.s-slingshot .tips .goal { padding: 10px 12px; background: rgba(12, 8, 26, .82); border: 1px solid rgba(255,176,0,.5); }
+.s-slingshot .tips .gt { font-size: 11px; letter-spacing: .16em; color: #ffb000; }
+.s-slingshot .tips .gb { height: 8px; margin: 8px 0 6px; background: rgba(255,176,0,.18); }
+.s-slingshot .tips .gb i { display:block; width: 62%; height: 100%; background: repeating-linear-gradient(90deg, #ffb000 0 8px, #ffcf5a 8px 10px); box-shadow: 0 0 8px #ff8a00; }
+.s-slingshot .tips .gn { font-size: 11px; color: #ffd9a0; text-align: right; }
+.s-slingshot .tips .tip { display:flex; gap: 10px; align-items: center; padding: 9px 12px; background: linear-gradient(90deg, rgba(255,43,214,.32), rgba(12,8,26,.85));
+                          border-left: 3px solid #ff2bd6; box-shadow: 0 0 18px rgba(255,43,214,.25); }
+.s-slingshot .tips .tip.big { background: linear-gradient(90deg, rgba(255,176,0,.36), rgba(12,8,26,.85)); border-left-color: #ffb000; box-shadow: 0 0 22px rgba(255,176,0,.3); }
+.s-slingshot .tips .av { flex: none; width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+.s-slingshot .tips .tt { font: 400 15px 'Arris'; color: #fff; }
+.s-slingshot .tips .tt b { font-weight: 700; }
+.s-slingshot .tips .amt { font: 700 15px 'Arris'; color: #ffd36b; }
+.s-slingshot .tips .tm { font: italic 400 14px 'Arris'; color: #f1e6ff; }
 .s-slingshot .glass { position:absolute; inset:0; pointer-events:none;
    background: linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(190,230,255,.06) 38%, rgba(255,255,255,0) 44%),
                linear-gradient(115deg, rgba(255,255,255,0) 52%, rgba(190,230,255,.035) 55%, rgba(255,255,255,0) 58%),
