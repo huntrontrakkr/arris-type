@@ -397,26 +397,212 @@ def anatomy():
     return body, 'Cap height 0.72 em, x-height 0.54 em', css
 
 
-@slide('squint', 'paper', 'White that reads')
+SERIES = ['#c98000', '#00a1cb', '#ea5098', '#73a500']   # validated (dataviz) on the night surface: band, CVD, contrast
+
+
+def _optics_data():
+    """Measured: each round's overshoot past its lines (mean of top and
+    bottom, per cent of its zone) and the optical centre's rise (per cent of
+    the zone) at each weight, from the engine with and without
+    draw.OPTICAL."""
+    sys.path.insert(0, str(ROOT / 'src'))
+    import arris.glyphs  # noqa: F401
+    import arris.draw as D
+    from arris.font import place
+    from arris.instances import params
+    cfg = D.OPTICAL
+    W = list(range(100, 901, 100))
+    over = {}
+    for label, n, zone in (('O', 'O', 720), ('C G S', 'S', 720), ('0 8', 'zero', 720), ('o c', 'o', 540)):
+        row = []
+        for w in W:
+            p = params(w)
+            D.OPTICAL = None
+            r0, _ = place(n, p)
+            D.OPTICAL = cfg
+            r1, _ = place(n, p)
+            y0 = [q[1] for r in r0 for q in r]
+            y1 = [q[1] for r in r1 for q in r]
+            row.append(100 * ((max(y1) - max(y0)) + (min(y0) - min(y1))) / 2 / zone)
+        over[label] = row
+    centre = {}
+    for label, n, zone in (('Capitals · B E H 8', 'B', 720), ('Lowercase · a e', 'e', 540)):
+        row = []
+        for w in W:
+            g = D.draw(n, params(w))                          # the correction as applied: its warp at the middle
+            f = getattr(g, 'warp', None)
+            row.append(100 * (f(zone / 2) - zone / 2) / zone if f else 0.0)
+        centre[label] = row
+    return W, over, centre
+
+
+def _chart(W, series, x0, y0, w, h, ymax, yticks, unit, area=False, gid='c'):
+    """A thin-line chart over weight, as SVG: recessive grid, a gradient wash
+    under each line, a dot and a direct label (ink, beside a colour chip)
+    at each line's end."""
+    X = lambda wt: x0 + (wt - W[0]) / (W[-1] - W[0]) * w
+    Y = lambda v: y0 + h - v / ymax * h
+    out = [f'<defs>']
+    for k, name in enumerate(series):
+        c = SERIES[k]
+        out.append(f'<linearGradient id="{gid}{k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{c}" stop-opacity=".34"/>'
+                   f'<stop offset="1" stop-color="{c}" stop-opacity="0"/></linearGradient>')
+    out.append('</defs>')
+    for t in yticks:
+        out.append(f'<line x1="{x0}" y1="{Y(t):.1f}" x2="{x0 + w}" y2="{Y(t):.1f}" class="gl"/>'
+                   f'<text x="{x0 - 12}" y="{Y(t) + 5:.1f}" class="yt">{t:g}{unit}</text>')
+    for wt, lab in ((100, 'Thin'), (400, 'Regular'), (700, 'Bold'), (900, 'Black')):
+        out.append(f'<text x="{X(wt):.1f}" y="{y0 + h + 28}" class="xt">{lab}</text>'
+                   f'<line x1="{X(wt):.1f}" y1="{y0 + h}" x2="{X(wt):.1f}" y2="{y0 + h + 7}" class="gl"/>')
+    labels = []
+    for k, (name, vals) in enumerate(series.items()):
+        c = SERIES[k]
+        pts = ' '.join(f'{X(wt):.1f},{Y(v):.1f}' for wt, v in zip(W, vals))
+        if area:
+            out.append(f'<polygon points="{X(W[0]):.1f},{Y(0):.1f} {pts} {X(W[-1]):.1f},{Y(0):.1f}" fill="url(#{gid}{k})"/>')
+        out.append(f'<polyline points="{pts}" class="ln" stroke="{c}" style="color:{c}"/>')
+        out.append(f'<circle cx="{X(W[-1]):.1f}" cy="{Y(vals[-1]):.1f}" r="5" fill="{c}" class="dot"/>'
+                   f'<circle cx="{X(W[0]):.1f}" cy="{Y(vals[0]):.1f}" r="5" fill="{c}" class="dot"/>')
+        labels.append([Y(vals[-1]), name, c, vals[-1], vals[0]])
+    labels.sort()
+    for i in range(1, len(labels)):                               # keep the end labels apart
+        labels[i][0] = max(labels[i][0], labels[i - 1][0] + 24)
+    for yy, name, c, last, first in labels:
+        out.append(f'<rect x="{x0 + w + 16}" y="{yy - 6:.1f}" width="12" height="12" rx="2" fill="{c}"/>'
+                   f'<text x="{x0 + w + 36}" y="{yy + 5:.1f}" class="dl">{esc(name)}<tspan class="dv" dx="10">{first:.2f} → {last:.2f}{unit}</tspan></text>')
+    return ''.join(out)
+
+
+def _outline_svg(names, w, scale, ox, base, cls, warp=True):
+    """Glyph outlines from the engine as one SVG path (even-odd), set side
+    by side from ox along a baseline at y = base (SVG down), at a weight."""
+    import arris.draw as D
+    from arris.font import place
+    from arris.instances import params
+    cfg = D.OPTICAL
+    D.OPTICAL = cfg if warp else None
+    x, d = ox, []
+    try:
+        for n in names:
+            rings, adv = place(n, params(w))
+            for r in rings:
+                d.append('M' + ' L'.join(f'{x + q[0] * scale:.2f},{base - q[1] * scale:.2f}' for q in r) + 'Z')
+            x += adv * scale
+    finally:
+        D.OPTICAL = cfg
+    return f'<path d="{" ".join(d)}" class="{cls}" fill-rule="evenodd"/>', x
+
+
+@slide('squint', 'night', 'White that reads')
 def squint():
-    word = '8 B 0 3 5 6 9 @ ₦'
-    rows = ''.join(f'<div class="r"><span class="label">{lab}</span><span class="g" style="filter: blur({b}px)">{esc(word)}</span></div>'
-                   for lab, b in (('Sharp', 0), ('Squint', 3), ('Squint harder', 6)))
+    W, over, centre = _optics_data()
+    glyphs = ''.join(f'<span style="filter: blur({b}px)">{esc(ch)}</span>'
+                     for ch, b in zip('8B03@₦6', (0, 0.8, 1.6, 2.4, 3.2, 4.2, 5.4)))
+    # overshoot, magnified: H and S at Regular on the cap line, a lens on S's top
+    from arris.font import place
+    from arris.instances import params
+    sc, base = 0.38, 410
+    h_s, xe = _outline_svg(['H', 'S'], 400, sc, 16, base, 'ink')
+    cap_y = base - 720 * sc
+    adv_h = place('H', params(400))[1] * sc
+    s_rings, adv_s = place('S', params(400))
+    top = max(q[1] for r in s_rings for q in r)
+    xs_top = [q[0] for r in s_rings for q in r if q[1] > top - 0.5]
+    fx = 16 + adv_h + (min(xs_top) + max(xs_top)) / 2 * sc     # the middle of S's top edge
+    fy = cap_y
+    k, R, lc = 20, 62, (150, 66)
+    lens = (f'<clipPath id="lens"><circle cx="{lc[0]}" cy="{lc[1]}" r="{R}"/></clipPath>'
+            f'<line x1="{fx:.1f}" y1="{fy - 2:.1f}" x2="{lc[0] + R * 0.8:.1f}" y2="{lc[1] + R * 0.6:.1f}" class="lensarm"/>'
+            f'<g clip-path="url(#lens)"><rect x="{lc[0] - R}" y="{lc[1] - R}" width="{2 * R}" height="{2 * R}" class="lensbg"/>'
+            f'<g transform="translate({lc[0]},{lc[1]}) scale({k}) translate({-fx:.2f},{-fy:.2f})">{h_s}'
+            f'<line x1="0" y1="{cap_y:.2f}" x2="700" y2="{cap_y:.2f}" class="capln" vector-effect="non-scaling-stroke"/></g></g>'
+            f'<circle cx="{lc[0]}" cy="{lc[1]}" r="{R}" class="lensring"/>'
+            f'<circle cx="{fx:.1f}" cy="{fy - 1:.1f}" r="4" class="focus"/>')
+    o_s = top - 720
+    shoot = (f'<svg class="ov" width="530" height="440">'
+             f'<line x1="0" y1="{base}" x2="530" y2="{base}" class="ruler"/><line x1="0" y1="{cap_y:.1f}" x2="530" y2="{cap_y:.1f}" class="capln"/>'
+             f'<text x="526" y="{cap_y - 8:.1f}" class="lineL">cap line</text><text x="526" y="{base - 8:.1f}" class="lineL">baseline</text>'
+             f'{h_s}{lens}<text x="{lc[0] + R + 16}" y="{lc[1] - 4}" class="ann">+{o_s:.1f} units</text>'
+             f'<text x="{lc[0] + R + 16}" y="{lc[1] + 20}" class="ann2">S past the cap line, at Regular;</text>'
+             f'<text x="{lc[0] + R + 16}" y="{lc[1] + 40}" class="ann2">H stays on it</text></svg>')
+    # the optical centre: B at Light, as drawn (grey) and as corrected (outline)
+    sb, bb = 0.48, 400
+    b0, xb = _outline_svg(['B'], 300, sb, 16, bb, 'ghost', warp=False)
+    b1, _ = _outline_svg(['B'], 300, sb, 16, bb, 'edge')
+    mid = bb - 360 * sb
+    b_rings, _ = place('B', params(300))
+    import arris.draw as D
+    gB = D.draw('B', params(300))
+    rise = gB.warp(360.0) - 360.0
+    cen = (f'<svg class="ce" width="390" height="440">'
+           f'<line x1="0" y1="{mid:.1f}" x2="390" y2="{mid:.1f}" class="midln"/>'
+           f'<line x1="0" y1="{bb}" x2="390" y2="{bb}" class="ruler"/><line x1="0" y1="{bb - 720 * sb:.1f}" x2="390" y2="{bb - 720 * sb:.1f}" class="ruler"/>'
+           f'{b0}{b1}<text x="386" y="{mid + 20:.1f}" class="lineL">geometric</text><text x="386" y="{mid + 36:.1f}" class="lineL">middle</text>'
+           f'<text x="{xb + 16:.0f}" y="{bb - 720 * sb + 34:.1f}" class="ann">+{rise:.0f}</text>'
+           f'<text x="{xb + 16:.0f}" y="{bb - 720 * sb + 56:.1f}" class="ann2">units up,</text>'
+           f'<text x="{xb + 16:.0f}" y="{bb - 720 * sb + 74:.1f}" class="ann2">at Light</text>'
+           f'<rect x="{xb + 16:.0f}" y="{bb - 92:.1f}" width="12" height="12" class="kg"/><text x="{xb + 34:.0f}" y="{bb - 81:.1f}" class="ann2">drawn</text>'
+           f'<rect x="{xb + 16:.0f}" y="{bb - 66:.1f}" width="12" height="12" class="kc"/><text x="{xb + 34:.0f}" y="{bb - 55:.1f}" class="ann2">seen</text></svg>')
+    ch1 = _chart(W, over, 70, 40, 560, 200, 0.9, (0, 0.3, 0.6, 0.9), '%', gid='o')
+    ch2 = _chart(W, centre, 70, 40, 560, 200, 4, (0, 1, 2, 3, 4), '%', area=True, gid='m')
     body = f"""
-<div class="head"><h2>Blur it, and the counters stay.</h2>
-<p>Every hole and every slot between two parts is measured under a model squint, a blur five per cent of the cap height wide.
-White that would close is opened: bars thin, rings grow, a stem steps aside.</p></div>
-<div class="rows">{rows}</div>"""
+<div class="glow g1"></div><div class="glow g2"></div>
+<div class="head"><div class="label kick">Optical corrections · measured, not guessed</div>
+<h2>Blur it, and the counters stay.</h2>
+<p>Every hole and slot is measured under a model squint, a blur five per cent of the cap height wide, and white that would close
+is opened. Then the two corrections type has always made by eye, made by measurement: round letters reach past the lines,
+and every middle sits a little high.</p></div>
+<div class="strip"><div class="sl label">Sharp</div><div class="gs">{glyphs}</div><div class="sl label r">Squint</div></div>
+<div class="card c1"><div class="ct label">Overshoot</div><div class="cs">A round top touches the line at fewer points than a flat one,
+so it looks short. Each round letter reaches past by what a blur, calibrated on a circle, says it needs.</div>{shoot}</div>
+<div class="card c2"><div class="ct label">Optical centre</div><div class="cs">The eye finds the middle above the middle. Bars rise
+until the top counter is 0.86 of the bottom one; strokes keep their weight.</div>{cen}</div>
+<div class="card c3"><div class="ct label">Overshoot by weight · per cent of the line height</div><svg width="860" height="290">{ch1}</svg></div>
+<div class="card c4"><div class="ct label">Middle raised by weight · per cent of the zone</div><svg width="860" height="290">{ch2}</svg></div>"""
     css = """
-.s-squint .head { position:absolute; left:96px; top:130px; width: 1500px; }
-.s-squint h2 { font-size: 84px; font-weight: 700; line-height: 1.02; }
-.s-squint .head p { font-size: 30px; line-height: 1.45; margin-top: 22px; color: #3b3832; max-width: 1300px; }
-.s-squint .rows { position:absolute; left:96px; right:96px; top: 470px; bottom: 110px; display:flex; flex-direction:column; justify-content:space-between; }
-.s-squint .r { display:flex; align-items:center; gap: 40px; }
-.s-squint .r .label { width: 230px; flex:none; }
-.s-squint .g { font-size: 140px; font-weight: 900; line-height: 1; white-space: nowrap; letter-spacing: .02em; }
+.s-squint .glow { position:absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; }
+.s-squint .g1 { left: 980px; top: 300px; width: 760px; height: 520px; background: radial-gradient(circle, rgba(0,161,203,.16), transparent 70%); }
+.s-squint .g2 { left: 80px; top: 560px; width: 760px; height: 420px; background: radial-gradient(circle, rgba(201,128,0,.14), transparent 70%); }
+.s-squint .head { position:absolute; left:96px; top:112px; width: 1180px; }
+.s-squint .kick { color: var(--accent); }
+.s-squint h2 { font-size: 60px; font-weight: 800; line-height: 1.02; margin-top: 10px; letter-spacing: -0.005em; }
+.s-squint .head p { font-size: 21px; line-height: 1.5; margin-top: 14px; color: #bdb5a6; }
+.s-squint .strip { position:absolute; left: 1330px; right: 96px; top: 118px; height: 210px; display:flex; flex-direction: column; justify-content: center;
+                   padding: 0 26px; border: 1px solid #2a2e33; background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,0) 60%); border-radius: 6px; }
+.s-squint .strip .gs { font: 900 64px/1 'Arris'; color: var(--ink); display:flex; justify-content: space-between; margin: 10px 0; }
+.s-squint .strip .sl { font-size: 13px; } .s-squint .strip .sl.r { text-align: right; }
+.s-squint .card { position:absolute; border: 1px solid #2a2e33; border-radius: 6px; padding: 18px 22px;
+                  background: linear-gradient(160deg, rgba(255,255,255,.055), rgba(255,255,255,.01) 55%, rgba(255,255,255,0));
+                  box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+.s-squint .ct { color: var(--ink); font-size: 14px; letter-spacing: .14em; }
+.s-squint .cs { margin-top: 8px; font: 400 15px/1.45 'Arris'; color: #9d968a; }
+.s-squint .c1 { left: 96px; top: 368px; width: 560px; height: 600px; }
+.s-squint .c2 { left: 676px; top: 368px; width: 420px; height: 600px; }
+.s-squint .c3 { left: 1116px; top: 368px; width: 708px; height: 292px; }
+.s-squint .c4 { left: 1116px; top: 676px; width: 708px; height: 292px; }
+.s-squint .card svg { position:absolute; left: 0; bottom: 0; overflow: visible; }
+.s-squint .c3 svg, .s-squint .c4 svg { left: 4px; bottom: 4px; transform: scale(.8); transform-origin: 0 100%; }
+.s-squint .c1 svg { left: 16px; bottom: 26px; } .s-squint .c2 svg { left: 14px; bottom: 26px; }
+.s-squint svg .ink { fill: #f1ebdd; } .s-squint svg .ghost { fill: rgba(241,235,221,.22); }
+.s-squint svg .edge { fill: none; stroke: #00a1cb; stroke-width: 2; }
+.s-squint svg .ruler { stroke: #3a3f45; stroke-width: 1; }
+.s-squint svg .capln { stroke: #c98000; stroke-width: 1.5; }
+.s-squint svg .midln { stroke: #c98000; stroke-width: 1.5; stroke-dasharray: 6 5; }
+.s-squint svg .lensbg { fill: #0c0e10; }
+.s-squint svg .focus { fill: none; stroke: #c98000; stroke-width: 2; }
+.s-squint svg .lineL { font: 400 12px 'Arris Mono'; fill: #6f6a60; text-anchor: end; letter-spacing: .08em; }
+.s-squint svg .kg { fill: rgba(241,235,221,.22); } .s-squint svg .kc { fill: none; stroke: #00a1cb; stroke-width: 2; }
+.s-squint svg .lensring { fill: none; stroke: #c98000; stroke-width: 2.5; filter: drop-shadow(0 0 8px rgba(201,128,0,.6)); }
+.s-squint svg .lensarm { stroke: #c98000; stroke-width: 1.5; }
+.s-squint svg .ann { font: 700 30px 'Arris'; fill: #f1ebdd; } .s-squint svg .ann2 { font: 400 13px 'Arris Mono'; fill: #9d968a; letter-spacing: .06em; }
+.s-squint svg .gl { stroke: #2a2e33; stroke-width: 1; }
+.s-squint svg .yt { font: 400 14px 'Arris Mono'; fill: #6f6a60; text-anchor: end; }
+.s-squint svg .xt { font: 400 14px 'Arris Mono'; fill: #6f6a60; text-anchor: middle; }
+.s-squint svg .ln { fill: none; stroke-width: 2.5; stroke-linejoin: round; filter: drop-shadow(0 0 5px currentColor); }
+.s-squint svg .dot { stroke: #0c0e10; stroke-width: 2; }
+.s-squint svg .dl { font: 600 16px 'Arris'; fill: #f1ebdd; } .s-squint svg .dv { font: 400 13px 'Arris Mono'; fill: #9d968a; }
 """
-    return body, 'Arris Black; the squint rule is the vision model’s, in arris.vision', css
+    return body, 'Measured in arris.vision and draw.OPTICAL; WTCH 100 keeps the watch’s pixel-exact drawing', css
 
 
 @slide('italic', 'paper', 'The italic')
