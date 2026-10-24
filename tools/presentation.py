@@ -550,11 +550,12 @@ def squint():
 <div class="head"><div class="label kick">Optical corrections · measured, not guessed</div>
 <h2>Blur it, and the counters stay.</h2>
 <p>Every hole and slot is measured under a model squint, a blur five per cent of the cap height wide, and white that would close
-is opened. Then the two corrections type has always made by eye, made by measurement: round letters reach past the lines,
-and every middle sits a little high.</p></div>
+is opened. Then the two corrections type has always made by eye, made by measurement: letters whose bowls turn at cut corners
+reach past the lines, and every middle sits a little high.</p></div>
 <div class="strip"><div class="sl label">Sharp</div><div class="gs">{glyphs}</div><div class="sl label r">Squint</div></div>
-<div class="card c1"><div class="ct label">Overshoot</div><div class="cs">A round top touches the line at fewer points than a flat one,
-so it looks short. Each round letter reaches past by what a blur, calibrated on a circle, says it needs.</div>{shoot}</div>
+<div class="card c1"><div class="ct label">Overshoot</div><div class="cs">Arris has no curves, but its bowls are octagons: S's top
+turns down at 45° at both ends, so it holds less ink at the line than H's square-cut stems and looks short. A blur says by how much, and the top
+reaches past by that.</div>{shoot}</div>
 <div class="card c2"><div class="ct label">Optical centre</div><div class="cs">The eye finds the middle above the middle. Bars rise
 until the top counter is 0.86 of the bottom one; strokes keep their weight.</div>{cen}</div>
 <div class="card c3"><div class="ct label">Overshoot by weight · per cent of the line height</div><svg width="860" height="290">{ch1}</svg></div>
