@@ -203,15 +203,26 @@ def _tt_glyph(contours, lsb):
 
 
 def _notdef(p: Params):
-    pen = TTGlyphPen(None)
-    w, h, s = 480, 720, 60
-    for c in ([(40, 0), (40, h), (40 + w, h), (40 + w, 0)],
-              [(40 + s, s), (40 + w - s, s), (40 + w - s, h - s), (40 + s, h - s)]):
-        pen.moveTo(c[0])
-        for q in c[1:]:
-            pen.lineTo(q)
-        pen.closePath()
-    return pen.glyph(), 560
+    """The missing glyph: a chamfered octagon (Arris's O, opened up to a
+    box) with the scissors inside, cutting corners where it can. One
+    drawing, at Regular, in every weight and master (it does not vary)."""
+    from .draw import Glyph, draw
+    from .glyphs.shapes import ring
+    from .glyphs.symkit import _scaled
+    from .instances import params
+    q = params(400)
+    W, H, lsb = 480, 720, 40
+    g = Glyph(q, W=W)
+    ring(g, W / 2, H / 2, W, H)
+    full = [pt for r in draw('uni2702', q).rings() for pt in r]
+    fw = max(x for x, _ in full) - min(x for x, _ in full)
+    k = (W - 2.8 * q.sv) / fw                               # the scissors fill the box, 0.4 of a stroke clear of each wall
+    sub = draw('uni2702', _scaled(q, k))
+    pts = [pt for r in sub.rings() for pt in r]
+    x0, x1 = min(x for x, _ in pts), max(x for x, _ in pts)
+    y0, y1 = min(y for _, y in pts), max(y for _, y in pts)
+    g.add_glyph(sub, W / 2 - (x0 + x1) / 2, H / 2 - (y0 + y1) / 2)
+    return _tt_glyph(_contours(g.rings()), lsb), W + 2 * lsb
 
 
 KERN_PUNCT = {'period', 'comma', 'colon', 'semicolon', 'hyphen', 'endash', 'emdash', 'quotesingle', 'quotedbl',

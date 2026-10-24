@@ -214,6 +214,7 @@ def _more(tag):
 def fea(mono: bool = False) -> str:
     """The feature file (the monospaced cut adds its programming ligatures)."""
     figs = ' '.join(FIGS)
+    px = ' '.join(f'{n}.px' for n in FIGS)
     sm = {s: ' '.join(f'{n}.{s}' for n in FIGS) for s in ('sups', 'subs', 'numr', 'dnom', 'pnum')}
     case = '\n'.join(f'    sub {n} by {n}.case;' for n in CASE)
     from ..draw import FEATURE_CODE, LANGSYS
@@ -230,7 +231,8 @@ languagesystem latn dflt;
 @subs = [{sm['subs']}];
 @numr = [{sm['numr']}];
 @dnom = [{sm['dnom']}];
-@anyfig = [{figs} {sm['pnum']} zero.zero zero.dot five.ss02];
+@px = [{px}];
+@anyfig = [{figs} {sm['pnum']} zero.zero zero.dot five.ss02 {px}];
 
 feature tnum {{ sub @pnum by @figs; }} tnum;
 feature pnum {{ sub @figs by @pnum; }} pnum;
@@ -246,6 +248,13 @@ feature ss02 {{
 feature calt {{
     sub @anyfig colon' @anyfig by colon.tf;
 }} calt;
+feature ss20 {{
+    featureNames {{ name "Watch pixels"; }};
+    sub @figs by @px;
+    sub @pnum by @px;
+    sub [zero.zero zero.dot] by zero.px;
+    sub five.ss02 by five.px;
+}} ss20;
 feature sups {{ sub @figs by @sups;{_more('sups')} }} sups;
 feature subs {{ sub @figs by @subs;{_more('subs')} }} subs;
 feature sinf {{ sub @figs by @subs;{_more('sinf')} }} sinf;

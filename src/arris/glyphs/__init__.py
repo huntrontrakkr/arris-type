@@ -18,4 +18,5 @@ from . import genpunct, supsubs, currency, letterlike, numberforms  # noqa: E402
 ALIASES.update(genpunct.ALIASES | letterlike.ALIASES | numberforms.ALIASES)
 from . import arrows, operators, technical  # noqa: E402,F401  (arrows, operators, technical symbols)
 from . import features  # noqa: E402,F401  (variants of everything above)
+from . import origin  # noqa: E402,F401  (ss20: the watch's pixel figures)
 from . import ligatures  # noqa: E402,F401  (the monospaced cut's programming ligatures)
