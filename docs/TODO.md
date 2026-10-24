@@ -60,6 +60,16 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
 
 ## Exploring
 
+- **A Text optical size (shelved 2026-10-23).** Trials on one paragraph at
+  11 pt (proofs/text-opsz-trial.png): exit tails and entry flags on the stem
+  letters and curved chamfers made it flow but read like an accessibility
+  face (OpenDyslexic, Lexend), not Arris; drop them. Longer extenders and a
+  520 x-height read naturally. Earlier trial proofs were drawn without
+  anti-aliasing, which made the weight look uneven: proof text anti-aliased.
+  Next, if resumed: measure Arris against established reading sans (x-height,
+  extenders, widths, spacing, word space) and change only where it is an
+  outlier; then an opsz axis.
+
 - **Japanese and Chinese**: scoping notes in `docs/research/cjk.md`
   (kana first, a 100-kanji pilot from pixel masters and from components,
   separate CJK families).

@@ -283,3 +283,35 @@ def fused(rings, sv: float, cap: float = 720.0, zones=()):
     return [(q, kind, d) for q, kind, d in narrow_whites(rings, sv, cap)
             if kind in ('hole', 'slot') and d < READS
             and (not zones or any(q.intersects(z) for z in zones))]
+
+
+OVERSHOOT_KAPPA = 0.1192   # silhouette blur (share of the zone height) at which a circle needs a 1.5% overshoot
+
+
+def overshoot_need(rings, zone: float, kappa: float = OVERSHOOT_KAPPA):
+    """(top, bottom) in font units that a glyph should reach past the zone
+    (0 to ``zone``) to look as tall as a flat-edged form: its convex hull
+    (openings do not count) blurred with sigma = kappa * zone, against the
+    box it fills between the lines, compared at the half level. A flat top
+    needs nothing; a chamfered or round one what its corners cost."""
+    from shapely.geometry import MultiPoint
+    pts = [q[:2] for r in rings for q in r]
+    if len(pts) < 3:
+        return 0.0, 0.0
+    hull = MultiPoint(pts).convex_hull
+    if hull.geom_type != 'Polygon':
+        return 0.0, 0.0
+    from shapely.geometry import box as _box
+    band = hull.intersection(_box(-1e4, 0, 1e4, zone))
+    if band.is_empty or band.geom_type != 'Polygon':
+        return 0.0, 0.0
+    x0, _, x1, _ = band.bounds
+    ring = [list(band.exterior.coords)[:-1]]
+    if _area(ring[0]) < 0:
+        ring = [ring[0][::-1]]
+    w = x1 - x0
+    b1, t1 = silhouette_extent(ring, kappa, cap=zone, px_per_cap=160, x0=x0 - 20, w=w + 40, lo=0, hi=zone)
+    b0, t0 = silhouette_extent(rect_rings(x0, 0, x1, zone), kappa, cap=zone, px_per_cap=160, x0=x0 - 20, w=w + 40, lo=0, hi=zone)
+    if any(v != v for v in (b0, t0, b1, t1)):
+        return 0.0, 0.0
+    return max(t0 - t1, 0.0), max(b1 - b0, 0.0)

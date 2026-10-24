@@ -397,17 +397,19 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     moved: dict = {}
     for poly in u.geoms:
         poly = orient(poly, sign=1.0)
-        rings.append(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt), POLISH * c, moved))
+        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt), POLISH * c, moved))
+            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
     if rec is not None and moved:
         _follow(rec, moved)
     return rings
 
 
 MIN_COUNTER = 0.2   # pinholes (under a fifth of a stem, squared) fill in
+JOG = 1.0           # a step between parallel edges shorter than this share of the chamfer leg is closed (_close_jogs)
+STRAY = 3.0         # degrees: a vertex bending less than this between two long edges goes (_close_jogs)
 POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
 SLIT = 0.35         # white narrower than twice this share of the chamfer leg, and long, is a slit
 
@@ -453,6 +455,112 @@ def _fill_slits(u, eps):
         if topology(v) == t0:
             u = v
     return u
+
+
+def _line_meet(p1, d1, p2, d2):
+    """Where the line through p1 along d1 meets the line through p2 along
+    d2 (None if they are parallel)."""
+    den = _cross(d1, d2)
+    if abs(den) < 1e-9:
+        return None
+    t = _cross(_sub(p2, p1), d2) / den
+    return _add(p1, _mul(d1, t))
+
+
+def _close_jogs(pts, eps, moved):
+    """Steps left where strokes that should share a line miss it, larger
+    than _polish's slivers but still far smaller than a drawn step (a pixel
+    step is a module; this is at most a corner break): a short edge between
+    two edges running the same way. The shorter of those two moves onto the
+    longer's line, its far end sliding along its own other neighbour, and
+    the step's two vertices go: every edge keeps its direction (a right
+    angle stays one, a diagonal stays on its 45 or 2:1), only lengths change.
+    A move that would carry a point further than the step is long and a
+    module more is not made (the step is a feature, not a miss). A vertex
+    bending less than STRAY degrees between two long edges also goes.
+    Choices are made by geometry alone, so a symmetric drawing stays
+    symmetric."""
+    pts = list(pts)
+    # vertices on a straight line (a stroke's end inside another's edge):
+    # no corner there, and they hide the jogs beside them
+    i = 0
+    while len(pts) > 3 and i < len(pts):
+        n = len(pts)
+        a, b, c2 = pts[i - 1], pts[i], pts[(i + 1) % n]
+        u, v = _sub(b, a), _sub(c2, b)
+        if _len(u) > 1e-9 and _len(v) > 1e-9 and abs(_cross(_unit(u), _unit(v))) < 0.005 and _dot(u, v) > 0:
+            moved[b] = b
+            del pts[i]
+            continue
+        i += 1
+    cx = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2 if pts else 0.0
+    skip = set()
+    while len(pts) > 5:
+        n = len(pts)
+        best = None
+        for i in range(n):
+            a, b = pts[i], pts[(i + 1) % n]
+            L = _len(_sub(b, a))
+            if L < eps and (a, b) not in skip:
+                key = (round(L, 6), round((a[1] + b[1]) / 2, 6), round(abs((a[0] + b[0]) / 2 - cx), 6))
+                if best is None or key < best[0]:
+                    best = (key, i)
+        if best is None:
+            break
+        _, i = best
+        hh, h, j, k, kk = (i - 2) % n, (i - 1) % n, (i + 1) % n, (i + 2) % n, (i + 3) % n
+        pp, prev, a, b, nxt, nn = pts[hh], pts[h], pts[i], pts[j], pts[k], pts[kk]
+        e_in, step, e_out = _sub(a, prev), _sub(b, a), _sub(nxt, b)
+        if min(_len(e_in), _len(e_out), _len(step)) < 1e-9:
+            skip.add((a, b))
+            continue
+        u_in, u_out, u_s = _unit(e_in), _unit(e_out), _unit(step)
+        parallel = _dot(u_in, u_out) > math.cos(math.radians(10))
+        stepping = abs(_cross(u_in, u_s)) > math.sin(math.radians(30))
+        if not (parallel and stepping) or abs(_len(e_in) - _len(e_out)) < 1e-6:
+            skip.add((a, b))
+            continue
+        limit = _len(step) + eps
+        if _len(e_in) < _len(e_out):                       # the incoming edge moves onto the outgoing's line
+            q = _line_meet(pp, _sub(prev, pp), b, u_out)
+            if q is None or _len(_sub(q, prev)) > limit or len({hh, h, i, j}) < 4:
+                skip.add((a, b))
+                continue
+            moved[prev] = q
+            moved[a] = q
+            moved[b] = q
+            pts[h] = q
+            for idx in sorted((i, j), reverse=True):
+                del pts[idx]
+        else:                                               # the outgoing edge moves onto the incoming's line
+            q = _line_meet(nn, _sub(nxt, nn), a, u_in)
+            if q is None or _len(_sub(q, nxt)) > limit or len({i, j, k, kk}) < 4:
+                skip.add((a, b))
+                continue
+            moved[nxt] = q
+            moved[a] = q
+            moved[b] = q
+            pts[k] = q
+            for idx in sorted((i, j), reverse=True):
+                del pts[idx]
+    # stray vertices: a barely bent long edge
+    long_ = 4 * eps
+    changed = True
+    while changed and len(pts) > 4:
+        changed = False
+        n = len(pts)
+        for i in range(n):
+            a, b, c2 = pts[i - 1], pts[i], pts[(i + 1) % n]
+            u, v = _sub(b, a), _sub(c2, b)
+            if _len(u) < long_ or _len(v) < long_:
+                continue
+            t = abs(math.degrees(math.atan2(_cross(_unit(u), _unit(v)), _dot(_unit(u), _unit(v)))))
+            if 1e-6 < t < STRAY:
+                moved[b] = b
+                del pts[i]
+                changed = True
+                break
+    return pts
 
 
 def _polish(pts, eps, moved):

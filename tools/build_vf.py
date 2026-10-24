@@ -65,6 +65,67 @@ ps = {m: P(m) for m in MASTERS}
 upright = {m: {n: _place(n, ps[m], record=ITALIC) for n in names} for m in MASTERS}
 print('placed', len(MASTERS), 'masters')
 
+# Per glyph: masters cleaned of jogs (geom._close_jogs) can differ in
+# structure between neighbouring weights where a step closes at one and not
+# the next; most still interpolate well, some do not. Each glyph is aligned,
+# interpolated between its neighbouring weight masters and compared with the
+# exact drawing at the midpoints; where that is off by more than the build's
+# tolerance, the glyph's masters are drawn again without the jog closing,
+# and whichever interpolates better is kept.
+from arris import geom as _geom
+from arris.geom import rings_to_shapely as _shp
+WM = sorted(w for (w, g, t) in MASTERS if g == 0 and t == 0)
+MIDS = [((a + b) / 2, WM.index(a), WM.index(b)) for a, b in zip(WM, WM[1:])]
+_exact = {}
+
+
+def _exact_at(n, w):
+    if (n, w) not in _exact:
+        _exact[(n, w)] = _shp(_place(n, P((w, 0, 0)), record=ITALIC)[0])
+    return _exact[(n, w)]
+
+
+def _local_error(n, rings_by_master):
+    try:
+        al = align(rings_by_master)
+    except ValueError:
+        return 1e9, None
+    idx = [MASTERS.index((w, 0, 0)) for w in WM]
+    worst = 0.0
+    for wm, i0, i1 in MIDS:
+        r0, r1 = al[idx[i0]], al[idx[i1]]
+        mid = [[((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2) for p0, p1 in zip(a_, b_)] for a_, b_ in zip(r0, r1)]
+        try:
+            ex = _exact_at(n, wm)
+            got = _shp([r for r in mid if len(set(r)) >= 3])
+            err = got.symmetric_difference(ex).area / max(ex.boundary.length, 1)
+        except Exception:  # noqa: BLE001
+            err = 1e9
+        worst = max(worst, err)
+    return worst, al
+
+
+LOCAL_TOL = 3.0
+replaced = []
+for n in names:
+    rings_a = [upright[w][n][0] for w in MASTERS]
+    if not any(rings_a):
+        continue
+    ea, _ = _local_error(n, rings_a)
+    if ea <= LOCAL_TOL:
+        continue
+    jog, _geom.JOG = _geom.JOG, 0.0
+    try:
+        alt = {w: _place(n, ps[w], record=ITALIC) for w in MASTERS}
+    finally:
+        _geom.JOG = jog
+    eb, _ = _local_error(n, [alt[w][0] for w in MASTERS])
+    if eb < ea:
+        for w in MASTERS:
+            upright[w][n] = alt[w]
+        replaced.append((n, round(ea, 1), round(eb, 1)))
+print(len(replaced), 'glyphs keep their jogs in the variable font, interpolating better so:', replaced[:12])
+
 aligned = {w: {} for w in MASTERS}
 frozen = []
 for n in names:

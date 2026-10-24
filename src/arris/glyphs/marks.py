@@ -398,9 +398,16 @@ def _register(name, ch, bname, base, marks):
         from ..draw import draw
         p = g.p
         base_glyph = draw(bname, p, g.ot, g.ob, width=(g.W - room) if room else None)
+        # the marks are placed on the exact base; its optical correction
+        # (draw._optical) then moves the whole composite, so a cedilla or an
+        # ogonek stays joined to the foot it hangs from and an accent keeps
+        # its distance from the top
+        warp = getattr(base_glyph, 'warp', None)
+        base_glyph.warp = None
         rings = base_glyph.rings()
         top = max(y for r in rings for _, y in r)
         g.add_glyph(base_glyph)
+        g.warp = warp
         x = (g.W - room) / 2
         above = []
         for m in marks:

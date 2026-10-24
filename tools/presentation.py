@@ -1014,55 +1014,6 @@ def _runs(pts, keep):
     return out
 
 
-def _avatar(seed, px=4):
-    """A 12 by 12 pixel portrait for a chatter: skin, hair or a helmet, a
-    visor or eyes, now and then a Belter's face tattoo; an SVG string."""
-    import random
-    rng = random.Random(seed)
-    skins = ['#f1c7a1', '#d9a07a', '#a8714f', '#7a4a32', '#5a3626', '#e8b893']
-    hairs = ['#1d1b17', '#5a3a22', '#c9a15a', '#e85d9b', '#4fd1ff', '#c8ff3a', '#f4efe2', '#8a5cff']
-    bgs = ['#1b2140', '#26173a', '#10302a', '#3a1d1d', '#13283a', '#2e2a12']
-    skin, hair, bg = rng.choice(skins), rng.choice(hairs), rng.choice(bgs)
-    helmet = rng.random() < 0.35
-    tattoo = rng.random() < 0.45
-    g = [[bg] * 12 for _ in range(12)]
-    for y in range(3, 11):                                   # head: a chamfered block
-        for x in range(3, 9):
-            if (y in (3, 10)) and x in (3, 8):
-                continue
-            g[y][x] = skin
-    for x in range(2, 10):                                   # shoulders
-        g[11][x] = rng.choice(['#3b4b5c', '#5c3b4b', '#2f4a3a', '#4b4b5c'])
-    if helmet:
-        c = rng.choice(['#cfd8e3', '#e3b14f', '#6fd3ff', '#ff6f5f'])
-        for y in range(1, 6):
-            for x in range(2, 10):
-                if y == 1 and x in (2, 9):
-                    continue
-                g[y][x] = c
-        for x in range(3, 9):
-            g[5][x] = rng.choice(['#00e5ff', '#ffb000', '#ff2bd6'])   # the visor
-    else:
-        style = rng.randrange(3)
-        for x in range(3, 9):
-            g[2][x] = hair
-            g[3][x] = hair
-        if style >= 1:
-            g[4][3] = g[4][8] = hair
-        if style == 2:                                       # a Belter's crest
-            for y in range(0, 3):
-                g[y][5] = g[y][6] = hair
-        g[6][4] = g[6][7] = '#151412'                         # eyes
-    g[9][5] = g[9][6] = '#7a3b3b'                             # mouth
-    if tattoo:
-        t = rng.choice(['#151412', '#1f6fb0', '#7a1f5c'])
-        for y in rng.choice([(7, 8), (6, 7, 8), (8, 9)]):
-            g[y][rng.choice([3, 8])] = t
-    rects = ''.join(f'<rect x="{x * px}" y="{y * px}" width="{px}" height="{px}" fill="{c}"/>'
-                    for y, row in enumerate(g) for x, c in enumerate(row))
-    return f'<svg class="av" width="{12 * px}" height="{12 * px}">{rects}</svg>'
-
-
 def _wire_nav(cx, cy, R, W_, H_):
     """The flyby's nav display: Jupiter as a wireframe (the far side dashed,
     belts by line density, the Great Red Spot as rings on the surface), its
@@ -1145,18 +1096,27 @@ def slingshot():
     ev = ''.join(f'<div class="ev {c}" style="left:{f * 100:.0f}%"><i></i><span>{t}</span></div>' for f, t, c in events)
     # the chat: photo avatars, a few pixel ones, images posted
     av = lambda f: f'<img class="av" src="{src(f)}">'
-    pix = lambda n: f'<span class="avp">{_avatar(n, 3)}</span>'
+    def face(f, fx, fy, zoom, size=34, cls='av'):
+        # a round crop centred on a face at (fx, fy) of the picture, the
+        # picture zoom times the circle's width (kept covering the circle)
+        from PIL import Image as _Im
+        w0, h0 = _Im.open(SOURCES / f).size
+        Wr, Hr = zoom * size, zoom * size * h0 / w0
+        left = min(0.0, max(size - Wr, size / 2 - fx * Wr))
+        top = min(0.0, max(size - Hr, size / 2 - fy * Hr))
+        return (f'<span class="{cls}" style="background-image:url({src(f)});background-size:{Wr:.0f}px {Hr:.0f}px;'
+                f'background-position:{left:.0f}px {top:.0f}px"></span>')
     crop = lambda f, pos: f'<span class="av" style="background-image:url({src(f)});background-position:{pos}"></span>'
     msgs = [
         ('pin', None, 'dock_rat', '#6fd3ff', 'flaitplan: slinshot, 3 g ka perijov, den gonya hom fo Ceres', None),
         ('m', av('eva-pettit.jpg'), 'beltalowda_88', '#7cf29a', 'Oye, beratnas! taim fo jus ⚡', None),
         ('m', crop('redoute-rosa-gallica-flore-giganteo.jpg', '48% 28%'), 'mira.okonkwo', '#ff8ad8', 'bern ka perijov, sasa ke?', None),
-        ('m', pix(3), 'dock_rat', '#6fd3ff', 'Oberth, kopeng. mo Δv fo im kilo', 'MOD'),
+        ('m', face('nasa-s61-02845.jpg', 0.48, 0.22, 4.2), 'dock_rat', '#6fd3ff', 'Oberth, kopeng. mo Δv fo im kilo', 'MOD'),
         ('m', av('eva-parmitano.jpg'), 'pilot_tanya', '#9ad6ff', '3 g? dat fo inyalowda', ('stapp-sled.gif', 'GIF')),
         ('cheer', av('cat-grass.jpg'), 'ceres_nights', '#ffd36b', 'taki bosmang, gut kofi fo to lowda ♥', '500'),
         ('m', crop('saturn-cassini-2004-10-06.jpg', '52% 50%'), 'nikos_r', '#6fd3ff', 'Μπράβο, καπετάνιε o7', None),
-        ('m', pix(11), 'linh.tran', '#ff8ad8', 'kopailot, nau', ('ducreux-yawning.jpg', 'IMG')),
-        ('m', pix(12), 'hal_n_teo', '#ffd36b', 'Glashaus sa oye ♥', 'SAB 8'),
+        ('m', face('nasa-iss070e014334.jpg', 0.355, 0.285, 6.5), 'linh.tran', '#ff8ad8', 'kopailot, nau', ('ducreux-yawning.jpg', 'IMG')),
+        ('m', face('nasa-iss046e017204.jpg', 0.47, 0.44, 1.8), 'hal_n_teo', '#ffd36b', 'Glashaus sa oye ♥', 'SAB 8'),
     ]
     rows = []
     for k, (kind, a, user, col, text, extra) in enumerate(msgs):
@@ -1241,7 +1201,7 @@ def slingshot():
   <div class="mr mono">PJ 1.22 RJ<br>V∞ 14.1<br>e 1.55</div>
 </div>
 <div class="mfd cam" style="left:112px;top:560px;width:380px;height:300px">
-  <img src="{src('nasa-b59-00723.jpg')}"><div class="red"></div><div class="scan"></div>
+  <img src="{src('nasa-s62-00303.jpg')}"><div class="red"></div><div class="scan"></div>
   <div class="mh mono"><span class="rec">●</span> PAILOT · KAM 2</div>
   <div class="bio mono">3.2 g · HARTA 168 · O2 91% · GREIAUT DANGA</div>
 </div>
@@ -1251,12 +1211,12 @@ def slingshot():
 <div class="tline mono"><div class="ax"></div>{ev}</div>
 <div class="flt mono"><span>SPID <b>61.4</b> km/s</span><span>ALTO <b>18 220</b> km</span><span>Δv <b>42</b>%</span><span>OBERTH <b>+9.8</b></span></div>
 <div class="tips">
-  <div class="goal"><div class="gt mono">TIP GOL · nyu kofi masin</div><div class="gb"><i></i></div><div class="gn mono">312 / 500 ¢</div></div>
-  <div class="tip">{av('cat-tabby.jpg')}<div><div class="tt"><b>la_tormenta</b> da <span class="amt">25 ¢</span></div><div class="tm">“mo jus, kopeng!”</div></div></div>
-  <div class="tip big">{av('eva-pettit.jpg')}<div><div class="tt"><b>beltalowda_88</b> da <span class="amt">100 ¢</span></div><div class="tm">“fo Glashaus roses ♥ taki”</div></div></div>
+  <div class="goal"><div class="gt mono">BITS GOL · nyu kofi masin</div><div class="gb"><i></i></div><div class="gn mono">◆ 3 120 / 5 000 bits</div></div>
+  <div class="tip">{av('cat-tabby.jpg')}<div><div class="tt"><b>la_tormenta</b> da <span class="amt">◆ 250 bits</span></div><div class="tm">“mo jus, kopeng!”</div></div></div>
+  <div class="tip big">{av('eva-pettit.jpg')}<div><div class="tt"><b>beltalowda_88</b> da <span class="amt">◆ 1 000 bits</span></div><div class="tm">“fo Glashaus roses ♥ taki”</div></div></div>
 </div>
 <div class="chat">
-  <div class="sh">{pix(99)}<div><div class="mono s1"><span class="live">● LAIV</span> beltcast <span class="up">03:12:44</span></div>
+  <div class="sh">{face('nasa-s66-46270.jpg', 0.50, 0.53, 3.2, 48, 'av sha')}<div><div class="mono s1"><span class="live">● LAIV</span> beltcast <span class="up">03:12:44</span></div>
      <div class="s2">slinshot ka Jupita · 3 g · na mang vomit (wa?)</div>
      <div class="s3 mono">{viewers}<span>14 312 lowda showxa</span></div></div></div>
   <div class="msgs">{''.join(rows)}</div>
@@ -1306,7 +1266,7 @@ def slingshot():
 .s-slingshot .hud .vec { stroke: #c8ff3a; stroke-width: 1.6; } .s-slingshot .hud .lock { stroke: #c8ff3a; stroke-width: 1.2; stroke-dasharray: 6 8; }
 .s-slingshot .tl { position:absolute; font-size: 11px; letter-spacing: .12em; color: #bfeeff; }
 .s-slingshot .tl.pj { color: #ffb000; }
-.s-slingshot .cam img { position:absolute; left: -70px; top: -40px; width: 520px; filter: grayscale(1) contrast(1.35) brightness(.95); }
+.s-slingshot .cam img { position:absolute; left: -101px; top: 0; width: 560px; filter: saturate(.55) contrast(1.2) brightness(.95); }
 .s-slingshot .cam { border-color: rgba(255, 90, 90, .6); }
 .s-slingshot .cam .red { position:absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, transparent 35%, rgba(120, 0, 0, .55) 85%),
                          linear-gradient(rgba(60, 255, 160, .10), rgba(60, 255, 160, .10)); mix-blend-mode: normal; }
@@ -1339,7 +1299,7 @@ def slingshot():
                      background: rgba(12, 8, 26, .9); border: 1px solid rgba(155, 120, 255, .4);
                      clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px)); }
 .s-slingshot .chat .sh { display:flex; gap: 12px; padding: 14px; border-bottom: 1px solid rgba(155,120,255,.3); background: rgba(155,120,255,.08); }
-.s-slingshot .chat .sh .avp { width: 48px; height: 48px; outline: 2px solid #ff3b5c; outline-offset: 2px; }
+.s-slingshot .chat .sh .sha { width: 48px; height: 48px; outline: 2px solid #ff3b5c; outline-offset: 2px; }
 .s-slingshot .chat .s1 { font-size: 12px; letter-spacing: .12em; color: #e6dcff; }
 .s-slingshot .chat .live { color: #fff; background: #ff3b5c; padding: 1px 6px; margin-right: 6px; }
 .s-slingshot .chat .up { color: #a99bd0; margin-left: 6px; }
@@ -1350,7 +1310,6 @@ def slingshot():
 .s-slingshot .chat .msgs { flex: 1; overflow: hidden; display:flex; flex-direction: column; justify-content: flex-end; padding: 8px 12px; gap: 8px; }
 .s-slingshot .chat .m, .s-slingshot .chat .cheer { display:flex; gap: 9px; align-items: flex-start; }
 .s-slingshot .chat .av { flex: none; width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background-size: 300%; display:block; }
-.s-slingshot .chat .avp { flex: none; width: 36px; height: 36px; border-radius: 50%; overflow: hidden; display:block; }
 .s-slingshot .chat .mb { flex: 1; min-width: 0; }
 .s-slingshot .chat .nm { font-size: 13px; display:flex; align-items: center; gap: 6px; }
 .s-slingshot .chat .nm b { font: 700 14px 'Arris'; }
@@ -1366,7 +1325,7 @@ def slingshot():
 .s-slingshot .chat .bits { font-size: 10px; color: #01030a; background: #ffb000; padding: 1px 6px; }
 .s-slingshot .chat .in { display:flex; justify-content: space-between; margin: 8px 12px 14px; padding: 9px 12px; border: 1px solid rgba(155,120,255,.45); color: #8e82b4; font-size: 13px; }
 .s-slingshot .chat .ic { color: #ff8ad8; }
-.s-slingshot .tips { position:absolute; left: 664px; top: 226px; width: 290px; display:flex; flex-direction: column; gap: 10px; }
+.s-slingshot .tips { position:absolute; left: 664px; top: 226px; width: 330px; display:flex; flex-direction: column; gap: 10px; }
 .s-slingshot .tips .goal { padding: 10px 12px; background: rgba(12, 8, 26, .82); border: 1px solid rgba(255,176,0,.5); }
 .s-slingshot .tips .gt { font-size: 11px; letter-spacing: .16em; color: #ffb000; }
 .s-slingshot .tips .gb { height: 8px; margin: 8px 0 6px; background: rgba(255,176,0,.18); }

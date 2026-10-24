@@ -188,7 +188,24 @@ class Glyph:
             box = _box(*self.clip)
         rec = [] if record else None
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt)
-        return rings, ((rec or []) + self.extra_chamfers if record else [])
+        rec = (rec or []) + self.extra_chamfers if record else []
+        warp = getattr(self, 'warp', None)
+        if warp is not None:
+            if p.slant:
+                # the italic curves its chamfers on the exact drawing first
+                # (italic.outline), then moves the curved outline: the warp
+                # travels in the record. Its rings stay exact whether or not a
+                # record is asked for, so spacing is measured on one geometry
+                # (a grade master spaces from its ungraded self)
+                if record:
+                    rec = rec + [('warp', warp)]
+            else:
+                # the optical corrections move the finished outline: every
+                # corner the corner rule cut, it cut on the drawing's exact
+                # directions
+                rings = [[(q[0], warp(q[1])) + tuple(q[2:]) for q in r] for r in rings]
+                rec = [_warped(r, warp) for r in rec]
+        return rings, rec
 
     def add_glyph(self, sub: 'Glyph', dx: float = 0.0, dy: float = 0.0):
         """Stamp another drawn glyph into this one, chamfer record and all."""
@@ -214,7 +231,24 @@ def _thickness(p: Params, sh: float) -> Thickness:
     return Thickness(p.sv, sh, p.sd, p.ss, p.slant, floor=p.floor)
 
 
+def _warped(r, f):
+    """A chamfer record entry with every point's y passed through f (a
+    direction is carried by moving a point a unit along it)."""
+    if r[0] == 'warp':
+        return r
+    if r[0] == 'bowl':
+        return ('bowl',) + tuple(((q[0], f(q[1])), (d[0], f(q[1] + d[1]) - f(q[1]))) for q, d in r[1:])
+    if r[0] == 'line':
+        (x, y), (dx, dy) = r[1], r[2]
+        y0, y1 = f(y), f(y + dy)
+        return ('line', (x, y0), (dx, y1 - y0))
+    return ('chord', (r[1][0], f(r[1][1])), (r[2][0], f(r[2][1])))
+
+
 def _moved(r, dx, dy):
+    if r[0] == 'warp':
+        f = r[1]
+        return ('warp', (lambda y, f=f, dy=dy: f(y - dy) + dy)) if dy else r
     if r[0] == 'bowl':
         return ('bowl',) + tuple(((q[0] + dx, q[1] + dy), d) for q, d in r[1:])
     return ('chord', (r[1][0] + dx, r[1][1] + dy), (r[2][0] + dx, r[2][1] + dy))
@@ -239,6 +273,112 @@ def _build(spec, p, ot, ob, overrides, width=None):
     g.defaults['sh_auto'] = 1.0
     spec.fn(g)
     return g
+
+
+# Optical corrections, as type is corrected by eye: the optical centre (a
+# letter's middle reads a little above its geometric middle, so middle bars
+# rise and top halves shrink: B, E, H, S, 3, 8, the e's bar) and overshoot
+# (round letters reach a little past the baseline and the cap or x-height, or
+# they look smaller than flat ones). Both move stroke centrelines only, so
+# every stroke keeps its thickness. Measured optics only: the share is
+# Params.optical (0 in the watch's own drawing, WTCH 100). Drawn on the base
+# letters and figures; composites inherit them. None turns them off.
+_FIGS = ('zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine')
+OPTICAL = {
+    'names': set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') | set(_FIGS),
+    # optical centre: the middle rises until the top counter of a three-bar
+    # letter (B E 8) is this share of the bottom one; calibrated so that at
+    # Regular the middle rises 2.5% of the cap height. As the bars thicken the
+    # counters shrink and the rise with them, so heavy top bowls never pinch.
+    'counters': 0.8615,
+    # overshoot: each glyph's own, measured (vision.overshoot_need: its hull
+    # under a blur calibrated on a circle to a 1.5% overshoot), at most this
+    # share of the zone height
+    'over_max': 0.015,
+}
+
+
+def _bowl_side(rings, y_line, inward, p):
+    """Whether every flat edge on the outline's extreme line ``y_line`` ends
+    at both ends in a bowl's corner: an edge leaving it at 45 degrees
+    toward the inside (``inward``: -1 down from a top, +1 up from a bottom)
+    for more than an edge break's reach."""
+    import math
+    reach = max(1.6 * p.c, 0.35 * p.leg)
+    flats = 0
+    for r in rings:
+        n = len(r)
+        for i in range(n):
+            a, b = r[i], r[(i + 1) % n]
+            if abs(a[1] - y_line) > 1.0 or abs(b[1] - y_line) > 1.0 or abs(a[0] - b[0]) < 1.0:
+                continue
+            flats += 1
+            for end, nb in ((a, r[i - 1]), (b, r[(i + 2) % n])):
+                dx, dy = nb[0] - end[0], nb[1] - end[1]
+                if dy * inward <= 0 or abs(abs(dx) - abs(dy)) > 0.1 * max(abs(dx), abs(dy)) or abs(dy) < reach:
+                    return False
+    return flats > 0
+
+
+def _optical(g, spec, p):
+    from .geom import Node, Stroke
+    from .vision import overshoot_need
+    H = p.xh if spec.kind == 'lower' else p.cap
+    r = OPTICAL['counters']
+    A = max(H / 2 - 1.5 * g.sh, 0.0)                         # a counter's height with the middle centred
+    dc = A * (1 - r) / (1 + r) * p.optical
+    rings0 = g.rings()
+    top, bot = overshoot_need(rings0, H)
+    cap_ = OPTICAL['over_max'] * H
+    # a side the drawing already carries past its line (v's point) keeps the
+    # overshoot it was drawn with
+    ys0 = [q[1] for r in rings0 for q in r]
+    if ys0 and max(ys0) > H + 1.0:
+        top = 0.0
+    if ys0 and min(ys0) < -1.0:
+        bot = 0.0
+    # only a side that ends in bowls overshoots: every flat on its extreme
+    # line turns down (up) into a bowl's 45-degree corner at both ends. A
+    # stem's end or a bar (F's foot, T's stem, B's top) ends in edge breaks,
+    # and sits on the line as H does
+    if ys0 and not _bowl_side(rings0, max(ys0), -1, p):
+        top = 0.0
+    if ys0 and not _bowl_side(rings0, min(ys0), +1, p):
+        bot = 0.0
+    ot, ob = min(top, cap_) * p.optical, min(bot, cap_) * p.optical
+    # a side where the clip cuts ink (A's flat apex, v's foot: strokes run on
+    # past the line and are cut on it) is a cut, and a cut stays on its line;
+    # only a side the drawing itself ends on (a bowl) overshoots
+    if g.clip is not None and isinstance(g.clip, tuple) and (ot or ob):
+        import shapely
+        from .geom import stroke_polygon
+        th = _thickness(g.p, g.sh)
+        raw = shapely.union_all([stroke_polygon(st, th, g.p.c) for st in g.strokes] + list(g.extra))
+        _, ry0, _, ry1 = raw.bounds
+        if ry1 > g.clip[3] + 1.0:
+            ot = 0.0
+        if ry0 < g.clip[1] - 1.0:
+            ob = 0.0
+    # The warp, piecewise linear in y: the bottom bar (and all below it), the
+    # middle bar and the top bar (and all above it) each move as one piece,
+    # so every bar keeps its thickness; the white between them stretches
+    # (below the middle) or gives way (above). The middle rises by dc, a bowl
+    # side moves out by its overshoot, a cut side stays on its line.
+    m, t = H / 2, g.sh
+    knots = [(t, t - ob), (m - t / 2, m - t / 2 + dc), (m + t / 2, m + t / 2 + dc), (H - t, H - t + ot)]
+    if not (dc or ot or ob) or not (t < m - t / 2 and m + t / 2 < H - t):
+        return
+
+    def f(y):
+        if y <= knots[0][0]:
+            return y - ob
+        if y >= knots[-1][0]:
+            return y + ot
+        for (x0, y0), (x1, y1) in zip(knots, knots[1:]):
+            if y <= x1:
+                return y0 + (y - x0) * (y1 - y0) / (x1 - x0)
+        return y
+    g.warp = f
 
 
 # Every closed counter keeps at least half its share of the stem in the
@@ -431,4 +571,8 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                         a = mid
             g = _build(spec, _lightened(p, b), ot, ob, overrides, width)
             g.lightened = b
+    # the optical corrections move the settled drawing (openings, counters
+    # and the squint are solved on the exact one)
+    if OPTICAL is not None and p.optical and spec.name.removesuffix('.ital') in OPTICAL['names']:
+        _optical(g, spec, p)
     return g

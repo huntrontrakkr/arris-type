@@ -157,10 +157,25 @@ def shear(contour, p: Params):
     return [(x + (y - yc) * p.slant, y, on) for x, y, on in contour]
 
 
+def split_warp(record):
+    """(record without warps, the optical correction's warp or None)."""
+    warps = [r[1] for r in record if r and r[0] == 'warp']
+    return [r for r in record if not (r and r[0] == 'warp')], (warps[0] if warps else None)
+
+
+def warped(contours, warp):
+    if warp is None:
+        return contours
+    return [[(x, warp(y), on) for x, y, on in c] for c in contours]
+
+
 def outline(rings, record, p: Params):
     """The italic outline: contours of (x, y, on), sheared, ink on the left
-    (as the upright rings)."""
-    return [shear(c, p) for c in curve_rings(rings, p, record)]
+    (as the upright rings). Chamfers are found and curved on the exact
+    drawing; the optical corrections (a warp in the record) then move the
+    curved outline, and the shear comes last."""
+    record, warp = split_warp(record)
+    return [shear(c, p) for c in warped(curve_rings(rings, p, record), warp)]
 
 
 def tt_contours(outline_):
@@ -253,6 +268,9 @@ def aligned_outlines(aligned, originals, records, params_):
     grows from a straight edge as the weight moves, and every master has the
     same points with the same flags."""
     k = len(aligned)
+    split = [split_warp(r) for r in records]               # curved on the exact drawing, then moved (outline)
+    records = [r for r, _ in split]
+    warps = [w for _, w in split]
     maps = [_chamfer_map(originals[mi], records[mi], params_[mi]) for mi in range(k)]
     out = [[] for _ in range(k)]
     for ci in range(len(aligned[0])):
@@ -268,5 +286,5 @@ def aligned_outlines(aligned, originals, records, params_):
                 if curved[j]:
                     ctrl = maps[mi].get((_key(a), _key(b)), ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2))
                     c.append((ctrl[0], ctrl[1], False))
-            out[mi].append(shear(c, params_[mi]))
+            out[mi].append(shear(warped([c], warps[mi])[0], params_[mi]))
     return out

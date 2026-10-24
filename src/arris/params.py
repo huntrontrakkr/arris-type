@@ -33,6 +33,7 @@ class Params:
     slant: float = 0.0         # italic: tan of the slant (outlines are sheared when built)
     floor: float = 0.0         # no stroke drawn thinner (instances.stroke_floor); 0 for the heritage
     raw: tuple | None = None   # (sv, sh, sd, ss) before the floor, where it raised them
+    optical: float = 1.0       # share of the optical corrections (draw.OPTICAL): 1 measured optics, 0 the watch's own drawing
 
     def with_(self, **kw) -> 'Params':
         """These parameters with some changed. Strokes never drop below the
@@ -92,5 +93,5 @@ def inner_leg(p: Params, sh: float | None = None) -> float:
 # across as a stem (so 45-degree strokes are only 1/sqrt2 of it), 1.5-module
 # bowl legs, half-module edge breaks.
 HERITAGE = Params(m=1, cap=12, xh=9, asc=13, desc=3, sv=2, sh=2, sd=SQRT2,
-                  ss=4 / math.sqrt(5), leg=1.5, c=0.5, fig_w=9, fig_adv=10)
+                  ss=4 / math.sqrt(5), leg=1.5, c=0.5, fig_w=9, fig_adv=10, optical=0.0)
 HERITAGE_UNITS = HERITAGE.scaled(60)

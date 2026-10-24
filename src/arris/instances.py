@@ -89,7 +89,8 @@ def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Pa
     if grad:
         k = 1 + grad * GRAD_SHARE
         p = p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, grade_k=k)
-    return p.with_(floor=stroke_floor(base))
+    optical = 0.0 if optics == HERITAGE_OPTICS else 1.0 - watch
+    return p.with_(floor=stroke_floor(base), optical=optical)
 
 
 def _params(wght, optics, base):

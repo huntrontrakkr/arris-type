@@ -332,20 +332,15 @@ def naira(g):
     p = g.p
     o, hang = bar_inset(p), bar_hang(p)
     wn = g.W - 2 * o
-    q = inset_letter(g, 'N', o, wn).p                       # the N as drawn (condensed, in Mono)
-    w = q.ss / STEEP[1]
+    from .caps import n_diagonal
+    sub = inset_letter(g, 'N', o, wn)                       # the N as drawn (condensed, in Mono)
+    q = sub.p
     f = frame(q, wn, 10)
-    x0, y0 = f.X(1) + q.sv / 2 + w / 2, f.Y(11)             # the diagonal's centre at the top (caps.N)
-    if p.mono:                                              # it joins the stems' feet: corner to corner
-        y1 = f.Y(1)
-        k = (f.X(9) - q.sv / 2 - w / 2 - x0) / (y0 - y1)
-    else:                                                   # at 2:1, to where it meets the right stem
-        k = 0.5
-        y1 = y0 - (f.X(9) - q.sv / 2 - w / 2 - x0) / k
+    cx = n_diagonal(sub, f.X(1) + q.sv / 2, f.X(9) - q.sv / 2, q.cap)   # its diagonal (caps.N)
     t, gap = pair(g)
-    yc = (y0 + y1) / 2
+    yc = q.cap / 2                                          # the joins lie alike about the middle
     yu, yl = yc + (t + gap) / 2, yc - (t + gap) / 2
-    at = lambda y: o + x0 + (y0 - y) * k                     # the diagonal's centre at height y
+    at = lambda y: o + cx(y)[0]                              # the diagonal's centre at height y
     xs_l, xs_r = o + q.sv / 2, g.W - o - q.sv / 2            # the stems' centres
     # each bar passes behind the diagonal on one side: the upper is cut
     # between the left stem and the diagonal, the lower between the

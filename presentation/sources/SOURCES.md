@@ -14,7 +14,11 @@ Pictures the presentation sets in type (`tools/presentation.py`, the
 | File | What | Source | Licence |
 |---|---|---|---|
 | `juno-pj18-jupiter.png` | Jupiter's limb and the Great Red Spot, Juno Perijove 18 (2019), processed by Justin Cowart | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Great_Red_Spot_-_Juno_Perijove_18_(46253901465).png), NASA/JPL-Caltech/SwRI/MSSS | Public domain |
-| `nasa-b59-00723.jpg` | Astronaut Scott Carpenter in the centrifuge, 1959 (b59-00723): the pilot cam | [NASA Image Library](https://images.nasa.gov/details/b59-00723) | Public domain (NASA) |
+| `nasa-s62-00303.jpg` | John Glenn in Friendship 7, from the capsule's onboard camera, 20 February 1962 (S62-00303): the pilot cam | [NASA Image Library](https://images.nasa.gov/details/s62-00303) | Public domain (NASA) |
+| `nasa-s66-46270.jpg` | Michael Collins inside the Gemini 10 spacecraft, July 1966 (S66-46270): the streamer | [NASA Image Library](https://images.nasa.gov/details/s66-46270) | Public domain (NASA) |
+| `nasa-s61-02845.jpg` | Gus Grissom suited for Mercury-Redstone 4, 1961 (S61-02845) | [NASA Image Library](https://images.nasa.gov/details/s61-02845) | Public domain (NASA) |
+| `nasa-iss070e014334.jpg` | Two crew members aboard the International Space Station, Expedition 70, 2023 (iss070e014334) | [NASA Image Library](https://images.nasa.gov/details/iss070e014334) | Public domain (NASA) |
+| `nasa-iss046e017204.jpg` | A zinnia grown in the Veggie garden aboard the ISS, January 2016 (iss046e017204) | [NASA Image Library](https://images.nasa.gov/details/iss046e017204) | Public domain (NASA) |
 | `eva-parmitano.jpg` | Luca Parmitano's self-portrait on a spacewalk, ISS-36 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:ISS-36_EVA-2_q_Luca_Parmitano_self-portrait.jpg), NASA | Public domain |
 | `eva-pettit.jpg` | Don Pettit's spacewalk selfie | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Don_Pettit_Spacewalk_Selfie.jpg), NASA on The Commons | No known restrictions |
 | `ducreux-yawning.jpg` | Joseph Ducreux, *Self-Portrait, Yawning* (c. 1783) | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Joseph_Ducreux_(French)_-_Self-Portrait,_Yawning_-_Google_Art_Project.jpg) | Public domain |
@@ -22,4 +26,4 @@ Pictures the presentation sets in type (`tools/presentation.py`, the
 | `cat-grass.jpg` | Domestic shorthair cat in grass | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Domestic_shorthair_cat_portrait_in_grass.jpg) | CC0 |
 | `cat-tabby.jpg` | Tabby cat with blue eyes, AdinaVoicu | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Tabby_cat_with_blue_eyes-3336579.jpg) | CC0 |
 
-The chat's other avatars reuse the deck's own sources (a Redouté rose, Cassini's Saturn) and its generated pixel portraits.
+The chat's other avatars reuse the deck's own sources (a Redouté rose, Cassini's Saturn).

@@ -13,7 +13,9 @@ see ``letterframe``. The moves are the figures':
 """
 from __future__ import annotations
 
-from ..draw import B, Opening, glyph
+import math
+
+from ..draw import B, Opening, _thickness, glyph
 from .figures import beak_depth, jog
 from .letterframe import STEEP, Frame, k_arms, letter_width
 
@@ -145,9 +147,42 @@ def M(g):
     g.stroke((xl, cl - xl), (xm, cl - xm), (xr, xr - cr))
 
 
+N_NECK = 1.0      # strokes: how far below the cap (above the baseline) the diagonal meets each stem
+
+
+def _n_neck(p, sh):
+    """Depth of N's joins: the diagonal's inner edge meets each stem at
+    least a full stroke from the cap and the baseline, so the ink joining
+    stem and diagonal is as thick as the strokes it joins (the pixel
+    master's half bar left a sliver, thinner still toward Black)."""
+    return N_NECK * max(sh, p.sd)
+
+
 def n_width(p):
     w = p.ss / STEEP[1]                                     # across-width of a 2:1 stroke
-    return 2 * p.sv + w / 2 + (p.cap - p.sh) / 2
+    return 2 * p.sv + w + (p.cap - 2 * _n_neck(p, p.sh)) / 2
+
+
+def n_diagonal(g, xa, xb, H):
+    """The centreline of N's diagonal, as a function of height, between
+    stems whose inner edges stand at xa and xb (as drawn: grade keeps a
+    stem's outer edge on the body's edge, so a thinner stem's inner edge
+    moves outward). At 2:1, centred between the two inner edges, so its two
+    joins are alike at every weight and grade, upright and italic (the
+    diagonal's horizontal width is the drawn one, which the italic's
+    strokes, set for the shear, make thinner); at the drawing's own grade
+    each join lies a neck (_n_neck) from the cap and the baseline. In the
+    monospaced cell it runs from join to join, whatever its slope."""
+    p = g.p
+    th = _thickness(p, g.sh)((1.0, -2.0))
+    w = th * math.sqrt(5) / 2                                # horizontal width of the drawn 2:1 stroke
+    if p.mono:
+        d = _n_neck(p.ungraded(), p.ungraded().sh * g.sh / p.sh)
+        x0, x1 = xa + w / 2, xb - w / 2
+        k = (x1 - x0) / (H - 2 * d)
+        return lambda y: (x0 + (H - d - y) * k, y)
+    mid = (xa + xb) / 2
+    return lambda y: (mid + (H / 2 - y) / 2, y)
 
 
 @cap('N', 10, 2, width=n_width)
@@ -157,18 +192,7 @@ def N(g):
     xl, xr = f.X(1), f.X(9)
     g.stroke((xl, 0), (xl, H))
     g.stroke((xr, 0), (xr, H))
-    # Straight at 2:1 through the master's staircase: its left edge meets the
-    # left stem at the top bar's height, its right edge the right stem at the
-    # bottom bar's.
-    w = p.ss / STEEP[1]
-    x0, y0 = xl + p.sv / 2 + w / 2, f.Y(11)
-    if p.mono:
-        # in the fixed cell the diagonal takes whatever slope joins the stems
-        x1, y1 = xr - p.sv / 2 - w / 2, f.Y(1)
-        k = (x1 - x0) / (y0 - y1)
-        at = lambda y: (x0 + (y0 - y) * k, y)
-    else:
-        at = lambda y: (x0 + (y0 - y) / 2, y)
+    at = n_diagonal(g, xl + p.sv / 2, xr - p.sv / 2, H)
     g.stroke(at(H + p.sv), at(-p.sv), start='h', end='h')
 
 

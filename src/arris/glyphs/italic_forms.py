@@ -89,7 +89,7 @@ def tail_end(g, f, xs, y=None):
     its end's chamfer: the same construction at every weight, which the
     variable font interpolates without a lump."""
     p = g.p
-    return (xs + p.sv / 2 + max(_reach(p, TAIL), TAIL_FLOOR * p.sv), f.Y(1) if y is None else y)
+    return (xs + p.sv / 2 + max(_reach(p, TAIL), TAIL_FLOOR * p.ungraded().sv), f.Y(1) if y is None else y)   # (grade moves no stroke)
 
 
 # --- Stems, entries and exits ------------------------------------------------

@@ -38,6 +38,11 @@ def _xform_rec(r, M, dx, dy):
 
     def vec(v):
         return (a * v[0] + b * v[1], c * v[0] + d * v[1])
+    if r[0] == 'warp':
+        # the optical correction's vertical warp, carried through a map that
+        # keeps verticals vertical (mirror, flip, half turn): y' = d y + dy
+        f = r[1]
+        return ('warp', (lambda y, f=f, d=d, dy=dy: d * f((y - dy) / d) + dy))
     if r[0] == 'bowl':
         return ('bowl',) + tuple((pt(q), vec(v)) for q, v in r[1:])
     return ('chord', pt(r[1]), pt(r[2]))
@@ -48,6 +53,13 @@ def add_t(g, sub, M=(1, 0, 0, 1), dx=0.0, dy=0.0):
     y' = c x + d y + dy (an orthogonal map), with its chamfer record."""
     rings, rec = sub.outline()
     a, b, c, d = M
+    warps = [r[1] for r in rec if r and r[0] == 'warp']
+    if warps and (b or c):
+        # a quarter turn would make the vertical warp horizontal: apply it here
+        from ..draw import _warped
+        f = warps[0]
+        rings = [[(q[0], f(q[1])) + tuple(q[2:]) for q in r_] for r_ in rings]
+        rec = [_warped(r_, f) for r_ in rec if r_[0] != 'warp']
     g.extra.append(affinity.affine_transform(rings_to_shapely(rings), [a, b, c, d, dx, dy]))
     g.extra_chamfers += [_xform_rec(r, M, dx, dy) for r in rec]
 
