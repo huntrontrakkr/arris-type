@@ -32,12 +32,12 @@ from arris.variable import align
 
 # (wght, GRAD, WTCH)
 # Masters where the interpolation check found the drawing bends between them:
-# every 100 on the weight axis up to 600 (the 1's flag, ŉ, the digraphs), and
-# the heavy corner where grade and the watch's proportions meet (they do not
-# add up there: a heavy, graded watch drawing is not the sum of the two)
+# every 100 on the weight axis up to 700 (the 1's flag, ŉ, the digraphs). (A
+# master at the heavy grade-watch corner was tried, 2026-10-25: there the ŀ's
+# dot meets its l, and the masters' contours stop agreeing.)
 MASTERS = [(w, 0, 0) for w in (100, 200, 300, 400, 500, 600, 700, 750, 800, 850, 900)] + \
     [(w, g, 0) for w in (100, 400, 900) for g in (-100, 100)] + \
-    [(w, 0, 100) for w in (100, 400, 600, 800, 900)] + [(900, 100, 100)]
+    [(w, 0, 100) for w in (100, 400, 600, 800, 900)]
 DEFAULT = (400, 0, 0)
 CHECK = [(150, 0, 0), (250, 0, 0), (350, 0, 0), (450, 0, 0), (550, 0, 0), (650, 0, 0), (725, 0, 0),
          (775, 0, 0), (825, 0, 0), (875, 0, 0),

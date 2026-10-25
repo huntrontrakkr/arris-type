@@ -57,11 +57,18 @@ def _left_tail(g, x, top):
 
 @glyph('uni019D', 'Ɲ', lambda p: REGISTRY['N'].width(p) + _hook_room(p), kind='cap')
 def Nhookleft(g):
-    """N with its left stem run down into the j's tail."""
-    p = g.p
+    """N with its left stem run on, in one stroke, down into the j's tail."""
+    from .caps import n_diagonal
+    p, H = g.p, g.p.cap
     o = _hook_room(p)
-    stamp(g, 'N', dx=o, width=g.W - o)
-    _left_tail(g, o + p.sv / 2, p.cap / 2)
+    f = Frame(g, 8, 'asc')
+    xl, xr = o + p.sv / 2, g.W - p.sv / 2
+    yd = f.Y(-2)
+    g.stroke((xl, H), B(xl, yd), B(xl - o, yd), (xl - o, -p.desc + beak_depth(p)))
+    g.stroke((xr, 0), (xr, H))
+    at = n_diagonal(g, xl + p.sv / 2, xr - p.sv / 2, H)
+    g.stroke(at(H + p.sv), at(-p.sv), start='h', end='h')
+    g.clip = (0, -p.desc, g.W, H)
 
 
 @glyph('uni0272', 'ɲ', lambda p: REGISTRY['n'].width(p) + _hook_room(p), kind='lower')

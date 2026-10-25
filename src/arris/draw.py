@@ -611,8 +611,10 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                         b = mid
                     else:
                         a = mid
-            overrides['sh_auto'] = b
-            g = _build(spec, p, ot, ob, overrides, width)
+            trial = _build(spec, p, ot, ob, {**overrides, 'sh_auto': b}, width)
+            if len(trial.rings()) == len(g.rings()):         # it thins; it never changes the topology
+                overrides['sh_auto'] = b                      # (the variable font's masters must agree)
+                g = trial
     for sq in spec.squint:
         want, n = _squint_reference(spec, p), _squint_count(spec, p)
         if sq.free not in g.defaults or _squint(g, count=n) >= want:
