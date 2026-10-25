@@ -56,7 +56,10 @@ uv run python tools/build_vf.py                 # the variable font, with its in
 uv run python tools/build_vf.py italic          # the italic variable font
 uv run pytest                                   # the figures against the watch's pixels
 uv run python tools/presentation.py             # the presentation: presentation/slides/*.png and arris.pdf
+uv run python tools/package.py                  # a release zip: build/release/Arris-<version>.zip
 ```
+
+Releasing: `docs/RELEASE.md`.
 
 The presentation (`presentation/`) is forty-two slides set in the built
 fonts: the family, axes, figures and their pixel masters, the italic, text,
