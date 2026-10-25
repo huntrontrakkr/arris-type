@@ -57,6 +57,13 @@ Left of `check-googlefonts`' warnings:
 - **vendor_id**: `NONE` until an ID is registered with Microsoft.
 - **article, unreachable_subsetting**: the Google Fonts repository's
   business (a family article; subsets for the terminal and symbol blocks).
+- **math_signs_width at heavy weights**: the core signs share the plus's
+  advance, but the set and membership signs (⊂ ⊃ ∈ ∋ ⊆) are drawn wider and
+  keep their own; one width for all would mean condensing them.
+- **opentype/monospace, numberOfHMetrics** (Mono): the spec's 3 assumes no
+  zero-width glyphs between the cells; Mono's marks are zero-width.
+- **file_size**: the exact flat kerning (≈ 200k pairs at Black); class
+  kerning would save about 2.5x (see the kerning notes).
 
 ## Carried over
 
