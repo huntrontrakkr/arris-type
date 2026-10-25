@@ -227,7 +227,7 @@ def Yeru(g):
 def yat_arm(p):
     """How far yat's bar reaches each side of its stem, centre to end:
     the arm's white beside the stem stays as the stroke grows."""
-    return 1.5 * p.m + p.sv
+    return 1.5 * p.m + p.ungraded().sv
 
 
 @ccap('uni0462', 'Ѣ', 11, 2)

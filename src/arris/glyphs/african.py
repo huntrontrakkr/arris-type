@@ -41,8 +41,10 @@ ALIASES = {0x025B: 'uni03B5'}
 
 def _hook_room(p):
     """How far a hook reaches from its stem, centre to centre: its white
-    stays the same as the strokes grow, so heavy hooks do not close up."""
-    return HOOK_WHITE * p.m + p.sv
+    stays the same as the strokes grow, so heavy hooks do not close up. From
+    the ungraded stem: grade changes strokes, never where they lie (the body
+    is spaced ungraded)."""
+    return HOOK_WHITE * p.m + p.ungraded().sv
 
 
 def _left_tail(g, x, top):
@@ -67,7 +69,9 @@ def Nhookleft(g):
     g.stroke((xl, H), B(xl, yd), B(xl - o, yd), (xl - o, -p.desc + beak_depth(p)))
     g.stroke((xr, 0), (xr, H))
     at = n_diagonal(g, xl + p.sv / 2, xr - p.sv / 2, H)
-    g.stroke(at(H + p.sv), at(-p.sv), start='h', end='h')
+    # cut flush on the cap line and the baseline (the N's clip does that; this
+    # one is opened below the line for the tail)
+    g.stroke(at(H), at(0), start='h', end='h')
     g.clip = (0, -p.desc, g.W, H)
 
 
