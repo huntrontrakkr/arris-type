@@ -475,28 +475,38 @@ def _heritage_ratio(spec, k):
     return _RATIOS[key]
 
 
-def _squint(g) -> float:
-    """How light the faintest hole or slot in the glyph's marked zones
-    stays under the squint (see Squint); 1 if it has none."""
+def _squint(g, kinds=('hole', 'slot')) -> float:
+    """How light the faintest hole or slot (of `kinds`) in the glyph's marked
+    zones stays under the squint (see Squint); 1 if it has none."""
     from shapely.geometry import box
     from .vision import narrow_whites
     zones = [box(*z) for z in g.zones]
-    return min((d for q, kind, d in narrow_whites(g.rings(), g.p.sv, g.p.cap)
-                if kind in ('hole', 'slot') and (not zones or any(q.intersects(z) for z in zones))), default=1.0)
+    return min((d for q, kind, d in narrow_whites(g.rings(), g.p.sv, g.p.view_cap or g.p.cap)
+                if kind in kinds and (not zones or any(q.intersects(z) for z in zones))), default=1.0)
 
 
 _SQUINT: dict = {}
 SQUINT_SLACK = 0.02   # what the Regular reference allows for the raster
+_REG_SV: dict = {}
 
 
-def _squint_reference(spec, p) -> float:
+def _regular_sv(p) -> float:
+    """The Regular's stem in the same cut (the squint rule for counters is
+    for weights heavier than it)."""
+    from .instances import params
+    if p.mono not in _REG_SV:
+        _REG_SV[p.mono] = params(400).with_(mono=p.mono).sv
+    return _REG_SV[p.mono]
+
+
+def _squint_reference(spec, p, kinds=('hole', 'slot')) -> float:
     """What a glyph's white keeps under the squint at Regular, in the same
     cut, capped at vision.READS: the least it may keep at any weight."""
     from .instances import params
     from .vision import READS
-    key = (spec.name, p.mono)
+    key = (spec.name, p.mono, kinds)
     if key not in _SQUINT:
-        _SQUINT[key] = min(READS, _squint(_build(spec, params(400).with_(mono=p.mono), 0.0, 0.0, {}))) - SQUINT_SLACK
+        _SQUINT[key] = min(READS, _squint(_build(spec, params(400).with_(mono=p.mono), 0.0, 0.0, {}), kinds)) - SQUINT_SLACK
     return _SQUINT[key]
 
 
@@ -538,6 +548,24 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                     b = mid
                 else:
                     a = mid
+            overrides['sh_auto'] = b
+            g = _build(spec, p, ot, ob, overrides, width)
+    if auto is not None and not spec.squint and p.sv > _regular_sv(p) * 1.15:
+        # a letter's closed counters also read under the squint, not only by
+        # measure: its horizontals thin further, within the same bound, until
+        # they do (slots are left alone: the arch notches are designed)
+        holes = ('hole',)
+        want = _squint_reference(spec, p, holes)
+        if _squint(g, holes) < want:
+            a, b = overrides.get('sh_auto', 1.0), AUTO_MIN
+            far = _build(spec, p, ot, ob, {**overrides, 'sh_auto': b}, width)
+            if _squint(far, holes) >= want:
+                for _ in range(8):  # bisection: a fuses, b reads
+                    mid = (a + b) / 2
+                    if _squint(_build(spec, p, ot, ob, {**overrides, 'sh_auto': mid}, width), holes) >= want:
+                        b = mid
+                    else:
+                        a = mid
             overrides['sh_auto'] = b
             g = _build(spec, p, ot, ob, overrides, width)
     for sq in spec.squint:

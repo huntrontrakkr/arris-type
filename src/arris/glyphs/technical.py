@@ -23,7 +23,8 @@ from ..draw import B, REGISTRY, _lightened, glyph
 from ..params import SQRT2
 from .arrows import chev, kb_of, reach, stack_k, Ctx, Turn
 from .figures import beak_depth
-from .letterframe import STEEP, growing_width, letter_width
+from .letterframe import STEEP, growing_width, heft, letter_width
+from .extra_latin import _split_counters
 from .operators import OPW, cdot, eq_gap, int_span, integral, kd, u
 from .punct import _ring, axis
 
@@ -62,10 +63,12 @@ def line_top(p):
 
 # --- Diameter, house, keys ---------------------------------------------------------
 
-@tech(u(0x2300), '⌀', lambda p: 0.6 * p.cap + p.sv)
+@glyph(u(0x2300), '⌀', _mono(lambda p: 0.6 * p.cap + p.sv + 2.0 * heft(p)), kind=('punct', 1.0),
+       openings=[_split_counters(2)])
 def diameter(g):
     """A small regular octagon on the axis, a 45-degree stroke through its
-    corners reaching a module past them."""
+    corners reaching a module past them. As ø's: the body grows with the
+    stroke, and at heavy weights the slash thins so both halves stay open."""
     p = g.p
     a = axis(p)
     W2 = g.W / 2
@@ -73,7 +76,7 @@ def diameter(g):
     cx = g.W / 2
     _ring(g, cx - r, a - r, cx + r, a + r, leg=0.586 * r)
     t = 0.707 * r + p.sv / 2 + 1.0 * p.m
-    g.stroke((cx - t, a - t), (cx + t, a + t), start='h', end='h')
+    g.stroke((cx - t, a - t, p.sd * g.free('slash', 1.0)), (cx + t, a + t), start='h', end='h')
 
 
 @tech('house', '⌂', letter_width(9, 2))

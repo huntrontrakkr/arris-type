@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from shapely import affinity
 
-from ..draw import B, REGISTRY, draw, glyph
+from ..draw import Squint, B, REGISTRY, draw, glyph
 from ..geom import rings_to_shapely
 from .caps import big
 from .figures import beak_depth, jog
@@ -28,8 +28,14 @@ ALIASES = {
 }
 
 
-def ccap(name, ch, wm, stems, width=None):
-    return glyph(name, ch, width or letter_width(wm, stems), kind='cap')
+def ccap(name, ch, wm, stems, width=None, squint=()):
+    return glyph(name, ch, width or letter_width(wm, stems), kind='cap', squint=squint)
+
+
+# The soft sign's bowl sits in the lower half of the capital. Drawn small (the
+# lowercase is the capital at the x-height) and heavy, its counter closes to a
+# pinhole: there its top rises, as far as row 7.5, until the counter reads.
+BOWL = (Squint('bowl', lambda p: 7.5),)
 
 
 def mirror(g):
@@ -185,25 +191,27 @@ def Shcha(g):
 
 
 def _sign(g, f, x0, x1):
-    """A stem at x0 carrying the lower bowl of a B out to x1."""
+    """A stem at x0 carrying the lower bowl of a B out to x1 (its top at the
+    free row 'bowl', BOWL)."""
+    top = f.Y(g.free('bowl', 6.0))
     g.stroke((x0, 0), (x0, f.p.cap))
-    g.stroke((x0, f.Y(6)), B(x1, f.Y(6)), B(x1, f.Y(1)), (x0, f.Y(1)), closed=True)
+    g.stroke((x0, top), B(x1, top), B(x1, f.Y(1)), (x0, f.Y(1)), closed=True)
 
 
-@ccap('uni042C', 'Ь', 9, 2)
+@ccap('uni042C', 'Ь', 9, 2, squint=BOWL)
 def Softsign(g):
     f = Frame(g, 9)
     _sign(g, f, f.X(1), f.X(8))
 
 
-@ccap('uni042A', 'Ъ', 11, 2)
+@ccap('uni042A', 'Ъ', 11, 2, squint=BOWL)
 def Hardsign(g):
     f = Frame(g, 11)
     g.stroke((0, f.Y(11)), (f.X(3), f.Y(11)))
     _sign(g, f, f.X(3), f.X(10))
 
 
-@ccap('uni042B', '\u042b', 12, 3)
+@ccap('uni042B', '\u042b', 12, 3, squint=BOWL)
 def Yeru(g):
     f = Frame(g, 12)
     p = f.p
@@ -264,20 +272,21 @@ def Tshe(g):
     g.stroke(f.P(3, 6.5), B(*f.P(10, 6.5)), f.P(10, 0))
 
 
-@ccap('uni0409', 'Љ', 14, 3)
+@ccap('uni0409', 'Љ', 14, 3, squint=BOWL)
 def Lje(g):
     f = Frame(g, 14)
     p = f.p
     g.stroke(f.P(8, 0), f.P(8, 11), f.P(2.5, 11))
     _el_leg(g, f)
-    g.stroke(f.P(8, 6), B(*f.P(13, 6)), B(*f.P(13, 1)), f.P(8, 1), closed=True)
+    row = g.free('bowl', 6.0)
+    g.stroke(f.P(8, row), B(*f.P(13, row)), B(*f.P(13, 1)), f.P(8, 1), closed=True)
 
 
-@ccap('uni040A', 'Њ', 14, 3)
+@ccap('uni040A', 'Њ', 14, 3, squint=BOWL)
 def Nje(g):
     f = Frame(g, 14)
     g.stroke(f.P(1, 0), f.P(1, 12))
-    g.stroke(f.P(1, 6), f.P(8, 6))
+    g.stroke(f.P(1, g.free('bowl', 6.0)), f.P(8, g.free('bowl', 6.0)))   # the bar meets the bowl's top
     _sign(g, f, f.X(8), f.X(13))
 
 

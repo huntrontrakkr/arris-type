@@ -34,6 +34,7 @@ class Params:
     floor: float = 0.0         # no stroke drawn thinner (instances.stroke_floor); 0 for the heritage
     raw: tuple | None = None   # (sv, sh, sd, ss) before the floor, where it raised them
     optical: float = 1.0       # share of the optical corrections (draw.OPTICAL): 1 measured optics, 0 the watch's own drawing
+    view_cap: float = 0.0      # the cap height text is read at (0: cap); a set drawn smaller keeps its font's
 
     def with_(self, **kw) -> 'Params':
         """These parameters with some changed. Strokes never drop below the
@@ -41,6 +42,8 @@ class Params:
         inside a ring, a grade) is clamped as it is made, so the geometry
         that places strokes and the strokes themselves agree."""
         strokes = ('sv', 'sh', 'sd', 'ss')
+        if 'cap' in kw and 'view_cap' not in kw:          # a set drawn at another size is still read at the font's
+            kw['view_cap'] = self.view_cap or self.cap
         before = dict(zip(strokes, self.raw)) if self.raw else {f: getattr(self, f) for f in strokes}
         before.update({f: kw[f] for f in strokes if f in kw})
         p = replace(self, **kw, raw=None)
