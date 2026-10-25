@@ -5,10 +5,15 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
 
 ## From the barred-sign and small-counter pass (2026-10-22)
 
-- **Mono ₦ ₩ at Black.** Their cells keep 0.33–0.38 under the squint
-  (the rule's floor is 0.55): the Mono cell leaves little room for a
-  letter, two bars and their white. Try thinner bars only in Mono, or a
-  narrower inset with the letter condensed further.
+- **Mono ₦ ₩ ¥ at heavy weights.** Their cells keep 0.33–0.38 under the
+  squint (the rule's floor is 0.55): the Mono cell leaves little room for a
+  letter, two bars and their white. The squint rule cannot help: Mono's own
+  Regular already reads 0.38, the reference the heavy weights are held to,
+  and in ¥ at Bold and Black the bars fuse with the Y outright (no white
+  left; the rule now notices that, but thinner bars do not reopen it).
+  Needs a Mono drawing: one bar where two cannot keep their white (a
+  one-bar trial, 2026-10-25, was blocked by the white count the rule now
+  keeps: one bar has fewer whites by design), or a narrower inset.
 - **Squint scan review** (≈370 glyphs flagged at Black, most of them the
   arch notches of n h m and their relatives, which are designed). Go
   through the rest by family and fix the real fusions:

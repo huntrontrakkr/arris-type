@@ -475,14 +475,24 @@ def _heritage_ratio(spec, k):
     return _RATIOS[key]
 
 
-def _squint(g, kinds=('hole', 'slot')) -> float:
-    """How light the faintest hole or slot (of `kinds`) in the glyph's marked
-    zones stays under the squint (see Squint); 1 if it has none."""
+def _squint_pieces(g, kinds=('hole', 'slot')) -> list:
+    """Depths of the holes and slots (of `kinds`) in the glyph's marked zones
+    under the squint (see Squint)."""
     from shapely.geometry import box
     from .vision import narrow_whites
     zones = [box(*z) for z in g.zones]
-    return min((d for q, kind, d in narrow_whites(g.rings(), g.p.sv, g.p.view_cap or g.p.cap)
-                if kind in kinds and (not zones or any(q.intersects(z) for z in zones))), default=1.0)
+    return [d for q, kind, d in narrow_whites(g.rings(), g.p.sv, g.p.view_cap or g.p.cap)
+            if kind in kinds and (not zones or any(q.intersects(z) for z in zones))]
+
+
+def _squint(g, kinds=('hole', 'slot'), count: int = 0) -> float:
+    """How light the faintest hole or slot (of `kinds`) in the glyph's marked
+    zones stays under the squint; 1 if it has none. With `count`, the number
+    it had at Regular: white that has closed altogether reads 0, not 1."""
+    d = _squint_pieces(g, kinds)
+    if len(d) < count:
+        return 0.0
+    return min(d, default=1.0)
 
 
 _SQUINT: dict = {}
@@ -502,11 +512,22 @@ def _regular_sv(p) -> float:
 def _squint_reference(spec, p, kinds=('hole', 'slot')) -> float:
     """What a glyph's white keeps under the squint at Regular, in the same
     cut, capped at vision.READS: the least it may keep at any weight."""
+    return _squint_regular(spec, p, kinds)[0]
+
+
+def _squint_count(spec, p, kinds=('hole', 'slot')) -> int:
+    """How many holes and slots the glyph's watched white has at Regular."""
+    return _squint_regular(spec, p, kinds)[1]
+
+
+def _squint_regular(spec, p, kinds):
     from .instances import params
     from .vision import READS
     key = (spec.name, p.mono, kinds)
     if key not in _SQUINT:
-        _SQUINT[key] = min(READS, _squint(_build(spec, params(400).with_(mono=p.mono), 0.0, 0.0, {}), kinds)) - SQUINT_SLACK
+        reg = _build(spec, params(400).with_(mono=p.mono), 0.0, 0.0, {})
+        d = _squint_pieces(reg, kinds)
+        _SQUINT[key] = (min(READS, min(d, default=1.0)) - SQUINT_SLACK, len(d))
     return _SQUINT[key]
 
 
@@ -569,18 +590,20 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
             overrides['sh_auto'] = b
             g = _build(spec, p, ot, ob, overrides, width)
     for sq in spec.squint:
-        want = _squint_reference(spec, p)
-        if sq.free not in g.defaults or _squint(g) >= want:
+        want, n = _squint_reference(spec, p), _squint_count(spec, p)
+        if sq.free not in g.defaults or _squint(g, count=n) >= want:
             continue
         a, b = g.defaults[sq.free], sq.limit(p)
         far = _build(spec, p, ot, ob, {**overrides, sq.free: b}, width)
-        if _squint(far) >= want:
+        if _squint(far, count=n) >= want:
             for _ in range(10):  # bisection: a fuses, b reads
                 mid = (a + b) / 2
-                if _squint(_build(spec, p, ot, ob, {**overrides, sq.free: mid}, width)) >= want:
+                if _squint(_build(spec, p, ot, ob, {**overrides, sq.free: mid}, width), count=n) >= want:
                     b = mid
                 else:
                     a = mid
+        elif _squint(far, count=n) <= _squint(g, count=n):   # the limit reads no better: leave it be
+            continue
         overrides[sq.free] = b
         g = _build(spec, p, ot, ob, overrides, width)
     # (the heritage drawing is never lightened; composites rely on their parts' own rules)
