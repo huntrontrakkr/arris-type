@@ -55,9 +55,6 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
   Tried again 2026-10-23 with the tone gain at 0.85 and 1.3: neither
   gives back the approved look (bands of `@ $`), so it stays as is until
   the user decides.
-- **ď in Mono Bold** reaches 44 units past its cell (Regular and Black
-  fit): the base narrows only as far as its counter allows and the
-  apostrophe lightens toward Black; at Bold neither is quite enough.
 
 - **Sloppiness pass**: `tools/jog_scan.py` for the remaining near-miss
   steps at Black (keep designed steps; fix the ones a few units apart).

@@ -272,6 +272,13 @@ def _build(spec, p, ot, ob, overrides, width=None):
     g.sh_auto = overrides.get('sh_auto', 1.0)
     g.defaults['sh_auto'] = 1.0
     spec.fn(g)
+    if p.mono and spec.kind not in ('mark', 'space') and not (isinstance(spec.kind, tuple) and spec.kind[0] == 'liga'):
+        # Mono: no ink past the cell (the body sits centred in it); a stroke
+        # that would run on is cut at its edge, and the corner rule chamfers
+        # the cut like any other end
+        cx0, cx1 = (g.W - p.fig_adv) / 2, (g.W + p.fig_adv) / 2
+        x0, y0, x1, y1 = g.clip if isinstance(g.clip, tuple) else (cx0, -10 * p.cap, cx1, 10 * p.cap)
+        g.clip = (max(x0, cx0), y0, min(x1, cx1), y1)
     return g
 
 
