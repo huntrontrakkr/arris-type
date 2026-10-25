@@ -41,8 +41,10 @@ def piece(name, char, width):
     """A bracket piece: set in its body on the figures' advance, as a
     tabular figure is, so the pieces of one bracket stand on the same stem
     line on line (spacing by ink would shift a piece with a point or a
-    hook off it)."""
-    return glyph(name, char, _mono(width), kind='fig')
+    hook off it). Upright in the italic, as a terminal cell is (curved like
+    the italic, never slanted): each line's glyphs slant about their own
+    baseline, so slanted pieces would step sideways at every join."""
+    return glyph(name, char, _mono(width), kind='fig', cell=True)
 
 
 def lighten(g):
