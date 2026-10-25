@@ -14,13 +14,20 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
   Needs a Mono drawing: one bar where two cannot keep their white (a
   one-bar trial, 2026-10-25, was blocked by the white count the rule now
   keeps: one bar has fewer whites by design), or a narrower inset.
-- **Squint scan review** (≈370 glyphs flagged at Black, most of them the
-  arch notches of n h m and their relatives, which are designed). Go
-  through the rest by family and fix the real fusions:
-  - closed counters: Q (0.41), љ њ (0.42), в (0.46), ъ ы ь (0.49–0.53),
-    Ħ, ӹ, ⅇ, ® ℗ (0.26), § (0.49), ¢ (its stem through the c: stubs as $?);
-  - operators and arrows with small closed white: ⌀ (0.14), ⊚, ∮, ∡, ≜,
-    ⊉ ∉ ∌ (slash through a closed form), ⇎, ↂ, ◍;
+- **Squint scan review** (2026-10-25: 215 flags at Black among letters and
+  figures, most of them designed notches or rare letterlike symbols).
+  Done: Q, љ њ ъ ы ь (the soft-sign bowl's top rises), ⌀ (0.14 to 0.5, as
+  ø), ¢ (stubs at Bold and Black, as $), and the squint is read at the
+  font's cap for small capitals (it was too kind to them). Left:
+  - в at Black (0.49): B's two bowls at the x-height; thinner bars help
+    only so far;
+  - Ħ (0.49), § (0.49), ® ℗ (0.46): Ħ's bar, §'s loops, the letter in the
+    ring;
+  - accents at Black: the white between a mark and its letter (Ť Ž š:
+    0.41-0.5) is marks.gap, 0.4 of a stem; more would raise the accents and
+    the line;
+  - operators and arrows with small closed white: ⊚, ∮, ∡, ≜, ⊉ ∉ ∌
+    (slash through a closed form), ⇎, ↂ, ◍; letterlike ℚ ℕ ℊ ↈ;
   - the hatched squares ▤–▩ are dense by design; decide whether they
     thin at heavy weights.
   - The ring below (U+0325) cannot read under the squint at any weight:
@@ -29,10 +36,9 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
   and two modules (operators.TALL) with the equal sign's 1.6 bars of white;
   struck stacks (≢ `!==` `!=`) are a module and a half shorter at each end
   so the slash can run past them. Review the look at Black.
-- **Make the squint rule general where it is safe**: today only glyphs
-  that declare a free variable use it (barred signs, $). Candidates: the
-  symbol lightening rule (holes, not just feature counts), with care not
-  to thin designed shapes (the asterisk).
+- **The squint rule, general**: letters with closed counters now thin their
+  horizontals under it above Regular (holes only, never the designed
+  slots); symbols still use the lightening rule's feature count.
 
 ## For Google Fonts (if the family goes there)
 
