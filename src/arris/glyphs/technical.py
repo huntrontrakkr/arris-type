@@ -78,7 +78,9 @@ def diameter(g):
     cx = g.W / 2
     _ring(g, cx - r, a - r, cx + r, a + r, leg=0.586 * r)
     t = 0.707 * r + p.sv / 2 + 1.0 * p.m
-    g.stroke((cx - t, a - t, p.sd * g.free('slash', 1.0)), (cx + t, a + t), start='h', end='h')
+    k = g.free('slash', 1.0)                   # (a width of its own only when thinned: the italic compensates the rest)
+    w = None if k >= 0.999 else max(p.sd * k, p.floor)
+    g.stroke((cx - t, a - t, w), (cx + t, a + t), start='h', end='h')
 
 
 @tech('house', '⌂', letter_width(9, 2))

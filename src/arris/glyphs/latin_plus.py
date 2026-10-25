@@ -74,6 +74,14 @@ def macronbelow(g, x, y, case):
     g.stroke((x - w, -gap(p) - t / 2, t), (x + w, -gap(p) - t / 2))
 
 
+def verticallinebelow(g, x, y, case):
+    """A short stem under the baseline (Yoruba, and phonetics): as tall as
+    a macron below is wide, within the room below the line."""
+    p = g.p
+    h = min(room_below(p), size(p, case))
+    g.stroke((x, -gap(p) - h), (x, -gap(p)))
+
+
 def ringbelow(g, x, y, case):
     """A small chamfered ring under the baseline; it keeps within the
     descender by lightening (its counter two strokes high), and is drawn
@@ -169,7 +177,7 @@ def horn(g, x, case):
 
 
 ABOVE.update({'̉': hookabove, '̏': doublegrave, '̑': invertedbreve})
-BELOW.update({'̣': dotbelow, '̤': dieresisbelow, '̥': ringbelow, '̱': macronbelow})
+BELOW.update({'̣': dotbelow, '̤': dieresisbelow, '̥': ringbelow, '̱': macronbelow, '\u0329': verticallinebelow})
 ATTACHED['̛'] = horn
 # Vietnamese: acute, grave and hook stand at the circumflex's upper right
 BESIDE.update(('̂', m) for m in ('́', '̀', '̉'))
@@ -447,7 +455,7 @@ ACCENTED = marks.compose(CHARS, BASES)
 # code point -> (glyph name, where it goes: 'top', 'bottom', 'ogonek', 'horn')
 COMBINING = {}
 for _cp in (0x0300, 0x0301, 0x0302, 0x0303, 0x0304, 0x0306, 0x0307, 0x0308, 0x0309, 0x030A, 0x030B, 0x030C,
-            0x030F, 0x0311, 0x031B, 0x0323, 0x0324, 0x0325, 0x0326, 0x0327, 0x0328, 0x0331):
+            0x030F, 0x0311, 0x031B, 0x0323, 0x0324, 0x0325, 0x0326, 0x0327, 0x0328, 0x0329, 0x0331):
     _m = chr(_cp)
     _where = 'top' if _m in ABOVE else 'horn' if _m in ATTACHED else 'ogonek' if _cp == 0x0328 else 'bottom'
     COMBINING[_cp] = (marks._name(_m), _where)

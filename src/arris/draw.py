@@ -378,6 +378,15 @@ def _optical(g, spec, p):
     # (below the middle) or gives way (above). The middle rises by dc, a bowl
     # side moves out by its overshoot, a cut side stays on its line.
     m, t = H / 2, g.sh
+    # The zone above the middle gives way as the middle rises: everything in it
+    # (a bar drawn off the middle, as the a's, the s's waist, a diagonal)
+    # shrinks by that zone's scale. No stroke may shrink below the floor, so
+    # the rise yields: at Thin, where the strokes are the floor, it is all but
+    # gone (tools/stroke_scan.py is the check).
+    if p.floor:
+        zone = H - t - (m + t / 2)
+        k = min(1.0, p.floor / max(min(t, p.sh), 1e-6))
+        dc = max(0.0, min(dc, zone * (1 - k) + ot))
     knots = [(t, t - ob), (m - t / 2, m - t / 2 + dc), (m + t / 2, m + t / 2 + dc), (H - t, H - t + ot)]
     if not (dc or ot or ob) or not (t < m - t / 2 and m + t / 2 < H - t):
         return
