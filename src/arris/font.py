@@ -16,7 +16,7 @@ UPM = 1000
 
 @dataclass
 class Metrics:
-    asc: int = 950      # hhea/typo ascender: room for accents over capitals
+    asc: int = 975      # hhea/typo ascender: room for accents over capitals (the Black À reaches 968)
     desc: int = -250
     gap: int = 0
     cap: int = 720
