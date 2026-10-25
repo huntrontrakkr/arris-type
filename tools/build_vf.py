@@ -232,3 +232,6 @@ print(f'interpolation check: {len(worst)} glyph-weights; mean outline difference
       f'median {sorted(worst)[len(worst) // 2][0]:.2f}; {len(bad)} over {TOL} units')
 for e, w, n in worst[:25]:
     print(f'  {n:16} at {w}: {e:.1f} units')
+import json  # noqa: E402
+(Path('build') / ('vf_check_italic.json' if ITALIC else 'vf_check.json')).write_text(   # every result, for triage
+    json.dumps([[round(e, 2), list(w), n] for e, w, n in worst]))

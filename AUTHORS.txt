@@ -1,0 +1,4 @@
+# The Arris Project Authors: the copyright holders of the font software
+# (see OFL.txt). Add new authors in the form Name <email or URL>.
+
+huntrontrakkr <https://github.com/huntrontrakkr>

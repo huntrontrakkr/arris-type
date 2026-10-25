@@ -267,8 +267,16 @@ def _nonhinting(font):
     font['gasp'] = gasp
 
 
+VERSION = '1.000'
+REPO = 'https://github.com/huntrontrakkr/arris-type'
+COPYRIGHT = f'Copyright 2026 The Arris Project Authors ({REPO})'
+LICENSE = ('This Font Software is licensed under the SIL Open Font License, Version 1.1. '
+           'This license is available with a FAQ at: https://openfontlicense.org')
+LICENSE_URL = 'https://openfontlicense.org'
+
+
 def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, tune=None,
-          metrics: Metrics | None = None, version='0.100', space=None, fea: str | None = None,
+          metrics: Metrics | None = None, version=VERSION, space=None, fea: str | None = None,
           kern: bool = True, placed: dict | None = None, kern_pairs: dict | None = None, stat: bool = True):
     m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh))
     order = ['.notdef', 'space'] + list(names)
@@ -341,13 +349,14 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     fb.setupNameTable({'familyName': fam1, 'styleName': sub1, 'uniqueFontIdentifier': f'{ps};{version}',
                        'fullName': f'{family} {style}', 'psName': ps, 'version': f'Version {version}',
                        'typographicFamily': family, 'typographicSubfamily': style,
-                       'description': f'{family}, a chamfered sans.'}, mac=False)
+                       'description': f'{family}, a chamfered sans.', 'copyright': COPYRIGHT,
+                       'licenseDescription': LICENSE, 'licenseInfoURL': LICENSE_URL}, mac=False)
     fb.setupOS2(sTypoAscender=m.asc, sTypoDescender=m.desc, sTypoLineGap=m.gap,
                 usWinAscent=max(m.win_asc, ymax), usWinDescent=max(m.win_desc, -ymin), sxHeight=m.xh,
                 sCapHeight=m.cap, usWeightClass=weight,
                 fsSelection=0x80 | (0x20 if base == 'Bold' else 0) | (0x01 if is_italic else 0)
                 | (0x40 if not is_italic and base != 'Bold' else 0),
-                achVendID='NONE', version=4)
+                achVendID='NONE', fsType=0, version=4)                 # installable: the OFL allows embedding
     fb.setupPost(isFixedPitch=1 if p.mono else 0,
                  italicAngle=-math.degrees(math.atan(p.slant)) if p.slant else 0)
     if p.slant:
