@@ -495,9 +495,11 @@ def _squint_pieces(g, kinds=('hole', 'slot')) -> list:
 def _squint(g, kinds=('hole', 'slot'), count: int = 0) -> float:
     """How light the faintest hole or slot (of `kinds`) in the glyph's marked
     zones stays under the squint; 1 if it has none. With `count`, the number
-    it had at Regular: white that has closed altogether reads 0, not 1."""
+    the zones had at Regular: white between a sign's bars that has closed
+    altogether reads 0, not 1 (white that opened out, a stem become stubs,
+    is not narrow any more and is not missed)."""
     d = _squint_pieces(g, kinds)
-    if len(d) < count:
+    if g.zones and len(d) < count:                 # watched white (a sign's bars) that closed altogether
         return 0.0
     return min(d, default=1.0)
 

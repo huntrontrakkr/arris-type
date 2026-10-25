@@ -59,12 +59,19 @@ def Euro(g):
 
 
 @glyph('cent', '¢', letter_width(8, 2), kind='lower',
-       openings=[Opening(lambda g: _counter_white(g, 1), 'slash', lambda p: 0.5, max_ratio=AUTO_SHARE)])
+       openings=[Opening(lambda g: _counter_white(g, 1), 'slash', lambda p: 0.5, max_ratio=AUTO_SHARE)],
+       squint=(Squint('stem', lambda p: 0.0),))
 def cent(g):
     p = g.p
     stamp(g, 'c', width=g.W)
-    # the bar thins at heavy weights so the counter it closes stays open
-    g.stroke((g.W / 2, -0.15 * p.cap, p.sv * g.free('slash', 1.0)), (g.W / 2, p.xh + 0.15 * p.cap))
+    # the bar thins at heavy weights so the counter it closes stays open; where
+    # even then the white beside it closes under the squint, it stops at the
+    # c and stands only above and below it, as the dollar's does
+    t = p.sv * g.free('slash', 1.0)
+    lo, hi = -0.15 * p.cap, p.xh + 0.15 * p.cap
+    runs = [(lo, hi)] if g.free('stem', 1.0) >= 0.5 else [(lo, g.sh / 2), (p.xh - g.sh / 2, hi)]
+    for y0, y1 in runs:
+        g.stroke((g.W / 2, y0, t), (g.W / 2, y1))
     g.clip = None
 
 
