@@ -28,7 +28,7 @@ brackets' height, the descender to above the caps.
 """
 from __future__ import annotations
 
-from ..draw import B, REGISTRY, draw, glyph
+from ..draw import TAB_MATH, B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
 from .letterframe import STEEP, growing_width, letter_width
@@ -44,6 +44,7 @@ def _mono(width):
 
 def op(name, char, width=None, sides=1.0, solid=False):
     w = _mono(width or letter_width(8, 1))
+    TAB_MATH.add(name)                         # on the math advance (draw.TAB_MATH)
     return glyph(name, char, w, kind=('punct', sides), solid=solid)
 
 

@@ -47,6 +47,12 @@ class Squint:
     limit: Callable[[Params], float]
 
 
+# Math signs set on one advance (the plus sign's, at least), their ink centred
+# in it, so a column of figures and operators lines up: the operators
+# (glyphs.operators.op) and the ASCII and Latin-1 signs.
+TAB_MATH: set = {'plus', 'minus', 'equal', 'less', 'greater', 'plusminus', 'multiply', 'divide', 'logicalnot'}
+
+
 @dataclass
 class Spec:
     name: str

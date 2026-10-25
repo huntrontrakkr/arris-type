@@ -8,7 +8,7 @@ from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.pens.pointPen import SegmentToPointPen  # noqa: F401  (kept for later point pens)
 
-from .draw import REGISTRY, draw
+from .draw import REGISTRY, TAB_MATH, draw
 from .params import Params
 
 UPM = 1000
@@ -130,6 +130,11 @@ def _place(name: str, p: Params, tune=None, record: bool = False):
         side = k(p) if callable(k) else PUNCT_SIDE * light(p) * k      # a glyph may set its own side
         dx = side - min(xs)
         adv = side + (max(xs) - min(xs)) + side
+        if name in TAB_MATH and name != 'plus':                          # math on one advance, at least
+            tab = _place('plus', p)[2]
+            if adv < tab:
+                dx += (tab - adv) / 2
+                adv = tab
     else:
         zone = (0.0, p.xh) if spec.kind == 'lower' else (0.0, p.cap)
         lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * (zone[1] - zone[0]),
@@ -247,9 +252,37 @@ def _contours(rings, keep=False):
                 clean.append(q)
         if len(clean) > 1 and clean[0] == clean[-1]:
             clean.pop()
+        clean = _drop_colinear(clean)
         if len(clean) >= 3:
             out.append(clean[::-1])
     return out
+
+
+def _drop_colinear(pts):
+    """Without the points that lie on a straight run between their
+    neighbours (rounding leaves some): a static outline needs none of them."""
+    changed = True
+    while changed and len(pts) > 3:
+        changed = False
+        for i in range(len(pts)):
+            a, b, c = pts[i - 1], pts[i], pts[(i + 1) % len(pts)]
+            u, v = (b[0] - a[0], b[1] - a[1]), (c[0] - b[0], c[1] - b[1])
+            if u[0] * v[1] - u[1] * v[0] == 0 and u[0] * v[0] + u[1] * v[1] > 0:
+                del pts[i]
+                changed = True
+                break
+    return pts
+
+
+SCRIPTS = 'Latn, Cyrl, Grek'
+
+
+def add_meta(font):
+    """The scripts the font is designed for and supports (the 'meta' table)."""
+    from fontTools.ttLib import newTable
+    meta = newTable('meta')
+    meta.data = {'dlng': SCRIPTS, 'slng': SCRIPTS}
+    font['meta'] = meta
 
 
 def _nonhinting(font):
@@ -369,6 +402,7 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     os2.recalcCodePageRanges(fb.font)
     os2.recalcUnicodeRanges(fb.font)
     _nonhinting(fb.font)
+    add_meta(fb.font)
     if p.mono:
         fb.font['OS/2'].panose.bFamilyType = 2
         fb.font['OS/2'].panose.bProportion = 9

@@ -21,8 +21,8 @@ from .cyrillic import sc
 from .letterframe import STEEP, Frame, growing_width, least_white, letter_width
 from .punct import _ring, axis, dot, punct
 
-ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyphen', 0x2011: 'hyphen',
-           0x00AD: 'hyphen'}
+ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyphen', 0x2011: 'hyphen'}
+# (no soft hyphen, U+00AD: where a word may break is the shaper's business, and it is never drawn)
 
 
 def stamp(g, name, p=None, dx=0.0, dy=0.0, width=None):

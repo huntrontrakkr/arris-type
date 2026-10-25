@@ -200,6 +200,8 @@ buildStatTable(vf, [
                [{'value': 0, 'name': 'Roman', 'flags': 0x2, 'linkedValue': 1}]},
 ])
 vf['name'].names = [nm for nm in vf['name'].names if nm.platformID != 1]   # Windows names only
+from arris.font import add_meta  # noqa: E402
+add_meta(vf)
 out = Path('build') / ('Arris-Italic[GRAD,WTCH,wght].ttf' if ITALIC else 'Arris[GRAD,WTCH,wght].ttf')
 vf.save(out)
 print('wrote', out)
