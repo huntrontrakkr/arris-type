@@ -31,12 +31,17 @@ from arris.kerning import kerns
 from arris.variable import align
 
 # (wght, GRAD, WTCH)
-MASTERS = [(w, 0, 0) for w in (100, 200, 400, 600, 750, 800, 850, 900)] + \
+# Masters where the interpolation check found the drawing bends between them:
+# every 100 on the weight axis up to 600 (the 1's flag, ŉ, the digraphs), and
+# the heavy corner where grade and the watch's proportions meet (they do not
+# add up there: a heavy, graded watch drawing is not the sum of the two)
+MASTERS = [(w, 0, 0) for w in (100, 200, 300, 400, 500, 600, 700, 750, 800, 850, 900)] + \
     [(w, g, 0) for w in (100, 400, 900) for g in (-100, 100)] + \
-    [(w, 0, 100) for w in (100, 400, 600, 800, 900)]
+    [(w, 0, 100) for w in (100, 400, 600, 800, 900)] + [(900, 100, 100)]
 DEFAULT = (400, 0, 0)
-CHECK = [(150, 0, 0), (300, 0, 0), (500, 0, 0), (700, 0, 0), (775, 0, 0), (825, 0, 0), (875, 0, 0),
-         (400, 50, 0), (700, -50, 0), (600, 0, 50), (300, 0, 100), (800, 50, 100)]
+CHECK = [(150, 0, 0), (250, 0, 0), (350, 0, 0), (450, 0, 0), (550, 0, 0), (650, 0, 0), (725, 0, 0),
+         (775, 0, 0), (825, 0, 0), (875, 0, 0),
+         (400, 50, 0), (700, -50, 0), (600, 0, 50), (300, 0, 100), (800, 50, 100), (850, 75, 75)]
 
 family = 'Arris'
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
