@@ -64,6 +64,13 @@ _register(SUB_SIGNS, sub_dy, False)
 _register(SUB_LETTERS, sub_dy, True)
 
 
+@glyph('uni2071.dotless', None, _small_width('i', True), kind=('punct', 0.55))
+def isuperior_dotless(g):
+    """ⁱ without its dot, for a mark above it (anchors' ccmp: a soft-dotted
+    letter loses its dot under an accent)."""
+    g.add_glyph(draw('dotlessi', small_all(g.p)), 0, sup_dy(g.p))
+
+
 @glyph('uni2094', 'ₔ', _small_width('e', True), kind=('punct', 0.55))
 def schwainferior(g):
     """The small e turned half round about the middle of its x-height."""

@@ -224,6 +224,21 @@ def Yeru(g):
     g.stroke((xs, 0), (xs, p.cap))
 
 
+def yat_arm(p):
+    """How far yat's bar reaches each side of its stem, centre to end:
+    the arm's white beside the stem stays as the stroke grows."""
+    return 1.5 * p.m + p.sv
+
+
+@ccap('uni0462', 'Ѣ', 11, 2)
+def Yat(g):
+    """Yat: the soft sign's stem crossed by a bar in its upper half."""
+    f = Frame(g, 11)
+    _sign(g, f, f.X(3), f.X(10))
+    arm = yat_arm(g.p)
+    g.stroke((f.X(3) - arm, f.Y(9)), (f.X(3) + arm, f.Y(9)))
+
+
 @ccap('uni042D', 'Э', 9, 2)
 def Ereversed(g):
     f = Frame(g, 9)
@@ -327,6 +342,18 @@ def smallcap(name, ch, cap_name):
 for cp, cap_name in SMALLCAP.items():
     if cap_name:
         smallcap(f'uni{cp:04X}', chr(cp), cap_name)
+
+
+@glyph('uni0463', 'ѣ', letter_width(11, 2), kind='lower')
+def yat(g):
+    """Yat: a stem rising to the ascender, crossed by a bar at the x-height,
+    the soft sign's bowl below it."""
+    f = Frame(g, 11, 'asc')
+    x = f.X(3)
+    g.stroke((x, 0), (x, f.Y(13)))
+    g.stroke((x, f.Y(5)), B(f.X(10), f.Y(5)), B(f.X(10), f.Y(1)), (x, f.Y(1)), closed=True)
+    arm = yat_arm(g.p)
+    g.stroke((x - arm, f.Y(8)), (x + arm, f.Y(8)))
 
 
 @glyph('uni0431', 'б', letter_width(8, 2), kind='lower')

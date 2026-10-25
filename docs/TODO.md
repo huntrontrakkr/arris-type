@@ -42,11 +42,21 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
 
 ## For Google Fonts (if the family goes there)
 
-- **West African Latin**: `check-googlefonts` (shape_languages) wants
-  Ɛ ɛ Ɔ ɔ Ɲ ɲ Ɗ ɗ Ƴ ƴ Ɓ ɓ Ƙ ƙ and the combining vertical line below
-  (U+0329) for Bambara, Dyula, Fanti, Fula, Hausa, Twi and Yoruba. ɛ can
-  share ε's drawing; Ɔ ɔ mirror C c; the hooked letters take the j's hook.
-  The rest of that profile passes on Arris Regular (2026-10-25).
+Done 2026-10-25: West African Latin (Ɛ ɛ Ɔ ɔ Ɲ ɲ Ɓ ɓ Ɗ ɗ Ƙ ƙ Ƴ ƴ, U+0329),
+yat (Ѣ ѣ), the dotless superior i under marks, marks centred on their
+origin (a mark the shaper left where it was drawn read as unattached),
+math on one advance, no soft hyphen, a meta table, no colinear points.
+Left of `check-googlefonts`' warnings:
+- **big yus Ѫ ѫ** (auxiliary for Russian and Bulgarian): not drawn; its
+  traditional form wants checking against a reference first.
+- **alt_caron** (ď ľ Ľ ť "decomposed"): the check reads components, and
+  Arris's glyphs are outlines; their carons are the apostrophe form it asks
+  for.
+- **contour_count**: designed differences (the 4 open at the top, % with
+  its rings joined to the slash, ⊕).
+- **vendor_id**: `NONE` until an ID is registered with Microsoft.
+- **article, unreachable_subsetting**: the Google Fonts repository's
+  business (a family article; subsets for the terminal and symbol blocks).
 
 ## Carried over
 

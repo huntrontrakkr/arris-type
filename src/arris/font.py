@@ -165,10 +165,11 @@ def _body(name, p, rings, dx, W):
 
 
 def mark_over(p: Params) -> float:
-    """Where a combining mark hangs without mark positioning: over the
-    middle of the glyph before it (an n's advance, or a monospaced cell)."""
-    from .glyphs.letterframe import letter_width
-    return p.fig_adv / 2 if p.mono else letter_width(8, 2)(p) / 2 + light(p)
+    """Where a combining mark sits before mark positioning moves it to its
+    base (``anchors``): centred on its own origin. Hung over the middle of an
+    n, it sat exactly where an n-wide letter's anchor puts it (a y, every
+    Mono glyph), unmoved, which checkers read as a mark left unattached."""
+    return 0.0
 
 
 def spacing(name: str, p: Params):

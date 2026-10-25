@@ -141,7 +141,8 @@ def fea(names, placed, p: Params) -> str:
     top_lc = [n for n in top_lc if f'{n}.case' in set(mark_names)]
     caps = [n for n in names if REGISTRY[n].kind in ('cap', 'fig')]
     have = set(names)
-    dotless = [(a, b) for a, b in (('i', 'dotlessi'), ('j', 'uni0237')) if a in have and b in have]
+    dotless = [(a, b) for a, b in (('i', 'dotlessi'), ('j', 'uni0237'), ('uni2071', 'uni2071.dotless'))
+               if a in have and b in have]
     decomp = [(a, b, c) for a, b, c in (('iogonek', 'dotlessi', 'uni0328'), ('uni1ECB', 'dotlessi', 'dotbelowcomb'))
               if {a, b, c} <= have]
     ccmp = []
