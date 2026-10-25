@@ -346,11 +346,13 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     fam1 = family if ribbi else f'{family} {base}'
     sub1 = style if ribbi else ('Italic' if is_italic else 'Regular')
     ps = f'{family}-{style}'.replace(' ', '')
-    fb.setupNameTable({'familyName': fam1, 'styleName': sub1, 'uniqueFontIdentifier': f'{ps};{version}',
-                       'fullName': f'{family} {style}', 'psName': ps, 'version': f'Version {version}',
-                       'typographicFamily': family, 'typographicSubfamily': style,
-                       'description': f'{family}, a chamfered sans.', 'copyright': COPYRIGHT,
-                       'licenseDescription': LICENSE, 'licenseInfoURL': LICENSE_URL}, mac=False)
+    strings = {'familyName': fam1, 'styleName': sub1, 'uniqueFontIdentifier': f'{ps};{version}',
+               'fullName': f'{family} {style}', 'psName': ps, 'version': f'Version {version}',
+               'description': f'{family}, a chamfered sans.', 'copyright': COPYRIGHT,
+               'licenseDescription': LICENSE, 'licenseInfoURL': LICENSE_URL}
+    if not ribbi:                       # Regular, Bold and their italics need no typographic names (16, 17)
+        strings.update(typographicFamily=family, typographicSubfamily=style)
+    fb.setupNameTable(strings, mac=False)
     fb.setupOS2(sTypoAscender=m.asc, sTypoDescender=m.desc, sTypoLineGap=m.gap,
                 usWinAscent=max(m.win_asc, ymax), usWinDescent=max(m.win_desc, -ymin), sxHeight=m.xh,
                 sCapHeight=m.cap, usWeightClass=weight,

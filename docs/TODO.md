@@ -34,6 +34,14 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
   symbol lightening rule (holes, not just feature counts), with care not
   to thin designed shapes (the asterisk).
 
+## For Google Fonts (if the family goes there)
+
+- **West African Latin**: `check-googlefonts` (shape_languages) wants
+  Ɛ ɛ Ɔ ɔ Ɲ ɲ Ɗ ɗ Ƴ ƴ Ɓ ɓ Ƙ ƙ and the combining vertical line below
+  (U+0329) for Bambara, Dyula, Fanti, Fula, Hausa, Twi and Yoruba. ɛ can
+  share ε's drawing; Ɔ ɔ mirror C c; the hooked letters take the j's hook.
+  The rest of that profile passes on Arris Regular (2026-10-25).
+
 ## Carried over
 
 - **Variable-font interpolation**: the build's check (exact drawings against
