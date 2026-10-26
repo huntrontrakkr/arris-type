@@ -4,9 +4,12 @@
 
 1. Set `VERSION` in `src/arris/font.py` (the fonts' version string,
    `head.fontRevision` and the unique ID all follow it).
-2. Rebuild everything: `build/scripts/rebuild.sh` (static families, both
-   variable fonts with their interpolation check, tests, fontbakery,
-   proofs, the specimen's WOFF2s and the presentation).
+2. Rebuild everything: `tools/rebuild.sh` (every static weight in a
+   process of its own, then both variable fonts with their interpolation
+   check, then pytest and fontbakery side by side, and the zip;
+   `tools/rebuild.sh extras` also remakes the proofs, the specimen's
+   WOFF2s and the presentation). A timing line per phase goes to
+   `build/scripts/logs/time.log`.
 3. Read `build/scripts/logs/post.log`: pytest passes, fontbakery reports
    no FAIL and no ERROR for the static, variable and Mono sets.
 4. Package: `uv run python tools/package.py` writes

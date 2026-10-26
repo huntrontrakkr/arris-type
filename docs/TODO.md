@@ -60,6 +60,14 @@ the release (fixes kept breaking things elsewhere that only this shows).
   (every point kept). `tools/stroke_scan.py` reads the engine's outlines,
   before the split, and still lists them.
 
+- **Build speed** (2026-10-26): a full `tools/rebuild.sh` takes about 50
+  minutes on 24 cores (static fonts 6, variable fonts 34, checks 11; it
+  was over two hours). Most of what is left is the variable fonts'
+  alignment with their own masters (16 minutes each) and fontbakery on
+  them. Next: keep drawings in a cache on disk (by glyph, parameters and
+  the engine's source), so a rebuild after a change to the build scripts,
+  or to a few glyphs, redraws only what changed.
+
 ## For Google Fonts (if the family goes there)
 
 Done 2026-10-25: West African Latin (Ɛ ɛ Ɔ ɔ Ɲ ɲ Ɓ ɓ Ɗ ɗ Ƙ ƙ Ƴ ƴ, U+0329),

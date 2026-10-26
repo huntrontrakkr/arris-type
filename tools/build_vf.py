@@ -275,13 +275,25 @@ def _glyph(n):
     up = [placed(m) for m in MASTERS]
     plain = lambda ups: [(u[0], u[2]) for u in ups]
     if not any(u[0] for u in up):
-        return n, plain(up), [u[0] for u in up], None, 0.0, 0.0, None, []
-    cache = {}
+        return n, plain(up), [u[0] for u in up], None, 0.0, 0.0, None, [], {}
+    cache, drawn = {}, {}
 
     def exact(loc):
         if loc not in cache:
-            cache[loc] = _shp(_place(n, P(loc), record=ITALIC)[0])
+            drawn[loc] = _place(n, P(loc), record=ITALIC)
+            cache[loc] = _shp(drawn[loc][0])
         return cache[loc]
+
+    def seen(loc):
+        """The outline the final check compares the font with at loc, from
+        the drawing made here (the italic curved and flattened, font.place)."""
+        rings, rec, _ = drawn[loc]
+        if not ITALIC:
+            return rings
+        q = P(loc)
+        if REGISTRY[n].cell:
+            q = q.with_(slant=0.0)
+        return ital.polylines(ital.outline(rings, rec, q))
 
     def candidates(variant, how):
         rings = [u[0] for u in variant]
@@ -382,7 +394,10 @@ def _glyph(n):
         d = place(n, ps[DEFAULT])[0]
         rings = [d for _ in MASTERS]
         own = []
-    return n, plain(up), rings, choice, first, err, why, own
+    # the exact outlines at the check's places, drawn here already: the final
+    # check need not draw them again
+    shown = {loc: [[tuple(q[:2]) for q in r] for r in seen(loc)] for loc in CHECK if loc in drawn}
+    return n, plain(up), rings, choice, first, err, why, own, shown
 
 
 from multiprocessing import get_context  # noqa: E402
@@ -391,8 +406,11 @@ upright = {m: {} for m in MASTERS}
 aligned = {w: {} for w in MASTERS}
 frozen, chosen = [], []
 OWN = {}                                                    # glyph -> [(location, outline)]: its own masters
+SHOWN = {}                                                  # (glyph, location) -> exact outline, for the check
 with get_context('fork').Pool(WORKERS) as pool:
-    for n, up, rings, choice, e0, e1, why, own in pool.imap_unordered(_glyph, names, chunksize=4):
+    for n, up, rings, choice, e0, e1, why, own, shown in pool.imap_unordered(_glyph, names, chunksize=4):
+        for loc, r in shown.items():
+            SHOWN[n, loc] = r
         if why is not None:
             frozen.append((n, why))
         if own:
@@ -541,8 +559,11 @@ def _check_at(w):
     p = P(w)
     res = []
     for n in names:
-        rings, adv = place(n, p)
-        exact = rings_to_shapely(ital.polylines(rings) if ITALIC else rings)
+        if (n, tuple(w)) in SHOWN:                          # drawn while aligning
+            exact = rings_to_shapely(SHOWN[n, tuple(w)])
+        else:
+            rings, adv = place(n, p)
+            exact = rings_to_shapely(ital.polylines(rings) if ITALIC else rings)
         g = glyf[n]
         coords, ends, flags = g.getCoordinates(glyf)
         pts, start = list(coords), 0
