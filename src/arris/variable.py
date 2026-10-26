@@ -96,7 +96,7 @@ def _match_contours(ref, other, nref, noth):
     return order
 
 
-def _dp(A, TA, B, TB, rotate=True):
+def _dp(A, TA, B, TB, rotate=True, turn=TURN):
     """Global alignment of A (with its start fixed) against a rotation of B
     (or B as it is: ``rotate`` False, for open paths).
     Returns list of (i or None, j or None) pairs.
@@ -111,7 +111,7 @@ def _dp(A, TA, B, TB, rotate=True):
     for w, Ag, Tg in guides:
         ax, ay, at = np.array([q[0] for q in Ag]), np.array([q[1] for q in Ag]), np.array(Tg)
         C += w / wsum * (np.hypot(ax[:, None] - Bx[None, :], ay[:, None] - By[None, :])
-                         + TURN * (np.abs(at[:, None] - Bt[None, :]) > 0.3))
+                         + turn * (np.abs(at[:, None] - Bt[None, :]) > 0.3))
     best = None
     # candidate rotations: B starts that look like A's start
     starts = sorted(range(m), key=lambda j: C[0, j])[:4] if rotate else [0]
@@ -268,7 +268,47 @@ def _whole(arc, c):
     return list(arc) + [(2 * c - x, y) for x, y in reversed(arc[1:-1])]
 
 
-def _align_open(paths, norms, locs=None):
+def _fill_gaps(cols, norms, locs, ends=None):
+    """Fill each master's gaps (None in its column) with a duplicate of the
+    real point on either side of the gap that the missing point is nearer
+    to, judged by where it lies in the master nearest in the design space
+    that has it (the first that has it, without locs): a feature collapsing
+    in some masters (a step shrinking to a corner) collapses onto the point
+    it shrinks into, not onto whichever point happens to precede it, nor
+    onto the one a far master puts it near. Collapsed onto the far end of
+    an edge, it slides along the edge between the masters, unseen, but two
+    such slides add up off the outline where two axes meet (Δ's step at
+    the heavy grade-watch corner, 440 units out). ``ends``: per master, the
+    ends of an open path (the axis points of a half), which a gap at the
+    head or the tail collapses onto."""
+    k = len(cols[0]) if cols else 0
+    n = len(cols)
+    real = [[q is not None for q in c] for c in cols]
+    for mi in range(k):
+        seq = [c[mi] for c in cols]
+        if ends is None and all(q is None for q in seq):
+            raise ValueError('a master lost a whole contour')
+        fill = list(seq)
+        for i in range(n):
+            if seq[i] is not None:
+                continue
+            have = [m for m in range(k) if real[i][m]]
+            src = min(have, key=lambda m: (math.dist(locs[m], locs[mi]), m)) if locs else have[0]
+            r = norms[src](cols[i][src])
+            if ends is None:
+                ip = next((i - t) % n for t in range(1, n + 1) if seq[(i - t) % n] is not None)
+                inx = next((i + t) % n for t in range(1, n + 1) if seq[(i + t) % n] is not None)
+                cands = [seq[ip], seq[inx]]
+            else:
+                cands = [next((seq[j] for j in range(i - 1, -1, -1) if seq[j] is not None), ends[mi][0]),
+                         next((seq[j] for j in range(i + 1, n) if seq[j] is not None), ends[mi][1])]
+            fill[i] = min(cands, key=lambda q: math.dist(norms[mi](q), r))
+        for c, q in zip(cols, fill):
+            c[mi] = q
+    return cols
+
+
+def _align_open(paths, norms, locs=None, turn=TURN):
     """Open paths, one per master, both ends on the axis: the ends pinned to
     each other, the points between matched, a missing point filled with the
     previous one (the start, at the head of the path)."""
@@ -287,25 +327,18 @@ def _align_open(paths, norms, locs=None):
         mi = have[a]
         B = [norms[mi](q) for q in inner[mi]]
         gs = [(w, *_guide(cols, have[b], norms[have[b]])[:2]) for w, b in guides]
-        path = _dp(gs, None, B, _turns(inner[mi]) if len(B) > 2 else [0.0] * len(B), rotate=False)
+        path = _dp(gs, None, B, _turns(inner[mi]) if len(B) > 2 else [0.0] * len(B), rotate=False, turn=turn)
         new = []
         for a, b in path:
             col = cols[a] if a is not None else [None] * k
             col[mi] = inner[mi][b] if b is not None else None
             new.append(col)
         cols = new
-    out = []
-    for mi in range(k):
-        seq, prev = [paths[mi][0]], paths[mi][0]
-        for col in cols:
-            prev = col[mi] if col[mi] is not None else prev
-            seq.append(prev)
-        seq.append(paths[mi][-1])
-        out.append(seq)
-    return out
+    _fill_gaps(cols, norms, locs, ends=[(pa[0], pa[-1]) for pa in paths])
+    return [[paths[mi][0]] + [col[mi] for col in cols] + [paths[mi][-1]] for mi in range(k)]
 
 
-def _mirror_align(masters, locs=None):
+def _mirror_align(masters, locs=None, turn=TURN):
     """A glyph symmetric in every master, aligned by its left half and
     mirrored, so every instance between the masters is symmetric too; or
     None, if it is not symmetric or its halves will not align.
@@ -334,14 +367,14 @@ def _mirror_align(masters, locs=None):
             return None
         for ai in range(len(wholes[ref_i])):
             group = [parts[mi][0][orders[mi][ai]] for mi in range(k)]
-            al = _align_open(group, norms, locs)
+            al = _align_open(group, norms, locs, turn)
             if al is None:
                 return None
             for mi in range(k):
                 out[mi].append(_whole(al[mi], axes[mi]))
     if sides[0]:
         try:
-            al = _align(sides, locs)
+            al = _align(sides, locs, turn)
         except ValueError:
             return None
         for mi in range(k):
@@ -372,7 +405,7 @@ def _mirror_align(masters, locs=None):
     return out
 
 
-def align(masters: list[list[list[tuple]]], locs=None):
+def align(masters: list[list[list[tuple]]], locs=None, turn=TURN):
     """masters: per master, a list of rings (ink-left). Returns the same,
     made compatible (same contour order, same point counts, same order), or
     raises ValueError. A glyph symmetric in every master is aligned by its
@@ -380,12 +413,15 @@ def align(masters: list[list[list[tuple]]], locs=None):
 
     locs: each master's place in the design space, axes scaled alike (a
     master is aligned against the nearest one already aligned); without
-    them, every master is aligned against the one with the most points."""
+    them, every master is aligned against the one with the most points.
+    turn: the cost of pairing points that turn differently (0: by position
+    alone, which pairs a fused heavy master with a thin one better in some
+    glyphs and worse in others: 2026-10-26, best for about 6% of glyphs)."""
     if any(masters):
-        res = _mirror_align(masters, locs)
+        res = _mirror_align(masters, locs, turn)
         if res is not None:
             return res
-    return _align(masters, locs)
+    return _align(masters, locs, turn)
 
 
 def _tree(ref_i, k, locs):
@@ -428,7 +464,7 @@ def _guide(cols, pa, norm):
     return pts, [t.get(i, 0.0) for i in range(len(cols))], len(real) == len(cols)
 
 
-def _align(masters, locs=None):
+def _align(masters, locs=None, turn=TURN):
     k = len(masters)
     if not any(masters):
         return masters                                      # an empty glyph (a blank Braille cell) varies trivially
@@ -461,7 +497,7 @@ def _align(masters, locs=None):
                     for idx in range(len(cols)):
                         cols[idx][mi] = ring[(idx + r) % len(ring)]
                     continue
-            path = _dp([g[:3] for g in gs], None, B, TB)
+            path = _dp([g[:3] for g in gs], None, B, TB, turn=turn)
             new_cols = []
             for a, b in path:
                 if a is not None:
@@ -473,31 +509,7 @@ def _align(masters, locs=None):
                     col[mi] = ring[b]
                     new_cols.append(col)
             cols = new_cols
-        # fill each master's gaps with a duplicate of the real point on either
-        # side that the missing point is nearer to where it does exist: a
-        # feature collapsing in some masters (a step shrinking to a corner)
-        # collapses onto the point it shrinks into, not onto whichever point
-        # happens to precede it (which slid it along an edge and bent the
-        # edge in the instances between)
-        rep = []
-        for col in cols:
-            mi_ = next(i for i, q in enumerate(col) if q is not None)
-            rep.append(norms[mi_](col[mi_]))
-        n_ = len(cols)
-        for mi in range(k):
-            seq = [c[mi] for c in cols]
-            if all(q is None for q in seq):
-                raise ValueError('a master lost a whole contour')
-            fill = list(seq)
-            for i in range(n_):
-                if seq[i] is not None:
-                    continue
-                ip = next((i - t) % n_ for t in range(1, n_ + 1) if seq[(i - t) % n_] is not None)
-                inx = next((i + t) % n_ for t in range(1, n_ + 1) if seq[(i + t) % n_] is not None)
-                d = lambda j: math.hypot(rep[i][0] - rep[j][0], rep[i][1] - rep[j][1])
-                fill[i] = seq[ip] if d(ip) <= d(inx) else seq[inx]
-            for c, q in zip(cols, fill):
-                c[mi] = q
+        _fill_gaps(cols, norms, locs)
         for mi in range(k):
             out[mi][ci] = [c[mi] for c in cols]
     return out
