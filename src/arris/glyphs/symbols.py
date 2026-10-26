@@ -39,11 +39,22 @@ def _bars_inset(p):
 
 
 def _bars_limit(p):
+    """How far the squint rule may thin a pair of bars: to PAIR_T_MIN of the
+    horizontal, never under the font's stroke floor."""
     from .currency import PAIR_T_MIN, pair_t
-    return PAIR_T_MIN * p.sh / pair_t(p)
+    return max(PAIR_T_MIN * p.sh, min(p.floor, pair_t(p))) / pair_t(p)
 
 
-BARS = (Squint('bars', _bars_limit),)   # as currency.BARS: the bars thin until their white reads
+# The squint rule for a sign with a pair of bars (here and in currency): the
+# bars thin, from the drawing's own down to PAIR_T_MIN of the horizontal,
+# until their white reads.
+BARS = (Squint('bars', _bars_limit),)
+# A sign written with one bar as well as two (¥ ₩ ₦): in Mono's narrow cell,
+# where even the thinned pair cannot keep its white (held to what reads, not
+# to the Regular, which reads no better), the pair becomes one bar if one
+# reads better. Not for a sign whose second bar is its identity (€, ₳, ₤
+# against £).
+BARS_OR_ONE = BARS + (Squint('one', lambda p: 1.0 if p.mono else 0.0, absolute=True),)
 
 
 @glyph('Euro', '€', lambda p: letter_width(10, 2)(p) + max(0.0, _bars_inset(p) - p.m), kind='cap', squint=BARS)
@@ -85,7 +96,7 @@ def sterling(g):
     g.stroke(f.P(0.5, 6), f.P(6, 6))
 
 
-@glyph('yen', '¥', letter_width(10, 2), kind='cap', squint=BARS)
+@glyph('yen', '¥', letter_width(10, 2), kind='cap', squint=BARS_OR_ONE)
 def yen(g):
     """Y with two bars across its stem, in the room under its arms: centred
     a third of the way up, but a stroke's white under where the arms meet

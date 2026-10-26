@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from ..draw import B, REGISTRY, Squint, draw, glyph, white_features
+from ..draw import B, REGISTRY, draw, glyph, white_features
 from ..params import SQRT2
 from .caps import big
 from .figures import beak_depth, heaviness, jog
@@ -130,9 +130,12 @@ def mark_bars(g, x0, x1, y_lo, y_hi):
         g.zones.append((min(x0, x1) - e, y - t / 2 - e, max(x0, x1) + e, y + t / 2 + e))
 
 
-# The squint rule for a sign with a pair of bars: the bars thin, from the
-# drawing's own down to PAIR_T_MIN of the horizontal, until their white reads.
-BARS = (Squint('bars', lambda p: PAIR_T_MIN * p.sh / pair_t(p)),)
+from .symbols import BARS, BARS_OR_ONE  # noqa: E402,F401  (the rules of every barred sign, € ¥ too)
+
+
+def one_bar(g) -> bool:
+    """Whether the squint rule has made the glyph's pair of bars one."""
+    return g.free('one', 0.0) >= 0.5
 
 
 def bar_out(p):
@@ -160,6 +163,10 @@ def bar_inset(p):
 def bar_pair(g, yc, x0, x1):
     """Two bars from x0 to x1 about yc (see pair). Returns their centres."""
     t, gap = pair(g)
+    if one_bar(g):
+        g.stroke((x0, yc, pair_t(g.p)), (x1, yc))
+        mark_bars(g, x0, x1, yc, yc)
+        return yc, yc
     off = (t + gap) / 2
     for y in (yc - off, yc + off):
         g.stroke((x0, y, t), (x1, y))
@@ -325,7 +332,7 @@ def som(g):
 
 # --- Letters with bars -----------------------------------------------------------
 
-@cur('uni20A6', '₦', lambda p: REGISTRY['N'].width(p) + 2 * bar_inset(p), squint=BARS)
+@cur('uni20A6', '₦', lambda p: REGISTRY['N'].width(p) + 2 * bar_inset(p), squint=BARS_OR_ONE)
 def naira(g):
     """N with two bars across, centred between the points where the
     diagonal meets the stems, so the white either side of it matches."""
@@ -342,6 +349,11 @@ def naira(g):
     yu, yl = yc + (t + gap) / 2, yc - (t + gap) / 2
     at = lambda y: o + cx(y)[0]                              # the diagonal's centre at height y
     xs_l, xs_r = o + q.sv / 2, g.W - o - q.sv / 2            # the stems' centres
+    if one_bar(g):                                          # one bar, run out from the stems only, so it
+        g.stroke((-hang, yc, pair_t(p)), (xs_l, yc))        # cuts no sliver against the diagonal
+        g.stroke((xs_r, yc, pair_t(p)), (g.W + hang, yc))
+        mark_bars(g, -hang, g.W + hang, yc, yc)
+        return
     # each bar passes behind the diagonal on one side: the upper is cut
     # between the left stem and the diagonal, the lower between the
     # diagonal and the right stem, so the white each side of the diagonal is
@@ -353,7 +365,7 @@ def naira(g):
     mark_bars(g, -hang, g.W + hang, yl, yu)
 
 
-@cur('uni20A9', '₩', lambda p: REGISTRY['W'].width(p) + 2 * bar_inset(p), squint=BARS)
+@cur('uni20A9', '₩', lambda p: REGISTRY['W'].width(p) + 2 * bar_inset(p), squint=BARS_OR_ONE)
 def won(g):
     """W with two bars, the lower one where the middle stem ends."""
     p = g.p

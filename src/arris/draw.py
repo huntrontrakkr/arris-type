@@ -45,6 +45,7 @@ class Squint:
     default toward ``limit(p)`` until they do, or as far as the limit."""
     free: str
     limit: Callable[[Params], float]
+    absolute: bool = False      # held to vision.READS itself, not to the Regular (where the Regular reads poorly too)
 
 
 # Math signs set on one advance (the plus sign's, at least), their ink centred
@@ -519,6 +520,36 @@ def _squint(g, kinds=('hole', 'slot'), count: int = 0) -> float:
     return min(d, default=1.0)
 
 
+_FORMS: dict = {}
+
+
+def _cut_form(spec, sq, p):
+    """An absolute Squint rule chooses a form (two bars or one) once for the
+    whole cut, at its heaviest weight, where the white is least: if the
+    default form does not read there (vision.READS) and the other reads
+    better, every weight of the cut takes the other. A sign keeps one form
+    through its family."""
+    from .instances import params
+    from .vision import READS
+    key = (spec.name, sq.free, p.mono)
+    if key not in _FORMS:
+        heavy = params(900).with_(mono=p.mono)
+        g0 = _build(spec, heavy, 0.0, 0.0, {})
+        d0 = g0.defaults.get(sq.free)
+        b = sq.limit(heavy)
+        choice = d0
+        if d0 is not None and b != d0:
+            kinds = ('hole', 'slot')
+            n0 = _squint_regular(spec, heavy, kinds, {sq.free: d0})[1]
+            n1 = _squint_regular(spec, heavy, kinds, {sq.free: b})[1]
+            s0 = _squint(g0, count=n0)
+            s1 = _squint(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), count=n1)
+            if s0 < READS - SQUINT_SLACK and s1 > s0:
+                choice = b
+        _FORMS[key] = choice
+    return _FORMS[key]
+
+
 _SQUINT: dict = {}
 SQUINT_SLACK = 0.02   # what the Regular reference allows for the raster
 _REG_SV: dict = {}
@@ -544,12 +575,16 @@ def _squint_count(spec, p, kinds=('hole', 'slot')) -> int:
     return _squint_regular(spec, p, kinds)[1]
 
 
-def _squint_regular(spec, p, kinds):
+def _squint_regular(spec, p, kinds, over=None):
+    """(reference, count) of the glyph's watched white at Regular, drawn with
+    `over` (a free variable at a trial value: a form is held to its own
+    Regular, so a pair of bars made one is not missed as two)."""
     from .instances import params
     from .vision import READS
-    key = (spec.name, p.mono, kinds)
+    over = over or {}
+    key = (spec.name, p.mono, kinds, tuple(sorted(over.items())))
     if key not in _SQUINT:
-        reg = _build(spec, params(400).with_(mono=p.mono), 0.0, 0.0, {})
+        reg = _build(spec, params(400).with_(mono=p.mono), 0.0, 0.0, dict(over))
         d = _squint_pieces(reg, kinds)
         _SQUINT[key] = (min(READS, min(d, default=1.0)) - SQUINT_SLACK, len(d))
     return _SQUINT[key]
@@ -616,19 +651,39 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                 overrides['sh_auto'] = b                      # (the variable font's masters must agree)
                 g = trial
     for sq in spec.squint:
-        want, n = _squint_reference(spec, p), _squint_count(spec, p)
-        if sq.free not in g.defaults or _squint(g, count=n) >= want:
+        if sq.free not in g.defaults:
             continue
-        a, b = g.defaults[sq.free], sq.limit(p)
+        if sq.absolute:                     # a choice of form, made once for the cut (see _cut_form)
+            v = _cut_form(spec, sq, p)
+            if v != g.defaults[sq.free]:
+                overrides[sq.free] = v
+                g = _build(spec, p, ot, ob, overrides, width)
+            continue
+        from .vision import READS
+        kinds = ('hole', 'slot')
+        a, b = overrides.get(sq.free, g.defaults[sq.free]), sq.limit(p)
+        want, n = _squint_regular(spec, p, kinds, {sq.free: a})
+        if sq.absolute:
+            want = READS - SQUINT_SLACK
+        now = _squint(g, count=n)
+        if now >= want:
+            continue
         far = _build(spec, p, ot, ob, {**overrides, sq.free: b}, width)
-        if _squint(far, count=n) >= want:
+        want_b, n_b = _squint_regular(spec, p, kinds, {sq.free: b})
+        if sq.absolute:
+            want_b = READS - SQUINT_SLACK
+        s_far = _squint(far, count=n_b)
+        if s_far >= want_b:
             for _ in range(10):  # bisection: a fuses, b reads
                 mid = (a + b) / 2
-                if _squint(_build(spec, p, ot, ob, {**overrides, sq.free: mid}, width), count=n) >= want:
+                if _squint(_build(spec, p, ot, ob, {**overrides, sq.free: mid}, width), count=n_b) >= want_b:
                     b = mid
                 else:
                     a = mid
-        elif _squint(far, count=n) <= _squint(g, count=n):   # the limit reads no better: leave it be
+        elif s_far < now - SQUINT_SLACK:
+            # the limit reads worse, past what the raster can tell: leave it
+            # be (within that, the rule's way, less ink, is taken: ₹'s
+            # thinner bars leave its leg room)
             continue
         overrides[sq.free] = b
         g = _build(spec, p, ot, ob, overrides, width)
