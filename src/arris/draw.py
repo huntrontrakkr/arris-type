@@ -671,6 +671,115 @@ def _thinning_reads(spec, sq, p) -> bool:
     return _THINS[key]
 
 
+def _squint_value(spec, sq, p, ot, ob, overrides, width):
+    """What a Squint rule sets its free variable to at p, or None: toward
+    its limit until the glyph's white reads as at its Regular (bisection),
+    to the limit if even that does not bring it back (where the cut thins
+    at all, _thinning_reads)."""
+    g = _build(spec, p, ot, ob, overrides, width)
+    if sq.free not in g.defaults:
+        return None
+    kinds = ('hole', 'slot')
+    a, b = overrides.get(sq.free, g.defaults[sq.free]), sq.limit(p)
+    want, n, wa = _squint_regular(spec, p, kinds, {sq.free: a})
+    wa = wa if sq.whites else 0
+    if _read(g, n, wa) >= want or not _thinning_reads(spec, sq, p):
+        return None
+    far = _build(spec, p, ot, ob, {**overrides, sq.free: b}, width)
+    want_b, n_b, wb = _squint_regular(spec, p, kinds, {sq.free: b})
+    wb = wb if sq.whites else 0
+    if _read(far, n_b, wb) >= want_b:
+        for _ in range(10):  # bisection: a fuses, b reads
+            mid = (a + b) / 2
+            if _read(_build(spec, p, ot, ob, {**overrides, sq.free: mid}, width), n_b, wb) >= want_b:
+                b = mid
+            else:
+                a = mid
+    return b
+
+
+SQUINT_ANCHORS = 4    # lighter strokes in the same body a Squint rule also decides at
+_MONO: dict = {}
+
+
+def _restroked(p, s):
+    """p with its stem at s, every stroke and the edge break with it (as a
+    grade: the body, the grid and the spacing stay)."""
+    k = s / p.sv
+    return p.with_(sv=s, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k)
+
+
+_CANON: dict = {}
+
+
+def _lighter(p):
+    """The parameters of the lighter weights of p's own cut, from the
+    Regular's up (every 100), if p is a font's own (a weight, grade and
+    watch balance of a cut: instances.params, Mono or not, italic or not);
+    else None (a set derived from one: small capitals, small figures)."""
+    if p not in _CANON:
+        from .instances import GRAD_SHARE, params, stem
+        out = None
+        grad = round((p.grade_k - 1) / GRAD_SHARE, 6)
+        base_sv = p.sv / p.grade_k
+        lo, hi = 1.0, 1000.0
+        for _ in range(40):                                 # the weight whose stem p has
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if stem(mid) < base_sv else (lo, mid)
+        w = round((lo + hi) / 2, 3)
+
+        def at(w_, watch):
+            q = params(w_, grad, watch=watch).with_(mono=p.mono)
+            if p.slant:
+                from .italic import italic
+                q = italic(q)
+            return q
+        # the watch balance: the measured optics' share is 1 - watch (0 at
+        # the watch's own proportions)
+        for watch in sorted({round(1.0 - p.optical, 6), 1.0}):
+            try:
+                if at(w, watch) == p:
+                    out = [at(w_, watch) for w_ in range(400, int(w), 100) if w_ < w]
+                    break
+            except Exception:  # noqa: BLE001
+                pass
+        _CANON[p] = out
+    return _CANON[p]
+
+
+def _squint_monotone(spec, sq, p, ot, ob, overrides, width):
+    """A Squint rule's value at p, never short of what it gives the lighter
+    weights of the same cut (or, for a derived set, lighter strokes in the
+    same body: SQUINT_ANCHORS stems from the Regular's to p's): decided at
+    each (_squint_value), the one furthest toward the limit kept. A squint
+    reading steps with the weight (raster and layout), and decided at p
+    alone a rule thinned one weight, left the next, thinned the one after
+    (¥'s bars 78 72 112 88 119 units from Medium to Black); so a heavier
+    weight now thins at least as much as a lighter one."""
+    key = (spec.name, sq.free, p, ot, ob, tuple(sorted(overrides.items())), width)
+    if key not in _MONO:
+        reg = _regular_sv(p)
+        g0 = _build(spec, p, ot, ob, overrides, width)
+        a0 = overrides.get(sq.free, g0.defaults.get(sq.free))
+        lim = sq.limit(p)
+        best = None
+        lighter = _lighter(p)
+        if lighter is None:
+            anchors = [_restroked(p, reg + (p.sv - reg) * j / SQUINT_ANCHORS) for j in range(1, SQUINT_ANCHORS)]
+        else:
+            anchors = [q for q in lighter if q.sv >= reg]
+        for q in anchors + [p]:
+            v = _squint_value(spec, sq, q, ot, ob, overrides, width)
+            if v is None:
+                continue
+            if best is None or abs(v - a0) > abs(best - a0):
+                best = v
+        if best is not None and (lim - a0) * (best - a0) < 0:   # (only ever toward the limit)
+            best = None
+        _MONO[key] = best
+    return _MONO[key]
+
+
 _SQUINT: dict = {}
 SQUINT_SLACK = 0.02   # what the Regular reference allows for the raster
 _REG_SV: dict = {}
@@ -804,26 +913,10 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
             # Light). (A small capital, on the Regular's stem, reads less
             # than its Regular capital: there the rule still holds.)
             continue
-        kinds = ('hole', 'slot')
-        a, b = overrides.get(sq.free, g.defaults[sq.free]), sq.limit(p)
-        want, n, wa = _squint_regular(spec, p, kinds, {sq.free: a})
-        wa = wa if sq.whites else 0
-        now = _read(g, n, wa)
-        if now >= want or not _thinning_reads(spec, sq, p):
-            continue
-        far = _build(spec, p, ot, ob, {**overrides, sq.free: b}, width)
-        want_b, n_b, wb = _squint_regular(spec, p, kinds, {sq.free: b})
-        wb = wb if sq.whites else 0
-        s_far = _read(far, n_b, wb)
-        if s_far >= want_b:
-            for _ in range(10):  # bisection: a fuses, b reads
-                mid = (a + b) / 2
-                if _read(_build(spec, p, ot, ob, {**overrides, sq.free: mid}, width), n_b, wb) >= want_b:
-                    b = mid
-                else:
-                    a = mid
-        overrides[sq.free] = b
-        g = _build(spec, p, ot, ob, overrides, width)
+        v = _squint_monotone(spec, sq, p, ot, ob, overrides, width)
+        if v is not None:
+            overrides[sq.free] = v
+            g = _build(spec, p, ot, ob, overrides, width)
     # (the heritage drawing is never lightened; composites rely on their parts' own rules)
     if _is_symbol(spec) and p.floor and g.strokes and not g.extra:
         want = _white_reference(spec, p)
