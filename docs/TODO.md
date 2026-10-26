@@ -67,6 +67,14 @@ Left of `check-googlefonts`' warnings:
 
 ## Carried over
 
+- **Variable-font spikes at the heavy grade-watch corner** (wght 900, GRAD
+  100, WTCH 100, where the grade's and the watch's deltas add): ℕ reaches
+  1344 units (720 drawn), ӽ and ℚ dip to -465 and -438. Their masters
+  agree in contours but not in points, and the aligner's duplicates pair
+  differently in the two directions. The rest of the font stays inside
+  1180/-390 there. A corner master would pin it but joins ŀ's dot to its l
+  (tried 2026-10-25); fix the three alignments instead.
+
 - **Variable-font interpolation**: the build's check (exact drawings against
   the VF between masters) still finds ≈1,150 upright and ≈1,500 italic
   glyph-locations over 3 units of mean outline difference, worst 40–57

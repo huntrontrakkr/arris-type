@@ -22,11 +22,11 @@ class Metrics:
     cap: int = 720
     xh: int = 540
     # Windows clipping box, one for the whole family (every weight, grade,
-    # balance and the italic): the tallest is the Black Å at the heaviest
-    # corner of the variable font, the deepest the integral and bracket
-    # pieces there (302).
-    win_asc: int = 1160
-    win_desc: int = 310
+    # balance and the italic; Windows spaces lines by the typo metrics,
+    # USE_TYPO_METRICS): the tallest drawing is ȭ at the heaviest corner of
+    # the variable font (1179), the deepest the stacked operators ≑ ≒ ≓ (-382).
+    win_asc: int = 1180
+    win_desc: int = 390
 
 
 def glyph_contours(name: str, p: Params, tune=None):
