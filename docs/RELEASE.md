@@ -56,11 +56,34 @@ before a commercial distribution if wanted.
   difference; it tries the alternatives where the check fails, keeps the
   best, and runs on a pool of processes.
 
+- Heavier than the Regular, a drawing keeps the Regular's contours and
+  counters (the topology lock, `draw`): white closing into a hole, parts
+  fusing, a counter filling are undone by lightening the drawing's strokes
+  together, as little as it takes (at most to LOCK_MIN). About a hundred
+  glyphs had done so somewhere: at the heaviest grade S J G 4 з э є ε m,
+  at Black ȩ ş, Mono Q's tail, ↺ ↻, ⋰ ⋱ ⊎ ≰, ↁ ↇ ↈ, ₻.
+- A squint rule never does less for a heavier weight than for a lighter
+  one of the same cut: ¥'s bars run 78 72 78 81 83 units from Medium to
+  Black (were 78 72 112 88 119); ¢ and $ keep their stubs from the weight
+  that first takes them.
+- The static fonts split a contour that crosses or touches itself into
+  its simple loops (α, the superior and fraction 1s, Ȩ ş).
+- The variable fonts pair their masters' points by what made each point
+  (`geom.ink` names every edge: a stroke's side, a cap, a chamfer, a
+  stamped glyph's own edge), and a glyph that still interpolates away
+  from its drawings gets masters of its own where it does (its variations
+  are kept glyph by glyph).
+- `tools/sweep.py`, the regression gate: every glyph in every cut against
+  the last release, before every change to the engine.
+
 Checked for 1.001: pytest; fontbakery `check-universal` 0 FAIL, 0 ERROR
 for the static, variable and Mono sets; `tools/stroke_scan.py` 92 findings
 upright and 158 Mono (218 and 309 before the 1.000 work), none new;
 `tools/mono_scan.py`; every glyph's ink against 1.000's (only the changes
-above); the variable fonts' check as in TODO.
+above); `tools/sweep.py` against 1.001's first build (every change toward
+the Regular's topology but Mono ℚ's pinhole); the variable fonts' check
+as in TODO, and fontbakery on them again (0 FAIL, 0 ERROR) after grade
+was kept from moving advances by a unit.
 
 ## 1.000 checklist (2026-10-25)
 

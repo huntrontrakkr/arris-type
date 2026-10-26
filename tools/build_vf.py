@@ -13,7 +13,15 @@ the upright masters are aligned, then curved and sheared, arris.italic)
 """
 import sys
 import tempfile
+import time
 from pathlib import Path
+
+_T0 = time.time()
+
+
+def _took():
+    """Minutes since the build started, for each phase's line."""
+    return f'[{(time.time() - _T0) / 60:.1f} min]'
 
 from fontTools.designspaceLib import AxisDescriptor, DesignSpaceDocument, InstanceDescriptor, SourceDescriptor
 from fontTools.ttLib import TTFont
@@ -150,7 +158,7 @@ for n in list(names):
                                                                         fn=pinned(b.fn, v=lim), squint=keep)
         names.append(alt)
         FORMS[n] = (alt, regions)
-print('forms:', {n: (a, r[:2], len(r)) for n, (a, r) in FORMS.items()})
+print(_took(), 'forms:', {n: (a, r[:2], len(r)) for n, (a, r) in FORMS.items()})
 
 ps = {m: P(m) for m in MASTERS}
 
@@ -394,7 +402,7 @@ with get_context('fork').Pool(WORKERS) as pool:
         for i, m in enumerate(MASTERS):
             upright[m][n] = up[i]                           # (rings, advance)
             aligned[m][n] = (rings[i], up[i][1])
-print('placed and aligned', len(names), 'glyphs in', len(MASTERS), 'masters;', len(chosen),
+print(_took(), 'placed and aligned', len(names), 'glyphs in', len(MASTERS), 'masters;', len(chosen),
       'took an alternative, interpolating better so:', sorted(chosen, key=lambda c: -c[4])[:12])
 print(sum(c[3] == 'predicted corners' for c in chosen), 'glyphs keep predicted corners;', len(OWN),
       'have masters of their own,', sum(len(v) for v in OWN.values()), 'in all')
@@ -421,7 +429,7 @@ for w in MASTERS:                       # grade keeps every advance, kerning inc
     if w[1] != 0:
         pairs_by[w] = pairs_by[(w[0], 0, w[2])]
 all_pairs = set().union(*pairs_by.values())
-print(len(all_pairs), 'kerning pairs')
+print(_took(), len(all_pairs), 'kerning pairs')
 
 tmp = Path(tempfile.mkdtemp())
 doc = DesignSpaceDocument()
@@ -506,6 +514,10 @@ def _own_masters(vf):
             if not sup:
                 continue
             coords = [(int(round(x)), int(round(y))) for x, y in d]
+            if any(tag == 'GRAD' and peak for tag, (lo, peak, hi) in sup.items()):
+                # grade never moves an advance (the phantom points): rounding
+                # the interpolated advances must not make it do so by a unit
+                coords[-4:] = [(0, 0)] * 4
             if any(c != (0, 0) for c in coords):
                 tvs.append(TupleVariation(dict(sup), coords))
         gvar.variations[n] = tvs
@@ -518,7 +530,7 @@ from arris.font import add_meta  # noqa: E402
 add_meta(vf)
 out = Path('build') / ('Arris-Italic[GRAD,WTCH,wght].ttf' if ITALIC else 'Arris[GRAD,WTCH,wght].ttf')
 vf.save(out)
-print('wrote', out)
+print(_took(), 'wrote', out)
 
 # --- check: the variable font against exact drawings between the masters ----
 def _check_at(w):
@@ -565,7 +577,7 @@ TOL = 3.0       # font units: a mean outline difference under 0.3% of the em pas
 FAR = 60.0      # font units: a point carried farther than this off the outline is a spike
 bad = [x for x in worst if x[0] > TOL]
 spikes = sorted((x for x in worst if x[3] > FAR), key=lambda x: -x[3])
-print(f'interpolation check: {len(worst)} glyph-weights; mean outline difference worst {worst[0][0]:.1f} units, '
+print(_took(), f'interpolation check: {len(worst)} glyph-weights; mean outline difference worst {worst[0][0]:.1f} units, '
       f'median {sorted(worst)[len(worst) // 2][0]:.2f}; {len(bad)} over {TOL} units; '
       f'{len(spikes)} with a point over {FAR} units off the outline ({len({x[2] for x in spikes})} glyphs)')
 for e, w, n, far in worst[:25]:

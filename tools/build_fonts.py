@@ -3,8 +3,14 @@
 weights: comma-separated (default all nine); 'watch' builds the watch-
 proportions family (Arris Watch) instead of the measured optics; 'mono' the
 monospaced cut; 'italic' the italics (arris.italic).
+
+Each weight is built in a process of its own (ARRIS_BUILD_WORKERS at a
+time, default every weight at once): a weight draws every glyph through
+every rule on one core, and the machine has many.
 """
+import os
 import sys
+from multiprocessing import get_context
 
 import arris.glyphs  # noqa: F401
 from pathlib import Path
@@ -29,7 +35,9 @@ def _liga(n):
 # italic drawings replace their uprights (arris.italic); ligatures are the monospaced cut's
 names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital') and (mono or not _liga(n))]
 Path('build').mkdir(exist_ok=True)
-for w in weights:
+
+
+def one(w):
     p = params(w, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono)
     style = NAMES[w]
     if ital:
@@ -37,4 +45,10 @@ for w in weights:
         style = 'Italic' if style == 'Regular' else f'{style} Italic'
     path = f"build/{family.replace(' ', '')}-{style.replace(' ', '')}.ttf"
     build(path, names, p, family=family, style=style, weight=w, fea=fea(mono=mono))
-    print(path, len(names) + 2, 'glyphs')
+    return path
+
+
+if __name__ == '__main__':
+    with get_context('fork').Pool(int(os.environ.get('ARRIS_BUILD_WORKERS', len(weights)))) as pool:
+        for path in pool.imap_unordered(one, weights):
+            print(path, len(names) + 2, 'glyphs', flush=True)
