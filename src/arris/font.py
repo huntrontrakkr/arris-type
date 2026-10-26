@@ -301,7 +301,7 @@ def _nonhinting(font):
     font['gasp'] = gasp
 
 
-VERSION = '1.000'
+VERSION = '1.001'
 REPO = 'https://github.com/huntrontrakkr/arris-type'
 COPYRIGHT = f'Copyright 2026 The Arris Project Authors ({REPO})'
 LICENSE = ('This Font Software is licensed under the SIL Open Font License, Version 1.1. '

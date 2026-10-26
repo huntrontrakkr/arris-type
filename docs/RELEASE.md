@@ -23,6 +23,45 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.001 (2026-10-26)
+
+- Big yus Ѫ ѫ (`cyrillic.Yusbig`; ѫ its small capital).
+- Mono: a letter drawn inside another was cut to a cell of its own in
+  1.000, so at Thin ₦ lost both stems, ₣ ₭ Ҋ a stem, ₩ its W. A stamped
+  letter is cut at the outer glyph's cell, where it stands in it.
+- Mono: a glyph made of a letter and something beside it (a hook, a
+  swash, a degree sign, a second spine or stem) squeezed the letter into
+  what was left of the cell until its strokes met: Ɓ Ɗ Ƙ Ɲ Ƴ ɲ ƴ, ℛ ℳ ℰ ℱ,
+  ℉ ℃, ₻, and Ы ы Ӹ (whose bowl closed even at Regular). The whole glyph
+  is now condensed as far as its letter needs to keep its own white
+  (`symkit.fit_inner`); ℤ's second spine stands on the side with room.
+- Mono Ǿ: the slash of a stamped Ø is cut at the cell before its corners
+  are cut (a twisted sliver at Black).
+- Mono ₦ ₩ ¥ take one bar where the cell cannot keep a pair's white
+  (decided once for the cut, at Black); € ₳ ₱ ₴ ₤ keep their pairs.
+- ₹ at Bold and Black: its bars thin again, giving its leg back its
+  length. The squint rule decides once per cut whether a glyph thins
+  (readings within the raster's precision count as no worse), and never
+  acts under the Regular's stem. Bars never thin under the stroke floor.
+- Variable fonts: masters are aligned against their neighbours in the
+  design space, not all against the Thin (`arris.variable`), and a point a
+  master lacks is collapsed onto the neighbour the nearest master puts it
+  by. Six masters at the grade-watch corners (wght 100, 400, 900 × GRAD
+  ±100 × WTCH 100) carry each glyph's exact drawing where it aligns, else
+  the outline the other masters predict: the spikes of ℕ ℚ ӽ, and of Δ Ç Ø
+  z ₰ ₯ (up to 440 units off the outline at the corners, where the grade's
+  and the watch's changes added up), are gone. The build checks every
+  glyph between the masters on and off the axes and at the corners,
+  counting a point carried off the outline as well as the mean
+  difference; it tries the alternatives where the check fails, keeps the
+  best, and runs on a pool of processes.
+
+Checked for 1.001: pytest; fontbakery `check-universal` 0 FAIL, 0 ERROR
+for the static, variable and Mono sets; `tools/stroke_scan.py` 92 findings
+upright and 158 Mono (218 and 309 before the 1.000 work), none new;
+`tools/mono_scan.py`; every glyph's ink against 1.000's (only the changes
+above); the variable fonts' check as in TODO.
+
 ## 1.000 checklist (2026-10-25)
 
 | Check | State |

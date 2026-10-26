@@ -1,19 +1,16 @@
 # To do
 
 Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
-`tools/jog_scan.py` and `tools/white_scan.py` find most of it.
+`tools/mono_scan.py`, `tools/jog_scan.py` and `tools/white_scan.py` find most
+of it.
 
 ## From the barred-sign and small-counter pass (2026-10-22)
 
-- **Mono ₦ ₩ ¥ at heavy weights.** Their cells keep 0.33–0.38 under the
-  squint (the rule's floor is 0.55): the Mono cell leaves little room for a
-  letter, two bars and their white. The squint rule cannot help: Mono's own
-  Regular already reads 0.38, the reference the heavy weights are held to,
-  and in ¥ at Bold and Black the bars fuse with the Y outright (no white
-  left; the rule now notices that, but thinner bars do not reopen it).
-  Needs a Mono drawing: one bar where two cannot keep their white (a
-  one-bar trial, 2026-10-25, was blocked by the white count the rule now
-  keeps: one bar has fewer whites by design), or a narrower inset.
+- **Mono ₦ ₩ ¥** (done 2026-10-25): one bar in Mono (`symbols.BARS_OR_ONE`),
+  where the cell cannot keep a pair's white at Black. The form is chosen
+  once for the whole cut, at Black (`draw._cut_form`), so the Mono weights
+  agree. Only signs that are written with one bar too take it: € ₳ ₱ ₴ ₤
+  keep their pairs, thinned.
 - **Squint scan review** (2026-10-25: 215 flags at Black among letters and
   figures, most of them designed notches or rare letterlike symbols).
   Done: Q, љ њ ъ ы ь (the soft-sign bowl's top rises), ⌀ (0.14 to 0.5, as
@@ -40,15 +37,36 @@ Open work, most pressing first. `tools/squint_scan.py`, `tools/stroke_scan.py`,
   horizontals under it above Regular (holes only, never the designed
   slots); symbols still use the lightening rule's feature count.
 
+- **Mono at Bold and Black, left over** (2026-10-25, after the
+  `fit_inner` pass): ₻ closes its loop at Black (the proportional nearly
+  does too); ԙ crowds at Black; the Roman numerals ↁ ↇ ↈ lose counters at
+  Bold and Black; ⏰ is drawn small in its cell. `tools/mono_scan.py`
+  finds these (every Mono glyph against its proportional self: closed
+  counters lost, and the likeness of the two inks stretched to one box);
+  run it after any change to Mono.
+- **Squint readings step with the weight**: a glyph's reading under the
+  squint is not smooth in the weight (raster and layout steps), so the
+  rule's per-weight answer is not either: ¥'s bars are 78 72 112 88 119
+  units from Medium to Black (thinned where the white falls short, full
+  where it reads). Decide the thinning at Black, once per cut, and ease it
+  in from the Regular by the stem, so the weights and the variable font's
+  masters change smoothly (cent's stem switch is the exception: a form).
+
+- **Contours touching or crossing themselves, by a unit or two**
+  (`tools/stroke_scan.py`, 2026-10-25; all there before 1.000): α at every
+  weight (its tail meets its bowl at the baseline corner), at Black the
+  superior and fraction 1's flag joint (a 2-unit bow-tie), Ȩ ş, and in
+  the italic at Black m т ç ş ∂ ₾ ℅ (a sub-unit loop where the shear
+  meets a corner). Invisible at text sizes; untangle them in the outline
+  step (for the static fonts, where points need not match across masters).
+
 ## For Google Fonts (if the family goes there)
 
 Done 2026-10-25: West African Latin (Ɛ ɛ Ɔ ɔ Ɲ ɲ Ɓ ɓ Ɗ ɗ Ƙ ƙ Ƴ ƴ, U+0329),
-yat (Ѣ ѣ), the dotless superior i under marks, marks centred on their
+yat (Ѣ ѣ), big yus (Ѫ ѫ), the dotless superior i under marks, marks centred on their
 origin (a mark the shaper left where it was drawn read as unattached),
 math on one advance, no soft hyphen, a meta table, no colinear points.
 Left of `check-googlefonts`' warnings:
-- **big yus Ѫ ѫ** (auxiliary for Russian and Bulgarian): not drawn; its
-  traditional form wants checking against a reference first.
 - **alt_caron** (ď ľ Ľ ť "decomposed"): the check reads components, and
   Arris's glyphs are outlines; their carons are the apostrophe form it asks
   for.
@@ -67,22 +85,33 @@ Left of `check-googlefonts`' warnings:
 
 ## Carried over
 
-- **Variable-font spikes at the heavy grade-watch corner** (wght 900, GRAD
-  100, WTCH 100, where the grade's and the watch's deltas add): ℕ reaches
-  1344 units (720 drawn), ӽ and ℚ dip to -465 and -438. Their masters
-  agree in contours but not in points, and the aligner's duplicates pair
-  differently in the two directions. The rest of the font stays inside
-  1180/-390 there. A corner master would pin it but joins ŀ's dot to its l
-  (tried 2026-10-25); fix the three alignments instead.
+- **Variable-font interpolation** (2026-10-26, 1.001, 28 masters with the
+  grade-watch corners): the build's check (82,688 glyph-locations between
+  the masters, on and off the axes and at the corners) finds 3,442 upright
+  and 5,040 italic over 3 units of mean outline difference, worst 58–60
+  (∭ ∬ underscoredbl, as before), and a point more than 60 units off the
+  outline at 622 upright locations (168 glyphs) and 1,251 italic (337
+  glyphs). The worst: ₪ along the grade at Black (250 units), ₹ and ¢ at
+  the heavy corner, ℚ's predicted corner in the italic (522), ↺ in the
+  italic at (400, ±100, 100). `build/vf_check*.json` lists every
+  location with both measures. The build keeps a glyph's predicted corner
+  where its exact one does not align or interpolates worse (242 glyphs);
+  those keep 1.000's additive corner. Next: align a corner master against
+  its own neighbours only (it need not move the others' points), and look
+  at ₪'s grade pairing.
+- **Variable-font extremes past the Windows box** (1180/-390) at the far
+  corners: Ǖ and Ȫ reach 1200 at (900, 100, 100) (their exact drawings,
+  now carried by the corner masters), ų dips to -418 at (650, -100, 100),
+  and the italic ℚ's spike to -508. Raise the VF's box, or keep the
+  stacked accents lower at the heaviest grade.
+- **Heavy grade small capitals**: at (900, 100, *) з э є stay dark even
+  thinned to the squint rule's limit (three horizontals in the small
+  capital's height leave little white); в as well. A lower limit for open
+  bowls, or a narrower stroke at the heaviest grade, if it matters.
 
-- **Variable-font interpolation**: the build's check (exact drawings against
-  the VF between masters) still finds ≈1,150 upright and ≈1,500 italic
-  glyph-locations over 3 units of mean outline difference, worst 40–57
-  (underscoredbl, ∭ ∬, and the GRAD/WTCH corner at (800, 50, 100)). Masters
-  at 800 and 850 and the aligner's nearer-neighbour gap fill (2026-10-23)
-  fixed the 3 and the italic h; 19 italic drawings still change point count
-  between 750 and 900 (m n k f e y …). Fix those constructions (as the
-  italic tail's floor did) or add masters where the check says so.
+- **19 italic drawings change point count between 750 and 900** (m n k f
+  e y …): fix those constructions (as the italic tail's floor did) or add
+  masters where the check says so.
 
 - **`tools/typeart.glyph_grids` fills the counters, not the ink**: it fills
   each ring by the sign of its area as if outer contours ran
