@@ -536,6 +536,43 @@ def _lightened(p: Params, k: float) -> Params:
     return p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k)
 
 
+LOCK_MIN = 0.75     # the most the topology lock lightens a drawing's strokes
+LOCK_MARGIN = 0.02  # and how far past the least lightening that works it goes
+_TOPO: dict = {}
+
+
+def _topology(g) -> tuple:
+    """(pieces of ink, counters) of a drawing as the font will carry it: in
+    whole units, and in an italic, curved and sheared (italic.outline)."""
+    from .geom import rings_to_shapely
+    if g.p.slant and not (REGISTRY.get(g.name) and REGISTRY[g.name].cell):
+        from .italic import outline, polylines
+        rings, rec = g.outline(record=True)
+        rings = polylines(outline(rings, rec, g.p))
+    else:
+        rings = g.rings()
+    ink = rings_to_shapely([[(round(q[0]), round(q[1])) for q in r] for r in rings])
+    polys = [q for q in getattr(ink, 'geoms', [ink]) if q.geom_type == 'Polygon']
+    return len(polys), sum(len(q.interiors) for q in polys)
+
+
+def _topology_reference(spec, p) -> tuple:
+    """The drawing's topology at Regular, in the same cut (Mono or not,
+    italic or not)."""
+    key = (spec.name, p.mono, bool(p.slant))
+    if key not in _TOPO:
+        from .instances import params
+        ref = params(400).with_(mono=p.mono)
+        if p.slant:
+            from .italic import italic
+            ref = italic(ref)
+        g = _build(spec, ref, 0.0, 0.0, {})
+        if OPTICAL is not None and ref.optical and spec.name.removesuffix('.ital') in OPTICAL['names']:
+            _optical(g, spec, ref)
+        _TOPO[key] = _topology(g)
+    return _TOPO[key]
+
+
 def _counter_white(g, n):
     """The tightest counter, or 0 if any of the drawing's n counters closed."""
     sizes = g.counters()
@@ -805,6 +842,41 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
             g.lightened = b
     # the optical corrections move the settled drawing (openings, counters
     # and the squint are solved on the exact one)
-    if OPTICAL is not None and p.optical and spec.name.removesuffix('.ital') in OPTICAL['names']:
-        _optical(g, spec, p)
+    optical = OPTICAL is not None and p.optical and spec.name.removesuffix('.ital') in OPTICAL['names']
+
+    def settled(k):
+        """The drawing with its strokes lightened by k, optics applied."""
+        h = g if k == 1.0 else _build(spec, _lightened(p, k), ot, ob, overrides, width)
+        if optical:
+            _optical(h, spec, p)
+        return h
+    g = settled(1.0)
+    # Topology lock: heavier than the Regular, a drawing keeps the Regular's
+    # contours and counters (white that closes into a hole, parts that fuse,
+    # a counter that fills: S J G 4 з at the heaviest grade). Its strokes
+    # lighten together, as little as brings the topology back (as the font
+    # will carry it: after the optics, in whole units, curved in the
+    # italic), at most to LOCK_MIN; a change they cannot undo is a form of
+    # its own (¢ $ with stubs) and stands. A composite relies on its parts'
+    # lock: lightened whole for an accent that touches its letter, it went
+    # a weight lighter than its neighbours (ά in Mono SemiBold), and its
+    # Regular may carry a part's flaw (ℚ the Q's tail pinhole).
+    if p.floor and g.strokes and not g.extra and p.sv > _regular_sv(p) and \
+            _topology(g) != _topology_reference(spec, p):
+        ref = _topology_reference(spec, p)
+        k0 = getattr(g, 'lightened', 1.0)
+        if _topology(settled(k0 * LOCK_MIN)) == ref:
+            a, b = 1.0, LOCK_MIN
+            for _ in range(12):
+                mid = (a + b) / 2
+                if _topology(settled(k0 * mid)) == ref:
+                    b = mid
+                else:
+                    a = mid
+            # a margin past where the parts just part (at the boundary they
+            # all but touch, and rounding joins them again)
+            if b - LOCK_MARGIN >= LOCK_MIN and _topology(settled(k0 * (b - LOCK_MARGIN))) == ref:
+                b -= LOCK_MARGIN
+            g = settled(k0 * b)
+            g.lightened = k0 * b
     return g
