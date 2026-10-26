@@ -578,6 +578,33 @@ def _cut_form(spec, sq, p):
     return _FORMS[key]
 
 
+_THINS: dict = {}
+
+
+def _thinning_reads(spec, sq, p) -> bool:
+    """Whether a Squint rule thins a glyph at all in its cut: if at Black,
+    where the white is least, the limit reads no worse than the raster can
+    tell (SQUINT_SLACK), the rule's way, less ink, is taken wherever the
+    white falls short, to the limit where even that does not bring it back
+    (₹'s thinner bars leave its leg room); if the limit reads worse, the
+    glyph is left be at every weight. Decided once for the cut, so the
+    weights and grades agree (and the variable font's masters with them):
+    decided weight by weight, ¥'s bars went thin, thick, thin, thick."""
+    from .instances import params
+    key = (spec.name, sq.free, p.mono)
+    if key not in _THINS:
+        heavy = params(900).with_(mono=p.mono)
+        kinds = ('hole', 'slot')
+        g0 = _build(spec, heavy, 0.0, 0.0, {})
+        b = sq.limit(heavy)
+        n0 = _squint_regular(spec, heavy, kinds, {sq.free: g0.defaults.get(sq.free)})[1]
+        n1 = _squint_regular(spec, heavy, kinds, {sq.free: b})[1]
+        s0 = _squint(g0, count=n0)
+        s1 = _squint(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), count=n1)
+        _THINS[key] = s1 >= s0 - SQUINT_SLACK
+    return _THINS[key]
+
+
 _SQUINT: dict = {}
 SQUINT_SLACK = 0.02   # what the Regular reference allows for the raster
 _REG_SV: dict = {}
@@ -687,19 +714,21 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                 overrides[sq.free] = v
                 g = _build(spec, p, ot, ob, overrides, width)
             continue
-        from .vision import READS
+        if p.sv < _regular_sv(p):
+            # white fuses as strokes grow: under the Regular's stem a glyph
+            # reading short of its Regular is not fusing, and thinner
+            # strokes would not open it, only lighten it (₱'s bars at
+            # Light). (A small capital, on the Regular's stem, reads less
+            # than its Regular capital: there the rule still holds.)
+            continue
         kinds = ('hole', 'slot')
         a, b = overrides.get(sq.free, g.defaults[sq.free]), sq.limit(p)
         want, n = _squint_regular(spec, p, kinds, {sq.free: a})
-        if sq.absolute:
-            want = READS - SQUINT_SLACK
         now = _squint(g, count=n)
-        if now >= want:
+        if now >= want or not _thinning_reads(spec, sq, p):
             continue
         far = _build(spec, p, ot, ob, {**overrides, sq.free: b}, width)
         want_b, n_b = _squint_regular(spec, p, kinds, {sq.free: b})
-        if sq.absolute:
-            want_b = READS - SQUINT_SLACK
         s_far = _squint(far, count=n_b)
         if s_far >= want_b:
             for _ in range(10):  # bisection: a fuses, b reads
@@ -708,11 +737,6 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                     b = mid
                 else:
                     a = mid
-        elif s_far < now - SQUINT_SLACK:
-            # the limit reads worse, past what the raster can tell: leave it
-            # be (within that, the rule's way, less ink, is taken: ₹'s
-            # thinner bars leave its leg room)
-            continue
         overrides[sq.free] = b
         g = _build(spec, p, ot, ob, overrides, width)
     # (the heritage drawing is never lightened; composites rely on their parts' own rules)
