@@ -255,9 +255,39 @@ def _contours(rings, keep=False):
         if len(clean) > 1 and clean[0] == clean[-1]:
             clean.pop()
         clean = _drop_colinear(clean)
-        if len(clean) >= 3:
-            out.append(clean[::-1])
+        for loop in _untangled(clean):
+            if len(loop) >= 3:
+                out.append(loop[::-1])
     return out
+
+
+LOOP = 4.0      # square units: a loop of a contour crossing itself smaller than this is dropped
+
+
+def _untangled(pts):
+    """A contour that crosses or touches itself (a chamfer's leg meeting a
+    stroke's end by a unit or two: α's tail at the baseline, the 1's flag
+    at Black), as the simple loops it makes, in its own direction; loops
+    too small to see go. A simple contour is returned as it is. (Static
+    fonts only: a variable font's masters keep every point.)"""
+    import shapely
+    from shapely.geometry import LinearRing, Polygon
+    from shapely.geometry.polygon import orient
+    if len(pts) < 4 or LinearRing(pts).is_simple:
+        return [pts]
+    area = sum(pts[i - 1][0] * pts[i][1] - pts[i][0] * pts[i - 1][1] for i in range(len(pts))) / 2
+    sign = 1.0 if area > 0 else -1.0
+    v = shapely.make_valid(Polygon(pts))
+    out = []
+    for poly in getattr(v, 'geoms', [v]):
+        if poly.geom_type != 'Polygon' or poly.area < LOOP:
+            continue
+        poly = orient(poly, sign)
+        out.append([(round(x), round(y)) for x, y in list(poly.exterior.coords)[:-1]])
+        for hole in poly.interiors:
+            if Polygon(hole).area >= LOOP:
+                out.append([(round(x), round(y)) for x, y in list(hole.coords)[:-1]])
+    return out or [pts]
 
 
 def _drop_colinear(pts):
