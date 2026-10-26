@@ -17,6 +17,7 @@ from terminal_gates import NAMES  # noqa: E402
 MASTERS = [(w, 0, 0) for w in (100, 200, 400, 600, 750, 900)] + \
     [(w, g, 0) for w in (100, 400, 900) for g in (-100, 100)] + \
     [(w, 0, 100) for w in (100, 400, 600, 900)]
+LOCS = [((w - 400) / (300 if w < 400 else 500), g / 100, t / 100) for w, g, t in MASTERS]   # build_vf.LOC
 ITALIC = 'italic' in sys.argv[1:]
 ps = {m: params(m[0], m[1], watch=m[2] / 100) for m in MASTERS}
 if ITALIC:
@@ -25,7 +26,7 @@ frozen = []
 for n in NAMES:
     up = [_place(n, ps[m], record=ITALIC) for m in MASTERS]
     try:
-        rings = align([u[0] for u in up])
+        rings = align([u[0] for u in up], LOCS)
         if ITALIC:
             ital.aligned_outlines(rings, [u[0] for u in up], [u[1] for u in up],
                                   [ps[m].with_(slant=0.0) if REGISTRY[n].cell else ps[m] for m in MASTERS])

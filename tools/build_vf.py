@@ -39,9 +39,22 @@ MASTERS = [(w, 0, 0) for w in (100, 200, 300, 400, 500, 600, 700, 750, 800, 850,
     [(w, g, 0) for w in (100, 400, 900) for g in (-100, 100)] + \
     [(w, 0, 100) for w in (100, 400, 600, 800, 900)]
 DEFAULT = (400, 0, 0)
+AXES = (('wght', 'Weight', 100, 400, 900), ('GRAD', 'Grade', -100, 0, 100), ('WTCH', 'Watch', 0, 0, 100))
+# between every two neighbouring masters on each axis, and off the axes
 CHECK = [(150, 0, 0), (250, 0, 0), (350, 0, 0), (450, 0, 0), (550, 0, 0), (650, 0, 0), (725, 0, 0),
-         (775, 0, 0), (825, 0, 0), (875, 0, 0),
-         (400, 50, 0), (700, -50, 0), (600, 0, 50), (300, 0, 100), (800, 50, 100), (850, 75, 75)]
+         (775, 0, 0), (825, 0, 0), (875, 0, 0)] + \
+    [(w, g, 0) for w in (100, 400, 900) for g in (-50, 50)] + [(w, 0, 50) for w in (100, 400, 600, 800, 900)] + \
+    [(700, -50, 0), (300, 0, 100), (400, 50, 50), (900, 50, 50), (800, 50, 100), (850, 75, 75)]
+
+
+def LOC(m):
+    """A master's place in the font's normalised design space (-1..1 on
+    each axis, 0 at the default): what the aligner measures nearness in."""
+    return tuple((v - df) / (df - lo) if v < df else (v - df) / (hi - df) if hi > df else 0.0
+                 for v, (_, _, lo, df, hi) in zip(m, AXES))
+
+
+LOCS = [LOC(m) for m in MASTERS]
 
 family = 'Arris'
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -66,88 +79,135 @@ def style_name(w):
 
 
 ps = {m: P(m) for m in MASTERS}
-# upright drawings (rings, chamfer record, advance); the italic is made from them
-upright = {m: {n: _place(n, ps[m], record=ITALIC) for n in names} for m in MASTERS}
-print('placed', len(MASTERS), 'masters')
 
-# Per glyph: masters cleaned of jogs (geom._close_jogs) can differ in
-# structure between neighbouring weights where a step closes at one and not
-# the next; most still interpolate well, some do not. Each glyph is aligned,
-# interpolated between its neighbouring weight masters and compared with the
-# exact drawing at the midpoints; where that is off by more than the build's
-# tolerance, the glyph's masters are drawn again without the jog closing,
-# and whichever interpolates better is kept.
-from arris import geom as _geom
-from arris.geom import rings_to_shapely as _shp
-WM = sorted(w for (w, g, t) in MASTERS if g == 0 and t == 0)
-MIDS = [((a + b) / 2, WM.index(a), WM.index(b)) for a, b in zip(WM, WM[1:])]
-_exact = {}
+# Per glyph, the masters are drawn (upright: the italic is made from them),
+# aligned, and the alignment is checked: interpolated as the font will
+# (fontTools' VariationModel, on the font's own masters) at the CHECK
+# locations between the masters, and compared with the exact drawing there.
+# Where that is off by more than LOCAL_TOL, the alternatives are tried, and
+# whichever interpolates best is kept:
+# * the masters aligned each against one, the one with the most points,
+#   instead of each against its neighbours in the design space (the default;
+#   arris.variable): one master's points can pair better with the others'
+#   through the thin master than through a chain of neighbours;
+# * the masters drawn again without the jog closing (geom._close_jogs):
+#   cleaned of jogs, neighbouring weights can differ in structure where a
+#   step closes at one and not the next.
+# Glyphs are independent: the work runs on a pool of processes.
+from fontTools.varLib.models import VariationModel  # noqa: E402
+from arris import geom as _geom  # noqa: E402
+from arris.geom import rings_to_shapely as _shp  # noqa: E402
+
+AXIS_TAGS = [a[0] for a in AXES]
+MODEL = VariationModel([dict(zip(AXIS_TAGS, loc)) for loc in LOCS], axisOrder=AXIS_TAGS)
+LOCAL_TOL = 3.0
 
 
-def _exact_at(n, w):
-    if (n, w) not in _exact:
-        _exact[(n, w)] = _shp(_place(n, P((w, 0, 0)), record=ITALIC)[0])
-    return _exact[(n, w)]
+def _interpolate(al, loc):
+    """The aligned masters' outline at loc, as the variable font has it."""
+    import numpy as np
+    flat = [np.array([c for r in m for q in r for c in q], dtype=float) for m in al]
+    v = MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(loc))), flat)
+    out, i = [], 0
+    for r in al[0]:
+        out.append([(v[i + 2 * j], v[i + 2 * j + 1]) for j in range(len(r))])
+        i += 2 * len(r)
+    return out
 
 
-def _local_error(n, rings_by_master):
+def _local_error(rings_by_master, exact, star=False):
+    """Worst mean outline difference at the CHECK locations, and the alignment."""
     try:
-        al = align(rings_by_master)
+        al = align(rings_by_master, None if star else LOCS)
     except ValueError:
         return 1e9, None
-    idx = [MASTERS.index((w, 0, 0)) for w in WM]
     worst = 0.0
-    for wm, i0, i1 in MIDS:
-        r0, r1 = al[idx[i0]], al[idx[i1]]
-        mid = [[((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2) for p0, p1 in zip(a_, b_)] for a_, b_ in zip(r0, r1)]
+    for loc in CHECK:
         try:
-            ex = _exact_at(n, wm)
-            got = _shp([r for r in mid if len(set(r)) >= 3])
+            ex = exact(loc)
+            got = _shp([r for r in _interpolate(al, loc) if len(set(r)) >= 3])
             err = got.symmetric_difference(ex).area / max(ex.boundary.length, 1)
         except Exception:  # noqa: BLE001
             err = 1e9
         worst = max(worst, err)
+        if worst > 1e8:
+            break
     return worst, al
 
 
-LOCAL_TOL = 3.0
-replaced = []
-for n in names:
-    rings_a = [upright[w][n][0] for w in MASTERS]
-    if not any(rings_a):
-        continue
-    ea, _ = _local_error(n, rings_a)
-    if ea <= LOCAL_TOL:
-        continue
-    jog, _geom.JOG = _geom.JOG, 0.0
-    try:
-        alt = {w: _place(n, ps[w], record=ITALIC) for w in MASTERS}
-    finally:
-        _geom.JOG = jog
-    eb, _ = _local_error(n, [alt[w][0] for w in MASTERS])
-    if eb < ea:
-        for w in MASTERS:
-            upright[w][n] = alt[w]
-        replaced.append((n, round(ea, 1), round(eb, 1)))
-print(len(replaced), 'glyphs keep their jogs in the variable font, interpolating better so:', replaced[:12])
+def _glyph(n):
+    """One glyph, start to end: (name, its upright rings and advance per
+    master (for the kerning), its outlines per master as the font carries
+    them, the alternative taken or None, the error before and after, why it
+    cannot vary or None). Only plain outlines go back to the main process
+    (the drawings' records hold functions)."""
+    up = [_place(n, ps[m], record=ITALIC) for m in MASTERS]
+    plain = lambda ups: [(u[0], u[2]) for u in ups]
+    if not any(u[0] for u in up):
+        return n, plain(up), [u[0] for u in up], None, 0.0, 0.0, None
+    cache = {}
 
-aligned = {w: {} for w in MASTERS}
-frozen = []
-for n in names:
-    try:
-        rings = align([upright[w][n][0] for w in MASTERS])
-        if ITALIC:
-            # (terminal cells are curved but never slanted: font.place)
-            rings = ital.aligned_outlines(rings, [upright[w][n][0] for w in MASTERS],
-                                          [upright[w][n][1] for w in MASTERS],
-                                          [ps[w].with_(slant=0.0) if REGISTRY[n].cell else ps[w] for w in MASTERS])
-    except ValueError as e:
+    def exact(loc):
+        if loc not in cache:
+            cache[loc] = _shp(_place(n, P(loc), record=ITALIC)[0])
+        return cache[loc]
+    best, first = None, None
+    for jogs in (True, False):
+        if not jogs:
+            jog, _geom.JOG = _geom.JOG, 0.0
+            try:
+                variant = [_place(n, ps[m], record=ITALIC) for m in MASTERS]
+            finally:
+                _geom.JOG = jog
+        else:
+            variant = up
+        for star in (False, True):
+            err, al = _local_error([u[0] for u in variant], exact, star)
+            first = err if first is None else first
+            if al is not None and (best is None or err < best[0]):
+                best = (err, al, variant, (jogs, star))
+            if best is not None and best[0] <= LOCAL_TOL:
+                break
+        if best is not None and best[0] <= LOCAL_TOL:
+            break
+    why, choice, err = None, None, first
+    if best is None:
+        why = 'masters will not align'
+    else:
+        err, al, up, choice = best
+        try:
+            rings = al
+            if ITALIC:
+                # (terminal cells are curved but never slanted: font.place)
+                rings = ital.aligned_outlines(al, [u[0] for u in up], [u[1] for u in up],
+                                              [ps[w].with_(slant=0.0) if REGISTRY[n].cell else ps[w]
+                                               for w in MASTERS])
+        except ValueError as e:
+            why = str(e)
+    if why is not None:
         # cannot vary: every master carries the default outline (reported)
-        frozen.append((n, str(e)))
         d = place(n, ps[DEFAULT])[0]
         rings = [d for _ in MASTERS]
-    for i, w in enumerate(MASTERS):
-        aligned[w][n] = (rings[i], upright[w][n][2])
+    return n, plain(up), rings, choice, first, err, why
+
+
+from multiprocessing import get_context  # noqa: E402
+WORKERS = int(__import__('os').environ.get('ARRIS_VF_WORKERS', '8'))
+upright = {m: {} for m in MASTERS}
+aligned = {w: {} for w in MASTERS}
+frozen, chosen = [], []
+with get_context('fork').Pool(WORKERS) as pool:
+    for n, up, rings, choice, e0, e1, why in pool.imap_unordered(_glyph, names, chunksize=4):
+        if why is not None:
+            frozen.append((n, why))
+        if choice not in (None, (True, False)):
+            chosen.append((n, 'jogs kept' if not choice[0] else '', 'one reference' if choice[1] else '',
+                           round(e0, 1), round(e1, 1)))
+        for i, m in enumerate(MASTERS):
+            upright[m][n] = up[i]                           # (rings, advance)
+            aligned[m][n] = (rings[i], up[i][1])
+print('placed and aligned', len(names), 'glyphs in', len(MASTERS), 'masters;', len(chosen),
+      'took an alternative, interpolating better so:', sorted(chosen, key=lambda c: -c[3])[:12])
 print('aligned;', len(frozen), 'glyphs could not vary:', frozen[:10])
 
 
@@ -159,7 +219,7 @@ def kern_outline(w, n):
 
 # kerning: the same pairs in every master, each master's own values
 kernable = [n for n in names if REGISTRY[n].kind in ('cap', 'lower') or n in KERN_PUNCT]
-pairs_by = {w: kerns({n: (kern_outline(w, n), round(upright[w][n][2])) for n in kernable}, ps[w], light(ps[w]))
+pairs_by = {w: kerns({n: (kern_outline(w, n), round(upright[w][n][1])) for n in kernable}, ps[w], light(ps[w]))
             for w in MASTERS if w[1] == 0}
 for w in MASTERS:                       # grade keeps every advance, kerning included
     if w[1] != 0:
@@ -169,8 +229,7 @@ print(len(all_pairs), 'kerning pairs')
 
 tmp = Path(tempfile.mkdtemp())
 doc = DesignSpaceDocument()
-for tag, name, lo, df, hi in (('wght', 'Weight', 100, 400, 900), ('GRAD', 'Grade', -100, 0, 100),
-                              ('WTCH', 'Watch', 0, 0, 100)):
+for tag, name, lo, df, hi in AXES:
     ax = AxisDescriptor()
     ax.tag, ax.name, ax.minimum, ax.default, ax.maximum = tag, name, lo, df, hi
     doc.addAxis(ax)
@@ -207,14 +266,15 @@ vf.save(out)
 print('wrote', out)
 
 # --- check: the variable font against exact drawings between the masters ----
-worst = []
-for w in CHECK:
+def _check_at(w):
+    """Every glyph of the built font at w against its exact drawing."""
+    from arris.geom import rings_to_shapely
     inst = instantiateVariableFont(TTFont(out), {'wght': w[0], 'GRAD': w[1], 'WTCH': w[2]})
     glyf = inst['glyf']
     p = P(w)
+    res = []
     for n in names:
         rings, adv = place(n, p)
-        from arris.geom import rings_to_shapely
         exact = rings_to_shapely(ital.polylines(rings) if ITALIC else rings)
         g = glyf[n]
         coords, ends, flags = g.getCoordinates(glyf)
@@ -229,9 +289,16 @@ for w in CHECK:
             # mean distance between the two outlines, in font units: the
             # area between them over the exact outline's length
             err = interp.symmetric_difference(exact).area / max(exact.boundary.length, 1)
-        except Exception as ex:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             err = 1e9
-        worst.append((err, w, n))
+        res.append((err, w, n))
+    return res
+
+
+worst = []
+with get_context('fork').Pool(min(WORKERS, len(CHECK))) as pool:
+    for res in pool.imap_unordered(_check_at, CHECK):
+        worst += res
 worst.sort(reverse=True)
 TOL = 3.0   # font units: a mean outline difference under 0.3% of the em passes
 bad = [x for x in worst if x[0] > TOL]

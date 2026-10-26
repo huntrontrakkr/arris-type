@@ -14,6 +14,14 @@ others as a duplicate of the neighbour it is nearer to (where it exists):
 a feature growing from nothing, or shrinking into a corner, as the weight
 moves.
 
+Masters are aligned one at a time, each against the master already aligned
+that lies nearest it in the design space (``locs``): the outline it will be
+interpolated with, so the two differ least. Aligned all against one master
+(the thinnest, which has the most points), a heavy master whose strokes have
+fused has several equally good-looking starts on the thin outline, and two
+heavy neighbours could take different ones: their instances between turned
+inside out (ℕ at the heavy grade-watch corner, 2026-10-25).
+
 A glyph that is mirror-symmetric in every master (8, A, *) is aligned by
 its left half, cut on its axis, and mirrored: aligned whole, a point
 present in some masters only can be paired with a neighbour on one side
@@ -91,15 +99,24 @@ def _match_contours(ref, other, nref, noth):
 def _dp(A, TA, B, TB, rotate=True):
     """Global alignment of A (with its start fixed) against a rotation of B
     (or B as it is: ``rotate`` False, for open paths).
-    Returns list of (i or None, j or None) pairs."""
-    n, m = len(A), len(B)
+    Returns list of (i or None, j or None) pairs.
+
+    A, TA may also be several guides at once: A a list of (weight, points,
+    turns), the cost of a match their weighted mean (TA unused)."""
+    guides = A if TA is None else [(1.0, A, TA)]
+    n, m = len(guides[0][1]), len(B)
+    wsum = sum(w for w, _, _ in guides)
+    Bx, By, Bt = np.array([q[0] for q in B]), np.array([q[1] for q in B]), np.array(TB)
+    C = np.zeros((n, m))
+    for w, Ag, Tg in guides:
+        ax, ay, at = np.array([q[0] for q in Ag]), np.array([q[1] for q in Ag]), np.array(Tg)
+        C += w / wsum * (np.hypot(ax[:, None] - Bx[None, :], ay[:, None] - By[None, :])
+                         + TURN * (np.abs(at[:, None] - Bt[None, :]) > 0.3))
     best = None
     # candidate rotations: B starts that look like A's start
-    starts = sorted(range(m), key=lambda j: math.hypot(A[0][0] - B[j][0], A[0][1] - B[j][1])
-                    + (TURN if abs(TA[0] - TB[j]) > 0.3 else 0))[:4] if rotate else [0]
+    starts = sorted(range(m), key=lambda j: C[0, j])[:4] if rotate else [0]
     for r in starts:
-        Br = B[r:] + B[:r]
-        Tr = TB[r:] + TB[:r]
+        Cr = np.roll(C, -r, axis=1).tolist()
         D = np.full((n + 1, m + 1), np.inf)
         P = np.zeros((n + 1, m + 1), dtype=np.int8)
         D[0, 0] = 0.0
@@ -109,9 +126,7 @@ def _dp(A, TA, B, TB, rotate=True):
                     continue
                 cands = []
                 if i > 0 and j > 0:
-                    c = math.hypot(A[i - 1][0] - Br[j - 1][0], A[i - 1][1] - Br[j - 1][1])
-                    c += TURN if abs(TA[i - 1] - Tr[j - 1]) > 0.3 else 0.0
-                    cands.append((D[i - 1, j - 1] + c, 1))
+                    cands.append((D[i - 1, j - 1] + Cr[i - 1][j - 1], 1))
                 if i > 0:
                     cands.append((D[i - 1, j] + GAP, 2))
                 if j > 0:
@@ -253,7 +268,7 @@ def _whole(arc, c):
     return list(arc) + [(2 * c - x, y) for x, y in reversed(arc[1:-1])]
 
 
-def _align_open(paths, norms):
+def _align_open(paths, norms, locs=None):
     """Open paths, one per master, both ends on the axis: the ends pinned to
     each other, the points between matched, a missing point filled with the
     previous one (the start, at the head of the path)."""
@@ -264,20 +279,15 @@ def _align_open(paths, norms):
     cols = [[None] * k for _ in ref]
     for idx, q in enumerate(ref):
         cols[idx][ref_i] = q
-    nref = norms[ref_i]
-    for mi in range(k):
-        if mi == ref_i or not ref:
-            continue
-        if not inner[mi]:
-            continue                                        # all of it filled below
+    # a master with no points between its ends guides nothing: grow the
+    # tree over the others only
+    have = [mi for mi in range(k) if inner[mi]]
+    sub = _tree(have.index(ref_i), len(have), [locs[mi] for mi in have] if locs else None) if ref else []
+    for a, guides in sub:
+        mi = have[a]
         B = [norms[mi](q) for q in inner[mi]]
-        refpts, last = [], None
-        for c_i, col in enumerate(cols):
-            if col[ref_i] is not None:
-                last = c_i
-            refpts.append(nref(cols[last][ref_i] if last is not None else ref[0]))
-        path = _dp(refpts, _turns(refpts) if len(refpts) > 2 else [0.0] * len(refpts),
-                   B, _turns(inner[mi]) if len(B) > 2 else [0.0] * len(B), rotate=False)
+        gs = [(w, *_guide(cols, have[b], norms[have[b]])[:2]) for w, b in guides]
+        path = _dp(gs, None, B, _turns(inner[mi]) if len(B) > 2 else [0.0] * len(B), rotate=False)
         new = []
         for a, b in path:
             col = cols[a] if a is not None else [None] * k
@@ -295,7 +305,7 @@ def _align_open(paths, norms):
     return out
 
 
-def _mirror_align(masters):
+def _mirror_align(masters, locs=None):
     """A glyph symmetric in every master, aligned by its left half and
     mirrored, so every instance between the masters is symmetric too; or
     None, if it is not symmetric or its halves will not align.
@@ -324,14 +334,14 @@ def _mirror_align(masters):
             return None
         for ai in range(len(wholes[ref_i])):
             group = [parts[mi][0][orders[mi][ai]] for mi in range(k)]
-            al = _align_open(group, norms)
+            al = _align_open(group, norms, locs)
             if al is None:
                 return None
             for mi in range(k):
                 out[mi].append(_whole(al[mi], axes[mi]))
     if sides[0]:
         try:
-            al = _align(sides)
+            al = _align(sides, locs)
         except ValueError:
             return None
         for mi in range(k):
@@ -362,19 +372,63 @@ def _mirror_align(masters):
     return out
 
 
-def align(masters: list[list[list[tuple]]]):
+def align(masters: list[list[list[tuple]]], locs=None):
     """masters: per master, a list of rings (ink-left). Returns the same,
     made compatible (same contour order, same point counts, same order), or
     raises ValueError. A glyph symmetric in every master is aligned by its
-    halves (``_mirror_align``), so its instances stay symmetric."""
+    halves (``_mirror_align``), so its instances stay symmetric.
+
+    locs: each master's place in the design space, axes scaled alike (a
+    master is aligned against the nearest one already aligned); without
+    them, every master is aligned against the one with the most points."""
     if any(masters):
-        res = _mirror_align(masters)
+        res = _mirror_align(masters, locs)
         if res is not None:
             return res
-    return _align(masters)
+    return _align(masters, locs)
 
 
-def _align(masters):
+def _tree(ref_i, k, locs):
+    """The order to align masters in, each with the masters to align it
+    against, weighted: grown from ref_i, every step taking the master
+    nearest to one already aligned (a shortest spanning tree, Prim's); it
+    is aligned against that one and against its nearest aligned neighbour
+    each way along each axis (the masters it is interpolated with), the
+    nearer weighing more."""
+    if locs is None:
+        return [(mi, [(1.0, ref_i)]) for mi in range(k) if mi != ref_i]
+    d = lambda a, b: math.dist(locs[a], locs[b])
+    done, out = [ref_i], []
+    while len(done) < k:
+        mi, pa = min(((m, q) for m in range(k) if m not in done for q in done),
+                     key=lambda mq: (d(*mq), mq))
+        guides = {pa}
+        for ax in range(len(locs[mi])):
+            for side in (-1, 1):
+                line = [q for q in done if all(abs(locs[q][b] - locs[mi][b]) < 1e-9 for b in range(len(locs[mi])) if b != ax)
+                        and (locs[q][ax] - locs[mi][ax]) * side > 1e-9]
+                if line:
+                    guides.add(min(line, key=lambda q: (d(mi, q), q)))
+        done.append(mi)
+        out.append((mi, [(1.0 / max(d(mi, q), 1e-9), q) for q in sorted(guides)]))
+    return out
+
+
+def _guide(cols, pa, norm):
+    """Master pa's points along the columns, normalised, with their turns:
+    a column pa has no point in carries the last point it has (the next, at
+    the head), turning nowhere."""
+    real = [i for i, c in enumerate(cols) if c[pa] is not None]
+    t = dict(zip(real, _turns([cols[i][pa] for i in real]) if len(real) > 2 else [0.0] * len(real)))
+    pts, last = [], None
+    for i, c in enumerate(cols):
+        if c[pa] is not None:
+            last = i
+        pts.append(norm(cols[last if last is not None else real[0]][pa]))
+    return pts, [t.get(i, 0.0) for i in range(len(cols))], len(real) == len(cols)
+
+
+def _align(masters, locs=None):
     k = len(masters)
     if not any(masters):
         return masters                                      # an empty glyph (a blank Braille cell) varies trivially
@@ -382,6 +436,8 @@ def _align(masters):
     ref_i = max(range(k), key=lambda i: sum(len(r) for r in masters[i]))
     ref = masters[ref_i]
     nref = _norm(ref)
+    norms = [_norm(m) for m in masters]
+    tree = _tree(ref_i, k, locs)
     orders = []
     for mi in range(k):
         o = _match_contours(ref, masters[mi], nref, _norm(masters[mi]))
@@ -391,33 +447,21 @@ def _align(masters):
     out = [[None] * len(ref) for _ in range(k)]
     for ci in range(len(ref)):
         # columns: list of per-master point (or None)
-        A = [nref(q) for q in ref[ci]]
-        TA = _turns(ref[ci])
-        cols = [[None] * k for _ in A]
+        cols = [[None] * k for _ in ref[ci]]
         for idx, q in enumerate(ref[ci]):
             cols[idx][ref_i] = q
-        for mi in range(k):
-            if mi == ref_i:
-                continue
+        for mi, guides in tree:
             ring = masters[mi][orders[mi][ci]]
-            nm = _norm(masters[mi])
-            B = [nm(q) for q in ring]
+            B = [norms[mi](q) for q in ring]
             TB = _turns(ring)
-            r = _rotation_only(A, TA, B, TB) if len(cols) == len(A) else None
-            if r is not None and len(B) == len(cols):
-                for idx in range(len(cols)):
-                    cols[idx][mi] = ring[(idx + r) % len(ring)]
-                continue
-            # reference coordinates per column (carry the last real one over gaps)
-            refpts, reft, last = [], [], None
-            for c_i, col in enumerate(cols):
-                if col[ref_i] is not None:
-                    last = c_i
-                src = cols[last][ref_i] if last is not None else next(c[ref_i] for c in cols if c[ref_i] is not None)
-                refpts.append(nref(src))
-            reft = _turns([c[ref_i] if c[ref_i] is not None else refpts[i] for i, c in enumerate(cols)]) \
-                if all(c[ref_i] is not None for c in cols) else [0.0] * len(cols)
-            path = _dp(refpts, reft, B, TB)
+            gs = [(w, *_guide(cols, q, norms[q])) for w, q in guides]
+            if len(gs) == 1 and gs[0][3]:
+                r = _rotation_only(gs[0][1], gs[0][2], B, TB)
+                if r is not None:
+                    for idx in range(len(cols)):
+                        cols[idx][mi] = ring[(idx + r) % len(ring)]
+                    continue
+            path = _dp([g[:3] for g in gs], None, B, TB)
             new_cols = []
             for a, b in path:
                 if a is not None:
@@ -435,7 +479,6 @@ def _align(masters):
         # collapses onto the point it shrinks into, not onto whichever point
         # happens to precede it (which slid it along an edge and bent the
         # edge in the instances between)
-        norms = [_norm(m) for m in masters]
         rep = []
         for col in cols:
             mi_ = next(i for i, q in enumerate(col) if q is not None)

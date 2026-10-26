@@ -660,12 +660,19 @@ def _follow(rec, moved):
 
 def rings_to_shapely(rings):
     """Rebuild the ink from rings, even-odd: a ring toggles ink inside it, so
-    a dot inside a counter inside a bowl comes out right."""
+    a dot inside a counter inside a bowl comes out right. Ink is area only: a
+    ring collapsed to a point or a line (a counter not yet open, in a
+    variable font's master) toggles nothing."""
     out = Polygon()
     for r in rings:
-        if len(r) < 3:
+        if len(set(r)) < 3:
             continue
         poly = shapely.make_valid(Polygon(r))
+        if poly.geom_type not in ('Polygon', 'MultiPolygon'):
+            poly = shapely.union_all([q for q in getattr(poly, 'geoms', [poly])
+                                      if q.geom_type in ('Polygon', 'MultiPolygon')])
+        if poly.is_empty:
+            continue
         out = out.symmetric_difference(poly)
     return out
 
