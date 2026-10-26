@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from shapely import affinity
 
-from ..draw import Squint, B, REGISTRY, draw, glyph
+from ..draw import AUTO_MIN, Squint, B, REGISTRY, draw, glyph
 from ..geom import rings_to_shapely
 from .caps import big
 from .figures import beak_depth, jog
@@ -116,7 +116,15 @@ def Zhe(g):
             g.stroke(*[(xm + sign * (x + ox - xm), y) for x, y in pts], start=a, end=b)
 
 
-@ccap('uni0417', 'З', 9, 2)
+# З's, Э's and Є's bowls are open: the counter rule (closed counters) never
+# lightens them, and at Black their small capitals з э є kept only slits
+# between the beaks and the middle arm (solid at the heaviest grade). Their
+# horizontals thin under the squint instead, as far as the counter rule's,
+# a white gone altogether counting as unread (Squint.whites).
+OPEN_BOWLS = (Squint('sh_auto', lambda p: AUTO_MIN, whites=True),)
+
+
+@ccap('uni0417', 'З', 9, 2, squint=OPEN_BOWLS)
 def Ze(g):
     """The 3 with the 2's beak on top."""
     f = Frame(g, 9)
@@ -256,7 +264,7 @@ def Yusbig(g):
     g.stroke(f.P(6, 6), f.P(6, 0))
 
 
-@ccap('uni042D', 'Э', 9, 2)
+@ccap('uni042D', 'Э', 9, 2, squint=OPEN_BOWLS)
 def Ereversed(g):
     f = Frame(g, 9)
     p, H, d = f.p, f.p.cap, beak_depth(f.p)
@@ -264,7 +272,7 @@ def Ereversed(g):
     g.stroke(f.P(3, 6), f.P(8, 6))
 
 
-@ccap('uni0404', 'Є', 9, 2)
+@ccap('uni0404', 'Є', 9, 2, squint=OPEN_BOWLS)
 def Eukr(g):
     REGISTRY['C'].fn(g)
     f = Frame(g, 9)

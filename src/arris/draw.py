@@ -46,6 +46,7 @@ class Squint:
     free: str
     limit: Callable[[Params], float]
     absolute: bool = False      # held to vision.READS itself, not to the Regular (where the Regular reads poorly too)
+    whites: bool = False        # a white the Regular has that is gone altogether reads 0 (open bowls: _read)
 
 
 # Math signs set on one advance (the plus sign's, at least), their ink centred
@@ -597,10 +598,10 @@ def _thinning_reads(spec, sq, p) -> bool:
         kinds = ('hole', 'slot')
         g0 = _build(spec, heavy, 0.0, 0.0, {})
         b = sq.limit(heavy)
-        n0 = _squint_regular(spec, heavy, kinds, {sq.free: g0.defaults.get(sq.free)})[1]
-        n1 = _squint_regular(spec, heavy, kinds, {sq.free: b})[1]
-        s0 = _squint(g0, count=n0)
-        s1 = _squint(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), count=n1)
+        _, n0, w0 = _squint_regular(spec, heavy, kinds, {sq.free: g0.defaults.get(sq.free)})
+        _, n1, w1 = _squint_regular(spec, heavy, kinds, {sq.free: b})
+        s0 = _read(g0, n0, w0 if sq.whites else 0)
+        s1 = _read(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), n1, w1 if sq.whites else 0)
         _THINS[key] = s1 >= s0 - SQUINT_SLACK
     return _THINS[key]
 
@@ -631,18 +632,35 @@ def _squint_count(spec, p, kinds=('hole', 'slot')) -> int:
 
 
 def _squint_regular(spec, p, kinds, over=None):
-    """(reference, count) of the glyph's watched white at Regular, drawn with
-    `over` (a free variable at a trial value: a form is held to its own
-    Regular, so a pair of bars made one is not missed as two)."""
+    """(reference, count, whites) of the glyph's watched white at Regular,
+    drawn with `over` (a free variable at a trial value: a form is held to
+    its own Regular, so a pair of bars made one is not missed as two);
+    whites: its readable white features (white_features)."""
     from .instances import params
     from .vision import READS
     over = over or {}
     key = (spec.name, p.mono, kinds, tuple(sorted(over.items())))
     if key not in _SQUINT:
-        reg = _build(spec, params(400).with_(mono=p.mono), 0.0, 0.0, dict(over))
+        ref = params(400).with_(mono=p.mono)
+        reg = _build(spec, ref, 0.0, 0.0, dict(over))
         d = _squint_pieces(reg, kinds)
-        _SQUINT[key] = (min(READS, min(d, default=1.0)) - SQUINT_SLACK, len(d))
+        _SQUINT[key] = (min(READS, min(d, default=1.0)) - SQUINT_SLACK, len(d), white_features(reg.rings(), ref))
     return _SQUINT[key]
+
+
+def _read(g, count, whites) -> float:
+    """How a glyph reads under the squint (_squint), held to its Regular's
+    count of watched white and, for a rule that watches whites
+    (Squint.whites), of white features: a white the Regular has that is
+    gone altogether (closed, or narrower than half a stroke) reads 0, not
+    1. The narrow whites the squint watches can vanish by closing: З's open
+    bowls, wide at Regular, are slits at Black and solid at the heaviest
+    grade, and the squint saw no narrow white there at all. (Not every
+    rule: the white features of letters at large shrink under half a stroke
+    at Black by design, between a tail and its stem, a mark and its letter.)"""
+    if whites and white_features(g.rings(), g.p) < whites:
+        return 0.0
+    return _squint(g, count=count)
 
 
 def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
@@ -723,17 +741,19 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
             continue
         kinds = ('hole', 'slot')
         a, b = overrides.get(sq.free, g.defaults[sq.free]), sq.limit(p)
-        want, n = _squint_regular(spec, p, kinds, {sq.free: a})
-        now = _squint(g, count=n)
+        want, n, wa = _squint_regular(spec, p, kinds, {sq.free: a})
+        wa = wa if sq.whites else 0
+        now = _read(g, n, wa)
         if now >= want or not _thinning_reads(spec, sq, p):
             continue
         far = _build(spec, p, ot, ob, {**overrides, sq.free: b}, width)
-        want_b, n_b = _squint_regular(spec, p, kinds, {sq.free: b})
-        s_far = _squint(far, count=n_b)
+        want_b, n_b, wb = _squint_regular(spec, p, kinds, {sq.free: b})
+        wb = wb if sq.whites else 0
+        s_far = _read(far, n_b, wb)
         if s_far >= want_b:
             for _ in range(10):  # bisection: a fuses, b reads
                 mid = (a + b) / 2
-                if _squint(_build(spec, p, ot, ob, {**overrides, sq.free: mid}, width), count=n_b) >= want_b:
+                if _read(_build(spec, p, ot, ob, {**overrides, sq.free: mid}, width), n_b, wb) >= want_b:
                     b = mid
                 else:
                     a = mid
