@@ -239,6 +239,17 @@ def Yat(g):
     g.stroke((f.X(3) - arm, f.Y(9)), (f.X(3) + arm, f.Y(9)))
 
 
+@ccap('uni046A', 'Ѫ', 12, 3)
+def Yusbig(g):
+    """Big yus: a triangle hanging point down from the top bar, its sides at
+    45 degrees, its point on an arch whose legs stand on the baseline, and a
+    stem from the point down the middle."""
+    f = Frame(g, 12)
+    g.stroke(f.P(1, 11), f.P(11, 11), f.P(6, 6), closed=True)
+    g.stroke(f.P(1, 0), B(*f.P(1, 6)), B(*f.P(11, 6)), f.P(11, 0))
+    g.stroke(f.P(6, 6), f.P(6, 0))
+
+
 @ccap('uni042D', 'Э', 9, 2)
 def Ereversed(g):
     f = Frame(g, 9)
@@ -321,7 +332,7 @@ SMALLCAP = {0x0431: None, 0x0432: 'B', 0x0433: 'uni0413', 0x0434: 'uni0414', 0x0
             0x043F: 'uni041F', 0x0442: 'T', 0x0446: 'uni0426', 0x0447: 'uni0427', 0x0448: 'uni0428',
             0x0449: 'uni0429', 0x044A: 'uni042A', 0x044B: 'uni042B', 0x044C: 'uni042C', 0x044D: 'uni042D',
             0x044E: 'uni042E', 0x044F: 'uni042F', 0x0454: 'uni0404', 0x0491: 'uni0490', 0x0459: 'uni0409',
-            0x045A: 'uni040A', 0x045F: 'uni040F'}
+            0x045A: 'uni040A', 0x045F: 'uni040F', 0x046B: 'uni046A'}
 
 
 def sc(p):
