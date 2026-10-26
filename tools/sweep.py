@@ -103,6 +103,11 @@ def _crosses(r) -> bool:
 def _shape(entry):
     """(ink, contours, counters, crosses itself) of a drawn entry."""
     rings, _ = entry
+    # as the static fonts keep them (font._contours): a contour crossing or
+    # pinching itself as its simple loops, specks rounding leaves dropped
+    from arris.font import LOOP as FONT_LOOP, _shoelace, _untangled
+    rings = [lp for r in rings if len(r) >= 3 for lp in _untangled(list(r))
+             if len(lp) >= 3 and abs(_shoelace(lp)) >= FONT_LOOP]
     ink = rings_to_shapely(rings)
     polys = [g for g in getattr(ink, 'geoms', [ink]) if g.geom_type == 'Polygon']
     holes = sum(len(g.interiors) for g in polys)

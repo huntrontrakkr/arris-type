@@ -145,15 +145,28 @@ def perceived_extent(rings, view: View, thr: float, x0: float, w: float, lo: flo
 # sigma a fixed fraction of the cap height, calibrated on circles against
 # measured overshoots in well-made fonts, then transfer it to any shape.
 
+_KERNELS: dict = {}
+
+
 def gaussian_blur(a: np.ndarray, sigma_px: float) -> np.ndarray:
+    """a blurred by a Gaussian of sigma_px, zero outside it: a real FFT on
+    a grid padded by 4 sigma (no wrap) to a fast length, the kernel kept
+    per grid (the same result as a plain FFT, to rounding, and some times
+    faster: the blurs are most of a drawing's time)."""
+    from scipy import fft as sfft
     pad = int(4 * sigma_px) + 2
-    b = np.pad(a, pad)
-    fy = np.fft.fftfreq(b.shape[0])
-    fx = np.fft.fftfreq(b.shape[1])
-    FX, FY = np.meshgrid(fx, fy)
-    G = np.exp(-2 * (math.pi * sigma_px) ** 2 * (FX ** 2 + FY ** 2))
-    out = np.fft.ifft2(np.fft.fft2(b) * G).real
-    return out[pad:-pad, pad:-pad]
+    h, w = a.shape
+    H = sfft.next_fast_len(h + 2 * pad, real=True)
+    W = sfft.next_fast_len(w + 2 * pad, real=True)
+    b = np.zeros((H, W))
+    b[pad:pad + h, pad:pad + w] = a
+    key = (H, W, sigma_px)
+    if key not in _KERNELS:
+        fy = np.fft.fftfreq(H)
+        fx = np.fft.rfftfreq(W)
+        _KERNELS[key] = np.exp(-2 * (math.pi * sigma_px) ** 2 * (fx[None, :] ** 2 + fy[:, None] ** 2))
+    out = sfft.irfft2(sfft.rfft2(b) * _KERNELS[key], s=(H, W))
+    return out[pad:pad + h, pad:pad + w]
 
 
 def silhouette(rings):
@@ -288,12 +301,20 @@ def fused(rings, sv: float, cap: float = 720.0, zones=()):
 OVERSHOOT_KAPPA = 0.1192   # silhouette blur (share of the zone height) at which a circle needs a 1.5% overshoot
 
 
+_NEED: dict = {}
+_RECT: dict = {}
+
+
 def overshoot_need(rings, zone: float, kappa: float = OVERSHOOT_KAPPA):
     """(top, bottom) in font units that a glyph should reach past the zone
     (0 to ``zone``) to look as tall as a flat-edged form: its convex hull
     (openings do not count) blurred with sigma = kappa * zone, against the
     box it fills between the lines, compared at the half level. A flat top
-    needs nothing; a chamfered or round one what its corners cost."""
+    needs nothing; a chamfered or round one what its corners cost.
+
+    Remembered by the hull it measures (a glyph is drawn again and again:
+    every accented letter stamps its base), the box by its width: the
+    blurs are most of a drawing's time."""
     from shapely.geometry import MultiPoint
     pts = [q[:2] for r in rings for q in r]
     if len(pts) < 3:
@@ -309,9 +330,17 @@ def overshoot_need(rings, zone: float, kappa: float = OVERSHOOT_KAPPA):
     ring = [list(band.exterior.coords)[:-1]]
     if _area(ring[0]) < 0:
         ring = [ring[0][::-1]]
-    w = x1 - x0
-    b1, t1 = silhouette_extent(ring, kappa, cap=zone, px_per_cap=160, x0=x0 - 20, w=w + 40, lo=0, hi=zone)
-    b0, t0 = silhouette_extent(rect_rings(x0, 0, x1, zone), kappa, cap=zone, px_per_cap=160, x0=x0 - 20, w=w + 40, lo=0, hi=zone)
-    if any(v != v for v in (b0, t0, b1, t1)):
-        return 0.0, 0.0
-    return max(t0 - t1, 0.0), max(b1 - b0, 0.0)
+    key = (tuple(ring[0]), zone, kappa)
+    if key not in _NEED:
+        w = x1 - x0
+        b1, t1 = silhouette_extent(ring, kappa, cap=zone, px_per_cap=160, x0=x0 - 20, w=w + 40, lo=0, hi=zone)
+        rkey = (x0, x1, zone, kappa)
+        if rkey not in _RECT:
+            _RECT[rkey] = silhouette_extent(rect_rings(x0, 0, x1, zone), kappa, cap=zone, px_per_cap=160,
+                                            x0=x0 - 20, w=w + 40, lo=0, hi=zone)
+        b0, t0 = _RECT[rkey]
+        if any(v != v for v in (b0, t0, b1, t1)):
+            _NEED[key] = (0.0, 0.0)
+        else:
+            _NEED[key] = (max(t0 - t1, 0.0), max(b1 - b0, 0.0))
+    return _NEED[key]

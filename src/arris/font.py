@@ -256,9 +256,15 @@ def _contours(rings, keep=False):
             clean.pop()
         clean = _drop_colinear(clean)
         for loop in _untangled(clean):
-            if len(loop) >= 3:
+            # a speck rounding leaves (two edges a unit apart closing a
+            # pinhole, a sliver) is not a contour
+            if len(loop) >= 3 and abs(_shoelace(loop)) >= LOOP:
                 out.append(loop[::-1])
     return out
+
+
+def _shoelace(pts):
+    return sum(pts[i - 1][0] * pts[i][1] - pts[i][0] * pts[i - 1][1] for i in range(len(pts))) / 2
 
 
 LOOP = 4.0      # square units: a loop of a contour crossing itself smaller than this is dropped
