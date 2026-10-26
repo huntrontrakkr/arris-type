@@ -81,8 +81,9 @@ def _shift_record(record, dx):
     return [_moved(r, dx, 0.0) for r in record]
 
 
-def _place(name: str, p: Params, tune=None, record: bool = False):
-    """(rings, chamfer record, advance), upright, shifted into place."""
+def _place(name: str, p: Params, tune=None, record: bool = False, tags: list | None = None):
+    """(rings, chamfer record, advance), upright, shifted into place;
+    ``tags`` collects the names of the rings' edges (``geom.ink``)."""
     from .spacing import bearings
     t = (tune or {}).get(name, {})
     if REGISTRY[name].kind == 'space':
@@ -106,10 +107,10 @@ def _place(name: str, p: Params, tune=None, record: bool = False):
             W = REGISTRY[name].width(p)
             dx += (g0.W - W) / 2
         g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0), width=W)
-        rings, rec = g.outline(record)
+        rings, rec = g.outline(record, tags=tags)
         return _body(name, p, rings, dx, W), _shift_record(rec, dx), adv
     g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
-    rings, rec = g.outline(record)
+    rings, rec = g.outline(record, tags=tags)
     spec = REGISTRY[name]
     if isinstance(spec.kind, tuple) and spec.kind[0] == 'liga':
         # a ligature is one cell wide and draws back over the n - 1 spacers

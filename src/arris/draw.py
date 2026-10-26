@@ -108,6 +108,7 @@ class Glyph:
     extra_chamfers: list = field(default_factory=list)   # chamfer record of stamped glyphs (see add_glyph)
     zones: list = field(default_factory=list)   # (x0, y0, x1, y1) boxes whose white the Squint rule watches
     cell: tuple[float, float] | None = None     # Mono: the cell (x0, x1) no ink may pass (see _build)
+    extra_src: list = field(default_factory=list)   # (ink in extra, stamped glyph, its rings, affine map): names its edges
 
     def free(self, name: str, default: float) -> float:
         """A free variable of the drawing (see Opening)."""
@@ -187,16 +188,19 @@ class Glyph:
     def rings(self):
         return self.outline(record=False)[0]
 
-    def outline(self, record: bool = True):
+    def outline(self, record: bool = True, tags: list | None = None):
         """(rings, chamfer record): see ``geom.ink``. Stamped glyphs bring
-        their own records (``add_glyph``)."""
+        their own records (``add_glyph``). ``tags``, if given, collects the
+        name of every edge (``geom.ink``); the warp below keeps every point's
+        place in its ring, so the names stay true."""
         p = self.p
         box = None
         if self.clip is not None:
             from shapely.geometry import box as _box
             box = _box(*self.clip)
         rec = [] if record else None
-        rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt)
+        rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
+                    tags=tags, extra_edges=self._extra_edges() if tags is not None else ())
         rec = (rec or []) + self.extra_chamfers if record else []
         warp = getattr(self, 'warp', None)
         if warp is not None:
@@ -231,7 +235,31 @@ class Glyph:
             sub.clip = (max(x0, self.cell[0] - dx), y0, min(x1, self.cell[1] - dx), y1)
         rings, rec = sub.outline()
         self.extra.append(affinity.translate(rings_to_shapely(rings), dx, dy))
+        self.extra_src.append((self.extra[-1], sub, rings, (1.0, 0.0, 0.0, 1.0, dx, dy)))
         self.extra_chamfers += [_moved(r, dx, dy) for r in rec]
+
+    def _extra_edges(self):
+        """The edges of the extra ink, named: a stamped glyph's by its own
+        names, ('sub', j, name) for the j-th piece of extra ink; other extra
+        ink by its place in its polygon."""
+        out = []
+        for j, e in enumerate(self.extra):
+            src = next((s for s in self.extra_src if s[0] is e), None)
+            if src is not None:
+                _, sub, rings, (a, b, c, d, ox, oy) = src
+                names: list = []
+                sub.outline(record=False, tags=names)
+                T = lambda q: (a * q[0] + b * q[1] + ox, c * q[0] + d * q[1] + oy)
+                for r, nm in zip(rings, names):
+                    n = len(r)
+                    out.extend((T(r[i]), T(r[(i + 1) % n]), ('sub', j, nm[i])) for i in range(n))
+                continue
+            polys = [g for g in getattr(e, 'geoms', [e]) if g.geom_type == 'Polygon']
+            for pi, poly in enumerate(polys):
+                for k, ring in enumerate([poly.exterior] + list(poly.interiors)):
+                    cs = list(ring.coords)
+                    out.extend((cs[i], cs[i + 1], ('x', j, pi, k, i)) for i in range(len(cs) - 1))
+        return out
 
     @property
     def sh(self) -> float:

@@ -110,6 +110,7 @@ def _expand(stroke: Stroke):
     nodes = list(stroke.nodes)
     n = len(nodes)
     pts, bowls, widths = [], [], []   # widths[i]: thickness of the segment from pts[i]
+    labels = []                       # what made each point: ('n', node) or ('b', node, 0 or 1)
     for i, nd in enumerate(nodes):
         p = (nd.x, nd.y)
         interior = stroke.closed or 0 < i < n - 1
@@ -127,9 +128,11 @@ def _expand(stroke: Stroke):
             bowls.append(len(pts))
             pts.extend([a, b])
             widths.extend([None, nd.w])
+            labels.extend([('b', i, 0), ('b', i, 1)])
         else:
             pts.append(p)
             widths.append(nd.w)
+            labels.append(('n', i))
     # Two chamfers that use a whole straight between them meet in one point.
     keep = [i for i in range(len(pts))
             if _len(_sub(pts[i], pts[i - 1 if (stroke.closed or i > 0) else i])) > 1e-9 or (i == 0 and not stroke.closed)]
@@ -142,7 +145,8 @@ def _expand(stroke: Stroke):
         bowls = [remap.get(b, remap.get(b - 1, 0)) for b in bowls]
         pts = [pts[i] for i in keep]
         widths = [widths[i] for i in keep]
-    return pts, bowls, widths
+        labels = [labels[i] for i in keep]
+    return pts, bowls, widths, labels
 
 
 def _cap_point(p, d, side_pt, kind):
@@ -156,18 +160,20 @@ def _cap_point(p, d, side_pt, kind):
     raise ValueError(f'unknown cap {kind!r}')
 
 
-def stroke_polygon(stroke: Stroke, thick: Thickness, c: float, rec: list | None = None) -> Polygon:
+def stroke_polygon(stroke: Stroke, thick: Thickness, c: float, rec: list | None = None,
+                   edges: list | None = None) -> Polygon:
     """The ink of one stroke. If a stroke's bowl chamfers do not fit inside it
     (very heavy weights), the bowls shrink until they do. ``rec`` collects
-    the lines the bowls' chamfer edges lie on (see ``ink``)."""
+    the lines the bowls' chamfer edges lie on (see ``ink``); ``edges`` the
+    outline's edges, each named for what made it (see ``ink``'s tags)."""
     try:
-        return _stroke_polygon(stroke, thick, c, rec=rec)
+        return _stroke_polygon(stroke, thick, c, rec=rec, edges=edges)
     except ValueError:
         if not any(n.bowl for n in stroke.nodes):
             # a stroke thicker than it is long (a short diagonal at the very
             # heaviest settings): repair it and log it
             REPAIRED.append(stroke)
-            return _stroke_polygon(stroke, thick, c, repair=True, rec=rec)
+            return _stroke_polygon(stroke, thick, c, repair=True, rec=rec, edges=edges)
     lo, hi = 0.0, 1.0
     for _ in range(30):
         mid = (lo + hi) / 2
@@ -177,13 +183,13 @@ def stroke_polygon(stroke: Stroke, thick: Thickness, c: float, rec: list | None 
         except ValueError:
             hi = mid
     try:
-        return _stroke_polygon(_scale_bowls(stroke, lo * 0.98), thick, c, rec=rec)
+        return _stroke_polygon(_scale_bowls(stroke, lo * 0.98), thick, c, rec=rec, edges=edges)
     except ValueError:
         # Last resort: repair the outline and log the stroke for review, so a
         # crowded extreme (a ligature squeezed into a monospaced cell at Black)
         # degrades instead of failing the build.
         REPAIRED.append(stroke)
-        return _stroke_polygon(stroke, thick, c, repair=True, rec=rec)
+        return _stroke_polygon(stroke, thick, c, repair=True, rec=rec, edges=edges)
 
 
 REPAIRED: list = []
@@ -194,8 +200,8 @@ def _scale_bowls(stroke: Stroke, k: float) -> Stroke:
 
 
 def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = False,
-                    rec: list | None = None) -> Polygon:
-    pts, bowls, widths = _expand(stroke)
+                    rec: list | None = None, edges: list | None = None) -> Polygon:
+    pts, bowls, widths, labels = _expand(stroke)
     closed = stroke.closed
     m = len(pts)
     nseg = m if closed else m - 1
@@ -263,6 +269,17 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
     if rec is not None:
         for k in bowls:                                     # a bowl's two chamfer edges, as one corner
             rec.append(('bowl', llines[k], rlines[k]))
+    if edges is not None:
+        # each side's edge j lies on segment j's offset line: named by the
+        # segment's two ends (what made them) and the side; the caps by end
+        seg = [(labels[j], labels[(j + 1) % m]) for j in range(nseg)]
+        nv = len(left)
+        for j in range(nseg if closed else nv - 1):
+            edges.append((left[j], left[(j + 1) % nv], ('L',) + seg[j]))
+            edges.append((right[j], right[(j + 1) % nv], ('R',) + seg[j]))
+        if not closed:
+            edges.append((left[0], right[0], ('cap', 0)))
+            edges.append((left[-1], right[-1], ('cap', 1)))
     return poly
 
 
@@ -364,7 +381,8 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
     return clean
 
 
-def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=()):
+def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=(),
+        tags: list | None = None, extra_edges=()):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
 
@@ -378,8 +396,22 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     collects where the outline's chamfers came from: ('line', point,
     direction) for the lines a bowl's chamfer edges lie on, ('chord', a, b)
     for the corner rule's edge breaks on right angles. The italic curves
-    exactly these (``arris.italic``)."""
-    polys = [stroke_polygon(s, thick, c, rec) for s in strokes] + list(extra)
+    exactly these (``arris.italic``).
+
+    ``tags``, if given, collects per ring the name of each edge (from its
+    point i to i + 1): the line it lies on, named for what made it (a
+    stroke's side along a segment, a cap, a stamped glyph's own edge
+    (``extra_edges``), the clip box), or a corner-rule chord between two
+    named edges. The same edge in another master has the same name: the
+    variable font matches masters' points by these (``variable``)."""
+    segs = [] if tags is not None else None
+    polys = []
+    for i, st in enumerate(strokes):
+        e = [] if segs is not None else None
+        polys.append(stroke_polygon(st, thick, c, rec, edges=e))
+        if e:
+            segs.extend((a, b, ('s', i) + t) for a, b, t in e)
+    polys += list(extra)
     if not polys:
         return []
     u = shapely.union_all(polys)
@@ -404,7 +436,54 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
             rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
     if rec is not None and moved:
         _follow(rec, moved)
+    if tags is not None:
+        segs.extend(extra_edges)
+        if clip is not None:
+            b = list(clip.exterior.coords)
+            segs.extend((b[k], b[k + 1], ('clip', k)) for k in range(len(b) - 1))
+        tags.extend(_name_edges(r, segs) for r in rings)
     return rings
+
+
+def _name_edges(ring, segs, tol=1e-3):
+    """The name of each edge of a ring (point i to i + 1): the named input
+    edge it lies along, overlapping it most (``ink``'s tags); an edge that
+    lies along none (a corner-rule chord) is named by the named edges
+    before and after it."""
+    n = len(ring)
+    pre = []
+    for (p, q, t) in segs:
+        e = _sub(q, p)
+        le = _len(e)
+        if le > 1e-9:
+            pre.append((p, _mul(e, 1 / le), le, t))
+    names = []
+    for i in range(n):
+        a, b = ring[i][:2], ring[(i + 1) % n][:2]
+        d = _sub(b, a)
+        ld = _len(d)
+        best = None
+        if ld > 1e-9:
+            u = _mul(d, 1 / ld)
+            for p, v, le, t in pre:
+                if abs(_cross(u, v)) > 1e-6 or abs(_cross(_sub(a, p), v)) > tol:
+                    continue
+                ta, tb = sorted((_dot(_sub(a, p), v), _dot(_sub(b, p), v)))
+                ov = min(tb, le) - max(ta, 0.0)
+                if ov < -tol:
+                    continue
+                if best is None or ov > best[0] + 1e-6 or (abs(ov - best[0]) <= 1e-6 and repr(t) < repr(best[1])):
+                    best = (ov, t)
+        names.append(best[1] if best else None)
+    if all(t is None for t in names):
+        return [('?', i) for i in range(n)]
+    out = list(names)
+    for i in range(n):
+        if names[i] is None:
+            prev = next(names[(i - k) % n] for k in range(1, n + 1) if names[(i - k) % n] is not None)
+            nxt = next(names[(i + k) % n] for k in range(1, n + 1) if names[(i + k) % n] is not None)
+            out[i] = ('chord', prev, nxt)
+    return out
 
 
 MIN_COUNTER = 0.2   # pinholes (under a fifth of a stem, squared) fill in

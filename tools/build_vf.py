@@ -135,23 +135,46 @@ def _predicted(base):
     return list(base) + [_interpolate(base, c, MODEL_BASE) for c in CORNERS]
 
 
-def _error(al, exact):
-    """Worst difference at the CHECK locations between the font's outline
+_MODELS: dict = {}
+
+
+def _model(mlocs):
+    """The variation model over a glyph's masters (the font's, and any of its own)."""
+    key = tuple(mlocs)
+    if key not in _MODELS:
+        _MODELS[key] = VariationModel([dict(zip(AXIS_TAGS, LOC(m))) for m in mlocs], axisOrder=AXIS_TAGS)
+    return _MODELS[key]
+
+
+def _errors(al, exact, mlocs=None):
+    """The difference at each CHECK location between the font's outline
     and the exact drawing: the mean distance between the outlines, or the
     farthest a point is carried off it over SPIKE, whichever is more."""
-    worst = 0.0
+    model = _model(mlocs or MASTERS)
+    out = {}
     for loc in CHECK:
         try:
             ex = exact(loc)
-            got = _shp([r for r in _interpolate(al, loc) if len(set(r)) >= 3])
+            got = _shp([r for r in _interpolate(al, loc, model) if len(set(r)) >= 3])
             err = max(got.symmetric_difference(ex).area / max(ex.boundary.length, 1),
                       got.boundary.hausdorff_distance(ex.boundary) / SPIKE)
         except Exception:  # noqa: BLE001
             err = 1e9
-        worst = max(worst, err)
-        if worst > 1e8:
+        out[loc] = err
+        if err > 1e8:
             break
-    return worst
+    return out
+
+
+def _error(al, exact, mlocs=None):
+    return max(_errors(al, exact, mlocs).values())
+
+
+# A glyph that still interpolates off its drawing somewhere gets masters of its
+# own there, one at a time, worst place first, while each makes it better: a
+# variable font's variations are stored glyph by glyph, so a master one glyph
+# needs costs the others nothing (gvar, rewritten after the build: _own_masters).
+OWN_MAX = 8
 
 
 def _glyph(n):
@@ -167,7 +190,11 @@ def _glyph(n):
     points; and each of those again with the masters drawn without the jog
     closing (geom._close_jogs: cleaned of jogs, neighbouring weights can
     differ in structure where a step closes at one and not the next)."""
-    up = [_place(n, ps[m], record=ITALIC) for m in MASTERS]
+    def placed(m):
+        names = []
+        u = _place(n, ps[m] if m in ps else P(m), record=ITALIC, tags=names)
+        return u + (names,)
+    up = [placed(m) for m in MASTERS]
     plain = lambda ups: [(u[0], u[2]) for u in ups]
     if not any(u[0] for u in up):
         return n, plain(up), [u[0] for u in up], None, 0.0, 0.0, None
@@ -178,15 +205,18 @@ def _glyph(n):
             cache[loc] = _shp(_place(n, P(loc), record=ITALIC)[0])
         return cache[loc]
 
-    def candidates(rings, star):
-        locs = None if star else LOCS
+    def candidates(variant, how):
+        rings = [u[0] for u in variant]
+        locs = None if how == 'star' else LOCS
+        names = [u[3] for u in variant] if how == 'named' else None
         try:
-            al = align(rings, locs)
+            al = align(rings, locs, names=names)
             yield 'exact corners', al
             yield 'predicted corners', _predicted(al[:NB])
         except ValueError:
             try:
-                yield 'predicted corners', _predicted(align(rings[:NB], None if star else LOCS[:NB]))
+                yield 'predicted corners', _predicted(align(rings[:NB], None if locs is None else LOCS[:NB],
+                                                            names=None if names is None else names[:NB]))
             except ValueError:
                 return
     best, first = None, None
@@ -194,47 +224,87 @@ def _glyph(n):
         if not jogs:
             jog, _geom.JOG = _geom.JOG, 0.0
             try:
-                variant = [_place(n, ps[m], record=ITALIC) for m in MASTERS]
+                variant = [placed(m) for m in MASTERS]
             finally:
                 _geom.JOG = jog
         else:
             variant = up
-        for star in (False, True):
-            for corners, al in candidates([u[0] for u in variant], star):
+        for how in ('named', 'tree', 'star'):
+            for corners, al in candidates(variant, how):
                 err = _error(al, exact)
                 first = err if first is None else first
                 if best is None or err < best[0]:
-                    best = (err, al, variant, (jogs, star, corners))
+                    best = (err, al, variant, (jogs, how, corners))
                 if best[0] <= LOCAL_TOL:
                     break
             if best is not None and best[0] <= LOCAL_TOL:
                 break
         if best is not None and best[0] <= LOCAL_TOL:
             break
+    own = []                                                # (location, outline) of the glyph's own masters
+    if best is not None and best[0] > LOCAL_TOL:
+        # its own masters: from the chosen way's alignment with every master
+        # drawn (corners exact), adding the worst place while it helps
+        _, _, variant, (jogs, how, _) = best
+        mlocs, var = list(MASTERS), list(variant)
+
+        def realign(var, mlocs):
+            return align([u[0] for u in var], None if how == 'star' else [LOC(m) for m in mlocs],
+                         names=[u[3] for u in var] if how == 'named' else None)
+        try:
+            al = realign(var, mlocs)
+            errs = _errors(al, exact, mlocs)
+            for _ in range(OWN_MAX):
+                loc, e = max(errs.items(), key=lambda kv: kv[1])
+                if e <= LOCAL_TOL or loc in mlocs:
+                    break
+                if not jogs:
+                    jog, _geom.JOG = _geom.JOG, 0.0
+                try:
+                    u = placed(loc)
+                finally:
+                    if not jogs:
+                        _geom.JOG = jog
+                al2 = realign(var + [u], mlocs + [loc])
+                errs2 = _errors(al2, exact, mlocs + [loc])
+                # kept if the glyph comes nearer its drawings overall (the
+                # worst place is now exact; the next may be as bad)
+                if sum(min(e, 100) for e in errs2.values()) >= 0.98 * sum(min(e, 100) for e in errs.values()):
+                    break
+                mlocs, var, al, errs = mlocs + [loc], var + [u], al2, errs2
+            if len(mlocs) > len(MASTERS) and max(errs.values()) < best[0]:
+                best = (max(errs.values()), al, var, (jogs, how, 'own masters', mlocs[len(MASTERS):]))
+        except ValueError:
+            pass
     why, choice, err = None, None, first
     if best is None:
         why = 'masters will not align'
     else:
-        err, al, up, choice = best
+        err, al, up_all, choice = best
+        mlocs = MASTERS + (choice[3] if choice[2] == 'own masters' else [])
         try:
             rings = al
             if ITALIC:
                 # (terminal cells are curved but never slanted: font.place)
-                cps = [ps[w].with_(slant=0.0) if REGISTRY[n].cell else ps[w] for w in MASTERS]
-                if choice[2] == 'exact corners':
-                    rings = ital.aligned_outlines(al, [u[0] for u in up], [u[1] for u in up], cps)
+                cps = [P(m).with_(slant=0.0) if REGISTRY[n].cell else P(m) for m in mlocs]
+                if choice[2] != 'predicted corners':
+                    rings = ital.aligned_outlines(al, [u[0] for u in up_all], [u[1] for u in up_all], cps)
                 else:
                     # the corners predicted from the others' italic outlines,
                     # curves and all
-                    rings = _predicted(ital.aligned_outlines(al[:NB], [u[0] for u in up[:NB]],
-                                                             [u[1] for u in up[:NB]], cps[:NB]))
+                    rings = _predicted(ital.aligned_outlines(al[:NB], [u[0] for u in up_all[:NB]],
+                                                             [u[1] for u in up_all[:NB]], cps[:NB]))
+            own = [(m, rings[len(MASTERS) + i]) for i, m in enumerate(mlocs[len(MASTERS):])]
+            rings = rings[:len(MASTERS)]
+            up = up_all[:len(MASTERS)]
         except ValueError as e:
             why = str(e)
     if why is not None:
         # cannot vary: every master carries the default outline (reported)
         d = place(n, ps[DEFAULT])[0]
         rings = [d for _ in MASTERS]
-    return n, plain(up), rings, choice, first, err, why
+        own = []
+    return n, plain(up), rings, choice, first, err, why, own
 
 
 from multiprocessing import get_context  # noqa: E402
@@ -242,19 +312,22 @@ WORKERS = int(__import__('os').environ.get('ARRIS_VF_WORKERS', '8'))
 upright = {m: {} for m in MASTERS}
 aligned = {w: {} for w in MASTERS}
 frozen, chosen = [], []
+OWN = {}                                                    # glyph -> [(location, outline)]: its own masters
 with get_context('fork').Pool(WORKERS) as pool:
-    for n, up, rings, choice, e0, e1, why in pool.imap_unordered(_glyph, names, chunksize=4):
+    for n, up, rings, choice, e0, e1, why, own in pool.imap_unordered(_glyph, names, chunksize=4):
         if why is not None:
             frozen.append((n, why))
-        if choice not in (None, (True, False, 'exact corners')):
-            chosen.append((n, 'jogs kept' if not choice[0] else '', 'one reference' if choice[1] else '',
-                           choice[2], round(e0, 1), round(e1, 1)))
+        if own:
+            OWN[n] = own
+        if choice not in (None, (True, 'named', 'exact corners')):
+            chosen.append((n, 'jogs kept' if not choice[0] else '', choice[1], choice[2], round(e0, 1), round(e1, 1)))
         for i, m in enumerate(MASTERS):
             upright[m][n] = up[i]                           # (rings, advance)
             aligned[m][n] = (rings[i], up[i][1])
 print('placed and aligned', len(names), 'glyphs in', len(MASTERS), 'masters;', len(chosen),
       'took an alternative, interpolating better so:', sorted(chosen, key=lambda c: -c[4])[:12])
-print(sum(c[3] == 'predicted corners' for c in chosen), 'glyphs keep predicted corners')
+print(sum(c[3] == 'predicted corners' for c in chosen), 'glyphs keep predicted corners;', len(OWN),
+      'have masters of their own,', sum(len(v) for v in OWN.values()), 'in all')
 print('aligned;', len(frozen), 'glyphs could not vary:', frozen[:10])
 
 
@@ -321,6 +394,44 @@ buildStatTable(vf, [
      'values': [{'value': 1, 'name': 'Italic'}] if ITALIC else
                [{'value': 0, 'name': 'Roman', 'flags': 0x2, 'linkedValue': 1}]},
 ])
+
+
+def _own_masters(vf):
+    """Rewrite the variations of glyphs that have masters of their own:
+    one model over all of the glyph's masters, its deltas as the glyph's
+    own regions (gvar keeps them glyph by glyph). Points as the master fonts
+    carry them (each contour reversed, rounded); the advance (phantom point
+    2) follows the font's masters, interpolated at the glyph's own."""
+    import numpy as np
+    from fontTools.ttLib.tables.TupleVariation import TupleVariation
+    gvar = vf['gvar']
+
+    def pts(rings):
+        return [(round(q[0]), round(q[1])) for r in rings for q in r[::-1]]
+    advs = lambda n: [aligned[m][n][1] for m in MASTERS]
+    for n, own in OWN.items():
+        mlocs = MASTERS + [m for m, _ in own]
+        base_adv = advs(n)
+        vals = []
+        for i, m in enumerate(MASTERS):
+            vals.append(pts(aligned[m][n][0]) + [(0, 0), (round(base_adv[i]), 0), (0, 0), (0, 0)])
+        for m, rings in own:
+            a = MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
+            vals.append(pts(rings) + [(0, 0), (round(a), 0), (0, 0), (0, 0)])
+        model = _model(mlocs)
+        deltas, supports = model.getDeltasAndSupports([np.array(v, dtype=float) for v in vals])
+        tvs = []
+        for d, sup in zip(deltas, supports):
+            if not sup:
+                continue
+            coords = [(int(round(x)), int(round(y))) for x, y in d]
+            if any(c != (0, 0) for c in coords):
+                tvs.append(TupleVariation(dict(sup), coords))
+        gvar.variations[n] = tvs
+
+
+if OWN:
+    _own_masters(vf)
 vf['name'].names = [nm for nm in vf['name'].names if nm.platformID != 1]   # Windows names only
 from arris.font import add_meta  # noqa: E402
 add_meta(vf)
@@ -360,9 +471,13 @@ def _check_at(w):
     return res
 
 
+# the check, and places between it the build never looked at (a glyph's own
+# masters come from CHECK: these say whether it holds in between)
+VALID = [(850, 25, 25), (650, -25, 75), (300, 50, 50), (725, 60, 30), (500, -75, 25), (950 - 75, 90, 90),
+         (200, -50, 50), (575, 25, 0), (775, 0, 75), (450, 75, 100)]
 worst = []
-with get_context('fork').Pool(min(WORKERS, len(CHECK))) as pool:
-    for res in pool.imap_unordered(_check_at, CHECK):
+with get_context('fork').Pool(min(WORKERS, len(CHECK) + len(VALID))) as pool:
+    for res in pool.imap_unordered(_check_at, CHECK + VALID):
         worst += res
 worst.sort(reverse=True)
 TOL = 3.0       # font units: a mean outline difference under 0.3% of the em passes

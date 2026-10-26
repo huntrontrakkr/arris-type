@@ -61,6 +61,7 @@ def add_t(g, sub, M=(1, 0, 0, 1), dx=0.0, dy=0.0):
         rings = [[(q[0], f(q[1])) + tuple(q[2:]) for q in r_] for r_ in rings]
         rec = [_warped(r_, f) for r_ in rec if r_[0] != 'warp']
     g.extra.append(affinity.affine_transform(rings_to_shapely(rings), [a, b, c, d, dx, dy]))
+    g.extra_src.append((g.extra[-1], sub, rings, (a, b, c, d, dx, dy)))
     g.extra_chamfers += [_xform_rec(r, M, dx, dy) for r in rec]
 
 
@@ -373,7 +374,11 @@ def shift(g, dx, dy):
     from ..geom import Node, Stroke
     g.strokes = [Stroke(tuple(Node(n.x + dx, n.y + dy, n.bowl, n.w) for n in st.nodes), st.closed, st.start, st.end)
                  for st in g.strokes]
-    g.extra = [affinity.translate(e, dx, dy) for e in g.extra]
+    moved = [affinity.translate(e, dx, dy) for e in g.extra]
+    src = {id(e): s for s in g.extra_src for e in g.extra if s[0] is e}
+    g.extra_src = [(m, s[1], s[2], s[3][:4] + (s[3][4] + dx, s[3][5] + dy))
+                   for e, m in zip(g.extra, moved) if (s := src.get(id(e))) is not None]
+    g.extra = moved
     g.extra_chamfers = [_moved(r, dx, dy) for r in g.extra_chamfers]
     if g.clip is not None:
         x0, y0, x1, y1 = g.clip

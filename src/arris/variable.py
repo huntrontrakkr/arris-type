@@ -41,6 +41,7 @@ import numpy as np
 
 GAP = 0.6           # alignment cost of a missing point, in normalised units (a match is preferred)
 TURN = 0.5          # cost of matching points that turn differently
+NAMED = 1.0         # cost of matching points whose names differ (half if they share a line; see vertex_names)
 
 
 def _area(r):
@@ -59,8 +60,8 @@ def _turns(r):
 
 
 def _norm(rings):
-    xs = [x for r in rings for x, _ in r]
-    ys = [y for r in rings for _, y in r]
+    xs = [q[0] for r in rings for q in r]
+    ys = [q[1] for r in rings for q in r]
     x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
     s = max(x1 - x0, y1 - y0, 1e-9)                         # one scale: keep the aspect
     return lambda q: ((q[0] - x0) / s, (q[1] - y0) / s)
@@ -79,12 +80,17 @@ def _match_contours(ref, other, nref, noth):
     fr = [feat(r, nref) for r in ref]
     fo = [feat(r, noth) for r in other]
     n = len(ref)
+    lines = lambda r: {x for q in r if len(q) > 2 for x in q[2]}
+    lr, lo = [lines(r) for r in ref], [lines(r) for r in other]
     def cost(i, j):
         if fr[i][0] != fo[j][0]:
             return 1e9
         # position and size: a dot centred in a bowl must not pair with the bowl
-        return (math.hypot(fr[i][1] - fo[j][1], fr[i][2] - fo[j][2])
-                + abs(fr[i][3] - fo[j][3]) + abs(fr[i][4] - fo[j][4]))
+        c = (math.hypot(fr[i][1] - fo[j][1], fr[i][2] - fo[j][2])
+             + abs(fr[i][3] - fo[j][3]) + abs(fr[i][4] - fo[j][4]))
+        if lr[i] and lo[j]:                                 # what made them: the share of lines they do not share
+            c += 1.0 - len(lr[i] & lo[j]) / len(lr[i] | lo[j])
+        return c
     if n <= 7:
         best = min(itertools.permutations(range(n)), key=lambda perm: sum(cost(i, perm[i]) for i in range(n)))
         return list(best) if sum(cost(i, best[i]) for i in range(n)) < 1e8 else None
@@ -96,22 +102,50 @@ def _match_contours(ref, other, nref, noth):
     return order
 
 
-def _dp(A, TA, B, TB, rotate=True, turn=TURN):
+def vertex_names(edge_names):
+    """The names of a ring's points from the names of its edges (geom.ink's
+    tags, edge i from point i to i + 1): point i is where edge i - 1 meets
+    edge i, named by the two lines, a corner-rule chord by the two lines it
+    cuts between. So a chamfer growing out of a corner shares a line with
+    the corner on each side, and a point whose edge shrinks away shares one
+    with the point it shrinks into."""
+    n = len(edge_names)
+    return [(edge_names[i - 1], edge_names[i]) for i in range(n)]
+
+
+def _name_cost(a, b):
+    """0 for the same name, half for a shared line, 1 otherwise (or for a
+    point with no name)."""
+    if a is None or b is None:
+        return 0.5
+    if a == b:
+        return 0.0
+    if a[0] in b or a[1] in b:
+        return 0.5
+    return 1.0
+
+
+def _dp(A, TA, B, TB, rotate=True, turn=TURN, NB=None):
     """Global alignment of A (with its start fixed) against a rotation of B
     (or B as it is: ``rotate`` False, for open paths).
     Returns list of (i or None, j or None) pairs.
 
     A, TA may also be several guides at once: A a list of (weight, points,
-    turns), the cost of a match their weighted mean (TA unused)."""
+    turns[, names]), the cost of a match their weighted mean (TA unused).
+    NB: B's point names; with the guides' names, a match costs NAMED for
+    names that differ (vertex_names)."""
     guides = A if TA is None else [(1.0, A, TA)]
     n, m = len(guides[0][1]), len(B)
-    wsum = sum(w for w, _, _ in guides)
+    wsum = sum(g[0] for g in guides)
     Bx, By, Bt = np.array([q[0] for q in B]), np.array([q[1] for q in B]), np.array(TB)
     C = np.zeros((n, m))
-    for w, Ag, Tg in guides:
+    for g in guides:
+        w, Ag, Tg = g[:3]
         ax, ay, at = np.array([q[0] for q in Ag]), np.array([q[1] for q in Ag]), np.array(Tg)
         C += w / wsum * (np.hypot(ax[:, None] - Bx[None, :], ay[:, None] - By[None, :])
                          + turn * (np.abs(at[:, None] - Bt[None, :]) > 0.3))
+        if NB is not None and len(g) > 3 and g[3] is not None:
+            C += w / wsum * NAMED * np.array([[_name_cost(a, b) for b in NB] for a in g[3]])
     best = None
     # candidate rotations: B starts that look like A's start
     starts = sorted(range(m), key=lambda j: C[0, j])[:4] if rotate else [0]
@@ -188,10 +222,10 @@ def _add_missing_counters(masters):
             if have and min(math.hypot(c[0] - a[0], c[1] - a[1]) for a in have) < 0.08:
                 continue
             # place the collapsed counter at the same normalised spot in this master
-            xs = [x for r in masters[mi] for x, _ in r]
-            ys = [y for r in masters[mi] for _, y in r]
+            xs = [q[0] for r in masters[mi] for q in r]
+            ys = [q[1] for r in masters[mi] for q in r]
             q = (min(xs) + c[0] * (max(xs) - min(xs)), min(ys) + c[1] * (max(ys) - min(ys)))
-            extra.append([q] * len(h))
+            extra.append([(q[0], q[1]) + tuple(hq[2:]) for hq in h])
         out.append(list(masters[mi]) + extra)
     return out
 
@@ -405,7 +439,7 @@ def _mirror_align(masters, locs=None, turn=TURN):
     return out
 
 
-def align(masters: list[list[list[tuple]]], locs=None, turn=TURN):
+def align(masters: list[list[list[tuple]]], locs=None, turn=TURN, names=None):
     """masters: per master, a list of rings (ink-left). Returns the same,
     made compatible (same contour order, same point counts, same order), or
     raises ValueError. A glyph symmetric in every master is aligned by its
@@ -416,7 +450,15 @@ def align(masters: list[list[list[tuple]]], locs=None, turn=TURN):
     them, every master is aligned against the one with the most points.
     turn: the cost of pairing points that turn differently (0: by position
     alone, which pairs a fused heavy master with a thin one better in some
-    glyphs and worse in others: 2026-10-26, best for about 6% of glyphs)."""
+    glyphs and worse in others: 2026-10-26, best for about 6% of glyphs).
+
+    names: per master, per ring, the name of each edge (geom.ink's tags):
+    points are then paired by what made them (vertex_names) before where
+    they lie, and a glyph symmetric in every master is aligned whole."""
+    if names is not None:
+        named = [[[(q[0], q[1], nm) for q, nm in zip(r, vertex_names(en))] for r, en in zip(m, mn)]
+                 for m, mn in zip(masters, names)]
+        return [[[q[:2] for q in r] for r in m] for m in _align(named, locs, turn)]
     if any(masters):
         res = _mirror_align(masters, locs, turn)
         if res is not None:
@@ -453,7 +495,8 @@ def _tree(ref_i, k, locs):
 def _guide(cols, pa, norm):
     """Master pa's points along the columns, normalised, with their turns:
     a column pa has no point in carries the last point it has (the next, at
-    the head), turning nowhere."""
+    the head), turning nowhere; and their names (None where pa has none,
+    or the points carry no names)."""
     real = [i for i, c in enumerate(cols) if c[pa] is not None]
     t = dict(zip(real, _turns([cols[i][pa] for i in real]) if len(real) > 2 else [0.0] * len(real)))
     pts, last = [], None
@@ -461,7 +504,8 @@ def _guide(cols, pa, norm):
         if c[pa] is not None:
             last = i
         pts.append(norm(cols[last if last is not None else real[0]][pa]))
-    return pts, [t.get(i, 0.0) for i in range(len(cols))], len(real) == len(cols)
+    names = [c[pa][2] if c[pa] is not None and len(c[pa]) > 2 else None for c in cols]
+    return pts, [t.get(i, 0.0) for i in range(len(cols))], len(real) == len(cols), names
 
 
 def _align(masters, locs=None, turn=TURN):
@@ -491,13 +535,15 @@ def _align(masters, locs=None, turn=TURN):
             B = [norms[mi](q) for q in ring]
             TB = _turns(ring)
             gs = [(w, *_guide(cols, q, norms[q])) for w, q in guides]
+            NB = [q[2] for q in ring] if ring and len(ring[0]) > 2 else None
             if len(gs) == 1 and gs[0][3]:
                 r = _rotation_only(gs[0][1], gs[0][2], B, TB)
-                if r is not None:
+                if r is not None and (NB is None or all(
+                        gs[0][4][idx] == NB[(idx + r) % len(ring)] for idx in range(len(cols)))):
                     for idx in range(len(cols)):
                         cols[idx][mi] = ring[(idx + r) % len(ring)]
                     continue
-            path = _dp([g[:3] for g in gs], None, B, TB, turn=turn)
+            path = _dp([(g[0], g[1], g[2], g[4]) for g in gs], None, B, TB, turn=turn, NB=NB)
             new_cols = []
             for a, b in path:
                 if a is not None:
