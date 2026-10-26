@@ -71,6 +71,8 @@ family = 'Arris'
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital')
                 and not (isinstance(REGISTRY[n].kind, tuple) and REGISTRY[n].kind[0] == 'liga')]
+if __import__('os').environ.get('ARRIS_VF_ONLY'):          # a trial build of a few glyphs (writes build/ as usual)
+    names = [n for n in names if n in __import__('os').environ['ARRIS_VF_ONLY'].split(',')]
 
 
 ITALIC = 'italic' in sys.argv[1:]
@@ -88,6 +90,67 @@ def style_name(w):
         return nm
     return 'Italic' if nm == 'Regular' else f'{nm} Italic'
 
+
+# Forms: a glyph whose drawing chooses between two (a Squint rule with
+# form=True: ¢ $ stem or stubs) cannot interpolate from one to the other.
+# Each form becomes a glyph of its own, drawn in that form at every master,
+# and a designspace rule (GSUB feature variations, rvrn) swaps the second in
+# where the engine draws it: from the weight where it first does, in each
+# band of grade and watch (the choice is monotone in the weight: draw).
+import dataclasses  # noqa: E402
+from fontTools.designspaceLib import RuleDescriptor  # noqa: E402
+from arris.draw import draw as _draw_glyph  # noqa: E402
+
+GRAD_BANDS = [(-100, -75, -100), (-75, -25, -50), (-25, 25, 0), (25, 75, 50), (75, 100, 100)]
+WTCH_BANDS = [(0, 25, 0), (25, 75, 50), (75, 100, 100)]
+FORMS = {}                                                   # glyph -> (its second form's name, regions)
+
+
+def _second(n, free, d, lim, loc):
+    g = _draw_glyph(n, P(loc))
+    v = g.overrides.get(free, d)
+    return (v - (d + lim) / 2) * (lim - d) > 0
+
+
+for n in list(names):
+    spec = REGISTRY[n]
+    for sq in spec.squint:
+        if not sq.form:
+            continue
+        g0 = _draw_glyph(n, P(DEFAULT))
+        d, lim = g0.defaults.get(sq.free), sq.limit(P(DEFAULT))
+        if d is None:
+            continue
+        regions = []
+        for glo, ghi, gs in GRAD_BANDS:
+            for tlo, thi, ts in WTCH_BANDS:
+                if not _second(n, sq.free, d, lim, (900, gs, ts)):
+                    continue
+                lo, hi = 100.0, 900.0
+                if not _second(n, sq.free, d, lim, (lo, gs, ts)):
+                    for _ in range(9):
+                        mid = (lo + hi) / 2
+                        lo, hi = (lo, mid) if _second(n, sq.free, d, lim, (mid, gs, ts)) else (mid, hi)
+                    lo = hi
+                regions.append((round(lo, 1), glo, ghi, tlo, thi))
+        alt = f'{n}.{sq.free}'
+
+        def pinned(fn, free=sq.free, v=None):
+            def f(g):
+                g.overrides[free] = v
+                return fn(g)
+            f.__module__, f.__name__ = fn.__module__, fn.__name__
+            return f
+        keep = tuple(q for q in spec.squint if q is not sq)
+        for base in (n, f'{n}.ital'):
+            if base in REGISTRY:
+                b = REGISTRY[base]
+                REGISTRY[base] = dataclasses.replace(b, fn=pinned(b.fn, v=d), squint=keep)
+                REGISTRY[base.replace(n, alt, 1)] = dataclasses.replace(b, name=base.replace(n, alt, 1), unicode=None,
+                                                                        fn=pinned(b.fn, v=lim), squint=keep)
+        names.append(alt)
+        FORMS[n] = (alt, regions)
+print('forms:', {n: (a, r[:2], len(r)) for n, (a, r) in FORMS.items()})
 
 ps = {m: P(m) for m in MASTERS}
 
@@ -146,13 +209,20 @@ def _model(mlocs):
     return _MODELS[key]
 
 
-def _errors(al, exact, mlocs=None):
-    """The difference at each CHECK location between the font's outline
-    and the exact drawing: the mean distance between the outlines, or the
-    farthest a point is carried off it over SPIKE, whichever is more."""
+# more places between the masters, off the axes, that a glyph's own masters
+# are chosen from (VALID, in the final check, stays apart from both)
+REFINE = [(500, -50, 50), (300, -50, 0), (600, 50, 50), (750, -75, 75), (850, 50, 25), (250, 50, 0),
+          (650, -50, 100), (450, -100, 50), (550, 100, 25), (350, 25, 75), (800, -25, 25), (700, 100, 75)]
+
+
+def _errors(al, exact, mlocs=None, where=None):
+    """The difference at each CHECK location (or ``where``) between the
+    font's outline and the exact drawing: the mean distance between the
+    outlines, or the farthest a point is carried off it over SPIKE,
+    whichever is more."""
     model = _model(mlocs or MASTERS)
     out = {}
-    for loc in CHECK:
+    for loc in (where or CHECK):
         try:
             ex = exact(loc)
             got = _shp([r for r in _interpolate(al, loc, model) if len(set(r)) >= 3])
@@ -197,7 +267,7 @@ def _glyph(n):
     up = [placed(m) for m in MASTERS]
     plain = lambda ups: [(u[0], u[2]) for u in ups]
     if not any(u[0] for u in up):
-        return n, plain(up), [u[0] for u in up], None, 0.0, 0.0, None
+        return n, plain(up), [u[0] for u in up], None, 0.0, 0.0, None, []
     cache = {}
 
     def exact(loc):
@@ -253,7 +323,7 @@ def _glyph(n):
                          names=[u[3] for u in var] if how == 'named' else None)
         try:
             al = realign(var, mlocs)
-            errs = _errors(al, exact, mlocs)
+            errs = _errors(al, exact, mlocs, CHECK + REFINE)
             for _ in range(OWN_MAX):
                 loc, e = max(errs.items(), key=lambda kv: kv[1])
                 if e <= LOCAL_TOL or loc in mlocs:
@@ -266,7 +336,7 @@ def _glyph(n):
                     if not jogs:
                         _geom.JOG = jog
                 al2 = realign(var + [u], mlocs + [loc])
-                errs2 = _errors(al2, exact, mlocs + [loc])
+                errs2 = _errors(al2, exact, mlocs + [loc], CHECK + REFINE)
                 # kept if the glyph comes nearer its drawings overall (the
                 # worst place is now exact; the next may be as bad)
                 if sum(min(e, 100) for e in errs2.values()) >= 0.98 * sum(min(e, 100) for e in errs.values()):
@@ -359,7 +429,7 @@ for tag, name, lo, df, hi in AXES:
     ax = AxisDescriptor()
     ax.tag, ax.name, ax.minimum, ax.default, ax.maximum = tag, name, lo, df, hi
     doc.addAxis(ax)
-FEA = fea()
+FEA = '' if __import__('os').environ.get('ARRIS_VF_ONLY') else fea()   # (a trial's few glyphs: no features)
 
 
 def _build_master(i):
@@ -377,6 +447,16 @@ for i, m in enumerate(MASTERS):
     src = SourceDescriptor()
     src.path, src.location = str(path), {'Weight': m[0], 'Grade': m[1], 'Watch': m[2]}
     doc.addSource(src)
+for n, (alt, regions) in FORMS.items():
+    if regions:
+        rule = RuleDescriptor()
+        rule.name = f'{n} second form'
+        rule.conditionSets = [[{'name': 'Weight', 'minimum': w, 'maximum': 900},
+                               {'name': 'Grade', 'minimum': glo, 'maximum': ghi},
+                               {'name': 'Watch', 'minimum': tlo, 'maximum': thi}]
+                              for w, glo, ghi, tlo, thi in regions]
+        rule.subs = [(n, alt)]
+        doc.addRule(rule)
 for w, nm in NAMES.items():
     inst = InstanceDescriptor()
     inst.familyName, inst.styleName, inst.location = family, style_name(w), {'Weight': w, 'Grade': 0, 'Watch': 0}
@@ -419,7 +499,8 @@ def _own_masters(vf):
             a = MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
             vals.append(pts(rings) + [(0, 0), (round(a), 0), (0, 0), (0, 0)])
         model = _model(mlocs)
-        deltas, supports = model.getDeltasAndSupports([np.array(v, dtype=float) for v in vals])
+        deltas = model.getDeltas([np.array(v, dtype=float) for v in vals])
+        supports = model.supports
         tvs = []
         for d, sup in zip(deltas, supports):
             if not sup:

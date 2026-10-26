@@ -458,7 +458,7 @@ def dollar_stem(p, sh, through):
     return [(bot, sh / 2), (p.cap - sh / 2, top)]
 
 
-@glyph('dollar', '$', letter_width(9, 2), kind=('punct', 1.0), squint=(Squint('stem', lambda p: 0.0),))
+@glyph('dollar', '$', letter_width(9, 2), kind=('punct', 1.0), squint=(Squint('stem', lambda p: 0.0, form=True),))
 def dollar(g):
     from .caps import S
     S(g)
