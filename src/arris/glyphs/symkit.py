@@ -98,6 +98,40 @@ def _condensed(p, k):
                    fig_w=k * p.fig_w, fig_adv=k * p.fig_adv)
 
 
+_INNER: dict = {}
+
+
+def fit_inner(g, letter, inner_w):
+    """In Mono, where a letter's body is the cell, a letter drawn with
+    something beside it (a hook, a swash, a degree sign, a second spine or
+    stem) is left only part of the cell, ``inner_w(q)`` wide: the whole
+    glyph is drawn condensed (module and strokes, _condensed) as far as the
+    letter needs, at that width, to keep the white it has in its own cell
+    (as a barred sign's inset letter, currency.inset_letter), and no
+    further. Elsewhere the body grows instead. Call it before anything is
+    measured from g.p: it sets g.p."""
+    from .currency import _white_share
+    p = g.p
+    if not p.mono:
+        return
+    key = (g.name, letter, p, round(g.W, 3), round(inner_w(p), 3))
+    if key not in _INNER:
+        want = _white_share(draw(letter, p), p)
+
+        def keeps(k):
+            q = _condensed(p, k) if k < 1 else p
+            return _white_share(draw(letter, q, width=inner_w(q)), q) >= want - 1e-3
+        lo = 1.0
+        if not keeps(1.0):
+            lo, hi = 0.4, 1.0
+            for _ in range(12):
+                mid = (lo + hi) / 2
+                lo, hi = (mid, hi) if keeps(mid) else (lo, mid)
+        _INNER[key] = lo
+    if _INNER[key] < 1:
+        g.p = _condensed(p, _INNER[key])
+
+
 def _layout(names, p, zone):
     """[(name, params, x offset)], total width: letters side by side, tight."""
     from ..font import light
@@ -311,13 +345,26 @@ def mono_fitted(name, fn, width, kind):
             g.p = _condensed(g.p, k)
         if s < 1.0:
             g.p = _scaled(g.p, s)
-        fn(g)
-        if dx or dy:
-            shift(g, dx, dy)
+        _fit_drawn(g, fn, dx, dy)
     wrapped.__module__ = fn.__module__
     wrapped.__name__ = fn.__name__
     wrapped.mono_fitted = True
     return wrapped, body
+
+
+def _fit_drawn(g, fn, dx, dy):
+    """Draw a fitted sign and move it by (dx, dy) into its cell. While it is
+    drawn, the cell it will stand in is where that is before the move: a
+    letter stamped into it is cut there (draw.Glyph.add_glyph)."""
+    cell = g.cell
+    if cell is not None:
+        g.cell = (cell[0] - dx, cell[1] - dx)
+    try:
+        fn(g)
+    finally:
+        g.cell = cell
+    if dx or dy:
+        shift(g, dx, dy)
 
 
 def shift(g, dx, dy):
@@ -357,9 +404,7 @@ def sign(name, ch, width, kind=('punct', 1.0), solid=False, openings=(), squint=
                 g.p = _condensed(g.p, k)
             if s < 1.0:
                 g.p = _scaled(g.p, s)
-            fn(g)
-            if dx or dy:
-                shift(g, dx, dy)
+            _fit_drawn(g, fn, dx, dy)
             g.p = p if (k < 1 or s < 1) and False else g.p
         wrapped.__module__ = fn.__module__
         wrapped.__name__ = fn.__name__

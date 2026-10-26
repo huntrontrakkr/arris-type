@@ -213,14 +213,20 @@ def Hardsign(g):
 
 @ccap('uni042B', '\u042b', 12, 3, squint=BOWL)
 def Yeru(g):
+    from ..font import light
+    from .symkit import fit_inner
+
+    def bowl(q, W):
+        """Where the soft sign's bowl ends, its stem's centre at q.sv / 2:
+        the separate stem stands as far from it as a letter from its
+        neighbour in a word (two sidebearings), never nearer."""
+        return min(q.sv / 2 + 0.7 * (W - q.sv), W - 1.5 * q.sv - 2 * light(q))
+    # Mono's cell leaves the soft sign little room beside the stem
+    fit_inner(g, 'uni042C', lambda q: bowl(q, g.W) + q.sv / 2)
     f = Frame(g, 12)
     p = f.p
     xs = f.X(11)
-    # the separate stem stands as far from the bowl as a letter from its
-    # neighbour in a word (two sidebearings), never nearer
-    from ..font import light
-    xb = min(f.X(8), xs - p.sv - 2 * light(p))
-    _sign(g, f, f.X(1), xb)
+    _sign(g, f, f.X(1), bowl(p, g.W))
     g.stroke((xs, 0), (xs, p.cap))
 
 

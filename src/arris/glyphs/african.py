@@ -19,6 +19,7 @@ from .cyrillic import mirror
 from .extra_latin import stamp
 from .figures import beak_depth
 from .letterframe import Frame, k_arms, letter_width
+from .symkit import fit_inner
 
 HOOK_WHITE = 1.5   # modules of white between a hook and its stem, at every weight
 
@@ -47,6 +48,12 @@ def _hook_room(p):
     return HOOK_WHITE * p.m + p.ungraded().sv
 
 
+def _fit_mono(g, letter):
+    """In Mono the hook takes its room out of the letter's cell: the glyph
+    is condensed as far as the letter needs (symkit.fit_inner)."""
+    fit_inner(g, letter, lambda q: g.W - _hook_room(q))
+
+
 def _left_tail(g, x, top):
     """From the stem at x, down from `top` under the baseline, turning left
     at the descender as the j's tail does, and up into a beak."""
@@ -61,6 +68,7 @@ def _left_tail(g, x, top):
 def Nhookleft(g):
     """N with its left stem run on, in one stroke, down into the j's tail."""
     from .caps import n_diagonal
+    _fit_mono(g, 'N')
     p, H = g.p, g.p.cap
     o = _hook_room(p)
     f = Frame(g, 8, 'asc')
@@ -77,6 +85,7 @@ def Nhookleft(g):
 
 @glyph('uni0272', 'ɲ', lambda p: REGISTRY['n'].width(p) + _hook_room(p), kind='lower')
 def nhookleft(g):
+    _fit_mono(g, 'n')
     p = g.p
     o = _hook_room(p)
     stamp(g, 'n', dx=o, width=g.W - o)
@@ -95,6 +104,7 @@ def _cap_hook(g, x):
 
 @glyph('uni0181', 'Ɓ', lambda p: REGISTRY['B'].width(p) + _hook_room(p), kind='cap')
 def Bhook(g):
+    _fit_mono(g, 'B')
     p = g.p
     o = _hook_room(p)
     stamp(g, 'B', dx=o, width=g.W - o)
@@ -103,6 +113,7 @@ def Bhook(g):
 
 @glyph('uni018A', 'Ɗ', lambda p: REGISTRY['D'].width(p) + _hook_room(p), kind='cap')
 def Dhook(g):
+    _fit_mono(g, 'D')
     p = g.p
     o = _hook_room(p)
     stamp(g, 'D', dx=o, width=g.W - o)
@@ -151,6 +162,7 @@ def _arm_flag(g, x, y):
 @glyph('uni0198', 'Ƙ', lambda p: REGISTRY['K'].width(p) + _hook_room(p), kind='cap')
 def Khook(g):
     """K whose arm ends in a hook to the right at the cap height."""
+    _fit_mono(g, 'K')
     p = g.p
     W9 = g.W - _hook_room(p)
     f = Frame(g, 9)
@@ -166,6 +178,7 @@ def Khook(g):
 @glyph('uni01B3', 'Ƴ', lambda p: REGISTRY['Y'].width(p) + _hook_room(p), kind='cap')
 def Yhook(g):
     """Y whose right arm turns right at the cap height."""
+    _fit_mono(g, 'Y')
     p = g.p
     W10 = g.W - _hook_room(p)
     f = Frame(g, 10)
@@ -180,6 +193,7 @@ def Yhook(g):
 @glyph('uni01B4', 'ƴ', lambda p: letter_width(8, 2)(p) + _hook_room(p), kind='lower')
 def yhook(g):
     """y whose right stroke turns right at the x-height."""
+    _fit_mono(g, 'y')
     p = g.p
     W8 = g.W - _hook_room(p)
     f = Frame(g, 8, 'lower')

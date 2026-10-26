@@ -695,6 +695,8 @@ def nordicmark(g):
     """An m whose first stem rises into the script l's loop, turned to the
     left."""
     from .letterlike import loop_l
+    from .symkit import fit_inner
+    fit_inner(g, 'm', lambda q: g.W - _loop_w(q))
     p = g.p
     dx = _loop_w(p)
     sub = stamp(g, 'm', dx, width=g.W - dx)

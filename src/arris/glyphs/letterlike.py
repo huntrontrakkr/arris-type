@@ -21,7 +21,7 @@ from ..draw import B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .figures import beak_depth, jog
 from .letterframe import STEEP, Frame, heft, letter_width
-from .symkit import MIRROR, TURN, across, set_tight, sign, small_all, stamp_t, tight
+from .symkit import MIRROR, TURN, across, fit_inner, set_tight, sign, small_all, stamp_t, tight
 
 ALIASES = {0x212A: 'K', 0x212B: 'Aring'}
 
@@ -185,6 +185,7 @@ def _ds_shift(p):
 @sign('uni2124', 'ℤ', lambda p: REGISTRY['Z'].width(p) + _ds_shift(p), kind='cap')
 def dsZ(g):
     """Z with its spine doubled by a lighter one beside it."""
+    fit_inner(g, 'Z', lambda q: g.W - _ds_shift(q))
     f = Frame(g, 9)
     p, W, H, k = f.p, f.W, f.p.cap, f.k
     D = _ds_shift(p)
@@ -192,8 +193,17 @@ def dsZ(g):
     g.stroke(f.P(0, 1), f.P(9, 1))
     a_up = W - (H - g.sh - p.c) - k
     xl = f.X(1)
-    _z_diag(g, f, W, a_up, xl + D)
-    _z_diag(g, f, W, a_up - D, xl, ds_t(p))
+    if xl + D <= f.Y(6.5) + a_up - jog(p):
+        # the light spine left of the heavy one, the heavy one's foot a
+        # spine's distance in: both run down past the jog
+        _z_diag(g, f, W, a_up, xl + D)
+        _z_diag(g, f, W, a_up - D, xl, ds_t(p))
+    else:
+        # a body too narrow for that (Mono's cell): the heavy spine would
+        # turn back after its jog. It is the Z's own; the light one stands
+        # right of it, out of the top bar's end
+        _z_diag(g, f, W, a_up, xl)
+        _z_diag(g, f, W, a_up + D, xl + D, ds_t(p))
 
 
 @sign('uni2140', '⅀', lambda p: REGISTRY['uni03A3'].width(p) + _ds_shift(p), kind=('punct', 1.0))
@@ -248,6 +258,7 @@ def _script(name, ch, base, exit_=None, foot=None):
         return REGISTRY[base].width(p) + _lead(p) + tail_w(p)
 
     def fn(g):
+        fit_inner(g, base, lambda q: g.W - _lead(q) - tail_w(q))
         p = g.p
         dx = _lead(p)
         wb = g.W - dx - tail_w(p)
@@ -526,6 +537,7 @@ def _degree_letter(name, ch, letter):
     gap = lambda p: max(0.5 * p.m, 0.4 * p.sv)
 
     def fn(g):
+        fit_inner(g, letter, lambda q: g.W - REGISTRY['degree'].width(q) - gap(q))
         p = g.p
         sub = draw('degree', p)
         g.add_glyph(sub)

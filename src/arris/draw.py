@@ -106,6 +106,7 @@ class Glyph:
     defaults_used: dict = field(default_factory=dict)
     extra_chamfers: list = field(default_factory=list)   # chamfer record of stamped glyphs (see add_glyph)
     zones: list = field(default_factory=list)   # (x0, y0, x1, y1) boxes whose white the Squint rule watches
+    cell: tuple[float, float] | None = None     # Mono: the cell (x0, x1) no ink may pass (see _build)
 
     def free(self, name: str, default: float) -> float:
         """A free variable of the drawing (see Opening)."""
@@ -215,9 +216,18 @@ class Glyph:
         return rings, rec
 
     def add_glyph(self, sub: 'Glyph', dx: float = 0.0, dy: float = 0.0):
-        """Stamp another drawn glyph into this one, chamfer record and all."""
+        """Stamp another drawn glyph into this one, chamfer record and all.
+        In Mono, the stamped glyph's strokes are cut at this glyph's cell
+        (where it stands in it) before its corner rule, as its own would be:
+        cut after, as finished ink, a chamfered end can twist (Ǿ's slash)."""
+        import copy
         from shapely import affinity
         from .geom import rings_to_shapely
+        if self.cell is not None and _cell_kind(REGISTRY.get(sub.name)):
+            sub = copy.copy(sub)
+            big = 10 * self.p.cap
+            x0, y0, x1, y1 = sub.clip if sub.clip is not None else (-big, -big, big, big)
+            sub.clip = (max(x0, self.cell[0] - dx), y0, min(x1, self.cell[1] - dx), y1)
         rings, rec = sub.outline()
         self.extra.append(affinity.translate(rings_to_shapely(rings), dx, dy))
         self.extra_chamfers += [_moved(r, dx, dy) for r in rec]
@@ -274,16 +284,34 @@ def body_width(spec, p, width=None):
     return spec.width(p)
 
 
+_DEPTH = [0]   # how deep in other glyphs' drawings a drawing is made (a stamped or inset letter is 1 or more)
+
+
+def _cell_kind(spec) -> bool:
+    """Whether a glyph keeps to Mono's cell: not marks, spaces, ligatures."""
+    return spec is not None and spec.kind not in ('mark', 'space') and \
+        not (isinstance(spec.kind, tuple) and spec.kind[0] == 'liga')
+
+
 def _build(spec, p, ot, ob, overrides, width=None):
     g = Glyph(p, spec.name, ot=ot, ob=ob, W=body_width(spec, p, width), overrides=dict(overrides))
     g.sh_auto = overrides.get('sh_auto', 1.0)
     g.defaults['sh_auto'] = 1.0
-    spec.fn(g)
-    if p.mono and spec.kind not in ('mark', 'space') and not (isinstance(spec.kind, tuple) and spec.kind[0] == 'liga'):
+    if p.mono and _DEPTH[0] == 0 and _cell_kind(spec):
         # Mono: no ink past the cell (the body sits centred in it); a stroke
         # that would run on is cut at its edge, and the corner rule chamfers
-        # the cut like any other end
-        cx0, cx1 = (g.W - p.fig_adv) / 2, (g.W + p.fig_adv) / 2
+        # the cut like any other end. The glyph's own cell: a letter drawn
+        # inside another (an inset N in ₦) is cut at the outer glyph's cell,
+        # where it stands in it, when it is stamped (add_glyph), not at a
+        # cell of its own parameters
+        g.cell = ((g.W - p.fig_adv) / 2, (g.W + p.fig_adv) / 2)
+    _DEPTH[0] += 1
+    try:
+        spec.fn(g)
+    finally:
+        _DEPTH[0] -= 1
+    if g.cell is not None:
+        cx0, cx1 = g.cell
         x0, y0, x1, y1 = g.clip if isinstance(g.clip, tuple) else (cx0, -10 * p.cap, cx1, 10 * p.cap)
         g.clip = (max(x0, cx0), y0, min(x1, cx1), y1)
     return g
