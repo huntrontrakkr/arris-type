@@ -54,6 +54,41 @@ before a commercial distribution if wanted.
   longer thinned where nothing closes. ↫ ↬ and the Mono semicolon now keep
   a white they have at Regular, lightening at Bold and Black.
 - `tools/vf_spikes.py` runs in `tools/rebuild.sh`'s checks.
+- Variable fonts under 9 MB (fontbakery's file size): kerning pairs across
+  scripts (a Latin letter beside a Cyrillic or Greek one, a glyph's scripts
+  being all those its characters are in) are no longer written: shapers
+  break text into runs of one script before kerning, so they were never
+  applied, and they were 39% of the pairs. Accented letters that are their
+  base and marks moved, and .case forms that are their glyph raised, are
+  TrueType composites in the variable fonts (`tools/composites.py`; nested
+  ones flattened, fontbakery's nested_components): their variations are
+  where their components stand. A glyph drops grid masters
+  while those left reproduce each dropped one within 2 units, and its
+  deltas are IUP-optimised to the coarsest tolerance (2, 1 or 0.5 units)
+  that keeps every node of its grid within 2 units: certified, as a model
+  over grid nodes is multilinear within the grid's cells. And a glyph's finer grid is kept
+  where it buys the most accuracy per byte (the error it takes off the
+  check's and the refinement's places), while the font fits: the build
+  makes the font without them, then with the best that fit (`TARGET`).
+- Accented letters at a grade: the base was drawn at its own graded width
+  and not in the body the font gives it (the ungraded one), so Á's A was
+  not the font's A (45 units apart at the heavy grades); it now is. An
+  accented letter's body is its base's in every cut: in the italic the
+  italic base's (й's breve centred over the italic и), and a body given to
+  a composite reaches its base (Mono Ҋ's И narrows for its tail, which
+  stood in its stem).
+- Italic: a recorded chamfer line is one edge, the nearest where it was
+  recorded. A 45-degree line runs on, and another corner's edge could lie
+  on it far away (an accent's, on the line of the letter's corner under
+  it; one arch of m on the other's): claimed by that corner, the sharp end
+  held its curve straight, so á's a was not a's, and Ĉ Õ ê § and the Thin
+  m had a corner left sharp.
+- A glyph stamped into another as drawn at its parameters, and only moved
+  (an accented letter's base, IJ's J, a fraction's figures), keeps its ink
+  as it was finished where it stands apart from the other's strokes: the
+  corner rule, polish and jog closing run again on it are not idempotent,
+  and changed Ć's C by a jog where the accent stood near it, flattened ₯'s
+  Δ apex.
 
 ## 1.001 (2026-10-26)
 

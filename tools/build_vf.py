@@ -175,6 +175,7 @@ for n in list(names):
 print(_took(), 'forms:', {n: (a, r[:2], len(r)) for n, (a, r) in FORMS.items()})
 
 ps = {m: P(m) for m in MASTERS}
+NAMESET = set(names)                                    # (a composite's components must be in the font)
 
 # Per glyph, the masters are drawn (upright: the italic is made from them),
 # aligned, and the alignment is checked: interpolated as the font will
@@ -310,8 +311,8 @@ def _dense_errors(al, mlocs):
 # (_prune: certified within PRUNE units everywhere).
 NODES_MAX = 132
 DEBUG = bool(__import__('os').environ.get('ARRIS_VF_DEBUG'))     # every candidate's error, as tried
-REFINE_STEPS = 12
-PRUNE = float(__import__('os').environ.get('ARRIS_VF_PRUNE', '1.0'))   # font units: what a dropped master may move
+REFINE_STEPS = int(__import__('os').environ.get('ARRIS_VF_REFINE', '12'))   # places tried for a finer grid
+PRUNE = float(__import__('os').environ.get('ARRIS_VF_PRUNE', '2.0'))   # font units: what a dropped master may move
 
 
 def _prune(nodes, rings, advs):
@@ -354,6 +355,115 @@ def _prune(nodes, rings, advs):
     return [nodes[i] for i in keep]
 
 
+IUP_TOLS = (2.0, 1.0, 0.5)  # font units: IUP tolerances tried, coarsest first ...
+IUP_TOL = 2.0               # ... the coarsest that keeps every master of the grid within this
+TARGET = float(__import__('os').environ.get('ARRIS_VF_TARGET', '8.9e6'))   # bytes: the font, under fontbakery's 9 MB
+
+
+def _tuples(mlocs, outlines, advances, coords0=None, ends=None):
+    """A glyph's variations (TupleVariations) over its masters ``mlocs``,
+    from its outlines there (rings, put in the master fonts' order: each
+    contour reversed, rounded) and advances: the deltas of one model over
+    them, the grade never moving the advance (the phantom points), the
+    points interpolation can infer left out (IUP) to the coarsest tolerance
+    that keeps every node of the glyph's grid within IUP_TOL units. (Each
+    delta's IUP error, summed at a node by the model's scalars, is the
+    error there; every region starts and ends at grid values, so it is
+    multilinear within the grid's cells and the nodes bound it between.)
+    ``coords0``, ``ends``: the default glyph's points and contour ends as
+    the font has them (else from the default outline)."""
+    import numpy as np
+    from fontTools.ttLib.tables.TupleVariation import TupleVariation
+    from fontTools.varLib.iup import iup_delta, iup_delta_optimize
+    from fontTools.varLib.models import supportScalar
+    pts = lambda rings: [(round(q[0]), round(q[1])) for r in rings for q in r[::-1]]
+    vals = [np.array(pts(o) + [(0, 0), (round(a), 0), (0, 0), (0, 0)], dtype=float) for o, a in zip(outlines, advances)]
+    if coords0 is None:
+        d0 = mlocs.index(DEFAULT)
+        coords0 = [tuple(v) for v in vals[d0]]
+        ends = [int(e) for e in np.cumsum([len(r) for r in outlines[d0]]) - 1]
+    model = _model(mlocs)
+    raw = []
+    for d, sup in zip(model.getDeltas(vals), model.supports):
+        if not sup:
+            continue
+        coords = [(int(round(x)), int(round(y))) for x, y in d]
+        if any(tag == 'GRAD' and peak for tag, (lo, peak, hi) in sup.items()):
+            # grade never moves an advance: rounding the interpolated
+            # advances must not make it do so by a unit
+            coords[-4:] = [(0, 0)] * 4
+        if any(c != (0, 0) for c in coords):
+            raw.append((sup, coords))
+    size = lambda tv: sum(map(len, tv.compile(AXIS_TAGS)))
+    # the grid the masters are nodes of: every value each axis has
+    vals_by_axis = [sorted({m[i] for m in list(mlocs) + NODES}) for i in range(3)]
+    grid = [dict(zip(AXIS_TAGS, LOC(m))) for m in product(*vals_by_axis)]
+    scal = np.array([[supportScalar(g, sup) for sup, _ in raw] for g in grid]) if raw else None
+    for tol in IUP_TOLS:
+        tvs, errs = [], []
+        for sup, coords in raw:
+            tv = TupleVariation(dict(sup), coords)
+            err = np.zeros((len(coords), 2))
+            opt = iup_delta_optimize(coords, coords0, ends, tolerance=tol)
+            if None in opt:
+                small = TupleVariation(dict(sup), opt)
+                if size(small) < size(tv):
+                    tv = small
+                    err = np.array(iup_delta(opt, coords0, ends), dtype=float) - np.array(coords, dtype=float)
+            tvs.append(tv)
+            errs.append(err)
+        if not raw or tol == IUP_TOLS[-1]:
+            break
+        if np.abs(np.tensordot(scal, np.array(errs), 1)).max() <= IUP_TOL:
+            break
+    return tvs
+
+
+def _gvar_bytes(tvs):
+    return sum(sum(map(len, tv.compile(AXIS_TAGS))) for tv in tvs)
+
+
+# Composites (tools/composites.py): a glyph that is other glyphs of the font,
+# translated, at every master of the grid and every check place (an accented
+# letter, a .case form) is carried as a TrueType composite: no alignment of
+# its own, its variations only where its components stand.
+import composites  # noqa: E402
+COMPOSITES = {}                                         # glyph -> (components, {place: [(dx, dy)]})
+
+
+def _contours_at(n, loc):
+    """n's contours at loc as the font carries them (the italic curved, its
+    points (x, y, on))."""
+    rings, rec, _ = _place(n, ps[loc] if loc in ps else P(loc), record=ITALIC)
+    if not ITALIC:
+        return [[q[:2] for q in r] for r in rings]
+    q = P(loc)
+    if REGISTRY[n].cell:
+        q = q.with_(slant=0.0)
+    return [[(x, y, float(on)) for x, y, on in c] for c in ital.outline(rings, rec, q)]
+
+
+def _composite(n):
+    """(its components, {place: their offsets}) if n is exactly its
+    components translated at every master of the grid and every check
+    place; else None."""
+    try:
+        stamped = [s[1].name for s in getattr(_draw_glyph(n, P(DEFAULT)), 'extra_src', [])]
+    except Exception:  # noqa: BLE001
+        stamped = []
+    comps = [c for c in composites.candidates(n, stamped) if c in NAMESET]
+    if not comps:
+        return None
+    kept, offs = None, {}
+    for loc in NODES + [c for c in CHECK if c not in NODES]:
+        d = composites.decompose(lambda x: _contours_at(x, loc), n, comps)
+        if d is None or (kept is not None and [c for c, _, _ in d] != kept):
+            return None
+        kept = [c for c, _, _ in d]
+        offs[loc] = [(dx, dy) for _, dx, dy in d]
+    return kept, offs
+
+
 def _glyph(n):
     """One glyph, start to end: (name, its upright rings and advance per
     master of the font (for the kerning), its outlines per master as the
@@ -385,7 +495,7 @@ def _glyph(n):
     up = [placed(m) for m in nodes]
     plain = lambda ups: [(u[0], u[2]) for u in ups[:nm]]
     if not any(u[0] for u in up):
-        return n, plain(up), [u[0] for u in up[:nm]], None, 0.0, 0.0, None, None, {}
+        return n, plain(up), [u[0] for u in up[:nm]], None, 0.0, 0.0, None, None, {}, None, None
     cache, drawn = {}, {}
 
     def exact(loc):
@@ -404,6 +514,19 @@ def _glyph(n):
         if REGISTRY[n].cell:
             q = q.with_(slant=0.0)
         return ital.polylines(ital.outline(rings, rec, q))
+
+    comp = _composite(n)
+    if comp is not None:
+        # carried as a composite: its outlines (for anchors and kerning) as
+        # drawn, the exact ones at the check's places for the final check
+        for loc in CHECK:
+            exact(loc)
+        if ITALIC:
+            rings = [_contours_at(n, m) for m in MASTERS]
+        else:
+            rings = [u[0] for u in up[:nm]]
+        shown = {loc: [[tuple(q[:2]) for q in r] for r in seen(loc)] for loc in CHECK}
+        return n, plain(up), rings, (True, 'composite', 'composite', 0, None), 0.0, 0.0, None, None, shown, comp, None
 
     LEADS = ((len(nodes), None), (nm, MODEL), (NB, MODEL_BASE))
 
@@ -445,6 +568,7 @@ def _glyph(n):
                 continue
             if sub is not None:
                 yield 'predicted grid', k, _predicted(sub, nodes, model), nodes
+    total = lambda es: sum(min(e, 100) for e in es.values())
     best, first = None, None
     for jogs in (True, False):
         variant = up if jogs else [placed(m, False) for m in nodes]
@@ -468,6 +592,7 @@ def _glyph(n):
                 break
         if best is not None and best[0] <= LOCAL_TOL:
             break
+    best0, errs = best, None
     if best is not None and best[0] > LOCAL_TOL:
         # a finer grid (above), from the chosen way's alignment with every
         # master drawn, a plane at a time while it helps
@@ -483,7 +608,6 @@ def _glyph(n):
         except ValueError:
             errs = None
         tried = set()
-        total = lambda es: sum(min(e, 100) for e in es.values())
         start = (max(errs.values()), total(errs)) if errs else None
         while errs and len(tried) < REFINE_STEPS:
             # the worst place not yet tried, its value on each axis the grid
@@ -524,47 +648,79 @@ def _glyph(n):
         if errs is not None and len(ns) > len(nodes) and (
                 max(errs.values()) < best[0] or (max(errs.values()) <= best[0] and total(errs) < start[1])):
             best = (max(errs.values()), al, var, (jogs, how, 'finer grid', len(ns), axes), ns)
-    why, choice, err, own = None, None, first, None
-    if best is None:
-        why = 'masters will not align'
-    else:
-        err, al, up_all, choice, nodes = best
-        _, _, kind, k, axes = choice
-        try:
-            rings = al
-            if ITALIC:
-                # (terminal cells are curved but never slanted: font.place)
-                cps = [P(m).with_(slant=0.0) if REGISTRY[n].cell else P(m) for m in nodes]
-                if kind != 'predicted grid':
-                    rings = ital.aligned_outlines(al, [u[0] for u in up_all[:len(nodes)]],
-                                                  [u[1] for u in up_all[:len(nodes)]], cps)
-                else:
-                    # the rest predicted from the leading masters' italic
-                    # outlines, curves and all
-                    rings = _predicted(ital.aligned_outlines(al[:k], [u[0] for u in up_all[:k]],
-                                                             [u[1] for u in up_all[:k]], cps[:k]),
-                                       nodes, dict((a, b) for a, b in LEADS)[k])
-            # every master's advance as the font has it (the font's masters'
-            # interpolated: HVAR and the kerning come from those)
-            base_adv = [u[2] for u in up_all[:nm]]
-            advs = base_adv + [MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
-                               for m in nodes[nm:]]
-            if kind != 'sparse':                            # (sparse: varLib's variations, from the font's masters)
-                keep = set(_prune(nodes, rings, advs))
-                own = ([m for m in nodes if m in keep], {m: rings[i] for i, m in enumerate(nodes) if m in keep and i >= nm})
-            rings = rings[:nm]
-            up = up_all[:nm]
-        except ValueError as e:
-            why = str(e)
-    if why is not None:
-        # cannot vary: every master carries the default outline (reported)
-        d = place(n, ps[DEFAULT])[0]
-        rings = [d for _ in MASTERS]
-        own = None
+    def finish(best):
+        """(outlines per master of the font, the drawings there, the choice,
+        its error, its own grid or None, why it cannot vary or None)."""
+        why, choice, err, own = None, None, first, None
+        rings, ups = None, up[:nm]
+        if best is None:
+            why = 'masters will not align'
+        else:
+            err, al, up_all, choice, nodes_ = best
+            _, _, kind, k, axes = choice
+            try:
+                rings = al
+                if ITALIC:
+                    # (terminal cells are curved but never slanted: font.place)
+                    cps = [P(m).with_(slant=0.0) if REGISTRY[n].cell else P(m) for m in nodes_]
+                    if kind != 'predicted grid':
+                        rings = ital.aligned_outlines(al, [u[0] for u in up_all[:len(nodes_)]],
+                                                      [u[1] for u in up_all[:len(nodes_)]], cps)
+                    else:
+                        # the rest predicted from the leading masters' italic
+                        # outlines, curves and all
+                        rings = _predicted(ital.aligned_outlines(al[:k], [u[0] for u in up_all[:k]],
+                                                                 [u[1] for u in up_all[:k]], cps[:k]),
+                                           nodes_, dict((a, b) for a, b in LEADS)[k])
+                # every master's advance as the font has it (the font's masters'
+                # interpolated: HVAR and the kerning come from those)
+                base_adv = [u[2] for u in up_all[:nm]]
+                advs = base_adv + [MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
+                                   for m in nodes_[nm:]]
+                if kind != 'sparse':                        # (sparse: the font's masters alone)
+                    keep = set(_prune(nodes_, rings, advs))
+                    own = ([m for m in nodes_ if m in keep],
+                           {m: rings[i] for i, m in enumerate(nodes_) if m in keep and i >= nm})
+                rings = rings[:nm]
+                ups = up_all[:nm]
+            except ValueError as e:
+                why = str(e)
+        if why is not None:
+            # cannot vary: every master carries the default outline (reported)
+            d = place(n, ps[DEFAULT])[0]
+            rings = [d for _ in MASTERS]
+            own = None
+        return rings, ups, choice, err, own, why
+
+    def cost(res):
+        """The bytes its variations would take."""
+        rings, ups, _, _, own, why = res
+        if why is not None:
+            return 0
+        mlocs = own[0] if own else MASTERS
+        outlines = [rings[MASTERS.index(m)] if m in MASTERS else own[1][m] for m in mlocs]
+        base_adv = [u[2] for u in ups]
+        advances = [base_adv[MASTERS.index(m)] if m in MASTERS else
+                    MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv) for m in mlocs]
+        return _gvar_bytes(_tuples(mlocs, outlines, advances))
+
+    res = finish(best)
+    rings, up_m, choice, err, own, why = res
+    # a finer grid: the glyph without it too, what it gains (the error over
+    # the check's and the refinement's places) and what it costs (bytes), so
+    # the font can keep the finer grids that buy most while it fits TARGET
+    alt = None
+    if best is not best0 and best0 is not None and errs is not None and why is None:
+        res0 = finish(best0)
+        if res0[5] is None:
+            _, al0, _, _, ns0 = best0
+            gain = total(_errors(al0, exact, ns0, CHECK + REFINE)) - total(errs)
+            alt = (res0[0], res0[4], gain, cost(res) - cost(res0))
     # the exact outlines at the check's places, drawn here already: the final
     # check need not draw them again
     shown = {loc: [[tuple(q[:2]) for q in r] for r in seen(loc)] for loc in CHECK if loc in drawn}
-    return n, plain(up), rings, choice, first, err, why, own, shown
+    up = up_m
+    return n, plain(up), rings, choice, first, err, why, own, shown, None, alt
 
 
 from multiprocessing import get_context  # noqa: E402
@@ -573,9 +729,16 @@ upright = {m: {} for m in MASTERS}
 aligned = {w: {} for w in MASTERS}
 frozen, chosen = [], []
 OWN = {}                                                    # glyph -> (its grid's masters, outlines at those past the font's)
+ALTS = {}                                                   # glyph -> (outlines, own) with its finer grid, gain, bytes
 SHOWN = {}                                                  # (glyph, location) -> exact outline, for the check
 with get_context('fork').Pool(WORKERS) as pool:
-    for n, up, rings, choice, e0, e1, why, own, shown in pool.imap_unordered(_glyph, names, chunksize=4):
+    for n, up, rings, choice, e0, e1, why, own, shown, comp, alt in pool.imap_unordered(_glyph, names, chunksize=4):
+        if comp is not None:
+            COMPOSITES[n] = comp
+        if alt is not None:
+            # (the font starts without the finer grid: TARGET decides)
+            ALTS[n] = (rings, own, alt[2], alt[3])
+            rings, own = alt[0], alt[1]
         for loc, r in shown.items():
             SHOWN[n, loc] = r
         if why is not None:
@@ -593,6 +756,30 @@ print(sum(c[3] == 'sparse' for c in chosen), 'glyphs keep the font\'s masters al
       sum(c[3] == 'finer grid' for c in chosen), 'took a finer grid; after pruning,',
       f'{sum(len(v[0]) for v in OWN.values()) / max(len(OWN), 1):.1f} masters a glyph on average (of {len(NODES)}),',
       sum(len(v[1]) for v in OWN.values()), 'past the font\'s in all')
+
+
+def _flat(n, seen=()):
+    """A composite's components down to glyphs that are none (nested
+    components render badly in some variable-font implementations:
+    fontbakery's nested_components), their offsets added up at every place."""
+    cs, offs = COMPOSITES[n]
+    flat, out = [], {loc: [] for loc in offs}
+    for k, c in enumerate(cs):
+        if c in COMPOSITES and c not in seen:
+            ccs, coffs = _flat(c, seen + (n,))
+            flat += ccs
+            for loc in offs:
+                dx, dy = offs[loc][k]
+                out[loc] += [(dx + a, dy + b) for a, b in coffs[loc]]
+        else:
+            flat.append(c)
+            for loc in offs:
+                out[loc].append(offs[loc][k])
+    return flat, out
+
+
+COMPOSITES.update({n: _flat(n) for n in list(COMPOSITES)})
+print(len(COMPOSITES), 'glyphs carried as composites (their components translated at every master)')
 print('aligned;', len(frozen), 'glyphs could not vary:', frozen[:10])
 
 
@@ -618,114 +805,155 @@ for w in MASTERS:                       # grade keeps every advance, kerning inc
 all_pairs = set().union(*pairs_by.values())
 print(_took(), len(all_pairs), 'kerning pairs')
 
-tmp = Path(tempfile.mkdtemp())
-doc = DesignSpaceDocument()
-for tag, name, lo, df, hi in AXES:
-    ax = AxisDescriptor()
-    ax.tag, ax.name, ax.minimum, ax.default, ax.maximum = tag, name, lo, df, hi
-    doc.addAxis(ax)
+def _composite_masters(vf):
+    """A composite's variations: where its components stand, over the
+    grid's masters it needs (its offsets pruned like an outline's points,
+    _prune), the advance as the font's masters have it."""
+    import numpy as np
+    from fontTools.ttLib.tables.TupleVariation import TupleVariation
+    gvar, glyf = vf['gvar'], vf['glyf']
+    index = {m: i for i, m in enumerate(MASTERS)}
+    for n, (cs, offs) in COMPOSITES.items():
+        base_adv = [aligned[m][n][1] for m in MASTERS]
+        advs = [base_adv[index[m]] if m in index else MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
+                for m in NODES]
+        keep = _prune(NODES, [[offs[m]] for m in NODES], advs)
+        default = [(c.x, c.y) for c in glyf[n].components]   # (as the font has them, rounded)
+        vals = []
+        for m in keep:
+            pts = default if m == DEFAULT else offs[m]
+            a = base_adv[index[m]] if m in index else MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
+            vals.append(np.array(list(pts) + [(0, 0), (a if m != DEFAULT else round(a), 0), (0, 0), (0, 0)], dtype=float))
+        model = _model(keep)
+        tvs = []
+        for d, sup in zip(model.getDeltas(vals, round=np.round), model.supports):
+            if not sup:
+                continue
+            coords = [(int(x), int(y)) for x, y in d]
+            if any(tag == 'GRAD' and peak for tag, (lo, peak, hi) in sup.items()):
+                coords[-4:] = [(0, 0)] * 4
+            if any(c != (0, 0) for c in coords):
+                tvs.append(TupleVariation(dict(sup), coords))
+        gvar.variations[n] = tvs
+
+
 FEA = '' if __import__('os').environ.get('ARRIS_VF_ONLY') else fea()   # (a trial's few glyphs: no features)
+tmp = Path(tempfile.mkdtemp())
 
 
 def _build_master(i):
     m = MASTERS[i]
     pairs = {pr: pairs_by[m].get(pr, 0) for pr in all_pairs}
     build(str(tmp / f'master-{i}.ttf'), names, ps[m], family=family, style=style_name(m[0]), weight=m[0],
-          fea=FEA, placed=aligned[m], kern_pairs=pairs, stat=False)
+          fea=FEA, placed=aligned[m], kern_pairs=pairs, stat=False,
+          components={n: [(c, dx, dy) for c, (dx, dy) in zip(cs, offs[m])] for n, (cs, offs) in COMPOSITES.items()})
     return i
 
 
-with get_context('fork').Pool(WORKERS) as pool:     # the master fonts are independent
-    list(pool.imap_unordered(_build_master, range(len(MASTERS))))
-for i, m in enumerate(MASTERS):
-    path = tmp / f'master-{i}.ttf'
-    src = SourceDescriptor()
-    src.path, src.location = str(path), {'Weight': m[0], 'Grade': m[1], 'Watch': m[2]}
-    doc.addSource(src)
-for n, (alt, regions) in FORMS.items():
-    if regions:
-        rule = RuleDescriptor()
-        rule.name = f'{n} second form'
-        rule.conditionSets = [[{'name': 'Weight', 'minimum': w, 'maximum': 900},
-                               {'name': 'Grade', 'minimum': glo, 'maximum': ghi},
-                               {'name': 'Watch', 'minimum': tlo, 'maximum': thi}]
-                              for w, glo, ghi, tlo, thi in regions]
-        rule.subs = [(n, alt)]
-        doc.addRule(rule)
-for w, nm in NAMES.items():
-    inst = InstanceDescriptor()
-    inst.familyName, inst.styleName, inst.location = family, style_name(w), {'Weight': w, 'Grade': 0, 'Watch': 0}
-    doc.addInstance(inst)
-vf, _, _ = varlib_build(doc)
-from fontTools.otlLib.builder import buildStatTable
-buildStatTable(vf, [
-    {'tag': 'wght', 'name': 'Weight',
-     'values': [{'value': w, 'name': nm, 'flags': 0x2 if w == 400 else 0} for w, nm in NAMES.items()]},
-    {'tag': 'GRAD', 'name': 'Grade', 'values': [{'value': 0, 'name': 'Normal', 'flags': 0x2}]},
-    {'tag': 'WTCH', 'name': 'Watch', 'values': [{'value': 0, 'name': 'Measured', 'flags': 0x2},
-                                                {'value': 100, 'name': 'Watch'}]},
-    # the upright and the italic are one family: each names its place on ital
-    {'tag': 'ital', 'name': 'Italic',
-     'values': [{'value': 1, 'name': 'Italic'}] if ITALIC else
-               [{'value': 0, 'name': 'Roman', 'flags': 0x2, 'linkedValue': 1}]},
-])
-
-
-def _own_masters(vf):
-    """Rewrite every glyph's variations as its grid has them: one model
-    over the glyph's masters, its deltas as the glyph's own regions (gvar
-    keeps them glyph by glyph), points the master fonts' way (each contour
-    reversed, rounded), the points interpolation can infer left out (IUP,
-    as varLib does). The advance (phantom point 2) follows the font's
-    masters, interpolated at the glyph's own."""
-    import numpy as np
-    from fontTools.ttLib.tables.TupleVariation import TupleVariation
-    from fontTools.varLib.iup import iup_delta_optimize
+def _variations(vf):
+    """Every glyph's variations as its masters have them (_tuples: its own
+    grid's, or the font's masters'), every composite's (_composite_masters)."""
     gvar, glyf, hmtx = vf['gvar'], vf['glyf'], vf['hmtx'].metrics
     index = {m: i for i, m in enumerate(MASTERS)}
-
-    def pts(rings):
-        return [(round(q[0]), round(q[1])) for r in rings for q in r[::-1]]
-    for n, (mlocs, rings_at) in OWN.items():
+    for n in names:
+        if n in COMPOSITES or glyf[n].numberOfContours <= 0:     # (composites below; empty glyphs vary nothing)
+            continue
+        mlocs = OWN[n][0] if n in OWN else MASTERS
         base_adv = [aligned[m][n][1] for m in MASTERS]
-        vals = []
-        for m in mlocs:
-            if m in index:
-                rings, a = aligned[m][n][0], base_adv[index[m]]
-            else:
-                rings, a = rings_at[m], MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
-            vals.append(pts(rings) + [(0, 0), (round(a), 0), (0, 0), (0, 0)])
-        model = _model(mlocs)
-        deltas = model.getDeltas([np.array(v, dtype=float) for v in vals])
+        outlines = [aligned[m][n][0] if m in index else OWN[n][1][m] for m in mlocs]
+        advances = [base_adv[index[m]] if m in index else
+                    MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv) for m in mlocs]
         coords0, ctrl = glyf._getCoordinatesAndControls(n, hmtx, None)
-        tvs = []
-        for d, sup in zip(deltas, model.supports):
-            if not sup:
-                continue
-            coords = [(int(round(x)), int(round(y))) for x, y in d]
-            if any(tag == 'GRAD' and peak for tag, (lo, peak, hi) in sup.items()):
-                # grade never moves an advance (the phantom points): rounding
-                # the interpolated advances must not make it do so by a unit
-                coords[-4:] = [(0, 0)] * 4
-            if not any(c != (0, 0) for c in coords):
-                continue
-            tv = TupleVariation(dict(sup), coords)
-            opt = iup_delta_optimize(coords, coords0, ctrl.endPts, tolerance=0.5)
-            if None in opt:
-                small = TupleVariation(dict(sup), opt)
-                if sum(map(len, small.compile(AXIS_TAGS))) < sum(map(len, tv.compile(AXIS_TAGS))):
-                    tv = small
-            tvs.append(tv)
-        gvar.variations[n] = tvs
+        gvar.variations[n] = _tuples(mlocs, outlines, advances, coords0, ctrl.endPts)
 
 
-if OWN:
-    _own_masters(vf)
-vf['name'].names = [nm for nm in vf['name'].names if nm.platformID != 1]   # Windows names only
-from arris.font import add_meta  # noqa: E402
-add_meta(vf)
+def make_vf():
+    """The variable font from the master fonts as the glyphs now stand."""
+    doc = DesignSpaceDocument()
+    for tag, name, lo, df, hi in AXES:
+        ax = AxisDescriptor()
+        ax.tag, ax.name, ax.minimum, ax.default, ax.maximum = tag, name, lo, df, hi
+        doc.addAxis(ax)
+    with get_context('fork').Pool(WORKERS) as pool:     # the master fonts are independent
+        list(pool.imap_unordered(_build_master, range(len(MASTERS))))
+    for i, m in enumerate(MASTERS):
+        src = SourceDescriptor()
+        src.path, src.location = str(tmp / f'master-{i}.ttf'), {'Weight': m[0], 'Grade': m[1], 'Watch': m[2]}
+        doc.addSource(src)
+    for n, (alt, regions) in FORMS.items():
+        if regions:
+            rule = RuleDescriptor()
+            rule.name = f'{n} second form'
+            rule.conditionSets = [[{'name': 'Weight', 'minimum': w, 'maximum': 900},
+                                   {'name': 'Grade', 'minimum': glo, 'maximum': ghi},
+                                   {'name': 'Watch', 'minimum': tlo, 'maximum': thi}]
+                                  for w, glo, ghi, tlo, thi in regions]
+            rule.subs = [(n, alt)]
+            doc.addRule(rule)
+    for w, nm in NAMES.items():
+        inst = InstanceDescriptor()
+        inst.familyName, inst.styleName, inst.location = family, style_name(w), {'Weight': w, 'Grade': 0, 'Watch': 0}
+        doc.addInstance(inst)
+    vf, _, _ = varlib_build(doc)
+    from fontTools.otlLib.builder import buildStatTable
+    buildStatTable(vf, [
+        {'tag': 'wght', 'name': 'Weight',
+         'values': [{'value': w, 'name': nm, 'flags': 0x2 if w == 400 else 0} for w, nm in NAMES.items()]},
+        {'tag': 'GRAD', 'name': 'Grade', 'values': [{'value': 0, 'name': 'Normal', 'flags': 0x2}]},
+        {'tag': 'WTCH', 'name': 'Watch', 'values': [{'value': 0, 'name': 'Measured', 'flags': 0x2},
+                                                    {'value': 100, 'name': 'Watch'}]},
+        # the upright and the italic are one family: each names its place on ital
+        {'tag': 'ital', 'name': 'Italic',
+         'values': [{'value': 1, 'name': 'Italic'}] if ITALIC else
+                   [{'value': 0, 'name': 'Roman', 'flags': 0x2, 'linkedValue': 1}]},
+    ])
+    _variations(vf)
+    if COMPOSITES:
+        _composite_masters(vf)
+    vf['name'].names = [nm for nm in vf['name'].names if nm.platformID != 1]   # Windows names only
+    from arris.font import add_meta
+    add_meta(vf)
+    return vf
+
+
+def _size(vf):
+    import io
+    b = io.BytesIO()
+    vf.save(b)
+    return len(b.getvalue())
+
+
+# The font without any glyph's finer grid first; then the finer grids that
+# buy most accuracy per byte (ALTS: the error they take off the check's and
+# the refinement's places, for the bytes their variations add), while the
+# font stays under TARGET.
+vf = make_vf()
+size = _size(vf)
+print(_took(), f'the font without finer grids: {size / 1e6:.2f} MB')
+if ALTS and size < TARGET:
+    room = TARGET - size
+    take = []
+    for n, (rings, own, gain, extra) in sorted(ALTS.items(), key=lambda kv: (kv[1][3] > 0, -kv[1][2] / max(kv[1][3], 1))):
+        if gain <= 0:
+            continue
+        if extra <= room:
+            take.append(n)
+            room -= max(extra, 0)
+    for n in take:
+        rings, own = ALTS[n][0], ALTS[n][1]
+        for i, m in enumerate(MASTERS):
+            aligned[m][n] = (rings[i], aligned[m][n][1])
+        OWN.pop(n, None)
+        if own:
+            OWN[n] = own
+    if take:
+        vf = make_vf()
+        size = _size(vf)
+    print(_took(), f'{len(take)} of {len(ALTS)} glyphs keep their finer grid: {size / 1e6:.2f} MB')
+if size > TARGET:
+    print(f'WARNING: {size / 1e6:.2f} MB, over the {TARGET / 1e6:.1f} MB target')
 # (a trial's few glyphs go apart: build/trial/, the fonts in build/ untouched)
-OUT = Path('build') / ('trial' if __import__('os').environ.get('ARRIS_VF_ONLY') else '')
+OUT = Path(__import__('os').environ.get('ARRIS_VF_OUT') or Path('build') / ('trial' if __import__('os').environ.get('ARRIS_VF_ONLY') else ''))
 OUT.mkdir(parents=True, exist_ok=True)
 out = OUT / ('Arris-Italic[GRAD,WTCH,wght].ttf' if ITALIC else 'Arris[GRAD,WTCH,wght].ttf')
 vf.save(out)

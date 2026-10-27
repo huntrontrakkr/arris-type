@@ -111,13 +111,19 @@ Left of `check-googlefonts`' warnings:
   and 800), or the aligner pairs a plane's masters poorly. A glyph whose
   drawing changes form between planes could be split into forms as ¢ $
   are.
-- **Variable-font size** (2026-10-27): 10.1 MB upright, 13.6 MB italic
-  (1.001: 6.5, 8.3; WOFF2 about 60% more), over fontbakery's 9 MB
-  (`file_size`, the only FAILs). The glyphs on the grid keep about 63
-  masters each: their drawings are not linear between the grid's planes
-  to within several units (pruning at 3 units saves 6%, at 10 units 18%
-  and visibly less exact). Fitting under 9 MB means fewer glyphs on the
-  grid, that is, a looser match for the sparse layout.
+- **Variable-font size** (2026-10-27): 7.85 MB upright, 8.88 MB italic
+  (fontbakery's 9 MB), by kerning only within a script, composites,
+  pruning and IUP certified within 2 units, and the finer grids that buy
+  most per byte (`build_vf.TARGET`): all 477 in the upright, 124 of 508 in
+  the italic, which so gives up some accuracy (a mean difference over 3
+  units at 1,136 held-out places, 785 with every finer grid; 1.001 had
+  3,725 against today's drawings).
+  Accented letters with an attached mark (ogonek, cedilla, horn) are still
+  outlines: their mark joins the base in one contour. ę at Black, grade
+  -100, italic, has a 25-unit pinhole where its ogonek joins the e.
+  The stroke scan lists two more since: ȩ crosses itself at italic Black
+  (by its cedilla), ◍ swells to 61 at italic Thin (its hatching's chamfers
+  now curve as each line's own).
 - **The white rule's count is fragile** (2026-10-27): whites are now
   counted where a disk can move (eroded components), so a pinch no longer
   merges two (∭ was lightened from Bold to Heavy and not at Black). But a
