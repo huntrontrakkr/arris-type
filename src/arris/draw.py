@@ -528,7 +528,13 @@ _WHITE: dict = {}
 
 def white_features(rings, p) -> int:
     """How many separate pieces of readable white a drawing holds inside its
-    hull: white at least half a stroke wide (opened by a quarter stroke)."""
+    hull: white a disk half a stroke across fits in, and a piece is one a
+    disk can move about in (the white eroded by the disk's radius: where it
+    can be centred). Counted as the union of the disks instead (the white
+    opened), two pieces met where disks either side of a pinch overlap,
+    with no way through: ∭'s triangles under the hooks joined the whites
+    between the stems from Bold to Heavy, so the rule lightened those
+    weights, and let go at Black, where the beak's corner turned a degree."""
     from shapely.geometry import MultiPoint
     from .geom import rings_to_shapely
     if not rings:
@@ -536,8 +542,9 @@ def white_features(rings, p) -> int:
     ink = rings_to_shapely(rings)
     hull = MultiPoint([q[:2] for r in rings for q in r]).convex_hull
     r = WHITE_OPEN * max(p.sv, p.sh, p.sd, p.ss)
-    white = hull.difference(ink).buffer(-r, join_style='mitre').buffer(r, join_style='mitre')
-    return sum(1 for q in getattr(white, 'geoms', [white]) if not q.is_empty and q.area > 0.5 * (2 * r) ** 2)
+    centres = hull.difference(ink).buffer(-r, join_style='mitre')
+    return sum(1 for q in getattr(centres, 'geoms', [centres])
+               if q.geom_type == 'Polygon' and not q.is_empty and q.buffer(r, join_style='mitre').area > 0.5 * (2 * r) ** 2)
 
 
 def _is_symbol(spec) -> bool:

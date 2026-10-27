@@ -752,8 +752,18 @@ def rings_to_shapely(rings):
                                       if q.geom_type in ('Polygon', 'MultiPolygon')])
         if poly.is_empty:
             continue
-        out = out.symmetric_difference(poly)
+        out = _area(out.symmetric_difference(poly))
     return out
+
+
+def _area(g):
+    """The polygons of a geometry: rings that share an edge exactly (a
+    counter collapsed onto its outline in one of a variable font's masters)
+    leave that edge behind as a line in their symmetric difference."""
+    if g.geom_type in ('Polygon', 'MultiPolygon'):
+        return g
+    parts = [q for q in getattr(g, 'geoms', [g]) if q.geom_type in ('Polygon', 'MultiPolygon') and not q.is_empty]
+    return shapely.union_all(parts) if parts else Polygon()
 
 
 def _signed_area(r):
