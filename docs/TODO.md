@@ -60,13 +60,10 @@ the release (fixes kept breaking things elsewhere that only this shows).
   (every point kept). `tools/stroke_scan.py` reads the engine's outlines,
   before the split, and still lists them.
 
-- **Build speed** (2026-10-26): a full `tools/rebuild.sh` takes about 50
-  minutes on 24 cores (static fonts 6, variable fonts 34, checks 11; it
-  was over two hours). Most of what is left is the variable fonts'
-  alignment with their own masters (16 minutes each) and fontbakery on
-  them. Next: keep drawings in a cache on disk (by glyph, parameters and
-  the engine's source), so a rebuild after a change to the build scripts,
-  or to a few glyphs, redraws only what changed.
+- **Build speed** (2026-10-27): a full `tools/rebuild.sh` takes about an
+  hour on 24 cores with the drawing cache warm (static fonts under a
+  minute, variable fonts 25, checks 37: fontbakery on the variable fonts
+  is most of it, then the GPU check).
 
 ## For Google Fonts (if the family goes there)
 
@@ -93,17 +90,41 @@ Left of `check-googlefonts`' warnings:
 
 ## Carried over
 
-- **Variable-font interpolation** (2026-10-26): masters paired by name
-  (`geom.ink`'s edge names), 692 upright and 704 italic glyphs with masters
-  of their own (about 4.5 each), ¢ $ as two forms each swapped by feature
-  variations. The check (104,544 glyph-locations, CHECK and VALID) finds a
-  point more than 60 units off the outline at 373 upright locations (114
-  glyphs) and 899 italic (241); before this, 622 (168) and 1,251 (337) on
-  fewer locations. Most are at VALID places, between the ones a glyph's
-  own masters were chosen at (₪ ∭ ♬ ε ҙ ğ): the refinement fits its grid
-  and misses between. A denser grid costs build time; better, a glyph whose
-  masters disagree in structure (names that pair poorly) could be split
-  into forms as ¢ $ are. `build/vf_check*.json` lists every location.
+- **Variable-font interpolation** (2026-10-27): a glyph keeps the font's
+  28 masters where they match its drawings at every node of the full grid
+  (about 800 glyphs), else it is interpolated on the grid, finer where
+  still off, pruned node by node with a 1-unit certificate (`tools/
+  build_vf.py`). At the held-out VALID places (`tools/vf_compare.py`,
+  against the tagged 1.001 VFs) a point more than 60 units off at 88 glyph
+  places upright (1.001: 160) and 144 italic (275); a mean difference over
+  3 units at 553 (1,434) and 785 (2,118); 51 and 81 glyphs better, 21 and
+  14 worse. The GPU check (`tools/vf_spikes.py`) lists 13 upright and 44
+  italic glyphs past their masters (1.001: 675, 844); looked at, these are
+  drawings that themselves reach past the 28 masters between them (Ŏ's
+  breve at (850, 100, 0)), the font 15 to 55 units from them at most.
+  Crossings deeper than 20 units: 19 upright, 45 italic (1.001: 156, 197);
+  the italic e at Thin and the lightest grade crosses in its master (the
+  italic's curved chamfers at a hairline). Left, worse than 1.001 at some
+  place: « » (the white rule, below), ‽ ℵ ϱ ҧ ♧ ⇭, italic y ¼ ψ: their
+  drawings change form between the grid's planes (ӻ's slots close at
+  Black between grade 0 and 50; ⇖ loses two chamfer points between 790
+  and 800), or the aligner pairs a plane's masters poorly. A glyph whose
+  drawing changes form between planes could be split into forms as ¢ $
+  are.
+- **Variable-font size** (2026-10-27): 10.1 MB upright, 13.6 MB italic
+  (1.001: 6.5, 8.3; WOFF2 about 60% more), over fontbakery's 9 MB
+  (`file_size`, the only FAILs). The glyphs on the grid keep about 63
+  masters each: their drawings are not linear between the grid's planes
+  to within several units (pruning at 3 units saves 6%, at 10 units 18%
+  and visibly less exact). Fitting under 9 MB means fewer glyphs on the
+  grid, that is, a looser match for the sparse layout.
+- **The white rule's count is fragile** (2026-10-27): whites are now
+  counted where a disk can move (eroded components), so a pinch no longer
+  merges two (∭ was lightened from Bold to Heavy and not at Black). But a
+  white that splits in two still counts as more: » at heavy weights loses
+  the notch inside its first chevron at watch 75 (lightened), and at watch
+  100 the gap between the chevrons splits, so the count is back and the
+  lightening lets go. Keep the Regular's features by identity, not count.
 - **Variable-font extremes past the Windows box** (1180/-390): ǻ reaches
   1199 at (650, 100, 0) (its exact stacked accents at a heavy grade), ≑
   dips to -396 at the heavy corner. Raise the VF's box, or keep stacked

@@ -37,10 +37,13 @@ date > build/scripts/fonts.done
 FB="uvx --quiet --from fontbakery fontbakery check-universal -l WARN"
 { echo "== pytest"; uv run python -m pytest -q tests 2>&1 | tail -n 1; } > $L/post_pytest.log 2>&1 &
 { echo "== fontbakery static"; timeout 1800 $FB build/Arris-Regular.ttf build/Arris-Italic.ttf build/Arris-Black.ttf build/Arris-BlackItalic.ttf 2>&1 | grep -E "ERROR:|FAIL:"; } > $L/post_static.log 2>&1 &
-{ echo "== fontbakery vf"; timeout 1800 $FB "build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf" 2>&1 | grep -E "ERROR:|FAIL:"; } > $L/post_vf.log 2>&1 &
+# (both at once: the italic's checks look for its roman)
+{ echo "== fontbakery vf"; timeout 3600 $FB "build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf" 2>&1 | grep -E "ERROR:|FAIL:" || echo "  (no summary: timed out?)"; } > $L/post_vf.log 2>&1 &
 { echo "== fontbakery mono"; timeout 1800 $FB build/ArrisMono-Regular.ttf build/ArrisMono-Black.ttf 2>&1 | grep -E "ERROR:|FAIL:"; } > $L/post_mono.log 2>&1 &
+# the variable fonts everywhere between their masters (on the GPU if there is one)
+{ echo "== vf spikes"; timeout 1800 uv run --group gpu python tools/vf_spikes.py 2>&1 | grep -v "Warning\|return lib"; } > $L/post_spikes.log 2>&1 &
 wait
-cat $L/post_pytest.log $L/post_static.log $L/post_vf.log $L/post_mono.log > $L/post.log
+cat $L/post_pytest.log $L/post_static.log $L/post_vf.log $L/post_mono.log $L/post_spikes.log > $L/post.log
 uv run python tools/package.py >> $L/post.log 2>&1
 stamp "checked and packaged"
 

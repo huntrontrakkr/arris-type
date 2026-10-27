@@ -26,6 +26,35 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## Unreleased
+
+- Variable fonts: the GPU check (`tools/vf_spikes.py`, 7,667 places per
+  glyph) found 1.001's sparse layout of masters carrying 675 upright glyphs
+  (844 italic) more than 20 units past every master, ✵ by 350 at (825,
+  100, 100): the grade's and the watch's changes, measured at three
+  weights, added up across the bends of the weight axis. A glyph now keeps
+  the font's 28 masters only where they match its drawings at every node
+  of the full grid (each weight of the font's masters × GRAD -100, 0, 100
+  × WTCH 0, 100) and at the check's places; any other glyph is
+  interpolated on that grid (the masters past the font's in the glyph's
+  own variations), finer where it is still off. A model over any of the
+  grid's nodes is multilinear within the grid's cells, so what holds at
+  its nodes holds everywhere between them: on the full grid nothing can
+  go past its masters, and each glyph then drops the masters it does not
+  need, one at a time, while those left reproduce every one dropped
+  within a unit (and span its box). Deltas are IUP-optimised as varLib
+  does. `tools/vf_compare.py` compares a build with a release at the
+  places no build chooses masters from.
+- Symbols: a symbol's separate whites are counted as pieces a disk half a
+  stroke across can move about in, not as the union of such disks, which
+  joined two whites where disks either side of a pinch overlapped. ∭ was
+  lightened from Bold to Heavy (its triangles under the hooks counted as
+  one with the whites between the stems) and not at Black, so its advance
+  jumped 210 units between 875 and 900; ⇎ ↚ ↛ ⌨ ⁜ « » and others are no
+  longer thinned where nothing closes. ↫ ↬ and the Mono semicolon now keep
+  a white they have at Regular, lightening at Bold and Black.
+- `tools/vf_spikes.py` runs in `tools/rebuild.sh`'s checks.
+
 ## 1.001 (2026-10-26)
 
 - Big yus Ѫ ѫ (`cyrillic.Yusbig`; ѫ its small capital).

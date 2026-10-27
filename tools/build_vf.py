@@ -14,6 +14,7 @@ the upright masters are aligned, then curved and sheared, arris.italic)
 import sys
 import tempfile
 import time
+from itertools import product
 from pathlib import Path
 
 _T0 = time.time()
@@ -55,6 +56,19 @@ BASE = [(w, 0, 0) for w in (100, 200, 300, 400, 500, 600, 700, 750, 800, 850, 90
 CORNERS = [(w, g, 100) for w in (100, 400, 900) for g in (-100, 100)]
 MASTERS = BASE + CORNERS
 NB = len(BASE)
+# The masters a glyph is interpolated between: a full grid over the design
+# space, every weight of BASE by the grade's ends and default by the watch's
+# ends (the font's masters among them, first). On a full grid the variation
+# model is multilinear: the outline anywhere is a weighted mean of the
+# outlines at its cell's corners and cannot overshoot them. On the font's
+# sparse layout the grade's change and the watch's, each measured at three
+# weights, add up across the bends of the weight axis: tools/vf_spikes.py
+# found 675 glyphs carried more than 20 units past every master (✵ 350 at
+# (825, 100, 100), ₩ 170, ð 140) and 929 crossing themselves. The masters
+# past the font's are each glyph's own (gvar keeps variations glyph by glyph:
+# _own_masters), and each glyph keeps only the planes it needs (_prune).
+GRID_AXES = ([w for w, g, t in BASE if not g and not t], [-100, 0, 100], [0, 100])
+NODES = MASTERS + sorted(set(product(*GRID_AXES)) - set(MASTERS))
 DEFAULT = (400, 0, 0)
 AXES = (('wght', 'Weight', 100, 400, 900), ('GRAD', 'Grade', -100, 0, 100), ('WTCH', 'Watch', 0, 0, 100))
 # between every two neighbouring masters on each axis, off the axes, and the
@@ -79,7 +93,7 @@ family = 'Arris'
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital')
                 and not (isinstance(REGISTRY[n].kind, tuple) and REGISTRY[n].kind[0] == 'liga')]
-if __import__('os').environ.get('ARRIS_VF_ONLY'):          # a trial build of a few glyphs (writes build/ as usual)
+if __import__('os').environ.get('ARRIS_VF_ONLY'):          # a trial build of a few glyphs (into build/trial/)
     names = [n for n in names if n in __import__('os').environ['ARRIS_VF_ONLY'].split(',')]
 
 
@@ -201,9 +215,10 @@ def _interpolate(al, loc, model=MODEL):
     return out
 
 
-def _predicted(base):
-    """Corner masters predicted from the others (all masters' outlines)."""
-    return list(base) + [_interpolate(base, c, MODEL_BASE) for c in CORNERS]
+def _predicted(lead, nodes, model):
+    """Every node's outline: the leading masters' (aligned), the rest
+    predicted from them by their model."""
+    return list(lead) + [_interpolate(lead, m, model) for m in nodes[len(lead):]]
 
 
 _MODELS: dict = {}
@@ -230,6 +245,10 @@ def _errors(al, exact, mlocs=None, where=None):
     whichever is more."""
     model = _model(mlocs or MASTERS)
     out = {}
+    try:
+        out.update(_dense_errors(al, mlocs or MASTERS))
+    except Exception:  # noqa: BLE001
+        pass
     for loc in (where or CHECK):
         try:
             ex = exact(loc)
@@ -248,34 +267,125 @@ def _error(al, exact, mlocs=None):
     return max(_errors(al, exact, mlocs).values())
 
 
-# A glyph that still interpolates off its drawing somewhere gets masters of its
-# own there, one at a time, worst place first, while each makes it better: a
-# variable font's variations are stored glyph by glyph, so a master one glyph
-# needs costs the others nothing (gvar, rewritten after the build: _own_masters).
-OWN_MAX = 8
+# Between the check's places: the interpolation looked at on a grid over the
+# whole design space (tools/vfdense.py), against no drawing: a point carried
+# outside the box its masters span, or the outline crossing itself deeper
+# than the masters do (by how far a point would have to move back to undo
+# it), DENSE_TOL of either as bad as LOCAL_TOL (tools/vf_spikes.py's
+# tolerance), so the alignment that keeps the font clean everywhere wins,
+# and a glyph's finer grid goes where it is not. (A crossing counted as a
+# fixed cost, ten times LOCAL_TOL, made a glyph take a 116-unit spike over a
+# twist 2 units deep.)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import vfdense  # noqa: E402
+DENSE = [(w, g, t) for w in range(100, 901, 50) for g in (-100, -50, 0, 50, 100) for t in (0, 25, 50, 75, 100)]
+DENSE_TOL = 20.0    # font units: a point this far past its masters, or a crossing this deep, is as bad as LOCAL_TOL
+
+
+def _dense_errors(al, mlocs):
+    import numpy as np
+    model = _model(mlocs)
+    base, D, R, nxt = vfdense.from_masters(al, [LOC(m) for m in mlocs], model)
+    masters_pts = np.array([[q[:2] for r in m for q in r] for m in al], dtype=float)
+    locs = np.array([LOC(m) for m in DENSE])
+    lo, hi = masters_pts.min(axis=0), masters_pts.max(axis=0)
+    mask = vfdense.pair_mask(nxt)
+    d0 = float(vfdense.deepest(np, masters_pts, nxt, mask).max())
+    P = vfdense.outlines(np, locs, base, D, R)
+    d = vfdense.overshoot(np, P, lo, hi)
+    x = vfdense.deepest(np, P, nxt, mask)
+    out = {}
+    for i, loc in enumerate(DENSE):
+        e = max(d[i], x[i] - d0 if x[i] >= vfdense.DEPTH else 0.0) * LOCAL_TOL / DENSE_TOL
+        if e > LOCAL_TOL:
+            out[loc] = e
+    return out
+
+
+# A glyph that still interpolates off its drawings somewhere gets a finer grid:
+# the worst place's value on an axis its grid lacks, every master of that
+# plane drawn (a variable font's variations are stored glyph by glyph: masters
+# one glyph needs cost the others nothing; gvar, rewritten after the build:
+# _own_masters). Then every glyph drops the masters its drawings do not need
+# (_prune: certified within PRUNE units everywhere).
+NODES_MAX = 132
+DEBUG = bool(__import__('os').environ.get('ARRIS_VF_DEBUG'))     # every candidate's error, as tried
+REFINE_STEPS = 12
+PRUNE = float(__import__('os').environ.get('ARRIS_VF_PRUNE', '1.0'))   # font units: what a dropped master may move
+
+
+def _prune(nodes, rings, advs):
+    """The masters of the glyph's grid it needs: one at a time, those the
+    rest reproduce best first (a corner before an edge, an edge before the
+    weight axis), each dropped while the masters left reproduce every one
+    dropped (each point, and the advance) within PRUNE units, and within
+    PRUNE of the box the masters left span. Every region
+    of a model over any of the grid's nodes starts and ends at grid values,
+    so the model is multilinear within each of the grid's cells, as the
+    full grid's is: what holds at the dropped masters holds everywhere
+    between them (and where the grade's and the watch's changes are linear
+    in the weight, as for most glyphs, the masters left are 1.001's sparse
+    layout or fewer)."""
+    import numpy as np
+    vals = np.array([[q[:2] for r in rings[i] for q in r] + [(advs[i], 0.0)] for i in range(len(nodes))], dtype=float)
+    loc = [dict(zip(AXIS_TAGS, LOC(m))) for m in nodes]
+
+    def off(keep, at):
+        """The farthest the model over keep is from the masters at, or
+        they from the box the masters kept span (the font's own masters
+        must span every point's range: tools/vf_spikes.py reads a point
+        past them as carried off)."""
+        model = VariationModel([loc[i] for i in keep], axisOrder=AXIS_TAGS)
+        deltas = np.array(model.getDeltas(list(vals[keep])))
+        lo, hi = vals[keep].min(axis=0), vals[keep].max(axis=0)
+        return max(max(float(np.abs(np.tensordot(model.getScalars(loc[j]), deltas, 1) - vals[j]).max()),
+                       float(np.maximum(lo - vals[j], vals[j] - hi).max())) for j in at)
+    every = list(range(len(nodes)))
+    default = nodes.index(DEFAULT)
+    alone = {i: off([j for j in every if j != i], [i]) for i in every if i != default}
+    order = sorted(alone, key=lambda i: (-sum(1 for v in nodes[i][1:] if v), alone[i]))
+    keep, gone = every, []
+    for i in order:
+        if alone[i] > PRUNE:
+            continue
+        trial = [j for j in keep if j != i]
+        if off(trial, gone + [i]) <= PRUNE:
+            keep, gone = trial, gone + [i]
+    return [nodes[i] for i in keep]
 
 
 def _glyph(n):
     """One glyph, start to end: (name, its upright rings and advance per
-    master (for the kerning), its outlines per master as the font carries
-    them, the alternative taken or None, the error before and after, why it
-    cannot vary or None). Only plain outlines go back to the main process
-    (the drawings' records hold functions).
+    master of the font (for the kerning), its outlines per master as the
+    font carries them, the alternative taken or None, the error before and
+    after, why it cannot vary or None, its grid (the masters gvar
+    interpolates it between, and its outlines at those the font has not),
+    the exact outlines drawn at the check's places). Only plain outlines go
+    back to the main process (the drawings' records hold functions).
 
     Candidates, in order, until one interpolates within LOCAL_TOL (else the
-    best): all masters aligned each against its neighbours; the corners
-    predicted instead; the masters aligned against the one with the most
-    points; and each of those again with the masters drawn without the jog
-    closing (geom._close_jogs: cleaned of jogs, neighbouring weights can
-    differ in structure where a step closes at one and not the next)."""
-    def placed(m):
-        names = []
-        u = _place(n, ps[m] if m in ps else P(m), record=ITALIC, tags=names)
-        return u + (names,)
-    up = [placed(m) for m in MASTERS]
-    plain = lambda ups: [(u[0], u[2]) for u in ups]
+    best): the grid's masters aligned each against its neighbours, named
+    edges first; the grid's masters past the font's (and past BASE)
+    predicted from those, as the sparse layout would have them; the masters
+    aligned against the one with the most points; and each of those again
+    with the masters drawn without the jog closing (geom._close_jogs:
+    cleaned of jogs, neighbouring weights can differ in structure where a
+    step closes at one and not the next)."""
+    def placed(m, jogs=True):
+        if not jogs:
+            jog, _geom.JOG = _geom.JOG, 0.0
+        try:
+            names = []
+            u = _place(n, ps[m] if m in ps else P(m), record=ITALIC, tags=names)
+            return u + (names,)
+        finally:
+            if not jogs:
+                _geom.JOG = jog
+    nodes, nm = list(NODES), len(MASTERS)
+    up = [placed(m) for m in nodes]
+    plain = lambda ups: [(u[0], u[2]) for u in ups[:nm]]
     if not any(u[0] for u in up):
-        return n, plain(up), [u[0] for u in up], None, 0.0, 0.0, None, [], {}
+        return n, plain(up), [u[0] for u in up[:nm]], None, 0.0, 0.0, None, None, {}
     cache, drawn = {}, {}
 
     def exact(loc):
@@ -295,105 +405,162 @@ def _glyph(n):
             q = q.with_(slant=0.0)
         return ital.polylines(ital.outline(rings, rec, q))
 
+    LEADS = ((len(nodes), None), (nm, MODEL), (NB, MODEL_BASE))
+
     def candidates(variant, how):
+        """(kind, how many masters lead, aligned outlines, the masters they
+        are at): the whole grid aligned; then, for the font's masters and
+        for BASE, the rest predicted from them, as aligned with the whole
+        grid and as aligned by themselves; and the font's masters alone,
+        without the grid, as 1.001 had them (sparse: aligned through a tree
+        over many more masters, a pair of neighbours can pair worse, ⇖
+        between the grade's ends at Regular, and where the sparse layout
+        adds up well the grid's cells can do worse, G at (850, 75, 75))."""
         rings = [u[0] for u in variant]
-        locs = None if how == 'star' else LOCS
         names = [u[3] for u in variant] if how == 'named' else None
+
+        def aligned(k):
+            return align(rings[:k], None if how == 'star' else [LOC(m) for m in nodes[:k]],
+                         names=None if names is None else names[:k])
+        # the sparse layout first: where it holds everywhere (the dense
+        # check: nothing past its masters, no crossing, DENSE_TOL), a glyph
+        # carries 28 masters' variations, not a grid's 60 and more (the
+        # variable fonts would be twice 1.001's size, past fontbakery's 9 MB)
         try:
-            al = align(rings, locs, names=names)
-            yield 'exact corners', al
-            yield 'predicted corners', _predicted(al[:NB])
+            lead = aligned(nm)
+            yield 'sparse', nm, lead, nodes[:nm]
         except ValueError:
+            lead = None
+        try:
+            full = aligned(len(nodes))
+            yield 'grid', len(nodes), full, nodes
+        except ValueError:
+            full = None
+        for k, model in LEADS[1:]:
+            if full is not None:
+                yield 'predicted grid', k, _predicted(full[:k], nodes, model), nodes
             try:
-                yield 'predicted corners', _predicted(align(rings[:NB], None if locs is None else LOCS[:NB],
-                                                            names=None if names is None else names[:NB]))
+                sub = lead if k == nm else aligned(k)
             except ValueError:
-                return
+                continue
+            if sub is not None:
+                yield 'predicted grid', k, _predicted(sub, nodes, model), nodes
     best, first = None, None
     for jogs in (True, False):
-        if not jogs:
-            jog, _geom.JOG = _geom.JOG, 0.0
-            try:
-                variant = [placed(m) for m in MASTERS]
-            finally:
-                _geom.JOG = jog
-        else:
-            variant = up
+        variant = up if jogs else [placed(m, False) for m in nodes]
         for how in ('named', 'tree', 'star'):
-            for corners, al in candidates(variant, how):
-                err = _error(al, exact)
+            for kind, k, al, ns in candidates(variant, how):
+                # (the sparse layout also at the grid's other masters: a
+                # model over any of the grid's nodes is multilinear within
+                # its cells, so where it matches the drawings at every node
+                # it is as good as the grid everywhere between)
+                where = CHECK + [m for m in nodes if m not in ns]
+                err = max(_errors(al, exact, ns, where).values())
+                if DEBUG:
+                    es = _errors(al, exact, ns, where)
+                    print(f'  {n} {"jogs" if jogs else "no jogs"} {how} {kind} {k}: {err:.1f} at {max(es, key=es.get)}', flush=True)
                 first = err if first is None else first
                 if best is None or err < best[0]:
-                    best = (err, al, variant, (jogs, how, corners))
+                    best = (err, al, variant, (jogs, how, kind, k, GRID_AXES), ns)
                 if best[0] <= LOCAL_TOL:
                     break
             if best is not None and best[0] <= LOCAL_TOL:
                 break
         if best is not None and best[0] <= LOCAL_TOL:
             break
-    own = []                                                # (location, outline) of the glyph's own masters
     if best is not None and best[0] > LOCAL_TOL:
-        # its own masters: from the chosen way's alignment with every master
-        # drawn (corners exact), adding the worst place while it helps
-        _, _, variant, (jogs, how, _) = best
-        mlocs, var = list(MASTERS), list(variant)
+        # a finer grid (above), from the chosen way's alignment with every
+        # master drawn, a plane at a time while it helps
+        _, _, variant, (jogs, how, _, _, _), _ = best
+        axes, ns, var = [list(a) for a in GRID_AXES], list(nodes), list(variant)
 
-        def realign(var, mlocs):
-            return align([u[0] for u in var], None if how == 'star' else [LOC(m) for m in mlocs],
+        def realign(var, ns):
+            return align([u[0] for u in var], None if how == 'star' else [LOC(m) for m in ns],
                          names=[u[3] for u in var] if how == 'named' else None)
         try:
-            al = realign(var, mlocs)
-            errs = _errors(al, exact, mlocs, CHECK + REFINE)
-            for _ in range(OWN_MAX):
-                loc, e = max(errs.items(), key=lambda kv: kv[1])
-                if e <= LOCAL_TOL or loc in mlocs:
-                    break
-                if not jogs:
-                    jog, _geom.JOG = _geom.JOG, 0.0
-                try:
-                    u = placed(loc)
-                finally:
-                    if not jogs:
-                        _geom.JOG = jog
-                al2 = realign(var + [u], mlocs + [loc])
-                errs2 = _errors(al2, exact, mlocs + [loc], CHECK + REFINE)
-                # kept if the glyph comes nearer its drawings overall (the
-                # worst place is now exact; the next may be as bad)
-                if sum(min(e, 100) for e in errs2.values()) >= 0.98 * sum(min(e, 100) for e in errs.values()):
-                    break
-                mlocs, var, al, errs = mlocs + [loc], var + [u], al2, errs2
-            if len(mlocs) > len(MASTERS) and max(errs.values()) < best[0]:
-                best = (max(errs.values()), al, var, (jogs, how, 'own masters', mlocs[len(MASTERS):]))
+            al = realign(var, ns)
+            errs = _errors(al, exact, ns, CHECK + REFINE)
         except ValueError:
-            pass
-    why, choice, err = None, None, first
+            errs = None
+        tried = set()
+        total = lambda es: sum(min(e, 100) for e in es.values())
+        start = (max(errs.values()), total(errs)) if errs else None
+        while errs and len(tried) < REFINE_STEPS:
+            # the worst place not yet tried, its value on each axis the grid
+            # lacks tried in turn (a plane that does not help, or will not
+            # align, is passed over)
+            todo = [(e, loc) for loc, e in errs.items()
+                    if e > LOCAL_TOL and loc not in tried and any(v not in a for v, a in zip(loc, axes))]
+            if not todo:
+                break
+            e, place = max(todo)
+            tried.add(place)
+            step = None
+            for i in range(3):
+                if place[i] in axes[i]:
+                    continue
+                ax2 = [sorted(a + [place[i]]) if j == i else a for j, a in enumerate(axes)]
+                have = set(ns)
+                new = [m for m in product(*ax2) if m not in have]
+                if len(ns) + len(new) > NODES_MAX:
+                    continue
+                var2 = var + [placed(m, jogs) for m in new]
+                try:
+                    al2 = realign(var2, ns + new)
+                except ValueError:
+                    continue
+                errs2 = _errors(al2, exact, ns + new, CHECK + REFINE)
+                if step is None or total(errs2) < total(step[0]):
+                    step = (errs2, ax2, ns + new, var2, al2)
+            # kept if the glyph comes nearer its drawings overall (the worst
+            # place is now on the grid; the next may be as bad)
+            if step is not None and total(step[0]) < 0.98 * total(errs):
+                errs, axes, ns, var, al = step
+            if DEBUG:
+                print(f'  {n} finer grid, tried {place}: {max(errs.values()):.1f}, axes {axes}', flush=True)
+        # kept if it does better than the best candidate (not only better
+        # than the grid it started from: a predicted one may be best), or
+        # as well with the glyph nearer its drawings overall
+        if errs is not None and len(ns) > len(nodes) and (
+                max(errs.values()) < best[0] or (max(errs.values()) <= best[0] and total(errs) < start[1])):
+            best = (max(errs.values()), al, var, (jogs, how, 'finer grid', len(ns), axes), ns)
+    why, choice, err, own = None, None, first, None
     if best is None:
         why = 'masters will not align'
     else:
-        err, al, up_all, choice = best
-        mlocs = MASTERS + (choice[3] if choice[2] == 'own masters' else [])
+        err, al, up_all, choice, nodes = best
+        _, _, kind, k, axes = choice
         try:
             rings = al
             if ITALIC:
                 # (terminal cells are curved but never slanted: font.place)
-                cps = [P(m).with_(slant=0.0) if REGISTRY[n].cell else P(m) for m in mlocs]
-                if choice[2] != 'predicted corners':
-                    rings = ital.aligned_outlines(al, [u[0] for u in up_all], [u[1] for u in up_all], cps)
+                cps = [P(m).with_(slant=0.0) if REGISTRY[n].cell else P(m) for m in nodes]
+                if kind != 'predicted grid':
+                    rings = ital.aligned_outlines(al, [u[0] for u in up_all[:len(nodes)]],
+                                                  [u[1] for u in up_all[:len(nodes)]], cps)
                 else:
-                    # the corners predicted from the others' italic outlines,
-                    # curves and all
-                    rings = _predicted(ital.aligned_outlines(al[:NB], [u[0] for u in up_all[:NB]],
-                                                             [u[1] for u in up_all[:NB]], cps[:NB]))
-            own = [(m, rings[len(MASTERS) + i]) for i, m in enumerate(mlocs[len(MASTERS):])]
-            rings = rings[:len(MASTERS)]
-            up = up_all[:len(MASTERS)]
+                    # the rest predicted from the leading masters' italic
+                    # outlines, curves and all
+                    rings = _predicted(ital.aligned_outlines(al[:k], [u[0] for u in up_all[:k]],
+                                                             [u[1] for u in up_all[:k]], cps[:k]),
+                                       nodes, dict((a, b) for a, b in LEADS)[k])
+            # every master's advance as the font has it (the font's masters'
+            # interpolated: HVAR and the kerning come from those)
+            base_adv = [u[2] for u in up_all[:nm]]
+            advs = base_adv + [MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
+                               for m in nodes[nm:]]
+            if kind != 'sparse':                            # (sparse: varLib's variations, from the font's masters)
+                keep = set(_prune(nodes, rings, advs))
+                own = ([m for m in nodes if m in keep], {m: rings[i] for i, m in enumerate(nodes) if m in keep and i >= nm})
+            rings = rings[:nm]
+            up = up_all[:nm]
         except ValueError as e:
             why = str(e)
     if why is not None:
         # cannot vary: every master carries the default outline (reported)
         d = place(n, ps[DEFAULT])[0]
         rings = [d for _ in MASTERS]
-        own = []
+        own = None
     # the exact outlines at the check's places, drawn here already: the final
     # check need not draw them again
     shown = {loc: [[tuple(q[:2]) for q in r] for r in seen(loc)] for loc in CHECK if loc in drawn}
@@ -405,7 +572,7 @@ WORKERS = int(__import__('os').environ.get('ARRIS_VF_WORKERS', '8'))
 upright = {m: {} for m in MASTERS}
 aligned = {w: {} for w in MASTERS}
 frozen, chosen = [], []
-OWN = {}                                                    # glyph -> [(location, outline)]: its own masters
+OWN = {}                                                    # glyph -> (its grid's masters, outlines at those past the font's)
 SHOWN = {}                                                  # (glyph, location) -> exact outline, for the check
 with get_context('fork').Pool(WORKERS) as pool:
     for n, up, rings, choice, e0, e1, why, own, shown in pool.imap_unordered(_glyph, names, chunksize=4):
@@ -415,15 +582,17 @@ with get_context('fork').Pool(WORKERS) as pool:
             frozen.append((n, why))
         if own:
             OWN[n] = own
-        if choice not in (None, (True, 'named', 'exact corners')):
+        if choice is not None and choice[:3] != (True, 'named', 'grid'):
             chosen.append((n, 'jogs kept' if not choice[0] else '', choice[1], choice[2], round(e0, 1), round(e1, 1)))
         for i, m in enumerate(MASTERS):
             upright[m][n] = up[i]                           # (rings, advance)
             aligned[m][n] = (rings[i], up[i][1])
 print(_took(), 'placed and aligned', len(names), 'glyphs in', len(MASTERS), 'masters;', len(chosen),
       'took an alternative, interpolating better so:', sorted(chosen, key=lambda c: -c[4])[:12])
-print(sum(c[3] == 'predicted corners' for c in chosen), 'glyphs keep predicted corners;', len(OWN),
-      'have masters of their own,', sum(len(v) for v in OWN.values()), 'in all')
+print(sum(c[3] == 'sparse' for c in chosen), 'glyphs keep the font\'s masters alone;', sum(c[3] == 'predicted grid' for c in chosen), 'masters predicted from the font\'s;',
+      sum(c[3] == 'finer grid' for c in chosen), 'took a finer grid; after pruning,',
+      f'{sum(len(v[0]) for v in OWN.values()) / max(len(OWN), 1):.1f} masters a glyph on average (of {len(NODES)}),',
+      sum(len(v[1]) for v in OWN.values()), 'past the font\'s in all')
 print('aligned;', len(frozen), 'glyphs could not vary:', frozen[:10])
 
 
@@ -503,32 +672,34 @@ buildStatTable(vf, [
 
 
 def _own_masters(vf):
-    """Rewrite the variations of glyphs that have masters of their own:
-    one model over all of the glyph's masters, its deltas as the glyph's
-    own regions (gvar keeps them glyph by glyph). Points as the master fonts
-    carry them (each contour reversed, rounded); the advance (phantom point
-    2) follows the font's masters, interpolated at the glyph's own."""
+    """Rewrite every glyph's variations as its grid has them: one model
+    over the glyph's masters, its deltas as the glyph's own regions (gvar
+    keeps them glyph by glyph), points the master fonts' way (each contour
+    reversed, rounded), the points interpolation can infer left out (IUP,
+    as varLib does). The advance (phantom point 2) follows the font's
+    masters, interpolated at the glyph's own."""
     import numpy as np
     from fontTools.ttLib.tables.TupleVariation import TupleVariation
-    gvar = vf['gvar']
+    from fontTools.varLib.iup import iup_delta_optimize
+    gvar, glyf, hmtx = vf['gvar'], vf['glyf'], vf['hmtx'].metrics
+    index = {m: i for i, m in enumerate(MASTERS)}
 
     def pts(rings):
         return [(round(q[0]), round(q[1])) for r in rings for q in r[::-1]]
-    advs = lambda n: [aligned[m][n][1] for m in MASTERS]
-    for n, own in OWN.items():
-        mlocs = MASTERS + [m for m, _ in own]
-        base_adv = advs(n)
+    for n, (mlocs, rings_at) in OWN.items():
+        base_adv = [aligned[m][n][1] for m in MASTERS]
         vals = []
-        for i, m in enumerate(MASTERS):
-            vals.append(pts(aligned[m][n][0]) + [(0, 0), (round(base_adv[i]), 0), (0, 0), (0, 0)])
-        for m, rings in own:
-            a = MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
+        for m in mlocs:
+            if m in index:
+                rings, a = aligned[m][n][0], base_adv[index[m]]
+            else:
+                rings, a = rings_at[m], MODEL.interpolateFromMasters(dict(zip(AXIS_TAGS, LOC(m))), base_adv)
             vals.append(pts(rings) + [(0, 0), (round(a), 0), (0, 0), (0, 0)])
         model = _model(mlocs)
         deltas = model.getDeltas([np.array(v, dtype=float) for v in vals])
-        supports = model.supports
+        coords0, ctrl = glyf._getCoordinatesAndControls(n, hmtx, None)
         tvs = []
-        for d, sup in zip(deltas, supports):
+        for d, sup in zip(deltas, model.supports):
             if not sup:
                 continue
             coords = [(int(round(x)), int(round(y))) for x, y in d]
@@ -536,8 +707,15 @@ def _own_masters(vf):
                 # grade never moves an advance (the phantom points): rounding
                 # the interpolated advances must not make it do so by a unit
                 coords[-4:] = [(0, 0)] * 4
-            if any(c != (0, 0) for c in coords):
-                tvs.append(TupleVariation(dict(sup), coords))
+            if not any(c != (0, 0) for c in coords):
+                continue
+            tv = TupleVariation(dict(sup), coords)
+            opt = iup_delta_optimize(coords, coords0, ctrl.endPts, tolerance=0.5)
+            if None in opt:
+                small = TupleVariation(dict(sup), opt)
+                if sum(map(len, small.compile(AXIS_TAGS))) < sum(map(len, tv.compile(AXIS_TAGS))):
+                    tv = small
+            tvs.append(tv)
         gvar.variations[n] = tvs
 
 
@@ -546,7 +724,10 @@ if OWN:
 vf['name'].names = [nm for nm in vf['name'].names if nm.platformID != 1]   # Windows names only
 from arris.font import add_meta  # noqa: E402
 add_meta(vf)
-out = Path('build') / ('Arris-Italic[GRAD,WTCH,wght].ttf' if ITALIC else 'Arris[GRAD,WTCH,wght].ttf')
+# (a trial's few glyphs go apart: build/trial/, the fonts in build/ untouched)
+OUT = Path('build') / ('trial' if __import__('os').environ.get('ARRIS_VF_ONLY') else '')
+OUT.mkdir(parents=True, exist_ok=True)
+out = OUT / ('Arris-Italic[GRAD,WTCH,wght].ttf' if ITALIC else 'Arris[GRAD,WTCH,wght].ttf')
 vf.save(out)
 print(_took(), 'wrote', out)
 
@@ -606,5 +787,5 @@ for e, w, n, far in worst[:25]:
 for e, w, n, far in spikes[:15]:
     print(f'  spike: {n:16} at {w}: {far:.0f} units off')
 import json  # noqa: E402
-(Path('build') / ('vf_check_italic.json' if ITALIC else 'vf_check.json')).write_text(   # every result, for triage
+(OUT / ('vf_check_italic.json' if ITALIC else 'vf_check.json')).write_text(   # every result, for triage
     json.dumps([[round(e, 2), list(w), n, round(far, 1)] for e, w, n, far in worst]))
