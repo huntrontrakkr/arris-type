@@ -18,6 +18,8 @@ stamp() { echo "$(( ($(date +%s) - T0) / 60 )) min: $*" | tee -a $L/time.log; }
 run() { tag=$1; shift; "$@" > $L/$tag.log 2>&1; echo "rc=$?" >> $L/$tag.log; }
 
 stamp start
+# drawings kept from other versions of the engine go (src/arris/font.py's cache)
+uv run python -c "from arris.font import prune_cache; print('cache: dropped', prune_cache(), 'old drawings')" >> $L/time.log 2>&1
 for fam in "" "watch" "mono" "italic" "mono italic"; do
     tag=$(echo "arris $fam" | tr ' ' '_' | sed 's/_$//')
     run "$tag" uv run python tools/build_fonts.py all $fam &

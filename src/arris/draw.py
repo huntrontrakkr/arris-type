@@ -296,7 +296,7 @@ def _warped(r, f):
 def _moved(r, dx, dy):
     if r[0] == 'warp':
         f = r[1]
-        return ('warp', (lambda y, f=f, dy=dy: f(y - dy) + dy)) if dy else r
+        return ('warp', Shifted(f, dy)) if dy else r
     if r[0] == 'bowl':
         return ('bowl',) + tuple(((q[0] + dx, q[1] + dy), d) for q, d in r[1:])
     return ('chord', (r[1][0] + dx, r[1][1] + dy), (r[2][0] + dx, r[2][1] + dy))
@@ -451,16 +451,38 @@ def _optical(g, spec, p):
     if not (dc or ot or ob) or not (t < m - t / 2 and m + t / 2 < H - t):
         return
 
-    def f(y):
+    g.warp = Warp(tuple(knots), ot, ob)
+
+
+class Warp:
+    """The optical correction's vertical warp: piecewise linear through
+    knots, below the first moved by -ob, above the last by +ot. (An object,
+    not a closure, so a drawing that carries it can be kept: font's cache.)"""
+
+    def __init__(self, knots, ot, ob):
+        self.knots, self.ot, self.ob = knots, ot, ob
+
+    def __call__(self, y):
+        knots = self.knots
         if y <= knots[0][0]:
-            return y - ob
+            return y - self.ob
         if y >= knots[-1][0]:
-            return y + ot
+            return y + self.ot
         for (x0, y0), (x1, y1) in zip(knots, knots[1:]):
             if y <= x1:
                 return y0 + (y - x0) * (y1 - y0) / (x1 - x0)
         return y
-    g.warp = f
+
+
+class Shifted:
+    """A warp f carried by dy: y -> d * f((y - dy) / d) + dy (d = -1: a
+    flip about the axis)."""
+
+    def __init__(self, f, dy, d=1.0):
+        self.f, self.dy, self.d = f, dy, d
+
+    def __call__(self, y):
+        return self.d * self.f((y - self.dy) / self.d) + self.dy
 
 
 # Every closed counter keeps at least half its share of the stem in the

@@ -42,7 +42,8 @@ def _xform_rec(r, M, dx, dy):
         # the optical correction's vertical warp, carried through a map that
         # keeps verticals vertical (mirror, flip, half turn): y' = d y + dy
         f = r[1]
-        return ('warp', (lambda y, f=f, d=d, dy=dy: d * f((y - dy) / d) + dy))
+        from ..draw import Shifted
+        return ('warp', Shifted(f, dy, d))
     if r[0] == 'bowl':
         return ('bowl',) + tuple((pt(q), vec(v)) for q, v in r[1:])
     return ('chord', pt(r[1]), pt(r[2]))

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from pathlib import Path
 
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
@@ -81,9 +82,100 @@ def _shift_record(record, dx):
     return [_moved(r, dx, 0.0) for r in record]
 
 
+# --- The drawing cache ---------------------------------------------------------
+#
+# A drawing is a function of the engine's source, the glyph and its
+# parameters: kept on disk (one SQLite file every process shares, and in
+# memory), a rebuild, a sweep or a check draws only what it has not drawn
+# since the engine last changed. ARRIS_CACHE names the file ('' turns it
+# off). The key holds a hash of every file of the engine (src/arris), so any
+# change to it starts afresh.
+
+_ENGINE = None
+_DB = None
+_MEM: dict = {}
+
+
+def _engine_hash():
+    global _ENGINE
+    if _ENGINE is None:
+        import hashlib
+        root = Path(__file__).resolve().parent
+        h = hashlib.sha1()
+        for f in sorted(root.rglob('*')):
+            if f.is_file() and '__pycache__' not in f.parts:
+                h.update(str(f.relative_to(root)).encode())
+                h.update(f.read_bytes())
+        _ENGINE = h.hexdigest()
+    return _ENGINE
+
+
+def _db():
+    """This process's connection (opened afresh in a forked child)."""
+    global _DB
+    import os
+    import sqlite3
+    path = os.environ.get('ARRIS_CACHE', str(Path(__file__).resolve().parents[2] / 'build' / 'cache' / 'draw.sqlite'))
+    if not path:
+        return None
+    if _DB is None or _DB[0] != os.getpid():
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        con = sqlite3.connect(path, timeout=300, isolation_level=None)
+        con.execute('PRAGMA journal_mode=WAL')
+        con.execute('PRAGMA synchronous=NORMAL')
+        con.execute('CREATE TABLE IF NOT EXISTS draw (k TEXT PRIMARY KEY, e TEXT, v BLOB)')
+        _DB = (os.getpid(), con)
+    return _DB[1]
+
+
+def prune_cache():
+    """Drop the drawings of every other version of the engine; returns how
+    many went."""
+    con = _db()
+    if con is None:
+        return 0
+    n = con.execute('DELETE FROM draw WHERE e != ?', (_engine_hash(),)).rowcount
+    con.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+    return n
+
+
 def _place(name: str, p: Params, tune=None, record: bool = False, tags: list | None = None):
     """(rings, chamfer record, advance), upright, shifted into place;
-    ``tags`` collects the names of the rings' edges (``geom.ink``)."""
+    ``tags`` collects the names of the rings' edges (``geom.ink``).
+    Remembered (the drawing cache, above)."""
+    import hashlib
+    import pickle
+    import zlib
+    from . import geom
+    con = _db()
+    if con is None:
+        return _place_drawn(name, p, tune, record, tags)
+    spec = REGISTRY[name]
+    key = hashlib.sha1(repr((_engine_hash(), name, p, sorted((tune or {}).get(name, {}).items()), record,
+                             tags is not None, geom.JOG, getattr(spec.fn, 'pin', None),
+                             tuple(sq.free for sq in spec.squint))).encode()).hexdigest()
+    hit = _MEM.get(key)
+    if hit is None:
+        row = con.execute('SELECT v FROM draw WHERE k = ?', (key,)).fetchone()
+        if row is not None:
+            hit = pickle.loads(zlib.decompress(row[0]))
+        else:
+            names = [] if tags is not None else None
+            rings, rec, adv = _place_drawn(name, p, tune, record, names)
+            hit = (rings, rec, adv, names, BODIES.get((name, p)))
+            con.execute('INSERT OR REPLACE INTO draw VALUES (?, ?, ?)',
+                        (key, _engine_hash(), zlib.compress(pickle.dumps(hit), 3)))
+        _MEM[key] = hit
+    rings, rec, adv, names, body = hit
+    if body is not None:
+        BODIES[name, p] = body
+    if tags is not None:
+        tags.extend(names)
+    return [list(r) for r in rings], list(rec), adv
+
+
+def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: list | None = None):
+    """_place, drawn."""
     from .spacing import bearings
     t = (tune or {}).get(name, {})
     if REGISTRY[name].kind == 'space':
