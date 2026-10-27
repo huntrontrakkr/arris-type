@@ -440,7 +440,11 @@ LICENSE_URL = 'https://openfontlicense.org'
 
 def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, tune=None,
           metrics: Metrics | None = None, version=VERSION, space=None, fea: str | None = None,
-          kern: bool = True, placed: dict | None = None, kern_pairs: dict | None = None, stat: bool = True):
+          kern: bool = True, placed: dict | None = None, kern_pairs: dict | None = None, stat: bool = True,
+          components: dict | None = None):
+    """Write a font of ``names`` at p. ``components`` (name -> [(component,
+    dx, dy)]): glyphs carried as TrueType composites (their rings in
+    ``placed`` still give their anchors and kerning)."""
     m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh))
     order = ['.notdef', 'space'] + list(names)
     fb = FontBuilder(UPM, isTTF=True)
@@ -465,7 +469,12 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
         if n not in placed:
             placed[n] = place(n, p, tune)
         rings, adv = placed[n]
-        if p.slant and keep:
+        if components and n in components:
+            pen = TTGlyphPen(set(order))                    # (it checks the components are glyphs)
+            for c, dx, dy in components[n]:
+                pen.addComponent(c, (1, 0, 0, 1, round(dx), round(dy)))
+            glyphs[n] = pen.glyph()
+        elif p.slant and keep:
             glyphs[n] = _raw_glyph([[(round(x), round(y), on) for x, y, on in c][::-1] for c in rings])
         elif p.slant:
             from . import italic

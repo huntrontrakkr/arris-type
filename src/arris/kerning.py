@@ -15,6 +15,9 @@ A closing kern never brings the two inks closer than half a standard gap
 in any direction (CLEAR): rows a little apart count at their diagonal
 distance. A mark floating high kerns as if its sides ran down to half
 the x-height (``_shadow``), so it never slides over a lowercase body.
+No pair is kerned across scripts (a Latin letter and a Cyrillic or Greek
+one): shapers break text into runs of one script before kerning, so such
+a pair is never applied (it was 39% of the variable fonts' pairs).
 """
 from __future__ import annotations
 
@@ -67,6 +70,33 @@ def _shadow(prof, ys, xh):
     return left, right
 
 
+_SCRIPTS: dict = {}
+
+
+def scripts(name: str) -> frozenset:
+    """The scripts a glyph is set in as a shaper itemises text ({'Latn'},
+    or {'Latn', 'Cyrl', 'Grek'} for an A that is all three: glyphs.ALIASES),
+    from its characters or its base glyph's (a.sc, uni0434.loclBGR, f_i);
+    empty for the common and inherited ones (punctuation, figures, marks),
+    which join the run of their neighbours."""
+    if not _SCRIPTS:
+        from fontTools import unicodedata as ud
+        from .draw import REGISTRY
+        from .glyphs import ALIASES
+        cps: dict = {}
+        for n, spec in REGISTRY.items():
+            if spec.unicode is not None:
+                cps.setdefault(n, set()).add(spec.unicode)
+        for cp, n in ALIASES.items():
+            cps.setdefault(n, set()).add(cp)
+        for n, cs in cps.items():
+            _SCRIPTS[n] = frozenset(sc for sc in (ud.script(chr(c)) for c in cs) if sc not in ('Zyyy', 'Zinh', 'Zzzz'))
+    for n in (name, name.split('.')[0], name.split('.')[0].split('_')[0]):
+        if n in _SCRIPTS:
+            return _SCRIPTS[n]
+    return frozenset()
+
+
 def kerns(placed: dict, p, light: float, left_names=None, right_names=None):
     """placed: name -> (rings, advance). Returns {(left, right): kern}."""
     ys = np.linspace(-p.desc, p.asc + 0.3 * p.cap, ROWS)
@@ -75,6 +105,7 @@ def kerns(placed: dict, p, light: float, left_names=None, right_names=None):
     out = {}
     lnames = left_names or list(placed)
     rnames = right_names or list(placed)
+    rscript = [scripts(n) for n in rnames]
     R = np.array([placed[n][1] - prof[n][1] for n in lnames])      # white to the right of each left glyph
     L = np.array([prof[n][0] for n in rnames])                      # white to the left of each right glyph
     for i, a in enumerate(lnames):
@@ -92,9 +123,10 @@ def kerns(placed: dict, p, light: float, left_names=None, right_names=None):
         closing = np.nonzero(ks < 0)[0]
         if len(closing):
             ks[closing] = np.maximum(ks[closing], np.minimum(0.0, _clearance(R[i], L[closing], ys, CLEAR * std)))
+        sa = scripts(a)
         for j in np.nonzero(has)[0]:
             k = 5 * round(ks[j] / 5)
-            if abs(k) >= MIN_KERN:
+            if abs(k) >= MIN_KERN and (not sa or not rscript[j] or sa & rscript[j]):
                 out[(a, rnames[j])] = int(k)
     return out
 

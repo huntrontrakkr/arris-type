@@ -60,20 +60,27 @@ def _meet(p0, p1, q0, q1):
 ON = 0.5   # font units: how near a segment must lie to a recorded chamfer
 
 
-def _owner(a, b, record):
-    """Which recorded corner the segment a-b belongs to: ('bowl', index)
-    if it lies on one of a bowl's two chamfer lines, ('chord', index) if it
-    is an edge break, else None."""
+def _owners(a, b, record):
+    """The recorded corners the segment a-b may belong to: [(owner, line,
+    distance)], ('bowl', index) for each of a bowl's two chamfer lines it
+    lies on (with its distance from where the line was recorded), ('chord',
+    index) for an edge break whose ends it is."""
+    out = []
+    mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
     for idx, r in enumerate(record):
         if r[0] == 'chord':
             if ((math.dist(a, r[1]) < ON and math.dist(b, r[2]) < ON)
                     or (math.dist(a, r[2]) < ON and math.dist(b, r[1]) < ON)):
-                return ('chord', idx)
+                out.append((('chord', idx), 0, 0.0))
         else:
-            for q, d in r[1:]:
+            for k, (q, d) in enumerate(r[1:]):
                 if all(abs(_cross((pt[0] - q[0], pt[1] - q[1]), d)) < ON for pt in (a, b)):
-                    return ('bowl', idx)
-    return None
+                    # how far the segment lies from the recorded point
+                    u = ((a[0] - q[0]) * d[0] + (a[1] - q[1]) * d[1], (b[0] - q[0]) * d[0] + (b[1] - q[1]) * d[1])
+                    dd = math.hypot(*d) or 1.0
+                    far = 0.0 if min(u) <= 0 <= max(u) else min(abs(u[0]), abs(u[1])) / dd
+                    out.append((('bowl', idx), k, far))
+    return out
 
 
 def _joins_smoothly(v, seg) -> bool:
@@ -96,7 +103,26 @@ def _corner(a, b, turn_left):
 
 def _segments(rings_, record):
     """Every 45-degree recorded chamfer in the rings: (ring, i, owner,
-    smooth, turn_left)."""
+    smooth, turn_left). Each recorded chamfer line is one edge: the
+    segment on it nearest where it was recorded. (A 45-degree line runs on,
+    and another corner's edge can lie on it far away, as an accent's on the
+    line of a corner of the letter under it: claimed by that corner, the
+    accent's sharp end held its curve straight, so á's a was not a's.)"""
+    claims = {}
+    for ri, ring in enumerate(rings_):
+        pts = [tuple(q) for q in ring]
+        n = len(pts)
+        for i in range(n):
+            a, b = pts[i], pts[(i + 1) % n]
+            if not _diag((b[0] - a[0], b[1] - a[1])):
+                continue
+            for own, k, far in _owners(a, b, record):
+                key = (own, k)
+                if own[0] == 'chord' or key not in claims or far < claims[key][0]:
+                    claims[key] = (far, ri, i)
+    owner = {}
+    for (own, k), (far, ri, i) in claims.items():
+        owner.setdefault((ri, i), own)
     out = []
     for ri, ring in enumerate(rings_):
         pts = [tuple(q) for q in ring]
@@ -104,9 +130,7 @@ def _segments(rings_, record):
         for i in range(n):
             a, b = pts[i], pts[(i + 1) % n]
             seg = (b[0] - a[0], b[1] - a[1])
-            if not _diag(seg):
-                continue
-            own = _owner(a, b, record)
+            own = owner.get((ri, i))
             if own is None:
                 continue
             prev, nxt = pts[i - 1], pts[(i + 2) % n]

@@ -201,8 +201,13 @@ class Glyph:
             from shapely.geometry import box as _box
             box = _box(*self.clip)
         rec = [] if record else None
+        # glyphs stamped as drawn at this one's parameters, only moved (an
+        # accented letter's base): finished. One drawn at other parameters
+        # (a small figure in a fraction) or scaled is finished again here.
+        finished = [e for e in self.extra if any(src[0] is e and tuple(src[3][:4]) == (1.0, 0.0, 0.0, 1.0)
+                                                 and src[1].p == p for src in self.extra_src)]
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
-                    tags=tags, extra_edges=self._extra_edges() if tags is not None else ())
+                    tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished)
         rec = (rec or []) + self.extra_chamfers if record else []
         warp = getattr(self, 'warp', None)
         if warp is not None:
@@ -326,6 +331,7 @@ def _cell_kind(spec) -> bool:
 
 def _build(spec, p, ot, ob, overrides, width=None):
     g = Glyph(p, spec.name, ot=ot, ob=ob, W=body_width(spec, p, width), overrides=dict(overrides))
+    g.width_arg = width                     # (a body the caller set: a composite's base is drawn in it)
     g.sh_auto = overrides.get('sh_auto', 1.0)
     g.defaults['sh_auto'] = 1.0
     if p.mono and _DEPTH[0] == 0 and _cell_kind(spec):

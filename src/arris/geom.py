@@ -382,7 +382,7 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
 
 
 def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=(),
-        tags: list | None = None, extra_edges=()):
+        tags: list | None = None, extra_edges=(), finished=()):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
 
@@ -427,8 +427,20 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     rings = []
     min_hole = (MIN_COUNTER * thick.v) ** 2
     moved: dict = {}
+    # finished ink (a stamped glyph) standing apart from the strokes is kept
+    # as it was finished: the corner rule, polish and jog closing are not
+    # idempotent, and run again they changed a stamped C by a jog where an
+    # accent stood near it (Ć's C was not C)
+    done = [q for f in finished for q in getattr(f, 'geoms', [f]) if isinstance(q, Polygon) and q.area > 1e-9]
     for poly in u.geoms:
         poly = orient(poly, sign=1.0)
+        if clip is None and any(abs(poly.area - f.area) <= 1e-6 * max(f.area, 1.0)
+                                and poly.symmetric_difference(f).area <= 1e-6 * max(f.area, 1.0) for f in done):
+            for r in [poly.exterior] + list(poly.interiors):
+                pts = list(r.coords)[:-1]
+                if r is poly.exterior or Polygon(r).area >= min_hole:
+                    rings.append(pts)
+            continue
         rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink

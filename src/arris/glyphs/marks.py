@@ -397,7 +397,12 @@ def _register(name, ch, bname, base, marks):
     def compose(g, room, bname=bname, marks=marks, base=base, case=case):
         from ..draw import draw
         p = g.p
-        base_glyph = draw(bname, p, g.ot, g.ob, width=(g.W - room) if room else None)
+        # in the body the composite was given, if any: the base's as the font
+        # places it (at a grade, the ungraded body: font._place_drawn; the
+        # composite's width is its base's in every cut). Drawn at its own
+        # graded width, the base in Á was not the font's A.
+        body = getattr(g, 'width_arg', None)
+        base_glyph = draw(bname, p, g.ot, g.ob, width=(body - room) if body is not None else ((g.W - room) if room else None))
         # the marks are placed on the exact base; its optical correction
         # (draw._optical) then moves the whole composite, so a cedilla or an
         # ogonek stays joined to the foot it hangs from and an accent keeps
@@ -434,7 +439,12 @@ def _register(name, ch, bname, base, marks):
         avoid = (mark_ink(g), raw_ink(g)) if g.strokes and any(m in ATTACHED for m in marks) else None
         draw_above(g, above, x, top, case, cell, avoid)
 
-    glyph(name, ch, spec.width, kind=spec.kind)(fn)
+    def width(p, bname=bname):
+        """The base's body in every cut (its italic drawing's in the italic):
+        the composite is its base and marks, stamped in the base's body."""
+        sp = REGISTRY.get(f'{bname}.ital') if p.slant else None
+        return (sp or REGISTRY[bname]).width(p)
+    glyph(name, ch, width, kind=spec.kind)(fn)
 
 
 def _into_cell(g):
