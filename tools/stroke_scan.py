@@ -16,7 +16,8 @@ Two checks, both measured, neither tuned per glyph:
   stack's horizontals).
 
 usage: stroke_scan.py [wght[,GRAD,WTCH] ...] [italic] [upright] [mono]
-       (default: 100 400 900, both upright and italic)
+       (default: 100 400 900, both upright and italic; on every core,
+       ARRIS_SCAN_WORKERS to set how many)
 """
 from __future__ import annotations
 
@@ -178,8 +179,17 @@ def below_floor(rings, p):
     return worst
 
 
-def scan(p, names):
+def scan(p, names, pool=None):
+    """Every glyph's issues at p, in order; on ``pool`` in chunks of glyphs."""
+    if pool is None:
+        return _scan_chunk((p, names))
+    chunks = [names[i:i + 24] for i in range(0, len(names), 24)]
+    return [x for part in pool.imap(_scan_chunk, [(p, c) for c in chunks]) for x in part]
+
+
+def _scan_chunk(job):
     global PX
+    p, names = job
     t_min = max(min(p.sv, p.sh, p.sd, p.ss), p.floor)
     t_max = max(p.sv, p.sh, p.sd, p.ss)
     PX = SPAN / t_min
@@ -212,15 +222,18 @@ if __name__ == '__main__':
     locs = [tuple(int(v) for v in a.split(',')) for a in args if a[0].isdigit()] or [(100,), (400,), (900,)]
     names = [n for n in REGISTRY if not n.endswith('.ital')]
     total = 0
-    for loc in locs:
-        w, g, t = (list(loc) + [0, 0])[:3]
-        for mode in modes:
-            p = params(w, g, watch=t / 100).with_(mono=mono)
-            if mode == 'italic':
-                p = italic(p)
-            issues = scan(p, names)
-            total += len(issues)
-            print(f'## {mode} {w},{g},{t}: {len(issues)} issues')
-            for n, msg in issues:
-                print(f'  {n:18s} {msg}')
+    import os
+    from multiprocessing import get_context
+    with get_context('fork').Pool(int(os.environ.get('ARRIS_SCAN_WORKERS', os.cpu_count() or 8))) as pool:
+        for loc in locs:
+            w, g, t = (list(loc) + [0, 0])[:3]
+            for mode in modes:
+                p = params(w, g, watch=t / 100).with_(mono=mono)
+                if mode == 'italic':
+                    p = italic(p)
+                issues = scan(p, names, pool)
+                total += len(issues)
+                print(f'## {mode} {w},{g},{t}: {len(issues)} issues', flush=True)
+                for n, msg in issues:
+                    print(f'  {n:18s} {msg}')
     print('TOTAL', total)
