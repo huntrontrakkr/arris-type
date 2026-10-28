@@ -268,25 +268,47 @@ detail, so it is no reason to change a diagonal's weight at text or watch
 size; the ratio is practice, which offsets the darkening where diagonals
 meet other strokes.
 
-**No overshoot for chamfered bowls.** Round letters usually rise above and
-dip below the flat ones (about 1.3–1.6% in the neutral faces), because a
-curve looks shorter than a flat edge of the same height. The vision
-model blurs each glyph with a contrast-sensitivity filter at the viewing
-size and finds where the blurred edge crosses half a bar's plateau. It
-shows that the octagon's flat top, four modules wide, reads as tall as a
-square top at text and watch sizes. Only below about 11 arcminutes of cap
-height (a 7-pixel label) do pointed ends start to look short. The
-chamfered faces agree: their median overshoot is zero. No study measures
-how much overshoot a round form needs (the usual 1–3% is practice), and a
-flat top 44% of the width needs none under either a blur or a local-window
-model. Arris does not overshoot its bowls.
+**Overshoot, where a bowl turns at a cut corner.** Round letters usually
+rise above and dip below the flat ones (about 1.3–1.6% in the neutral
+faces), because a curve looks shorter than a flat edge of the same height.
+Arris has no curves, but its bowls are octagons: S's top turns down at 45
+degrees at both ends, so it holds less ink at the line than H's square-cut
+stems and looks short. The vision model says by how much
+(`vision.overshoot_need`): it blurs the glyph's convex hull with a sigma of
+0.119 of the zone height (the blur at which a circle needs a 1.5%
+overshoot), compares it at the half level with the box it fills between
+the lines, and the side reaches past its line by the difference, at most
+1.5% of the zone (`draw.OPTICAL`). Only a side that ends in bowls
+overshoots: every flat on its extreme line must turn down (or up) into a
+bowl's 45-degree corner at both ends (`draw._bowl_side`). Stem ends and
+bars (H, F's foot, T's stem, B's top) sit on the line, as does a side the
+clip cuts (A's apex, v's foot), and a side the drawing already carries past
+its line (v's point) keeps what it was drawn with. In 1.002, at Regular, S,
+C, 8 and o reach 3 units past their lines at the top and the bottom, O
+1; at Thin S 4 and o 5; at Black S 2 and o 1. H and x stay on the line at
+every weight.
 
-**Optical centre.** Measured crossbars sit at 0.50–0.51 of the cap height in
-chamfered faces (0.51–0.53 in neutral ones). The watch figures put their
-waists at the geometric middle, and so do the Arris capitals. Bowls of B
-and P follow their masters. The "optical centre a few percent above the
-middle" is mostly folklore: people bisect a vertical line about 1% high,
-a third of a pixel at the watch's 36-pixel figures.
+**Optical centre.** People bisect a vertical line about 1% high, and type
+sets its middles higher than that: measured crossbars sit at 0.50–0.51 of
+the cap height in chamfered faces and 0.51–0.53 in neutral ones. Arris
+raises the middle of its letters and figures (`draw.OPTICAL`) until the top
+counter of a three-bar letter (B, E, 8) is 0.86 of the bottom one,
+calibrated so that at Regular the middle rises 2.5% of the cap height
+(B's: 17.5 units). As the bars thicken the counters shrink, and the rise
+with them, so a heavy top bowl never pinches: B's middle is 20 units up at
+Light and 10.5 at Black. At Thin, where the strokes are the stroke floor,
+the zone above the middle cannot give way without a stroke falling under
+the floor, so the rise yields (it is all but gone; `tools/stroke_scan.py`
+is the check). The correction is a piecewise-linear warp through the bars:
+the bottom bar, the middle bar and the top bar each move as one piece, so
+every stroke keeps its thickness and only the white between them stretches
+or gives way.
+
+**Measured optics only.** Both corrections are the share `Params.optical`,
+which is 1 at the measured optics and falls linearly to 0 along the watch
+axis: at WTCH 100, and in Arris Watch, the figures are the watch's own
+drawing, pixel-exact (`tests/test_heritage.py`). Composites take their
+base's correction whole (a cedilla stays joined).
 
 **Small figures drawn small.** Superiors, inferiors and the figures of
 fractions are not scaled-down figures. They are the same constructions with
@@ -502,6 +524,10 @@ horizontals.
 * `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`, plus precomposed ½ ¼ ¾,
   superior ¹ ² ³ and ª º.
 * `case`: dashes, guillemets, bullets and brackets raised for capitals.
+* `ss20`, Watch pixels: the figures as the watch drew them, one square
+  per lit pixel of their 9×12 masters, and the time colon between them as
+  the watch lights it, two dots of 2×2 on rows 3–4 and 8–9 of the twelve
+  (`arris.glyphs.origin`). Upright in the italic, as a display's pixels are.
 
 ### Programming ligatures (Arris Mono)
 

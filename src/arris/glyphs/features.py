@@ -254,6 +254,7 @@ feature ss20 {{
     sub @pnum by @px;
     sub [zero.zero zero.dot] by zero.px;
     sub five.ss02 by five.px;
+    sub colon.tf by colon.tf.px;
 }} ss20;
 feature sups {{ sub @figs by @sups;{_more('sups')} }} sups;
 feature subs {{ sub @figs by @subs;{_more('subs')} }} subs;

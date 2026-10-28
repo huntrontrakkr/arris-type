@@ -27,6 +27,21 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.003 (2026-10-28)
+
+- `ss20`, Watch pixels, now lights the time colon too. Between figures,
+  `calt`'s time colon (`colon.tf`) becomes `colon.tf.px`: two dots of 2×2
+  pixels on rows 3–4 and 8–9 of the twelve, as the watch's big clock lights
+  them, the same squares as the pixel figures, upright in the italic.
+  `tests/test_heritage.py` checks it against the watch's colon.
+- Design notes: section 5 described overshoot and the optical centre as
+  Arris drew them before 23 October. It now describes `draw.OPTICAL` as
+  the fonts have it: round sides that end in a bowl's cut corners
+  overshoot by what a blur measures (S, C, 8 and o by 3 units at Regular),
+  middles rise until a three-bar letter's top counter is 0.86 of its
+  bottom one (B's by 20 units at Light, none at Thin, where the rise yields
+  to the stroke floor), and both fade out along the watch axis.
+
 ## 1.002 (2026-10-27)
 
 - Variable fonts: the GPU check (`tools/vf_spikes.py`, 7,667 places per
