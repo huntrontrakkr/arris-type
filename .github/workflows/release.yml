@@ -4,7 +4,10 @@
 # font on GitHub's runners, checks them, packages the zip and publishes the
 # release with it, the notes taken from docs/RELEASE.md. Run it by hand
 # (Actions, "Release", Run workflow) to build and check without publishing:
-# the zip is left as the run's artifact.
+# the zip is left as the run's artifact. Run it by hand on main with
+# "publish" ticked to release that commit: the release job creates the tag
+# v<version> there itself (refusing if the tag exists already), so a release
+# needs no one to push a tag.
 #
 # The build is split across runners as tools/rebuild.sh splits it across
 # cores: each static family on one, each variable font on one of its own.
@@ -19,6 +22,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the release, tagging this commit v<version> (main only)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -100,11 +108,19 @@ jobs:
           merge-multiple: true
       - name: Version
         id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH: ${{ inputs.publish == true }}
         run: |
           V=$(uv run python -c "import sys; sys.path.insert(0, 'src'); from arris.version import VERSION; print(VERSION)")
           echo "version=$V" >> "$GITHUB_OUTPUT"
           if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$V" ]; then
             echo "::error::tag $GITHUB_REF_NAME does not match src/arris/version.py ($V)"; exit 1
+          fi
+          # a release by hand: from main only, and a version not released already
+          if [ "$PUBLISH" = true ]; then
+            if [ "$GITHUB_REF" != refs/heads/main ]; then echo "::error::publish from main only (this run is on $GITHUB_REF)"; exit 1; fi
+            if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$V" > /dev/null 2>&1; then echo "::error::v$V is tagged already: set a new VERSION"; exit 1; fi
           fi
       - name: pytest
         run: uv run python -m pytest -q tests
@@ -124,7 +140,7 @@ jobs:
           name: Arris-${{ steps.v.outputs.version }}
           path: build/release/Arris-${{ steps.v.outputs.version }}.zip
       - name: Publish
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' || inputs.publish == true
         env:
           GH_TOKEN: ${{ github.token }}
           V: ${{ steps.v.outputs.version }}
@@ -145,4 +161,9 @@ jobs:
               'Full notes: [docs/RELEASE.md](https://github.com/huntrontrakkr/arris-type/blob/main/docs/RELEASE.md).\n')
           open('notes.md', 'w', encoding='utf-8').write(body)
           PY
-          gh release create "$GITHUB_REF_NAME" "build/release/Arris-$V.zip" --title "Arris $V" --notes-file notes.md --verify-tag
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            gh release create "$GITHUB_REF_NAME" "build/release/Arris-$V.zip" --title "Arris $V" --notes-file notes.md --verify-tag
+          else
+            # a release by hand: the tag v<version> is made on this run's commit
+            gh release create "v$V" "build/release/Arris-$V.zip" --title "Arris $V" --notes-file notes.md --target "$GITHUB_SHA"
+          fi
