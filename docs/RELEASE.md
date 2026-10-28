@@ -28,7 +28,9 @@ between runs, then runs pytest and fontbakery (any FAIL or ERROR stops
 it), packages the zip, and publishes the release with the zip and this
 file's section for the version. Run it by hand (Actions, Release, Run
 workflow) to build and check without publishing: the zip is the run's
-artifact. The runners have no GPU, so the workflow skips
+artifact; run it on main with "publish" ticked to release that commit
+without pushing a tag (it tags `v<version>` itself, and refuses a version
+already tagged). The runners have no GPU, so the workflow skips
 `tools/vf_spikes.py`; run it on a GPU machine before tagging when the
 variable fonts' masters or interpolation change.
 
