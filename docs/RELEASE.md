@@ -2,8 +2,9 @@
 
 ## Cutting a release
 
-1. Set `VERSION` in `src/arris/font.py` (the fonts' version string,
-   `head.fontRevision` and the unique ID all follow it).
+1. Set `VERSION` in `src/arris/version.py` (the fonts' version string,
+   `head.fontRevision` and the unique ID all follow it; outside the drawing
+   cache's key, so it redraws nothing).
 2. Rebuild everything: `tools/rebuild.sh` (every static weight in a
    process of its own, then both variable fonts with their interpolation
    check, then pytest and fontbakery side by side, and the zip;

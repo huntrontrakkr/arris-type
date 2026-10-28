@@ -103,7 +103,7 @@ def _engine_hash():
         root = Path(__file__).resolve().parent
         h = hashlib.sha1()
         for f in sorted(root.rglob('*')):
-            if f.is_file() and '__pycache__' not in f.parts:
+            if f.is_file() and '__pycache__' not in f.parts and f.name != 'version.py':
                 h.update(str(f.relative_to(root)).encode())
                 h.update(f.read_bytes())
         _ENGINE = h.hexdigest()
@@ -430,7 +430,7 @@ def _nonhinting(font):
     font['gasp'] = gasp
 
 
-VERSION = '1.001'
+from .version import VERSION  # noqa: E402
 REPO = 'https://github.com/huntrontrakkr/arris-type'
 COPYRIGHT = f'Copyright 2026 The Arris Project Authors ({REPO})'
 LICENSE = ('This Font Software is licensed under the SIL Open Font License, Version 1.1. '
