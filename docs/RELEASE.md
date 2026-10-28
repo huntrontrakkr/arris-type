@@ -19,6 +19,19 @@
    version, the licence URL and installable embedding.
 5. Tag the commit `v<version>`; attach the zip to the GitHub release.
 
+Or let GitHub do steps 2 to 5: write the release's section below, set
+`VERSION`, merge to `main`, and push the tag (`git tag v<version> &&
+git push origin v<version>`). The Release workflow
+(`.github/workflows/release.yml`) builds each static family and each
+variable font on a runner of its own, keeping each job's drawing cache
+between runs, then runs pytest and fontbakery (any FAIL or ERROR stops
+it), packages the zip, and publishes the release with the zip and this
+file's section for the version. Run it by hand (Actions, Release, Run
+workflow) to build and check without publishing: the zip is the run's
+artifact. The runners have no GPU, so the workflow skips
+`tools/vf_spikes.py`; run it on a GPU machine before tagging when the
+variable fonts' masters or interpolation change.
+
 ## Licence and metadata
 
 SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors

@@ -1,0 +1,148 @@
+# Build, check and publish a release.
+#
+# Push a tag v<version> (matching src/arris/version.py) and this builds every
+# font on GitHub's runners, checks them, packages the zip and publishes the
+# release with it, the notes taken from docs/RELEASE.md. Run it by hand
+# (Actions, "Release", Run workflow) to build and check without publishing:
+# the zip is left as the run's artifact.
+#
+# The build is split across runners as tools/rebuild.sh splits it across
+# cores: each static family on one, each variable font on one of its own.
+# Each job keeps its drawing cache (build/cache/draw.sqlite) between runs,
+# keyed by the engine's source, so a release that changes no drawing redraws
+# nothing. The GPU spike check (tools/vf_spikes.py) needs a CUDA GPU, which
+# these runners lack: run it on a GPU machine before tagging if the variable
+# fonts' interpolation changed.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  static:
+    name: static ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { name: arris, args: '' }
+          - { name: watch, args: 'watch' }
+          - { name: mono, args: 'mono' }
+          - { name: italic, args: 'italic' }
+          - { name: mono-italic, args: 'mono italic' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/cache@v4
+        with:
+          path: build/cache
+          key: draw-${{ matrix.name }}-${{ hashFiles('src/**', 'uv.lock') }}
+          restore-keys: draw-${{ matrix.name }}-
+      - run: uv sync --frozen
+      - name: Build
+        run: ARRIS_BUILD_WORKERS=$(nproc) uv run python tools/build_fonts.py all ${{ matrix.args }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fonts-static-${{ matrix.name }}
+          path: build/*.ttf
+          if-no-files-found: error
+
+  variable:
+    name: variable ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { name: upright, args: '' }
+          - { name: italic, args: 'italic' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/cache@v4
+        with:
+          path: build/cache
+          key: draw-vf-${{ matrix.name }}-${{ hashFiles('src/**', 'uv.lock') }}
+          restore-keys: draw-vf-${{ matrix.name }}-
+      - run: uv sync --frozen
+      - name: Build (with its interpolation check)
+        run: ARRIS_VF_WORKERS=$(nproc) uv run python tools/build_vf.py ${{ matrix.args }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fonts-variable-${{ matrix.name }}
+          path: build/Arris*GRAD*.ttf
+          if-no-files-found: error
+
+  release:
+    needs: [static, variable]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fonts-*
+          path: build
+          merge-multiple: true
+      - name: Version
+        id: v
+        run: |
+          V=$(uv run python -c "import sys; sys.path.insert(0, 'src'); from arris.version import VERSION; print(VERSION)")
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$V" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match src/arris/version.py ($V)"; exit 1
+          fi
+      - name: pytest
+        run: uv run python -m pytest -q tests
+      - name: fontbakery (no FAIL, no ERROR)
+        run: |
+          FB="uvx --quiet --from fontbakery fontbakery check-universal -l WARN"
+          set +e
+          { $FB build/Arris-Regular.ttf build/Arris-Italic.ttf build/Arris-Black.ttf build/Arris-BlackItalic.ttf
+            $FB "build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf"
+            $FB build/ArrisMono-Regular.ttf build/ArrisMono-Black.ttf; } > fontbakery.log 2>&1
+          set -e
+          if grep -E "ERROR:|FAIL:" fontbakery.log; then echo "::error::fontbakery reports FAILs or ERRORs"; exit 1; fi
+      - name: Package
+        run: uv run python tools/package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Arris-${{ steps.v.outputs.version }}
+          path: build/release/Arris-${{ steps.v.outputs.version }}.zip
+      - name: Publish
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          # the release's notes: what Arris is, then this version's section of docs/RELEASE.md
+          uv run python - <<'PY'
+          import os, re
+          v = os.environ['V']
+          notes = open('docs/RELEASE.md', encoding='utf-8').read()
+          m = re.search(rf'^## {re.escape(v)}\b.*?\n(.*?)(?=^## |\Z)', notes, re.S | re.M)
+          body = (
+              'Arris is a chamfered sans: octagonal and monoline, every outer corner cut at 45 degrees. '
+              'Nine weights in upright, italic and mono, plus variable fonts with weight, grade and watch axes. '
+              'Free and open under the SIL Open Font License 1.1, with no Reserved Font Name.\n\n'
+              f'**Download:** `Arris-{v}.zip` below: the static fonts (TTF), the two variable fonts, '
+              'web fonts (WOFF2), the licence and a README.\n\n'
+              f'### What\'s new in {v}\n\n' + (m.group(1).strip() if m else '') + '\n\n'
+              'Full notes: [docs/RELEASE.md](https://github.com/huntrontrakkr/arris-type/blob/main/docs/RELEASE.md).\n')
+          open('notes.md', 'w', encoding='utf-8').write(body)
+          PY
+          gh release create "$GITHUB_REF_NAME" "build/release/Arris-$V.zip" --title "Arris $V" --notes-file notes.md --verify-tag
