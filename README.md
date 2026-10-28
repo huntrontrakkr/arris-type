@@ -101,6 +101,14 @@ and where the optical corrections come from. In short:
 
 ## Licence
 
+Arris is free and open: the fonts, and everything here that makes them (the
+drawing engine in `src/`, the build and check scripts in `tools/`, the
+documentation), are under the [SIL Open Font Licence 1.1](OFL.txt), with no
+Reserved Font Name. Use them for anything, commercial work included; embed
+them in apps, documents and websites; modify and redistribute them. The one
+thing the licence asks: the fonts are not sold by themselves, and modified
+versions stay under it.
+
 The watch's Draft lettering in `heritage/` is Apache-2.0 (Dymaxion
-contributors). Arris is intended for release under the SIL Open Font Licence
-1.1.
+contributors). The pictures the presentation sets in type are public domain
+or CC0 (`presentation/sources/SOURCES.md`).
