@@ -27,7 +27,7 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
-## Unreleased
+## 1.002 (2026-10-27)
 
 - Variable fonts: the GPU check (`tools/vf_spikes.py`, 7,667 places per
   glyph) found 1.001's sparse layout of masters carrying 675 upright glyphs
@@ -43,9 +43,10 @@ before a commercial distribution if wanted.
   its nodes holds everywhere between them: on the full grid nothing can
   go past its masters, and each glyph then drops the masters it does not
   need, one at a time, while those left reproduce every one dropped
-  within a unit (and span its box). Deltas are IUP-optimised as varLib
-  does. `tools/vf_compare.py` compares a build with a release at the
-  places no build chooses masters from.
+  within 2 units (and span its box). `tools/vf_compare.py` compares a
+  build with a release at the places no build chooses masters from: a
+  point more than 60 units off at 86 held-out places upright (1.001: 213)
+  and 175 italic (351).
 - Symbols: a symbol's separate whites are counted as pieces a disk half a
   stroke across can move about in, not as the union of such disks, which
   joined two whites where disks either side of a pinch overlapped. ∭ was
@@ -55,7 +56,8 @@ before a commercial distribution if wanted.
   longer thinned where nothing closes. ↫ ↬ and the Mono semicolon now keep
   a white they have at Regular, lightening at Bold and Black.
 - `tools/vf_spikes.py` runs in `tools/rebuild.sh`'s checks.
-- Variable fonts under 9 MB (fontbakery's file size): kerning pairs across
+- Variable fonts still under 9 MB (fontbakery's file size) with all that:
+  7.9 MB upright and 8.9 MB italic (1.001: 6.5 and 8.3). Kerning pairs across
   scripts (a Latin letter beside a Cyrillic or Greek one, a glyph's scripts
   being all those its characters are in) are no longer written: shapers
   break text into runs of one script before kerning, so they were never
