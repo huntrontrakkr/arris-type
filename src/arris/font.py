@@ -115,15 +115,26 @@ def _db():
     global _DB
     import os
     import sqlite3
+    import time
     path = os.environ.get('ARRIS_CACHE', str(Path(__file__).resolve().parents[2] / 'build' / 'cache' / 'draw.sqlite'))
     if not path:
         return None
     if _DB is None or _DB[0] != os.getpid():
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         con = sqlite3.connect(path, timeout=300, isolation_level=None)
-        con.execute('PRAGMA journal_mode=WAL')
+        # a fresh file: workers racing to switch it to WAL get "locked" at
+        # once, not after the timeout, so try again until one has (WAL stays
+        # with the file, and the switch is then a no-op for the rest)
+        for tries in range(200):
+            try:
+                con.execute('PRAGMA journal_mode=WAL')
+                con.execute('CREATE TABLE IF NOT EXISTS draw (k TEXT PRIMARY KEY, e TEXT, v BLOB)')
+                break
+            except sqlite3.OperationalError as e:
+                if 'locked' not in str(e) or tries == 199:
+                    raise
+                time.sleep(0.05)
         con.execute('PRAGMA synchronous=NORMAL')
-        con.execute('CREATE TABLE IF NOT EXISTS draw (k TEXT PRIMARY KEY, e TEXT, v BLOB)')
         _DB = (os.getpid(), con)
     return _DB[1]
 
