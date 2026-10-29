@@ -126,13 +126,15 @@ jobs:
         run: uv run python -m pytest -q tests
       - name: fontbakery (no FAIL, no ERROR)
         run: |
+          # fontbakery exits 1 on any FAIL, FATAL or ERROR (its -e default); its
+          # summary lists every level, at 0 too, so the log is not grepped for them
           FB="uvx --quiet --from fontbakery fontbakery check-universal -l WARN"
-          set +e
-          { $FB build/Arris-Regular.ttf build/Arris-Italic.ttf build/Arris-Black.ttf build/Arris-BlackItalic.ttf
-            $FB "build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf"
-            $FB build/ArrisMono-Regular.ttf build/ArrisMono-Black.ttf; } > fontbakery.log 2>&1
-          set -e
-          if grep -E "ERROR:|FAIL:" fontbakery.log; then echo "::error::fontbakery reports FAILs or ERRORs"; exit 1; fi
+          bad=0
+          $FB build/Arris-Regular.ttf build/Arris-Italic.ttf build/Arris-Black.ttf build/Arris-BlackItalic.ttf >> fontbakery.log 2>&1 || bad=1
+          $FB "build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf" >> fontbakery.log 2>&1 || bad=1
+          $FB build/ArrisMono-Regular.ttf build/ArrisMono-Black.ttf >> fontbakery.log 2>&1 || bad=1
+          grep -E "^ *(ERROR|FATAL|FAIL|WARN): [0-9]+" fontbakery.log || true
+          if [ $bad = 1 ]; then cat fontbakery.log; echo "::error::fontbakery reports FAILs or ERRORs"; exit 1; fi
       - name: Package
         run: uv run python tools/package.py
       - uses: actions/upload-artifact@v4
