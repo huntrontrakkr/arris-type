@@ -73,6 +73,16 @@ the weight axis alone. The causes, and what changed:
   next.
 - The build can take a census of where each glyph's drawing jumps
   (`tools/vf_planes.py`) and give the glyph masters just either side.
+- ⏭ ⏮: the triangles join the bar instead of touching it. The front
+  triangle's tip sat on the bar's edge, one ring or two by the rounding of
+  the weight, and a master drawn in the other state could not be aligned;
+  the tip now reaches into the bar.
+
+The build's interpolation check, 1.004 to the trial build of these changes
+(before ⏭'s): upright, glyph-weights more than 3 units from the drawing
+1173 to 867 and points more than 60 units off 190 to 139 (in 82 glyphs to
+44); italic 4024 to 2428 and 790 to 520 (215 glyphs to 137). Most of what
+remains was ⏭.
 
 ## 1.004 (2026-10-30)
 
