@@ -258,9 +258,7 @@ def sigma(g):
     f = Frame(g, 9.5, 'lower')
     W = f.W
     xr = W - 1.5 * f.p.m - f.p.sv / 2
-    # the bowl's top right is a junction, the bar running on over it, so
-    # it is square: cut, it left a notch under the bar
-    g.stroke(B(*f.P(1, 1)), B(xr, f.Y(1)), (xr, f.Y(8)), f.P(1, 8), closed=True)
+    g.stroke(B(*f.P(1, 1)), B(xr, f.Y(1)), B(xr, f.Y(8)), f.P(1, 8), closed=True)
     g.stroke(f.P(4, 8), (W, f.Y(8)))
 
 
