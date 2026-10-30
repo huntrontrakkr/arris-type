@@ -323,10 +323,11 @@ DEBUG = bool(__import__('os').environ.get('ARRIS_VF_DEBUG'))     # every candida
 # font instead of being drawn out between two masters fifty or a hundred
 # apart (a slit filling, a bar fusing, a stub going).
 PLANES: dict = {}
-if __import__('os').environ.get('ARRIS_VF_PLANES'):
+_planes_path = __import__('os').environ.get('ARRIS_VF_PLANES', str(Path(__file__).resolve().parent / 'vf_planes.json'))
+if _planes_path and Path(_planes_path).is_file():
     import json as _json
-    PLANES = {k: [tuple(q) for q in v] for k, v in _json.load(open(__import__('os').environ['ARRIS_VF_PLANES'])).items()}
-    print(_took(), 'census planes for', len(PLANES), 'glyphs')
+    PLANES = {k: [tuple(q) for q in v] for k, v in _json.load(open(_planes_path)).items()}
+    print(_took(), 'census planes for', len(PLANES), 'glyphs, from', _planes_path)
 REFINE_STEPS = int(__import__('os').environ.get('ARRIS_VF_REFINE', '12'))   # places tried for a finer grid
 PRUNE = float(__import__('os').environ.get('ARRIS_VF_PRUNE', '2.0'))   # font units: what a dropped master may move
 

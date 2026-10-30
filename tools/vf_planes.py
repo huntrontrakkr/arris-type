@@ -6,6 +6,7 @@ move the outline far more than the glyph's usual step, as (wght, GRAD, WTCH)
 just before and at the jump.
 
 usage: vf_planes.py out.json census.jsonl:GRAD:WTCH [...]
+(build_vf.py reads tools/vf_planes.json if it is there, or ARRIS_VF_PLANES)
 """
 import json
 import sys
