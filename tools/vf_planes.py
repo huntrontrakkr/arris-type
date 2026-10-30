@@ -8,7 +8,6 @@ just before and at the jump.
 usage: vf_planes.py out.json census.jsonl:GRAD:WTCH [...]
 """
 import json
-import statistics
 import sys
 
 out = sys.argv[1]
@@ -21,13 +20,24 @@ for arg in sys.argv[2:]:
         if 'error' in r or len(r.get('steps', [])) < 3:
             continue
         steps = r['steps']
-        med_mv = statistics.median(s[2] for s in steps[1:]) or 0.5
-        med_mx = statistics.median(s[3] for s in steps[1:]) or 2.0
         jumps = []
-        for prev, s in zip(steps, steps[1:]):
+        for i, (prev, s) in enumerate(zip(steps, steps[1:])):
             w, mv, mx = s[0], s[2], s[3]
-            if (mv > 2.5 * med_mv and mv > 2.0) or (mx > 3 * med_mx and mx > 20):
-                jumps.append((max(mx, 10 * mv), prev[0], w))
+            # a jump: a step that moves the outline far more than the steps
+            # either side of it (a steady growth, however fast, is not one)
+            near = [q for q in (steps[i - 1] if i >= 1 else None, steps[i + 2] if i + 2 < len(steps) else None) if q]
+            n_mv = max((q[2] for q in near), default=0.0); n_mx = max((q[3] for q in near), default=0.0)
+            if not ((mv > 2.5 * n_mv and mv > 2.0) or (mx > 3 * n_mx and mx > 20)):
+                continue
+            # a jump that the drawing undoes within three steps (a rule that
+            # fires at one weight and lets go at the next: ⁜'s lightening) is
+            # no place for a master: the font's masters sit outside it, and
+            # masters inside would carry the flicker into the font
+            same = lambda a, b: a[1] == b[1] and abs(a[5] - b[5]) < 0.02 and a[6] == b[6]   # structure, lightening, free variables
+            if any(same(steps[j], prev) for j in range(i + 2, min(i + 5, len(steps)))) or \
+                    any(same(s, steps[j]) for j in range(max(0, i - 3), i)):     # (or is itself the undoing)
+                continue
+            jumps.append((max(mx, 10 * mv), prev[0], w))
         jumps.sort(reverse=True)
         for _, w0, w1 in jumps[:3]:          # the three biggest: a plane costs the glyph six masters
             planes.setdefault(r['n'], set()).update({(w0, g, t), (w1, g, t)})
