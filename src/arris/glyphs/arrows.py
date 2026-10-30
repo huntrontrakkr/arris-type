@@ -932,8 +932,8 @@ class LArrow(Framed):
 
 @dataclass(frozen=True)
 class Circle(Framed):
-    """An open octagon with a head at its top (↻; ``mirror``: ↺), or an
-    arch with a head at its foot (↷; ``mirror``: ↶)."""
+    """An open octagon with a head in its top right corner (↻; ``mirror``:
+    ↺), or an arch with a head at its foot (↷; ``mirror``: ↶)."""
     semi: bool = False
     mirror: bool = False
 
@@ -947,16 +947,42 @@ class Circle(Framed):
         white = 0.75 * p.sv
         leg = p.leg + 0.5 * p.m
         if not self.semi:
-            # from the ring's foot to the head's upper barb: the cap height,
-            # unless the ring needs more room for the barb hanging inside it
-            R = max((p.cap - ctx.sh / 2 - (h + kb)) / 2, (ctx.sh + h + kb + white) / 2, leg + p.sv)
-            if p.mono:
-                R = min(R, (p.fig_w - p.sv) / 2)
-            x_tip = R - p.sv / 2 - white - kb
-            y_s = R - leg - 0.5 * p.sv
-            parts = [chev(ctx, (x_tip, R), (1, 0), h),
-                     Part([(R, y_s), B(R, -R, leg), B(-R, -R, leg), B(-R, R, leg), (x_tip - 0.01 * ctx.ts, R)],
-                          'flat', 'flat')]
+            # the head is a diagonal arrow's (one barb level, one upright) in
+            # the ring's top right corner, pointing on round it: the ring
+            # runs into it down a cut from the top's middle toward the right
+            # side's, so its level barb lies across the ring, and the upright
+            # one stands where the corner was. Nothing meets: the level barb
+            # keeps half a stem of white under the ring's top (the cut comes
+            # no higher), and the right side, under the head's point, starts
+            # as far below it. Where heavy strokes leave no room for both,
+            # the cut comes up, then that side shortens to a stub on its
+            # foot's corner, then the corner itself shortens; the ring, from
+            # its foot to the upright barb's end, is the cap height
+            kd = kb_of(ctx, (1, -1))
+            gap = WHITE * p.sv
+            clear = ctx.ts / 2 + kd + gap                     # the level barb's centreline under the top's
+            under = kd + gap + p.sv / 2                       # the right side's end under the point
+            fit = (lambda r: min(r, (p.fig_w - p.sv) / 2)) if p.mono else (lambda r: r)
+            R = fit(max((p.cap - ctx.sh) / 2, leg + p.sv))
+            for _ in range(4):
+                # in Mono's cell the ring is smaller, and the head with it
+                hh = min(0.8 * h, 0.66 * R) if p.mono else 0.8 * h
+                L = hh * SQRT2
+                hi = R - clear
+                leg_r, stub = leg, 0.5 * p.sv
+                ty = max(0.0, -R + leg_r + stub + under)
+                if ty > hi:
+                    stub = max(0.02 * p.sv, stub - (ty - hi))
+                    ty = max(0.0, -R + leg_r + stub + under)
+                if ty > hi:
+                    leg_r = max(0.5 * leg, leg_r - (ty - hi))
+                    ty = max(0.0, -R + leg_r + stub + under)
+                ty = min(ty, hi)
+                R = fit(max((p.cap - ctx.sh - max(0.0, ty + L - R)) / 2, leg + p.sv))
+            y_s = max(ty - under, -R + leg_r)
+            parts = [chev(ctx, (R, ty), (1, -1), hh),
+                     Part([(R, y_s), B(R, -R, leg_r), B(-R, -R, leg), B(-R, R, leg), (ty, R),
+                           (R - 0.01 * ctx.ts, ty + 0.01 * ctx.ts)], 'flat', 'flat')]
         else:
             # an arch: up from its left foot, over, down the right into a head
             kb2 = kb_of(ctx, (0, -1))

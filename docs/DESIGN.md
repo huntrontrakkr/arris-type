@@ -185,7 +185,8 @@ that variable until the opening is back to size:
 * the open five's bowl comes back down toward the 5's own;
 * the a's bowl lowers;
 * the e's bar rises;
-* the Q's tail shortens.
+* the Q's tail shortens;
+* the δ's neck stands up, from 45 degrees toward the 7's 2:1.
 
 Every closed counter, in letters and signs alike, keeps at least half its
 share of the stem in the watch's drawing. Where heavier strokes would close
