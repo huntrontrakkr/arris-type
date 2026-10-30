@@ -129,6 +129,7 @@ def _db():
             try:
                 con.execute('PRAGMA journal_mode=WAL')
                 con.execute('CREATE TABLE IF NOT EXISTS draw (k TEXT PRIMARY KEY, e TEXT, v BLOB)')
+                con.execute('CREATE TABLE IF NOT EXISTS anchor (k TEXT PRIMARY KEY, e TEXT, v TEXT)')   # draw._anchor
                 break
             except sqlite3.OperationalError as e:
                 if 'locked' not in str(e) or tries == 199:
@@ -146,6 +147,7 @@ def prune_cache():
     if con is None:
         return 0
     n = con.execute('DELETE FROM draw WHERE e != ?', (_engine_hash(),)).rowcount
+    con.execute('DELETE FROM anchor WHERE e != ?', (_engine_hash(),))
     con.execute('PRAGMA wal_checkpoint(TRUNCATE)')
     return n
 
