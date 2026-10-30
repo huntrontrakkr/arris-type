@@ -29,7 +29,14 @@ jobs:
         run: |
           set -euo pipefail
           gh run download "$RUN" --dir fonts
-          mapfile -t files < <(find fonts -type f \( -name '*.ttf' -o -name '*.otf' -o -name '*.zip' -o -name '*.json' \) | sort)
+          # the variable fonts, the zip and any report; named without the
+          # brackets of a variable font's file name, which gh reads as a glob
+          mkdir -p out
+          while IFS= read -r f; do
+            b=$(basename "$f"); b=${b//[/-}; b=${b//]/}; b=${b//,/-}
+            cp "$f" "out/$b"
+          done < <(find fonts -type f \( -name '*GRAD*.ttf' -o -name '*.zip' -o -name '*.json' \) | sort)
+          mapfile -t files < <(find out -type f | sort)
           printf '%s\n' "${files[@]}"
           tag="trial-$RUN"
           if gh release view "$tag" > /dev/null 2>&1; then
