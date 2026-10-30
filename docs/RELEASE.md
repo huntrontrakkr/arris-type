@@ -42,6 +42,25 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.004 (2026-10-30)
+
+- ↻ ↺ redrawn. The head was a full chevron on the ring's top, pointing
+  sideways, its lower barb hanging inside a ring barely wider than it: from
+  about 250 its white against the ring's top closed into slivers, and the
+  ring grew with the weight to make room. The head is now a diagonal
+  arrow's, one barb level and one upright, in the ring's top right corner,
+  pointing on round it; the ring runs into it down a cut from the top's
+  middle toward the right side's. The level barb keeps half a stem of
+  white under the ring's top and the right side starts as far below the
+  point; where heavy strokes leave no room for both, the cut comes up and
+  the right side shortens to a stub on its corner, so nothing meets at
+  any weight. In Mono the head is as small as Mono's ring.
+- δ keeps the white under its bar. At 45 degrees its neck took as much
+  room across as the bar, and from about 450 heavier strokes filled that
+  white. The neck is now an opening the engine keeps (DESIGN.md, "Openings
+  stay open"): 45 degrees through Medium, standing up toward the 7's 2:1 as
+  far as the white needs (0.91 of its run at 600, 0.54 at 900).
+
 ## 1.003 (2026-10-28)
 
 - `ss20`, Watch pixels, now lights the time colon too. Between figures,
