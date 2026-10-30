@@ -643,13 +643,13 @@ def _glyph(n):
                     if e > LOCAL_TOL and loc not in tried and any(v not in a for v, a in zip(loc, axes))]
             if not todo:
                 break
-            e, place = max(todo)
-            tried.add(place)
+            e, spot = max(todo)
+            tried.add(spot)
             step = None
             for i in range(3):
-                if place[i] in axes[i]:
+                if spot[i] in axes[i]:
                     continue
-                ax2 = [sorted(a + [place[i]]) if j == i else a for j, a in enumerate(axes)]
+                ax2 = [sorted(a + [spot[i]]) if j == i else a for j, a in enumerate(axes)]
                 have = set(ns)
                 new = [m for m in product(*ax2) if m not in have]
                 if len(ns) + len(new) > NODES_MAX:
@@ -667,7 +667,7 @@ def _glyph(n):
             if step is not None and total(step[0]) < 0.98 * total(errs):
                 errs, axes, ns, var, al = step
             if DEBUG:
-                print(f'  {n} finer grid, tried {place}: {max(errs.values()):.1f}, axes {axes}', flush=True)
+                print(f'  {n} finer grid, tried {spot}: {max(errs.values()):.1f}, axes {axes}', flush=True)
         # kept if it does better than the best candidate (not only better
         # than the grid it started from: a predicted one may be best), or
         # as well with the glyph nearer its drawings overall
