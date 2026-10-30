@@ -374,6 +374,15 @@ and a line of text keeps its length. Glyphs as narrow as a stem (I, i, dots)
 thicken outward about their centre; everything else thickens inward from
 its edges.
 
+A positive grade fades out from SemiBold to Black (`instances.GRAD_TAPER`):
+at Black it adds nothing, so the heaviest stroke the fonts draw is Black's
+own. Past Black's stroke the drawings had no room. With a fifth more, some
+three hundred glyphs fused, kinked or lost a terminal between 750 and 900
+(the ? its hook's stub, the ‡ its bars, the $ its counters), and the
+variable font smeared each change across the weights between its masters.
+A negative grade thins, which the drawings have room for, and keeps its
+full reach.
+
 **Recommended grade.** A light–dark border looks shifted about 0.4
 arcminutes toward the dark side (Westheimer), so a light stroke on dark
 gains about 0.8 arcminutes. At the watch's 36-pixel figures that is 11% of

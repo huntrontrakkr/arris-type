@@ -755,9 +755,9 @@ def _lighter(p):
     watch balance of a cut: instances.params, Mono or not, italic or not);
     else None (a set derived from one: small capitals, small figures)."""
     if p not in _CANON:
-        from .instances import GRAD_SHARE, params, stem
+        from .instances import params, stem
         out = None
-        grad = round((p.grade_k - 1) / GRAD_SHARE, 6)
+        grad = p.grad
         base_sv = p.sv / p.grade_k
         lo, hi = 1.0, 1000.0
         for _ in range(40):                                 # the weight whose stem p has
@@ -934,6 +934,20 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
             if len(trial.rings()) == len(g.rings()):         # it thins; it never changes the topology
                 overrides['sh_auto'] = b                      # (the variable font's masters must agree)
                 g = trial
+    # the horizontals thinned at least as much as at the lighter named weights
+    # of the same cut (as the lock below, and the squint rule): solved weight
+    # by weight, the thinning went back and forth in a score of glyphs (@ &
+    # § ¥), and the variable font pulsed between its masters
+    if auto is not None and p.sv > _regular_sv(p):
+        lighter = _lighter(p)
+        if lighter:
+            k_here = overrides.get('sh_auto', 1.0)
+            k_min = min([k_here] + [_anchor(name, q, ot, ob, width)[1].get('sh_auto', 1.0) for q in lighter])
+            if k_min < k_here - 1e-9:
+                trial = _build(spec, p, ot, ob, {**overrides, 'sh_auto': k_min}, width)
+                if _topology(trial) in (_topology_reference(spec, p), _topology(g)):
+                    overrides['sh_auto'] = k_min
+                    g = trial
     for sq in spec.squint:
         if sq.free not in g.defaults:
             continue
@@ -1009,4 +1023,37 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                 b -= LOCK_MARGIN
             g = settled(k0 * b)
             g.lightened = k0 * b
+    # Lightened at least as much as the lighter named weights of the same cut
+    # (the squint rule is monotone the same way: _squint_monotone). The lock
+    # decided weight by weight on a yes-or-no test, so $ lightened to 0.8 from
+    # Bold to 850 and not at all at 875, where its topology happened to match
+    # again, and the variable font pulsed a fifth of a stroke between its
+    # masters there. A heavier weight now keeps the lighter weights' lightening
+    # unless that would change its topology.
+    if p.floor and g.strokes and not g.extra and p.sv > _regular_sv(p):
+        lighter = _lighter(p)
+        if lighter:
+            k_here = getattr(g, 'lightened', 1.0)
+            k_min = min([k_here] + [_anchor(name, q, ot, ob, width)[0] for q in lighter])
+            if k_min < k_here - 1e-9:
+                trial = settled(k_min)
+                # taken unless it changes the topology for the worse: one
+                # the lock could not restore ($ at 875, its counters gone
+                # lightened or not) stays as wrong, and continuous
+                if _topology(trial) in (_topology_reference(spec, p), _topology(g)):
+                    g = trial
+                    g.lightened = k_min
     return g
+
+
+_ANCHOR: dict = {}
+
+
+def _anchor(name, p, ot, ob, width) -> tuple:
+    """(how much a glyph's strokes are lightened, its free variables) as
+    drawn at p, remembered: what a heavier weight of the same cut keeps to."""
+    key = (name, p, ot, ob, width)
+    if key not in _ANCHOR:
+        g = draw(name, p, ot, ob, width)
+        _ANCHOR[key] = (getattr(g, 'lightened', 1.0), dict(getattr(g, 'overrides', {})))
+    return _ANCHOR[key]

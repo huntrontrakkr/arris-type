@@ -30,6 +30,7 @@ class Params:
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
     mono: bool = False         # monospaced: every glyph on the figures' pitch
     grade_k: float = 1.0       # grade: strokes scaled by this, widths and spacing untouched
+    grad: float = 0.0          # the grade itself (GRAD), for the lighter weights of the same cut (draw._lighter)
     slant: float = 0.0         # italic: tan of the slant (outlines are sheared when built)
     floor: float = 0.0         # no stroke drawn thinner (instances.stroke_floor); 0 for the heritage
     raw: tuple | None = None   # (sv, sh, sd, ss) before the floor, where it raised them
@@ -68,7 +69,7 @@ class Params:
         return s
 
     def scaled(self, k: float) -> 'Params':
-        keep = ('mono', 'grade_k', 'slant', 'raw')
+        keep = ('mono', 'grade_k', 'grad', 'slant', 'raw')
         out = Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})
         return replace(out, raw=tuple(v * k for v in self.raw) if self.raw else None)
 
@@ -77,7 +78,7 @@ class Params:
         if k == 1.0:
             return self
         sv, sh, sd, ss = self.raw if self.raw else (self.sv, self.sh, self.sd, self.ss)
-        return self.with_(sv=sv / k, sh=sh / k, sd=sd / k, ss=ss / k, c=self.c / k, grade_k=1.0)
+        return self.with_(sv=sv / k, sh=sh / k, sd=sd / k, ss=ss / k, c=self.c / k, grade_k=1.0, grad=0.0)
 
 
 def outer_leg(p: Params, sv: float | None = None, sh: float | None = None) -> float:

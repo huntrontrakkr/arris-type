@@ -41,9 +41,13 @@ from arris.variable import align
 
 # (wght, GRAD, WTCH)
 # Masters where the interpolation check found the drawing bends between them:
-# every 100 on the weight axis up to 700 (the 1's flag, ŉ, the digraphs).
+# every 100 on the weight axis up to 700 (the 1's flag, ŉ, the digraphs). On
+# the grade's ends, SemiBold and ExtraBold too: a positive grade fades out
+# from SemiBold to Black (instances.GRAD_TAPER), so the grade's change bends
+# at 600, and from three weights the model carried less than half of it
+# there; and the heavy grades are where the drawings change most.
 BASE = [(w, 0, 0) for w in (100, 200, 300, 400, 500, 600, 700, 750, 800, 850, 900)] + \
-    [(w, g, 0) for w in (100, 400, 900) for g in (-100, 100)] + \
+    [(w, g, 0) for w in (100, 400, 600, 800, 900) for g in (-100, 100)] + \
     [(w, 0, 100) for w in (100, 400, 600, 800, 900)]
 # Masters where the grade and the watch meet. Without them the font adds
 # the grade's change and the watch's there, and a point that slides along
@@ -53,7 +57,7 @@ BASE = [(w, 0, 0) for w in (100, 200, 300, 400, 500, 600, 700, 750, 800, 850, 90
 # corner master carries the exact drawing where it aligns with the others
 # and interpolates better so, else the outline the other masters predict
 # there (no change: ŀ, whose dot meets its l at the heavy corner, 2026-10-25).
-CORNERS = [(w, g, 100) for w in (100, 400, 900) for g in (-100, 100)]
+CORNERS = [(w, g, 100) for w in (100, 400, 600, 800, 900) for g in (-100, 100)]
 MASTERS = BASE + CORNERS
 NB = len(BASE)
 # The masters a glyph is interpolated between: a full grid over the design
