@@ -323,7 +323,8 @@ DEBUG = bool(__import__('os').environ.get('ARRIS_VF_DEBUG'))     # every candida
 # font instead of being drawn out between two masters fifty or a hundred
 # apart (a slit filling, a bar fusing, a stub going).
 PLANES: dict = {}
-_planes_path = __import__('os').environ.get('ARRIS_VF_PLANES', str(Path(__file__).resolve().parent / 'vf_planes.json'))
+_planes_path = __import__('os').environ.get(
+    'ARRIS_VF_PLANES', str(Path(__file__).resolve().parent / ('vf_planes_italic.json' if ITALIC else 'vf_planes.json')))
 if _planes_path and Path(_planes_path).is_file():
     import json as _json
     PLANES = {k: [tuple(q) for q in v] for k, v in _json.load(open(_planes_path)).items()}
