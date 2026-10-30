@@ -42,7 +42,7 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
-## 1.005 (unreleased)
+## 1.005 (2026-10-30)
 
 The variable font between its masters. Sliding the weight at a heavy grade
 jumped and went crooked between the masters, and in a smaller way along
