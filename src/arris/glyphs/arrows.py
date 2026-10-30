@@ -960,13 +960,14 @@ class Circle(Framed):
             # its foot to the upright barb's end, is the cap height
             kd = kb_of(ctx, (1, -1))
             gap = WHITE * p.sv
-            hh = 0.8 * h
-            L = hh * SQRT2
             clear = ctx.ts / 2 + kd + gap                     # the level barb's centreline under the top's
             under = kd + gap + p.sv / 2                       # the right side's end under the point
             fit = (lambda r: min(r, (p.fig_w - p.sv) / 2)) if p.mono else (lambda r: r)
             R = fit(max((p.cap - ctx.sh) / 2, leg + p.sv))
             for _ in range(4):
+                # in Mono's cell the ring is smaller, and the head with it
+                hh = min(0.8 * h, 0.66 * R) if p.mono else 0.8 * h
+                L = hh * SQRT2
                 hi = R - clear
                 leg_r, stub = leg, 0.5 * p.sv
                 ty = max(0.0, -R + leg_r + stub + under)
