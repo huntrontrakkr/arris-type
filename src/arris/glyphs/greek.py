@@ -11,7 +11,7 @@ the sharp s with a descending stem).
 """
 from __future__ import annotations
 
-from ..draw import B, REGISTRY, glyph
+from ..draw import B, REGISTRY, Opening, glyph
 from ..params import SQRT2
 from .caps import big
 from .cyrillic import mirror, sc
@@ -31,8 +31,8 @@ def gcap(name, ch, wm, stems, width=None):
     return glyph(name, ch, width or letter_width(wm, stems), kind='cap')
 
 
-def glow(name, ch, wm, stems, width=None):
-    return glyph(name, ch, width or letter_width(wm, stems), kind='lower')
+def glow(name, ch, wm, stems, width=None, openings=()):
+    return glyph(name, ch, width or letter_width(wm, stems), kind='lower', openings=openings)
 
 
 # --- Capitals ----------------------------------------------------------------
@@ -138,18 +138,28 @@ def gamma(g):
     g.stroke((W / 2, ya), (W / 2, -p.desc))
 
 
-@glow('uni03B4', 'δ', 8, 2)
+def _delta_hook(g):
+    """The white under δ's bar beside its neck, halfway up the neck."""
+    return g.defaults_used['hook']
+
+
+@glow('uni03B4', 'δ', 8, 2, openings=[Opening(_delta_hook, 'neck', lambda p: 0.5)])
 def delta(g):
-    """An o under a hooked ascender: from the bowl's top a 45-degree
-    stroke up to the left, turning at the ascender into a short top bar to
-    the right. Not the 6 (whose stem stands on the bowl's left side), nor
-    the soft sign's be (б), whose flag it used to borrow."""
+    """An o under a hooked ascender: from the bowl's top a stroke up to the
+    left, turning at the ascender into a short top bar to the right. Not
+    the 6 (whose stem stands on the bowl's left side), nor the soft sign's
+    be (б), whose flag it used to borrow. The neck is 45 degrees; heavier
+    strokes would fill the white under the bar, so as they grow it stands
+    up, toward the 7's 2:1, as far as it needs to keep that white open
+    (``neck``: its run across for its rise)."""
     f = Frame(g, 8, 'asc')
     p = f.p
     g.clip = (0, -p.desc, f.W, p.asc)
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
     xl, yt, yb = f.X(1), f.Y(12), f.Y(8)
-    g.stroke((xl + (yt - yb), yb), B(xl, yt), f.P(6, 12), start='h')
+    s = g.free('neck', 1.0)
+    g.stroke((xl + s * (yt - yb), yb), B(xl, yt), f.P(6, 12), start='h')
+    g.defaults_used['hook'] = f.X(6) - (xl + s * (yt - yb) / 2 + p.sd * (1 + s * s) ** 0.5 / 2)
 
 
 @glow('uni03B5', 'ε', 8, 2)
@@ -248,7 +258,9 @@ def sigma(g):
     f = Frame(g, 9.5, 'lower')
     W = f.W
     xr = W - 1.5 * f.p.m - f.p.sv / 2
-    g.stroke(B(*f.P(1, 1)), B(xr, f.Y(1)), B(xr, f.Y(8)), f.P(1, 8), closed=True)
+    # the bowl's top right is a junction, the bar running on over it, so
+    # it is square: cut, it left a notch under the bar
+    g.stroke(B(*f.P(1, 1)), B(xr, f.Y(1)), (xr, f.Y(8)), f.P(1, 8), closed=True)
     g.stroke(f.P(4, 8), (W, f.Y(8)))
 
 
