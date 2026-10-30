@@ -206,10 +206,14 @@ keep three quarters of a stem between them; the bars of # stay a stroke
 apart; a dagger's bar moves down so the stem above it stays longer than it
 is thick; small figures' strokes ease from 0.8 to 0.68 of the figures' as
 the weight rises. Behind these sits a rule for every symbol: the white
-features it has at Regular (white at least half a stroke wide, inside its
-hull) it keeps at every weight, its strokes lightening as far as needed,
-never below 0.8 (`draw.LIGHTEN_MIN`; `tools/white_scan.py` lists what
-each weight loses).
+features it has at Regular (white at least half its heaviest stroke wide,
+inside its hull) it keeps at every weight, its strokes lightening as far
+as needed, never below 0.8 (`draw.LIGHTEN_MIN`; `tools/white_scan.py`
+lists what each weight loses). The heaviest stroke is the drawing's own:
+a sign made of diagonals alone (‹ « ^) is measured by its diagonal, not by
+a stem it has none of. Lightening and the counter thinning are monotone
+in the weight: a weight keeps at least what the next lighter named weight
+of its cut decided, so neither comes and goes along the weight axis.
 
 **A floor under every stroke.** The lightest the font draws is the Thin's
 own thinnest stroke (its horizontal, 22 units). Nothing is drawn thinner,
@@ -299,8 +303,11 @@ calibrated so that at Regular the middle rises 2.5% of the cap height
 with them, so a heavy top bowl never pinches: B's middle is 20 units up at
 Light and 10.5 at Black. At Thin, where the strokes are the stroke floor,
 the zone above the middle cannot give way without a stroke falling under
-the floor, so the rise yields (it is all but gone; `tools/stroke_scan.py`
-is the check). The correction is a piecewise-linear warp through the bars:
+the floor, so the rise yields: it comes in by degrees with the stroke,
+nothing at the floor and whole at twice it (about ExtraLight), a straight
+line in the weight that the variable font follows between its Thin and
+ExtraLight masters (`tools/stroke_scan.py` is the check). The correction
+is a piecewise-linear warp through the bars:
 the bottom bar, the middle bar and the top bar each move as one piece, so
 every stroke keeps its thickness and only the white between them stretches
 or gives way.
@@ -374,6 +381,15 @@ and a line of text keeps its length. Glyphs as narrow as a stem (I, i, dots)
 thicken outward about their centre; everything else thickens inward from
 its edges.
 
+A positive grade fades out from SemiBold to Black (`instances.GRAD_TAPER`):
+at Black it adds nothing, so the heaviest stroke the fonts draw is Black's
+own. Past Black's stroke the drawings had no room. With a fifth more, some
+three hundred glyphs fused, kinked or lost a terminal between 750 and 900
+(the ? its hook's stub, the ‡ its bars, the $ its counters), and the
+variable font smeared each change across the weights between its masters.
+A negative grade thins, which the drawings have room for, and keeps its
+full reach.
+
 **Recommended grade.** A light–dark border looks shifted about 0.4
 arcminutes toward the dark side (Westheimer), so a light stroke on dark
 gains about 0.8 arcminutes. At the watch's 36-pixel figures that is 11% of
@@ -399,6 +415,19 @@ text by up to a third of a pixel per edge on its own.
 
 Three axes: weight (100–900), grade (−100–100) and watch (0–100), the
 dial between the measured optics and the watch's own stroke balance.
+
+**Masters.** Every hundred on the weight axis, and every fifty from Bold
+up; the grade's ends at 100, 400, 600, 800 and 900 (a positive grade
+fades out from SemiBold, so its change bends at 600, and between the ends
+at 400 and 900 alone everything at a grade was predicted); the watch's end
+at 100, 400, 600, 800 and 900; and the grade's ends on the watch's end at
+the same five weights, where the two changes meet. Thirty-six in all
+(`tools/build_vf.py`, `BASE` and `CORNERS`). Each glyph then keeps only the
+masters its drawings need, and a glyph the font still draws away from its
+drawings somewhere gets masters of its own there, on a finer grid; a census
+of where each glyph's drawing jumps from one weight to the next
+(`tools/vf_planes.py`) can give it masters just either side of the jump,
+so a change the drawing makes in ten units of weight stays within them.
 
 Arris's outlines are unions of strokes cut by the corner rule. That means
 the number of points can change between weights: a junction becomes a

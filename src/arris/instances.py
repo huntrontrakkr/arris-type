@@ -3,7 +3,8 @@
 Axes:
   wght  100-900  stem weight; SemiBold (600) is the watch's heritage weight
   GRAD  -100-100 grade: strokes up to a fifth thinner or thicker in the same
-                 widths and spacing, for light-on-dark text (docs/DESIGN.md)
+                 widths and spacing, for light-on-dark text (docs/DESIGN.md);
+                 a positive grade fades out toward Black (GRAD_TAPER)
 
 Everything optical (stroke ratios by direction, edge breaks, overshoots) is
 derived here from the stem and the correction constants in ``OPTICS``, which
@@ -72,6 +73,20 @@ def stem(wght: float) -> float:
 
 FIG_GROWTH = 1.5  # figure width gained per unit of stem
 GRAD_SHARE = 0.002  # grade: GRAD 100 thickens strokes by a fifth, -100 thins them by a fifth
+# A positive grade fades out from SemiBold to Black: at Black it adds nothing,
+# so the heaviest stroke the font draws is Black's own. Past Black's stroke the
+# drawings had no room: with a fifth more, some three hundred glyphs (? ‡ $ €
+# among them) fused, kinked or lost a terminal between 750 and 900, and the
+# variable font smeared each change across the weights between its masters.
+GRAD_TAPER = (600.0, 900.0)
+
+
+def grade_k(wght: float, grad: float) -> float:
+    """What a grade scales the strokes by, at a weight."""
+    if grad > 0:
+        a, b = GRAD_TAPER
+        grad *= min(1.0, max(0.0, (b - wght) / (b - a)))
+    return 1 + grad * GRAD_SHARE
 
 
 def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Params = Params(),
@@ -87,8 +102,8 @@ def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Pa
                         c_ratio=mix(a.c_ratio, b.c_ratio), leg=mix(a.leg, b.leg))
     p = _params(wght, optics, base)
     if grad:
-        k = 1 + grad * GRAD_SHARE
-        p = p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, grade_k=k)
+        k = grade_k(wght, grad)
+        p = p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, grade_k=k, grad=grad)
     optical = 0.0 if optics == HERITAGE_OPTICS else 1.0 - watch
     return p.with_(floor=stroke_floor(base), optical=optical)
 

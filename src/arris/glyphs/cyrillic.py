@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from shapely import affinity
 
-from ..draw import AUTO_MIN, Squint, B, REGISTRY, draw, glyph
+from ..draw import AUTO_MIN, Opening, Squint, B, REGISTRY, draw, glyph
 from ..geom import rings_to_shapely
 from .caps import big
 from .figures import beak_depth, jog
@@ -28,8 +28,8 @@ ALIASES = {
 }
 
 
-def ccap(name, ch, wm, stems, width=None, squint=()):
-    return glyph(name, ch, width or letter_width(wm, stems), kind='cap', squint=squint)
+def ccap(name, ch, wm, stems, width=None, squint=(), openings=()):
+    return glyph(name, ch, width or letter_width(wm, stems), kind='cap', squint=squint, openings=openings)
 
 
 # The soft sign's bowl sits in the lower half of the capital. Drawn small (the
@@ -279,12 +279,26 @@ def Eukr(g):
     g.stroke(f.P(1, 6), f.P(6, 6))
 
 
-@ccap('uni042E', 'Ю', 14, 3)
+def _yu_gap(g):
+    """The white between Ю's stem and its bowl, either side of the bar."""
+    return g.defaults_used['gap']
+
+
+@ccap('uni042E', 'Ю', 14, 3, openings=[Opening(_yu_gap, 'bowl', lambda p: 3 * p.m)])
 def Yu(g):
+    """The stem, a bar from it, and the O on the bar. The white between the
+    stem and the bowl's side keeps its share of the stem (an opening: at the
+    heavy weights it was a slit, filled at one weight and open at the next,
+    and the variable font smeared a hairline across the weights between);
+    where it would close, the bowl's left side moves in, so the O narrows a
+    little rather than touch the stem."""
     f = Frame(g, 14)
+    p = g.p
+    xb = f.X(4) + g.free('bowl', 0.0)
     g.stroke(f.P(1, 0), f.P(1, 12))
-    g.stroke(f.P(1, 6), f.P(4, 6))
-    g.stroke(B(*f.P(4, 1)), B(*f.P(13, 1)), B(*f.P(13, 11)), B(*f.P(4, 11)), closed=True)
+    g.stroke(f.P(1, 6), (xb, f.Y(6)))
+    g.stroke(B(xb, f.Y(1)), B(*f.P(13, 1)), B(*f.P(13, 11)), B(xb, f.Y(11)), closed=True)
+    g.defaults_used['gap'] = xb - f.X(1) - p.sv
 
 
 @ccap('uni042F', 'Я', 9, 2)

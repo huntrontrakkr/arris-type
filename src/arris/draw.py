@@ -448,11 +448,17 @@ def _optical(g, spec, p):
     # (a bar drawn off the middle, as the a's, the s's waist, a diagonal)
     # shrinks by that zone's scale. No stroke may shrink below the floor, so
     # the rise yields: at Thin, where the strokes are the floor, it is all but
-    # gone (tools/stroke_scan.py is the check).
+    # gone (tools/stroke_scan.py is the check). It comes in by degrees with
+    # the stroke, nothing at the floor and whole at twice it (about
+    # ExtraLight), a straight line in the weight the variable font can follow
+    # between its Thin and ExtraLight masters: yielding only as far as the
+    # floor forced it, the whole rise arrived between 100 and 110, and the
+    # font, drawing a line from Thin to ExtraLight, had a tenth of it at 110.
     if p.floor:
         zone = H - t - (m + t / 2)
         k = min(1.0, p.floor / max(min(t, p.sh), 1e-6))
-        dc = max(0.0, min(dc, zone * (1 - k) + ot))
+        ramp = min(1.0, max(0.0, (min(t, p.sh) - p.floor) / p.floor))
+        dc = max(0.0, min(dc * ramp, zone * (1 - k) + ot))
     knots = [(t, t - ob), (m - t / 2, m - t / 2 + dc), (m + t / 2, m + t / 2 + dc), (H - t, H - t + ot)]
     if not (dc or ot or ob) or not (t < m - t / 2 and m + t / 2 < H - t):
         return
@@ -532,22 +538,42 @@ WHITE_OPEN = 0.25
 _WHITE: dict = {}
 
 
-def white_features(rings, p) -> int:
+def _heaviest_stroke(g, p) -> float:
+    """The thickest stroke a drawing has, by the directions its segments run
+    in (or a thickness a node sets): a sign made of diagonals alone (‹ « ^)
+    is measured by its diagonal, not by a stem it has none of. Measured by
+    the stem, « fell short of the white rule from WTCH 60 up at the heavy
+    weights, where the watch's diagonals are thinner against the stem, and
+    was lightened there and not at the ends, which shrank it by a fifth
+    (its reach is drawn from its strokes) between one master and the next."""
+    if g is None or not getattr(g, 'strokes', None):
+        return max(p.sv, p.sh, p.sd, p.ss)
+    th = _thickness(p, g.sh)
+    best = 0.0
+    for st in g.strokes:
+        nodes = st.nodes
+        for a, b in zip(nodes, nodes[1:] + (nodes[:1] if st.closed else ())):
+            best = max(best, a.w if a.w is not None else th((b.x - a.x, b.y - a.y)))
+    return best or max(p.sv, p.sh, p.sd, p.ss)
+
+
+def white_features(rings, p, g=None) -> int:
     """How many separate pieces of readable white a drawing holds inside its
-    hull: white a disk half a stroke across fits in, and a piece is one a
-    disk can move about in (the white eroded by the disk's radius: where it
-    can be centred). Counted as the union of the disks instead (the white
-    opened), two pieces met where disks either side of a pinch overlap,
-    with no way through: ∭'s triangles under the hooks joined the whites
-    between the stems from Bold to Heavy, so the rule lightened those
-    weights, and let go at Black, where the beak's corner turned a degree."""
+    hull: white a disk half a stroke across fits in (half the drawing's
+    heaviest stroke: _heaviest_stroke), and a piece is one a disk can move
+    about in (the white eroded by the disk's radius: where it can be
+    centred). Counted as the union of the disks instead (the white opened),
+    two pieces met where disks either side of a pinch overlap, with no way
+    through: ∭'s triangles under the hooks joined the whites between the
+    stems from Bold to Heavy, so the rule lightened those weights, and let
+    go at Black, where the beak's corner turned a degree."""
     from shapely.geometry import MultiPoint
     from .geom import rings_to_shapely
     if not rings:
         return 0
     ink = rings_to_shapely(rings)
     hull = MultiPoint([q[:2] for r in rings for q in r]).convex_hull
-    r = WHITE_OPEN * max(p.sv, p.sh, p.sd, p.ss)
+    r = WHITE_OPEN * _heaviest_stroke(g, p)
     centres = hull.difference(ink).buffer(-r, join_style='mitre')
     return sum(1 for q in getattr(centres, 'geoms', [centres])
                if q.geom_type == 'Polygon' and not q.is_empty and q.buffer(r, join_style='mitre').area > 0.5 * (2 * r) ** 2)
@@ -565,7 +591,7 @@ def _white_reference(spec, p):
         from .instances import params
         ref = params(400).with_(mono=p.mono)
         g = _build(spec, ref, 0.0, 0.0, {})
-        _WHITE[key] = white_features(g.rings(), ref)
+        _WHITE[key] = white_features(g.rings(), ref, g)
     return _WHITE[key]
 
 
@@ -755,9 +781,9 @@ def _lighter(p):
     watch balance of a cut: instances.params, Mono or not, italic or not);
     else None (a set derived from one: small capitals, small figures)."""
     if p not in _CANON:
-        from .instances import GRAD_SHARE, params, stem
+        from .instances import params, stem
         out = None
-        grad = round((p.grade_k - 1) / GRAD_SHARE, 6)
+        grad = p.grad
         base_sv = p.sv / p.grade_k
         lo, hi = 1.0, 1000.0
         for _ in range(40):                                 # the weight whose stem p has
@@ -855,7 +881,7 @@ def _squint_regular(spec, p, kinds, over=None):
         ref = params(400).with_(mono=p.mono)
         reg = _build(spec, ref, 0.0, 0.0, dict(over))
         d = _squint_pieces(reg, kinds)
-        _SQUINT[key] = (min(READS, min(d, default=1.0)) - SQUINT_SLACK, len(d), white_features(reg.rings(), ref))
+        _SQUINT[key] = (min(READS, min(d, default=1.0)) - SQUINT_SLACK, len(d), white_features(reg.rings(), ref, reg))
     return _SQUINT[key]
 
 
@@ -869,7 +895,7 @@ def _read(g, count, whites) -> float:
     grade, and the squint saw no narrow white there at all. (Not every
     rule: the white features of letters at large shrink under half a stroke
     at Black by design, between a tail and its stem, a mark and its letter.)"""
-    if whites and white_features(g.rings(), g.p) < whites:
+    if whites and white_features(g.rings(), g.p, g) < whites:
         return 0.0
     return _squint(g, count=count)
 
@@ -934,6 +960,21 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
             if len(trial.rings()) == len(g.rings()):         # it thins; it never changes the topology
                 overrides['sh_auto'] = b                      # (the variable font's masters must agree)
                 g = trial
+    # the horizontals thinned at least as much as at the next lighter named
+    # weight of the same cut (as the lock below, and the squint rule), whose
+    # own thinning keeps to the one below it, and so down to the Regular:
+    # solved weight by weight, the thinning went back and forth in a score of
+    # glyphs (@ & § ¥), and the variable font pulsed between its masters
+    if auto is not None and p.sv > _regular_sv(p):
+        lighter = _lighter(p)
+        if lighter:
+            k_here = overrides.get('sh_auto', 1.0)
+            k_min = min(k_here, _anchor(name, lighter[-1], ot, ob, width)[1].get('sh_auto', 1.0))
+            if k_min < k_here - 1e-9:
+                trial = _build(spec, p, ot, ob, {**overrides, 'sh_auto': k_min}, width)
+                if _topology(trial) in (_topology_reference(spec, p), _topology(g)):
+                    overrides['sh_auto'] = k_min
+                    g = trial
     for sq in spec.squint:
         if sq.free not in g.defaults:
             continue
@@ -957,14 +998,14 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
     # (the heritage drawing is never lightened; composites rely on their parts' own rules)
     if _is_symbol(spec) and p.floor and g.strokes and not g.extra:
         want = _white_reference(spec, p)
-        if want and white_features(g.rings(), p) < want:
+        if want and white_features(g.rings(), p, g) < want:
             a, b = 1.0, LIGHTEN_MIN
             lo = _build(spec, _lightened(p, b), ot, ob, overrides, width)
-            if white_features(lo.rings(), _lightened(p, b)) >= want:
+            if white_features(lo.rings(), _lightened(p, b), lo) >= want:
                 for _ in range(16):
                     mid = (a + b) / 2
                     trial = _build(spec, _lightened(p, mid), ot, ob, overrides, width)
-                    if white_features(trial.rings(), _lightened(p, mid)) >= want:
+                    if white_features(trial.rings(), _lightened(p, mid), trial) >= want:
                         b = mid
                     else:
                         a = mid
@@ -1009,4 +1050,53 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                 b -= LOCK_MARGIN
             g = settled(k0 * b)
             g.lightened = k0 * b
+    # Lightened at least as much as the next lighter named weight of the same
+    # cut, whose own lightening keeps to the one below it, and so down to the
+    # Regular (the squint rule is monotone the same way: _squint_monotone). The lock
+    # decided weight by weight on a yes-or-no test, so $ lightened to 0.8 from
+    # Bold to 850 and not at all at 875, where its topology happened to match
+    # again, and the variable font pulsed a fifth of a stroke between its
+    # masters there. A heavier weight now keeps the lighter weights' lightening
+    # unless that would change its topology.
+    if p.floor and g.strokes and not g.extra and p.sv > _regular_sv(p):
+        lighter = _lighter(p)
+        if lighter:
+            k_here = getattr(g, 'lightened', 1.0)
+            k_min = min(k_here, _anchor(name, lighter[-1], ot, ob, width)[0])
+            if k_min < k_here - 1e-9:
+                trial = settled(k_min)
+                # taken unless it changes the topology for the worse: one
+                # the lock could not restore ($ at 875, its counters gone
+                # lightened or not) stays as wrong, and continuous
+                if _topology(trial) in (_topology_reference(spec, p), _topology(g)):
+                    g = trial
+                    g.lightened = k_min
     return g
+
+
+_ANCHOR: dict = {}
+
+
+def _anchor(name, p, ot, ob, width) -> tuple:
+    """(how much a glyph's strokes are lightened, its free variables) as
+    drawn at p: what a heavier weight of the same cut keeps to. Remembered
+    in this process and in the drawing cache (font._db), so the processes
+    that build the weights side by side each draw a glyph's lighter weights
+    once between them, not each for itself."""
+    key = (name, p, ot, ob, width)
+    if key not in _ANCHOR:
+        import hashlib
+        import json
+        from .font import _db, _engine_hash
+        con = _db()
+        k = hashlib.sha1(repr((_engine_hash(), 'anchor', key)).encode()).hexdigest() if con is not None else None
+        row = con.execute('SELECT v FROM anchor WHERE k = ?', (k,)).fetchone() if con is not None else None
+        if row is not None:
+            light, ov = json.loads(row[0])
+        else:
+            g = draw(name, p, ot, ob, width)
+            light, ov = getattr(g, 'lightened', 1.0), dict(getattr(g, 'overrides', {}))
+            if con is not None:
+                con.execute('INSERT OR REPLACE INTO anchor VALUES (?, ?, ?)', (k, _engine_hash(), json.dumps([light, ov])))
+        _ANCHOR[key] = (light, ov)
+    return _ANCHOR[key]

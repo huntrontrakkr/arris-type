@@ -41,9 +41,13 @@ from arris.variable import align
 
 # (wght, GRAD, WTCH)
 # Masters where the interpolation check found the drawing bends between them:
-# every 100 on the weight axis up to 700 (the 1's flag, ŉ, the digraphs).
+# every 100 on the weight axis up to 700 (the 1's flag, ŉ, the digraphs). On
+# the grade's ends, SemiBold and ExtraBold too: a positive grade fades out
+# from SemiBold to Black (instances.GRAD_TAPER), so the grade's change bends
+# at 600, and from three weights the model carried less than half of it
+# there; and the heavy grades are where the drawings change most.
 BASE = [(w, 0, 0) for w in (100, 200, 300, 400, 500, 600, 700, 750, 800, 850, 900)] + \
-    [(w, g, 0) for w in (100, 400, 900) for g in (-100, 100)] + \
+    [(w, g, 0) for w in (100, 400, 600, 800, 900) for g in (-100, 100)] + \
     [(w, 0, 100) for w in (100, 400, 600, 800, 900)]
 # Masters where the grade and the watch meet. Without them the font adds
 # the grade's change and the watch's there, and a point that slides along
@@ -53,7 +57,7 @@ BASE = [(w, 0, 0) for w in (100, 200, 300, 400, 500, 600, 700, 750, 800, 850, 90
 # corner master carries the exact drawing where it aligns with the others
 # and interpolates better so, else the outline the other masters predict
 # there (no change: ŀ, whose dot meets its l at the heavy corner, 2026-10-25).
-CORNERS = [(w, g, 100) for w in (100, 400, 900) for g in (-100, 100)]
+CORNERS = [(w, g, 100) for w in (100, 400, 600, 800, 900) for g in (-100, 100)]
 MASTERS = BASE + CORNERS
 NB = len(BASE)
 # The masters a glyph is interpolated between: a full grid over the design
@@ -311,6 +315,20 @@ def _dense_errors(al, mlocs):
 # (_prune: certified within PRUNE units everywhere).
 NODES_MAX = 132
 DEBUG = bool(__import__('os').environ.get('ARRIS_VF_DEBUG'))     # every candidate's error, as tried
+# Where a glyph's exact drawing jumps between one weight and the next
+# (tools/vf_planes.py, from a census of the drawings): per glyph, (wght,
+# GRAD, WTCH) places just before and just after each jump. The check looks
+# there too, and a finer grid can take a plane at either, so a change the
+# drawing makes in ten units of weight stays within those ten units in the
+# font instead of being drawn out between two masters fifty or a hundred
+# apart (a slit filling, a bar fusing, a stub going).
+PLANES: dict = {}
+_planes_path = __import__('os').environ.get(
+    'ARRIS_VF_PLANES', str(Path(__file__).resolve().parent / ('vf_planes_italic.json' if ITALIC else 'vf_planes.json')))
+if _planes_path and Path(_planes_path).is_file():
+    import json as _json
+    PLANES = {k: [tuple(q) for q in v] for k, v in _json.load(open(_planes_path)).items()}
+    print(_took(), 'census planes for', len(PLANES), 'glyphs, from', _planes_path)
 REFINE_STEPS = int(__import__('os').environ.get('ARRIS_VF_REFINE', '12'))   # places tried for a finer grid
 PRUNE = float(__import__('os').environ.get('ARRIS_VF_PRUNE', '2.0'))   # font units: what a dropped master may move
 
@@ -552,13 +570,17 @@ def _glyph(n):
         try:
             lead = aligned(nm)
             yield 'sparse', nm, lead, nodes[:nm]
-        except ValueError:
+        except ValueError as e:
             lead = None
+            if DEBUG:
+                print(f'  {n} {how} sparse: {e}', flush=True)
         try:
             full = aligned(len(nodes))
             yield 'grid', len(nodes), full, nodes
-        except ValueError:
+        except ValueError as e:
             full = None
+            if DEBUG:
+                print(f'  {n} {how} grid: {e}', flush=True)
         for k, model in LEADS[1:]:
             if full is not None:
                 yield 'predicted grid', k, _predicted(full[:k], nodes, model), nodes
@@ -593,18 +615,26 @@ def _glyph(n):
         if best is not None and best[0] <= LOCAL_TOL:
             break
     best0, errs = best, None
+    # the places the census found this glyph's drawing jumping at (PLANES):
+    # the refinement measures there too, and a plane there confines the jump
+    jumps = [q for q in PLANES.get(n, []) if q not in CHECK and q not in REFINE]
+    if jumps and best is not None and best[0] <= LOCAL_TOL:
+        _, al_b, _, _, ns_b = best
+        if max(_errors(al_b, exact, ns_b, jumps).values()) > LOCAL_TOL:
+            best = (max(_errors(al_b, exact, ns_b, jumps).values()),) + tuple(best[1:])
     if best is not None and best[0] > LOCAL_TOL:
         # a finer grid (above), from the chosen way's alignment with every
         # master drawn, a plane at a time while it helps
         _, _, variant, (jogs, how, _, _, _), _ = best
         axes, ns, var = [list(a) for a in GRID_AXES], list(nodes), list(variant)
+        places = CHECK + REFINE + jumps
 
         def realign(var, ns):
             return align([u[0] for u in var], None if how == 'star' else [LOC(m) for m in ns],
                          names=[u[3] for u in var] if how == 'named' else None)
         try:
             al = realign(var, ns)
-            errs = _errors(al, exact, ns, CHECK + REFINE)
+            errs = _errors(al, exact, ns, places)
         except ValueError:
             errs = None
         tried = set()
@@ -617,13 +647,13 @@ def _glyph(n):
                     if e > LOCAL_TOL and loc not in tried and any(v not in a for v, a in zip(loc, axes))]
             if not todo:
                 break
-            e, place = max(todo)
-            tried.add(place)
+            e, spot = max(todo)
+            tried.add(spot)
             step = None
             for i in range(3):
-                if place[i] in axes[i]:
+                if spot[i] in axes[i]:
                     continue
-                ax2 = [sorted(a + [place[i]]) if j == i else a for j, a in enumerate(axes)]
+                ax2 = [sorted(a + [spot[i]]) if j == i else a for j, a in enumerate(axes)]
                 have = set(ns)
                 new = [m for m in product(*ax2) if m not in have]
                 if len(ns) + len(new) > NODES_MAX:
@@ -633,7 +663,7 @@ def _glyph(n):
                     al2 = realign(var2, ns + new)
                 except ValueError:
                     continue
-                errs2 = _errors(al2, exact, ns + new, CHECK + REFINE)
+                errs2 = _errors(al2, exact, ns + new, places)
                 if step is None or total(errs2) < total(step[0]):
                     step = (errs2, ax2, ns + new, var2, al2)
             # kept if the glyph comes nearer its drawings overall (the worst
@@ -641,7 +671,7 @@ def _glyph(n):
             if step is not None and total(step[0]) < 0.98 * total(errs):
                 errs, axes, ns, var, al = step
             if DEBUG:
-                print(f'  {n} finer grid, tried {place}: {max(errs.values()):.1f}, axes {axes}', flush=True)
+                print(f'  {n} finer grid, tried {spot}: {max(errs.values()):.1f}, axes {axes}', flush=True)
         # kept if it does better than the best candidate (not only better
         # than the grid it started from: a predicted one may be best), or
         # as well with the glyph nearer its drawings overall
@@ -714,7 +744,7 @@ def _glyph(n):
         res0 = finish(best0)
         if res0[5] is None:
             _, al0, _, _, ns0 = best0
-            gain = total(_errors(al0, exact, ns0, CHECK + REFINE)) - total(errs)
+            gain = total(_errors(al0, exact, ns0, places)) - total(errs)
             alt = (res0[0], res0[4], gain, cost(res) - cost(res0))
     # the exact outlines at the check's places, drawn here already: the final
     # check need not draw them again
