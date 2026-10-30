@@ -570,13 +570,17 @@ def _glyph(n):
         try:
             lead = aligned(nm)
             yield 'sparse', nm, lead, nodes[:nm]
-        except ValueError:
+        except ValueError as e:
             lead = None
+            if DEBUG:
+                print(f'  {n} {how} sparse: {e}', flush=True)
         try:
             full = aligned(len(nodes))
             yield 'grid', len(nodes), full, nodes
-        except ValueError:
+        except ValueError as e:
             full = None
+            if DEBUG:
+                print(f'  {n} {how} grid: {e}', flush=True)
         for k, model in LEADS[1:]:
             if full is not None:
                 yield 'predicted grid', k, _predicted(full[:k], nodes, model), nodes

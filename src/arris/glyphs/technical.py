@@ -613,7 +613,7 @@ def media(name, char, width):
 
 W_TRI = lambda p: 2 * media_h(p)
 W_FF = lambda p: 3 * media_h(p)
-W_TRACK = lambda p: 3 * media_h(p) + bar_w(p)
+W_TRACK = lambda p: 3 * media_h(p) + bar_w(p) / 4    # the triangles reach into the bar
 W_PP = lambda p: 0.8 * (2 * media_h(p) + 2 * bar_w(p) + media_gap(p)) + media_gap(p)
 W_PAUSE = lambda p: 2 * bar_w(p) + 1.25 * media_gap(p)
 
@@ -665,16 +665,24 @@ def fastdown(g, m):
 
 @media(u(0x23ED), '⏭', W_TRACK)
 def nexttrack(g, m):
-    tri(g, 0, m.a, m.h)
-    tri(g, m.h, m.a, m.h)
-    ubar(g, g.W - m.bw / 2, m.a, m.h, m.bw)
+    """Fast-forward against a bar. The front triangle's tip reaches three
+    quarters of the way into the bar: joined, not touching (a tip on an
+    edge is one ring or two by the rounding of the weight, and the variable
+    font needs one answer), and deep enough that the join's two inside
+    corners keep their chamfers apart. The drawing is centred in the
+    advance, which a grade keeps while the ink grows or shrinks."""
+    x = (g.W - (3 * m.h + m.bw / 4)) / 2
+    tri(g, x, m.a, m.h)
+    tri(g, x + m.h, m.a, m.h)
+    ubar(g, x + 3 * m.h - m.bw / 4, m.a, m.h, m.bw)
 
 
 @media(u(0x23EE), '⏮', W_TRACK)
 def prevtrack(g, m):
-    tri(g, g.W, m.a, m.h, d=-1)
-    tri(g, g.W - m.h, m.a, m.h, d=-1)
-    ubar(g, m.bw / 2, m.a, m.h, m.bw)
+    x = g.W - (g.W - (3 * m.h + m.bw / 4)) / 2
+    tri(g, x, m.a, m.h, d=-1)
+    tri(g, x - m.h, m.a, m.h, d=-1)
+    ubar(g, x - 3 * m.h + m.bw / 4, m.a, m.h, m.bw)
 
 
 @media(u(0x23EF), '⏯', W_PP)
