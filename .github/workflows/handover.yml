@@ -1,0 +1,42 @@
+# Hand over a run's built fonts. A Release run leaves its fonts as artifacts,
+# which some networks cannot fetch; this attaches them to a draft release
+# named trial-<run id> instead (drafts are invisible to visitors and make no
+# tag). Run it by hand with the run's id; run again as more jobs finish.
+# Delete the draft when done with it.
+name: Hand over
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: The Release run whose artifacts to hand over
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  handover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN: ${{ inputs.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Attach the run's fonts to a draft release
+        run: |
+          set -euo pipefail
+          gh run download "$RUN" --dir fonts
+          mapfile -t files < <(find fonts -type f \( -name '*.ttf' -o -name '*.otf' -o -name '*.zip' -o -name '*.json' \) | sort)
+          printf '%s\n' "${files[@]}"
+          tag="trial-$RUN"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" "${files[@]}" --clobber
+          else
+            gh release create "$tag" "${files[@]}" --draft --title "Trial build $RUN" \
+              --notes "Fonts built by Release run $RUN, for checking. Not a release."
+          fi
+          echo; echo "assets:"
+          gh release view "$tag" --json assets --jq '.assets[] | "\(.name)  \(.size)  \(.apiUrl)"'
