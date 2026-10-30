@@ -42,6 +42,38 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.005 (unreleased)
+
+The variable font between its masters. Sliding the weight at a heavy grade
+jumped and went crooked between the masters, and in a smaller way along
+the weight axis alone. The causes, and what changed:
+
+- A positive grade fades out from SemiBold to Black (`instances.GRAD_TAPER`):
+  at Black it adds nothing, so the heaviest stroke the fonts draw is Black's
+  own. A fifth past Black's stroke the drawings had no room (? lost its
+  hook's stub, ‡ its bars, $ its counters, some three hundred glyphs in
+  all), and the font smeared each change across the weights between its
+  masters. A negative grade keeps its full reach.
+- The topology lock and the counter thinning are monotone in the weight: a
+  weight keeps at least what the next lighter named weight of its cut
+  decided. Decided weight by weight on yes-or-no tests, $ lightened to 0.8
+  from Bold to 850 and not at 875, ⁜ and several arrows went 1.0, 0.8,
+  0.85, 1.0, and @ & § ¥ thinned their bars back and forth.
+- The symbol white rule measures a drawing against its own heaviest stroke,
+  not the stem's whether it has one or not: « ‹ were lightened, and shrank
+  a fifth, from WTCH 60 up at the heavy weights and not at the ends.
+- The optical centre's rise comes in by degrees from Thin to about
+  ExtraLight; it arrived whole between weights 100 and 110, a kink the font
+  drew as a line from Thin to ExtraLight.
+- The variable fonts have masters on the grade's ends at 600 and 800 too
+  (36 masters, from 28): the taper bends the grade's change at 600, and
+  between 400 and 900 everything at a grade was predicted from the ends.
+- Ю keeps the white between its stem and bowl at half a stem (an opening):
+  at the heavy weights it was a slit, filled at one weight and open at the
+  next.
+- The build can take a census of where each glyph's drawing jumps
+  (`tools/vf_planes.py`) and give the glyph masters just either side.
+
 ## 1.004 (2026-10-30)
 
 - ↻ ↺ redrawn. The head was a full chevron on the ring's top, pointing

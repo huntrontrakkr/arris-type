@@ -416,6 +416,19 @@ text by up to a third of a pixel per edge on its own.
 Three axes: weight (100–900), grade (−100–100) and watch (0–100), the
 dial between the measured optics and the watch's own stroke balance.
 
+**Masters.** Every hundred on the weight axis, and every fifty from Bold
+up; the grade's ends at 100, 400, 600, 800 and 900 (a positive grade
+fades out from SemiBold, so its change bends at 600, and between the ends
+at 400 and 900 alone everything at a grade was predicted); the watch's end
+at 100, 400, 600, 800 and 900; and the grade's ends on the watch's end at
+the same five weights, where the two changes meet. Thirty-six in all
+(`tools/build_vf.py`, `BASE` and `CORNERS`). Each glyph then keeps only the
+masters its drawings need, and a glyph the font still draws away from its
+drawings somewhere gets masters of its own there, on a finer grid; a census
+of where each glyph's drawing jumps from one weight to the next
+(`tools/vf_planes.py`) can give it masters just either side of the jump,
+so a change the drawing makes in ten units of weight stays within them.
+
 Arris's outlines are unions of strokes cut by the corner rule. That means
 the number of points can change between weights: a junction becomes a
 lump, a chamfer uses up a straight, an opening's free variable moves. A
