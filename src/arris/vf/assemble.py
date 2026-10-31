@@ -117,17 +117,8 @@ def make_vf(job: Masters, forms: Mapping[str, Form]) -> TTFont:
         inst.location = {'Weight': w, 'Grade': 0, 'Watch': 0}
         doc.addInstance(inst)
     vf, _, _ = varlib_build(doc)
-    buildStatTable(vf, [
-        {'tag': 'wght', 'name': 'Weight',
-         'values': [{'value': w, 'name': nm, 'flags': 0x2 if w == 400 else 0} for w, nm in NAMES.items()]},
-        {'tag': 'GRAD', 'name': 'Grade', 'values': [{'value': 0, 'name': 'Normal', 'flags': 0x2}]},
-        {'tag': 'WTCH', 'name': 'Watch', 'values': [{'value': 0, 'name': 'Measured', 'flags': 0x2},
-                                                    {'value': 100, 'name': 'Watch'}]},
-        # the upright and the italic are one family: each names its place on ital
-        {'tag': 'ital', 'name': 'Italic',
-         'values': [{'value': 1, 'name': 'Italic'}] if job.settings.italic else
-                   [{'value': 0, 'name': 'Roman', 'flags': 0x2, 'linkedValue': 1}]},
-    ])
+    buildStatTable(vf, stat_axes(job.settings.italic))
+    name_variations(vf, job.settings.italic)
     out = job.outlines
     encode.variations(vf, job.names, out.aligned, out.own, out.composites)
     if out.composites:
@@ -135,6 +126,29 @@ def make_vf(job: Masters, forms: Mapping[str, Form]) -> TTFont:
     vf['name'].names = [nm for nm in vf['name'].names if nm.platformID != 1]   # Windows names only
     add_meta(vf)
     return vf
+
+
+def stat_axes(italic: bool, watch: bool = True) -> list[dict]:
+    """The STAT table's axes and their named values (buildStatTable's
+    form); without the watch axis for a build that leaves it out."""
+    axes = [
+        {'tag': 'wght', 'name': 'Weight',
+         'values': [{'value': w, 'name': nm, 'flags': 0x2 if w == 400 else 0} for w, nm in NAMES.items()]},
+        {'tag': 'GRAD', 'name': 'Grade', 'values': [{'value': 0, 'name': 'Normal', 'flags': 0x2}]},
+        {'tag': 'WTCH', 'name': 'Watch', 'values': [{'value': 0, 'name': 'Measured', 'flags': 0x2},
+                                                    {'value': 100, 'name': 'Watch'}]},
+        # the upright and the italic are one family: each names its place on ital
+        {'tag': 'ital', 'name': 'Italic',
+         'values': [{'value': 1, 'name': 'Italic'}] if italic else
+                   [{'value': 0, 'name': 'Roman', 'flags': 0x2, 'linkedValue': 1}]},
+    ]
+    return axes if watch else [a for a in axes if a['tag'] != 'WTCH']
+
+
+def name_variations(vf: TTFont, italic: bool) -> None:
+    """Name ID 25, the prefix of the PostScript names of the font's
+    instances: the family's, and the italic's ending in Italic."""
+    vf['name'].setName(FAMILY + ('Italic' if italic else ''), 25, 3, 1, 0x409)
 
 
 def size(vf: TTFont) -> int:

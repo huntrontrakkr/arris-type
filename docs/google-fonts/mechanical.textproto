@@ -1,0 +1,20 @@
+# MECH, proposed for the Google Fonts axis registry by Arris
+# (https://github.com/huntrontrakkr/arris-type), whose own fonts carry it as WTCH
+tag: "MECH"
+display_name: "Mechanical"
+min_value: 0
+default_value: 0
+max_value: 100
+precision: 0
+fallback {
+  name: "Default"
+  value: 0
+}
+fallback_only: false
+illustration_url: "mechanical.svg"
+description:
+  "Moves the design from its optically corrected drawing (0%)"
+  " toward strict mechanical construction (100%): strokes take"
+  " their constructed widths, so horizontals match verticals and"
+  " diagonals match stems measured across, and corrections such"
+  " as overshoot and a raised optical centre are removed."

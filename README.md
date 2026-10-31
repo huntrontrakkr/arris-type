@@ -7,6 +7,8 @@ corner cut at 45 degrees, in nine weights with three variable axes. An
 you get when you break it. Its figures are the Chamfer clock figures of the
 [Dymaxion watch face](https://github.com/huntrontrakkr/dymaxion-watch-face).
 
+Specimen, and the fonts to download: **[arristype.com](https://arristype.com)**.
+
 ![Weights](proofs/figures-weights.png)
 
 ![Italic](proofs/italic.png)
