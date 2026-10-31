@@ -13,11 +13,11 @@ region's support there: one matrix product. Two things are looked for:
   additive model pushing it where no master puts it (Δ went 440 units off
   at the heavy grade-watch corner). A drawing that itself reaches past its
   masters between them (an accent highest at 850) is listed too: see how
-  far the font is from the drawing there (tools/vf_compare.py, build_vf's
+  far the font is from the drawing there (tools/vf_compare.py, arris.vf's
   check);
 * crossings: segments of the outline (its control polygon) crossing where
   they do not at the default, deeper than a twist too small to see
-  (vfdense.crossings): a contour turned inside out or into another.
+  (arris.vf.dense.crossings): a contour turned inside out or into another.
 
 The build's own check compares with exact drawings at 47 places; this one
 has none to compare with, but looks everywhere. Writes build/vf_spikes*.json
@@ -41,7 +41,7 @@ import jax  # noqa: E402
 import jax.numpy as jnp  # noqa: E402
 from fontTools.ttLib import TTFont  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+from arris.vf import dense as vfdense  # noqa: E402
 
 HI = jax.lax.Precision.HIGHEST
 BUCKETS = (32, 64, 128, 256, 512, 1024)   # points per glyph, padded (one compiled kernel per size)
@@ -116,7 +116,6 @@ def _overshoot(P, lo, hi, mask):
 
 @jax.jit
 def _crossings(P, nxt, valid):
-    import vfdense
     return vfdense.crossings(jnp, P, nxt, valid), vfdense.deepest(jnp, P, nxt, valid)
 
 
@@ -128,7 +127,6 @@ def check_glyph(base, D, R, nxt, cid, locs, peaks, tol):
     DP = np.pad(D, ((0, 0), (0, pad), (0, 0)))
     nxtP = np.concatenate([nxt, np.arange(n, N)])
     mask = np.concatenate([np.ones(n), np.zeros(pad)])
-    import vfdense
     valid = vfdense.pair_mask(nxtP, n)          # segment pairs that count
     # positions at the masters (the regions' peaks, and the default): each point's box
     Pm = np.asarray(_outlines(jnp.asarray(peaks), baseP, DP, R))

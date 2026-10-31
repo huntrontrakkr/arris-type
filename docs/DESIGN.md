@@ -422,7 +422,7 @@ fades out from SemiBold, so its change bends at 600, and between the ends
 at 400 and 900 alone everything at a grade was predicted); the watch's end
 at 100, 400, 600, 800 and 900; and the grade's ends on the watch's end at
 the same five weights, where the two changes meet. Thirty-six in all
-(`tools/build_vf.py`, `BASE` and `CORNERS`). Each glyph then keeps only the
+(`arris.vf.space`, `BASE` and `CORNERS`). Each glyph then keeps only the
 masters its drawings need, and a glyph the font still draws away from its
 drawings somewhere gets masters of its own there, on a finer grid; a census
 of where each glyph's drawing jumps from one weight to the next
@@ -453,7 +453,7 @@ so `arris.variable.align` makes the masters compatible after the fact:
   rule's polish makes its choices by geometry, never by the direction a
   ring runs, so a symmetric drawing stays exactly symmetric to begin with.
 
-Nothing is trusted. `tools/build_vf.py` draws every glyph exactly at
+Nothing is trusted. The build (`arris.vf`) draws every glyph exactly at
 locations between the masters and compares the variable font's
 interpolation to it. With sixteen masters, every glyph varies, and the
 median outline difference is under half a unit of the 1000-unit em. The

@@ -1,0 +1,32 @@
+# Check a change: ruff and ty on the variable-font build, the drawing cache
+# and the tests (the rest of the engine predates both and is not held to
+# them yet), then pytest. The golden test (tests/test_vf_golden.py) skips
+# here: a golden build is made locally, before a change to the build.
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      - name: ruff
+        run: uvx ruff@0.17.3 check src/arris/vf src/arris/cache.py tests tools/build_vf.py tools/vf_compare.py
+      - name: ty
+        run: uvx ty@0.0.95 check src/arris/vf tests/test_cache.py tests/test_vf_golden.py
+      - name: pytest
+        run: uv run python -m pytest -q tests

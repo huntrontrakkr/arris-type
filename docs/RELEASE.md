@@ -54,10 +54,23 @@ The build, after 1.005 took nine hours of runners for one release:
   change under `src/`, a string in the name table included, redrew all
   2,179 glyphs at every master, ninety-five minutes a variable font.
 - Fontbakery runs in five jobs side by side, one a family or a variable
-  font (about fifteen minutes, from seventy-six in one job).
+  font (about fifteen minutes, from seventy-six in one job); its ital-axis
+  check, which wants each italic and its Roman in one run, is made for the
+  pairs in the upright jobs.
 - A variable font is uploaded and its cache saved as soon as it is
   written; its interpolation check runs in a job of its own on the
   uploaded font and may fail without failing the release.
+- The variable-font build is a package, `arris.vf` (`uv run python -m
+  arris.vf [italic]`; `tools/build_vf.py` still runs it): the settings, the
+  design space, the glyph stages, composites, kerning, encoding, assembly
+  and check each a module, `tools/vfdense.py` and `tools/composites.py`
+  moved in, and the census planes beside them. A characterization test
+  (`tests/test_vf_golden.py`) holds a trial build of nineteen glyphs to a
+  golden one, outline for outline and delta for delta; the package's
+  matches 1.005's builder exactly. The census the planes come from is
+  `python -m arris.vf.census`. The build's own code is outside the drawing
+  cache's stamps: a change to it redraws nothing. A `check` workflow runs
+  ruff, ty and pytest on pull requests.
 
 ## 1.005 (2026-10-30)
 
@@ -171,7 +184,7 @@ remains was ⏭.
   break text into runs of one script before kerning, so they were never
   applied, and they were 39% of the pairs. Accented letters that are their
   base and marks moved, and .case forms that are their glyph raised, are
-  TrueType composites in the variable fonts (`tools/composites.py`; nested
+  TrueType composites in the variable fonts (`arris.vf.composites`; nested
   ones flattened, fontbakery's nested_components): their variations are
   where their components stand. A glyph drops grid masters
   while those left reproduce each dropped one within 2 units, and its

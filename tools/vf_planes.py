@@ -1,12 +1,13 @@
 """The places where glyphs' exact drawings jump, for the variable font
-(build_vf.py, ARRIS_VF_PLANES): from structure censuses of the drawings
+(arris.vf, ARRIS_VF_PLANES): from structure censuses of the drawings
+(python -m arris.vf.census)
 (one json line per glyph: its steps [wght, structure, moved mean, moved max,
 rings, lightened, overrides] at a grade and watch balance), the steps that
 move the outline far more than the glyph's usual step, as (wght, GRAD, WTCH)
 just before and at the jump.
 
 usage: vf_planes.py out.json census.jsonl:GRAD:WTCH [...]
-(build_vf.py reads tools/vf_planes.json, or vf_planes_italic.json for the italic, if it is there, or ARRIS_VF_PLANES)
+(the build reads src/arris/vf/planes.json, or planes_italic.json for the italic, if it is there, or ARRIS_VF_PLANES)
 """
 import json
 import sys

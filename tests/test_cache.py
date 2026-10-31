@@ -10,7 +10,7 @@ from arris.instances import params
 def test_hashes_name_the_modules():
     h = cache.hashes()
     assert {'draw', 'geom', 'params', 'font', 'glyphs.caps', 'glyphs.technical'} <= set(h)
-    assert 'version' not in h and all(len(v) == 12 for v in h.values())
+    assert 'version' not in h and not any(m.split('.')[0] == 'vf' for m in h) and all(len(v) == 12 for v in h.values())
     assert {'draw', 'glyphs.figures', 'glyphs.letterframe'} <= cache.imports('glyphs.caps') and not cache.imports('font')
 
 
