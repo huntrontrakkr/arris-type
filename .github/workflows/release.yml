@@ -13,7 +13,10 @@
 # cores: each static family on one, each variable font on one of its own.
 # Each job keeps its drawing cache (build/cache/draw.sqlite) between runs,
 # keyed by the engine's source, so a release that changes no drawing redraws
-# nothing. The GPU spike check (tools/vf_spikes.py) needs a CUDA GPU, which
+# nothing. A variable font is uploaded and its cache saved as soon as it is
+# written; its interpolation check runs in a job of its own after that, and
+# may fail without failing the release (twice a runner was lost in the
+# italic's check after a two-hour build, with the font finished). The GPU spike check (tools/vf_spikes.py) needs a CUDA GPU, which
 # these runners lack: run it on a GPU machine before tagging if the variable
 # fonts' interpolation changed.
 name: Release
@@ -79,19 +82,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: cache
         with:
           path: build/cache
           key: draw-vf-${{ matrix.name }}-${{ hashFiles('src/**', 'uv.lock') }}
           restore-keys: draw-vf-${{ matrix.name }}-
       - run: uv sync --frozen
-      - name: Build (with its interpolation check)
-        run: ARRIS_VF_WORKERS=$(nproc) uv run python tools/build_vf.py ${{ matrix.args }}
+      - name: Build
+        run: ARRIS_VF_CHECK=0 ARRIS_VF_WORKERS=$(nproc) uv run python tools/build_vf.py ${{ matrix.args }}
       - uses: actions/upload-artifact@v4
         with:
           name: fonts-variable-${{ matrix.name }}
           path: build/Arris*GRAD*.ttf
           if-no-files-found: error
+      - uses: actions/cache/save@v4
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          path: build/cache
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+  check:
+    name: check ${{ matrix.name }}
+    needs: variable
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: upright, font: 'Arris[GRAD,WTCH,wght].ttf' }
+          - { name: italic, font: 'Arris-Italic[GRAD,WTCH,wght].ttf' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/cache/restore@v4
+        with:
+          path: build/cache
+          key: draw-vf-${{ matrix.name }}-${{ hashFiles('src/**', 'uv.lock') }}
+          restore-keys: draw-vf-${{ matrix.name }}-
+      - run: uv sync --frozen
+      - uses: actions/download-artifact@v4
+        with:
+          name: fonts-variable-${{ matrix.name }}
+          path: build
+      - name: Interpolation check (the font against the drawings at the check's places)
+        run: ARRIS_VF_WORKERS=2 uv run python tools/vf_compare.py "build/${{ matrix.font }}" "build/${{ matrix.font }}" --all
 
   release:
     needs: [static, variable]

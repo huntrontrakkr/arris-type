@@ -1028,6 +1028,12 @@ def _check_at(w):
 # masters come from CHECK: these say whether it holds in between)
 VALID = [(850, 25, 25), (650, -25, 75), (300, 50, 50), (725, 60, 30), (500, -75, 25), (950 - 75, 90, 90),
          (200, -50, 50), (575, 25, 0), (775, 0, 75), (450, 75, 100)]
+if __import__('os').environ.get('ARRIS_VF_CHECK', '1') == '0':
+    # the release workflow checks the font in a job of its own (tools/vf_compare.py --all),
+    # after the font and the drawing cache are safe: a check that runs out of memory
+    # then costs the check, not the build
+    print(_took(), 'interpolation check left to tools/vf_compare.py (ARRIS_VF_CHECK=0)')
+    raise SystemExit(0)
 worst = []
 with get_context('fork').Pool(min(WORKERS, len(CHECK) + len(VALID))) as pool:
     for res in pool.imap_unordered(_check_at, CHECK + VALID):
