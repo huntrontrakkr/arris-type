@@ -42,6 +42,23 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.006 (unreleased)
+
+The build, after 1.005 took nine hours of runners for one release:
+
+- The drawing cache stamps each drawing with the modules it came from
+  (`arris.cache`: the glyph's module and those it draws with, found as it
+  is drawn, widened by their imports, and the engine's drawing modules),
+  and reads a stamp against the code as it is now. A change to one glyph
+  module redraws that module's glyphs and keeps the rest; before, any
+  change under `src/`, a string in the name table included, redrew all
+  2,179 glyphs at every master, ninety-five minutes a variable font.
+- Fontbakery runs in five jobs side by side, one a family or a variable
+  font (about fifteen minutes, from seventy-six in one job).
+- A variable font is uploaded and its cache saved as soon as it is
+  written; its interpolation check runs in a job of its own on the
+  uploaded font and may fail without failing the release.
+
 ## 1.005 (2026-10-30)
 
 The variable font between its masters. Sliding the weight at a heavy grade

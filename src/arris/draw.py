@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
+from . import cache
 from .geom import Node, Stroke, Thickness, ink
 from .params import Params
 
@@ -1080,23 +1081,22 @@ _ANCHOR: dict = {}
 def _anchor(name, p, ot, ob, width) -> tuple:
     """(how much a glyph's strokes are lightened, its free variables) as
     drawn at p: what a heavier weight of the same cut keeps to. Remembered
-    in this process and in the drawing cache (font._db), so the processes
+    in this process and in the drawing cache (arris.cache), so the processes
     that build the weights side by side each draw a glyph's lighter weights
     once between them, not each for itself."""
     key = (name, p, ot, ob, width)
     if key not in _ANCHOR:
-        import hashlib
         import json
-        from .font import _db, _engine_hash
-        con = _db()
-        k = hashlib.sha1(repr((_engine_hash(), 'anchor', key)).encode()).hexdigest() if con is not None else None
-        row = con.execute('SELECT v FROM anchor WHERE k = ?', (k,)).fetchone() if con is not None else None
-        if row is not None:
-            light, ov = json.loads(row[0])
+        con = cache.db()
+        k = cache.key('anchor', key) if con is not None else None
+        row = con.execute('SELECT e, v FROM anchor WHERE k = ?', (k,)).fetchone() if con is not None else None
+        if row is not None and cache.valid(row[0]):
+            light, ov = json.loads(row[1])
         else:
-            g = draw(name, p, ot, ob, width)
+            with cache.using() as mods:
+                g = draw(name, p, ot, ob, width)
             light, ov = getattr(g, 'lightened', 1.0), dict(getattr(g, 'overrides', {}))
             if con is not None:
-                con.execute('INSERT OR REPLACE INTO anchor VALUES (?, ?, ?)', (k, _engine_hash(), json.dumps([light, ov])))
+                con.execute('INSERT OR REPLACE INTO anchor VALUES (?, ?, ?)', (k, cache.stamp(mods), json.dumps([light, ov])))
         _ANCHOR[key] = (light, ov)
     return _ANCHOR[key]
