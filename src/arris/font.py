@@ -445,6 +445,8 @@ def _nonhinting(font):
 
 from .version import VERSION  # noqa: E402
 REPO = 'https://github.com/huntrontrakkr/arris-type'
+DESCRIPTION = ('Arris is a chamfered geometric sans family with an industrial character, '
+               'a cursive italic, and a monospaced companion.')
 COPYRIGHT = f'Copyright 2026 The Arris Project Authors ({REPO})'
 LICENSE = ('This Font Software is licensed under the SIL Open Font License, Version 1.1. '
            'This license is available with a FAQ at: https://openfontlicense.org')
@@ -533,7 +535,7 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     ps = f'{family}-{style}'.replace(' ', '')
     strings = {'familyName': fam1, 'styleName': sub1, 'uniqueFontIdentifier': f'{ps};{version}',
                'fullName': f'{family} {style}', 'psName': ps, 'version': f'Version {version}',
-               'description': f'{family}, a chamfered sans.', 'copyright': COPYRIGHT,
+               'description': DESCRIPTION, 'copyright': COPYRIGHT,
                'licenseDescription': LICENSE, 'licenseInfoURL': LICENSE_URL}
     if not ribbi:                       # Regular, Bold and their italics need no typographic names (16, 17)
         strings.update(typographicFamily=family, typographicSubfamily=style)

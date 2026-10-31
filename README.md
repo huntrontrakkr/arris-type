@@ -1,8 +1,9 @@
 # Arris
 
-A chamfered sans: octagonal and monoline, every outer corner cut at 45
-degrees, in nine weights, upright, italic and mono, with three variable
-axes. An *arris* is the sharp edge where two faces meet; a chamfer is what
+A chamfered geometric sans family with an industrial character, a cursive
+italic, and a monospaced companion: octagonal and monoline, every outer
+corner cut at 45 degrees, in nine weights with three variable axes. An
+*arris* is the sharp edge where two faces meet; a chamfer is what
 you get when you break it. Its figures are the Chamfer clock figures of the
 [Dymaxion watch face](https://github.com/huntrontrakkr/dymaxion-watch-face).
 

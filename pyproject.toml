@@ -1,7 +1,7 @@
 [project]
 name = "arris"
 version = "1.002"
-description = "Arris: a chamfered sans, drawn by code"
+description = "Arris: a chamfered geometric sans family with an industrial character, drawn by code"
 license = "OFL-1.1"
 readme = "README.md"
 requires-python = ">=3.12"
