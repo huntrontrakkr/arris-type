@@ -16,8 +16,8 @@
 # so a change to one glyph module redraws that module's glyphs and keeps the
 # rest, and a release that changes no drawing redraws nothing. Fontbakery
 # runs in five jobs side by side, one a family or a variable font; its
-# ital-axis check wants an italic and its Roman in one run, so the italics
-# are checked beside a Roman. A variable font is uploaded and its cache
+# ital-axis check wants each italic and its Roman in one run, which the
+# upright jobs make for the pairs. A variable font is uploaded and its cache
 # saved as soon as it is written; its interpolation check runs in a job of
 # its own after that, and may fail without failing the release (twice a
 # runner was lost in the italic's check after a two-hour build, with the
@@ -153,13 +153,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # (an italic is checked beside a Roman: opentype/STAT/ital_axis pairs
-        # them within one run and fails an italic alone; the variable italic
-        # skips that check in its own run and the upright's run makes it for
-        # the pair, since the two variable fonts take too long for one job)
+        # (opentype/STAT/ital_axis pairs each italic with a Roman within one
+        # run and fails an italic alone: the italic shards skip that check,
+        # and the upright shards make it for the pairs, Romans and italics
+        # together, in a run of that one check)
         include:
-          - { name: upright, artifacts: 'fonts-static-arris', files: 'build/Arris-Regular.ttf build/Arris-Black.ttf', skip: '', pair: '' }
-          - { name: italic, artifacts: 'fonts-static-*', files: 'build/Arris-Regular.ttf build/Arris-Italic.ttf build/Arris-BlackItalic.ttf', skip: '', pair: '' }
+          - { name: upright, artifacts: 'fonts-static-{arris,italic}', files: 'build/Arris-Regular.ttf build/Arris-Black.ttf', skip: '',
+              pair: 'build/Arris-Regular.ttf build/Arris-Black.ttf build/Arris-Italic.ttf build/Arris-BlackItalic.ttf' }
+          - { name: italic, artifacts: 'fonts-static-italic', files: 'build/Arris-Italic.ttf build/Arris-BlackItalic.ttf',
+              skip: '-x opentype/STAT/ital_axis', pair: '' }
           - { name: mono, artifacts: 'fonts-static-mono', files: 'build/ArrisMono-Regular.ttf build/ArrisMono-Black.ttf', skip: '', pair: '' }
           - { name: variable upright, artifacts: 'fonts-variable-*', files: '"build/Arris[GRAD,WTCH,wght].ttf"', skip: '',
               pair: '"build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf"' }
@@ -182,7 +184,7 @@ jobs:
           else
             cat fontbakery.log; echo "::error::fontbakery reports FAILs or ERRORs"; exit 1
           fi
-      - name: The ital axis, the upright and the italic together
+      - name: The ital axis, each italic beside its Roman
         if: matrix.pair != ''
         run: uvx --quiet --from fontbakery fontbakery check-universal -c opentype/STAT/ital_axis ${{ matrix.pair }}
 

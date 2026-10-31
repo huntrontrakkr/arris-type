@@ -54,8 +54,9 @@ The build, after 1.005 took nine hours of runners for one release:
   change under `src/`, a string in the name table included, redrew all
   2,179 glyphs at every master, ninety-five minutes a variable font.
 - Fontbakery runs in five jobs side by side, one a family or a variable
-  font (about fifteen minutes, from seventy-six in one job); an italic is
-  checked beside a Roman, as its ital-axis check wants the pair in one run.
+  font (about fifteen minutes, from seventy-six in one job); its ital-axis
+  check, which wants each italic and its Roman in one run, is made for the
+  pairs in the upright jobs.
 - A variable font is uploaded and its cache saved as soon as it is
   written; its interpolation check runs in a job of its own on the
   uploaded font and may fail without failing the release.
