@@ -11,9 +11,11 @@
 #
 # The build is split across runners as tools/rebuild.sh splits it across
 # cores: each static family on one, each variable font on one of its own.
-# Each job keeps its drawing cache (build/cache/draw.sqlite) between runs,
-# keyed by the engine's source, so a release that changes no drawing redraws
-# nothing. A variable font is uploaded and its cache saved as soon as it is
+# Each job keeps its drawing cache (build/cache/draw.sqlite) between runs;
+# each drawing in it is stamped with the modules it came from (arris.cache),
+# so a change to one glyph module redraws that module's glyphs and keeps the
+# rest, and a release that changes no drawing redraws nothing. Fontbakery
+# runs in five jobs side by side, one a family or a variable font. A variable font is uploaded and its cache saved as soon as it is
 # written; its interpolation check runs in a job of its own after that, and
 # may fail without failing the release (twice a runner was lost in the
 # italic's check after a two-hour build, with the font finished). The GPU spike check (tools/vf_spikes.py) needs a CUDA GPU, which
@@ -55,7 +57,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: cache
         with:
           path: build/cache
           key: draw-${{ matrix.name }}-${{ hashFiles('src/**', 'uv.lock') }}
@@ -68,6 +71,13 @@ jobs:
           name: fonts-static-${{ matrix.name }}
           path: build/*.ttf
           if-no-files-found: error
+      - name: Prune the drawing cache
+        run: uv run python -c "from arris.cache import prune; print('dropped', prune(), 'drawings whose code changed')"
+      - uses: actions/cache/save@v4
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          path: build/cache
+          key: ${{ steps.cache.outputs.cache-primary-key }}
 
   variable:
     name: variable ${{ matrix.name }}
@@ -96,6 +106,8 @@ jobs:
           name: fonts-variable-${{ matrix.name }}
           path: build/Arris*GRAD*.ttf
           if-no-files-found: error
+      - name: Prune the drawing cache
+        run: uv run python -c "from arris.cache import prune; print('dropped', prune(), 'drawings whose code changed')"
       - uses: actions/cache/save@v4
         if: steps.cache.outputs.cache-hit != 'true'
         with:
@@ -130,10 +142,41 @@ jobs:
       - name: Interpolation check (the font against the drawings at the check's places)
         run: ARRIS_VF_WORKERS=2 uv run python tools/vf_compare.py "build/${{ matrix.font }}" "build/${{ matrix.font }}" --all
 
-  release:
+  fontbakery:
+    name: fontbakery ${{ matrix.name }}
     needs: [static, variable]
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: upright and italic, artifacts: 'fonts-static-arris', files: 'build/Arris-Regular.ttf build/Arris-Black.ttf' }
+          - { name: italic, artifacts: 'fonts-static-italic', files: 'build/Arris-Italic.ttf build/Arris-BlackItalic.ttf' }
+          - { name: mono, artifacts: 'fonts-static-mono', files: 'build/ArrisMono-Regular.ttf build/ArrisMono-Black.ttf' }
+          - { name: variable upright, artifacts: 'fonts-variable-upright', files: '"build/Arris[GRAD,WTCH,wght].ttf"' }
+          - { name: variable italic, artifacts: 'fonts-variable-italic', files: '"build/Arris-Italic[GRAD,WTCH,wght].ttf"' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifacts }}
+          path: build
+      - name: fontbakery (no FAIL, no ERROR)
+        run: |
+          # fontbakery exits 1 on any FAIL, FATAL or ERROR (its -e default); its
+          # summary lists every level, at 0 too, so the log is not grepped for them
+          if uvx --quiet --from fontbakery fontbakery check-universal -l WARN ${{ matrix.files }} > fontbakery.log 2>&1; then
+            grep -E "^ *(ERROR|FATAL|FAIL|WARN): [0-9]+" fontbakery.log || true
+          else
+            cat fontbakery.log; echo "::error::fontbakery reports FAILs or ERRORs"; exit 1
+          fi
+
+  release:
+    needs: [static, variable, fontbakery]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -161,17 +204,6 @@ jobs:
           fi
       - name: pytest
         run: uv run python -m pytest -q tests
-      - name: fontbakery (no FAIL, no ERROR)
-        run: |
-          # fontbakery exits 1 on any FAIL, FATAL or ERROR (its -e default); its
-          # summary lists every level, at 0 too, so the log is not grepped for them
-          FB="uvx --quiet --from fontbakery fontbakery check-universal -l WARN"
-          bad=0
-          $FB build/Arris-Regular.ttf build/Arris-Italic.ttf build/Arris-Black.ttf build/Arris-BlackItalic.ttf >> fontbakery.log 2>&1 || bad=1
-          $FB "build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf" >> fontbakery.log 2>&1 || bad=1
-          $FB build/ArrisMono-Regular.ttf build/ArrisMono-Black.ttf >> fontbakery.log 2>&1 || bad=1
-          grep -E "^ *(ERROR|FATAL|FAIL|WARN): [0-9]+" fontbakery.log || true
-          if [ $bad = 1 ]; then cat fontbakery.log; echo "::error::fontbakery reports FAILs or ERRORs"; exit 1; fi
       - name: Package
         run: uv run python tools/package.py
       - uses: actions/upload-artifact@v4
