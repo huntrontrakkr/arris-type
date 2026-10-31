@@ -23,7 +23,8 @@
 # runner was lost in the italic's check after a two-hour build, with the
 # font finished). The GPU spike check (tools/vf_spikes.py) needs a CUDA GPU,
 # which these runners lack: run it on a GPU machine before tagging if the
-# variable fonts' interpolation changed.
+# variable fonts' interpolation changed. A published release's web fonts go
+# to npm as @arristype/arris (npm.yml).
 name: Release
 
 on:
@@ -191,6 +192,8 @@ jobs:
   release:
     needs: [static, variable, fontbakery]
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -253,3 +256,14 @@ jobs:
             # a release by hand: the tag v<version> is made on this run's commit
             gh release create "v$V" "build/release/Arris-$V.zip" --title "Arris $V" --notes-file notes.md --target "$GITHUB_SHA"
           fi
+
+  npm:
+    needs: release
+    if: github.ref_type == 'tag' || inputs.publish == true
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/npm.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+    secrets: inherit

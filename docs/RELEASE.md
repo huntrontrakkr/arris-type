@@ -71,6 +71,10 @@ The build, after 1.005 took nine hours of runners for one release:
   `python -m arris.vf.census`. The build's own code is outside the drawing
   cache's stamps: a change to it redraws nothing. A `check` workflow runs
   ruff, ty and pytest on pull requests.
+- The web fonts are on npm as `@arristype/arris` (WOFF2 and CSS: Arris
+  variable, Arris Mono, Arris Watch, and Arris as static weights), and so
+  on jsDelivr and unpkg. A published release goes there by itself
+  (`.github/workflows/npm.yml`, `tools/npm_package.py`); 1.005 is 1.5.0.
 
 ## 1.005 (2026-10-30)
 

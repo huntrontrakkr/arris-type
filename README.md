@@ -45,6 +45,22 @@ figures) `zero` `ss01` `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`
 figures as the watch drew them, one square per pixel of the 9×12 masters
 they grew from, and the time colon between them as the watch lights it.
 
+## Getting it
+
+The fonts (TTF for desktop, WOFF2 for the web) are in each release's zip
+on the [Releases](https://github.com/huntrontrakkr/arris-type/releases) page.
+For a site, the web fonts and their CSS are on npm:
+
+```
+npm install @arristype/arris
+```
+
+```js
+import '@arristype/arris';   // Arris (variable), Arris Mono, Arris Watch
+```
+
+or from a CDN: `https://cdn.jsdelivr.net/npm/@arristype/arris@1/index.css`.
+
 ## Building
 
 ```
