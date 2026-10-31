@@ -38,8 +38,7 @@ def contours(glyf, name):
 
 def edges(rings):
     for r in rings:
-        for a, b in zip(r, r[1:] + r[:1]):
-            yield a, b
+        yield from zip(r, r[1:] + r[:1])
 
 
 def bar(rings) -> tuple[float, float]:
@@ -65,8 +64,8 @@ def sample(font: TTFont, cx: float, scale: float) -> str:
     glyf, hmtx = font['glyf'], font['hmtx'].metrics
     adv = hmtx['H'][0] + GAP + hmtx['x'][0]
     x0 = cx - adv * scale / 2
-    X = lambda u, at=0.0: x0 + (at + u) * scale  # noqa: E731
-    Y = lambda u: BASELINE - u * scale  # noqa: E731
+    X = lambda u, at=0.0: x0 + (at + u) * scale
+    Y = lambda u: BASELINE - u * scale
     marks = []
     h = contours(glyf, 'H')
     lo, hi = bar(h)
@@ -81,7 +80,7 @@ def sample(font: TTFont, cx: float, scale: float) -> str:
     cm, half = (c1 + c2) / 2, (c2 - c1) / r2 / 2
     along = [(px + py - cm) / r2 for r in x for px, py in r]
     s0, s1 = min(along) - EXT / scale, max(along) + EXT / scale
-    centre = lambda t: (t / r2, cm + t / r2)  # noqa: E731
+    centre = lambda t: (t / r2, cm + t / r2)
     nx, ny = -1 / r2, 1 / r2
     pts = [(centre(t)[0] + k * nx * half, centre(t)[1] + k * ny * half) for t, k in ((s0, -1), (s1, -1), (s1, 1), (s0, 1))]
     marks.append('M' + 'L'.join(f'{X(px, at):.1f} {Y(py):.1f}' for px, py in pts) + 'Z')
