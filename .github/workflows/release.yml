@@ -158,7 +158,7 @@ jobs:
         # and the upright shards make it for the pairs, Romans and italics
         # together, in a run of that one check)
         include:
-          - { name: upright, artifacts: 'fonts-static-{arris,italic}', files: 'build/Arris-Regular.ttf build/Arris-Black.ttf', skip: '',
+          - { name: upright, artifacts: 'fonts-static-*', files: 'build/Arris-Regular.ttf build/Arris-Black.ttf', skip: '',
               pair: 'build/Arris-Regular.ttf build/Arris-Black.ttf build/Arris-Italic.ttf build/Arris-BlackItalic.ttf' }
           - { name: italic, artifacts: 'fonts-static-italic', files: 'build/Arris-Italic.ttf build/Arris-BlackItalic.ttf',
               skip: '-x opentype/STAT/ital_axis', pair: '' }
