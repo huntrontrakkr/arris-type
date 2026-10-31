@@ -28,8 +28,8 @@ wait
 stamp "static families built"
 
 export ARRIS_VF_WORKERS=$(( CORES / 2 ))
-run vf uv run python tools/build_vf.py &
-run vfital uv run python tools/build_vf.py italic &
+run vf uv run python -m arris.vf &
+run vfital uv run python -m arris.vf italic &
 wait
 stamp "variable fonts built"
 date > build/scripts/fonts.done

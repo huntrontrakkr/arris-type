@@ -49,7 +49,7 @@ class Squint:
     absolute: bool = False      # held to vision.READS itself, not to the Regular (where the Regular reads poorly too)
     whites: bool = False        # a white the Regular has that is gone altogether reads 0 (open bowls: _read)
     form: bool = False          # free chooses between two drawings (¢ $ stem or stubs): a variable font
-                                # carries each as a glyph of its own, swapped where the engine swaps them (build_vf)
+                                # carries each as a glyph of its own, swapped where the engine swaps them (arris.vf.forms)
 
 
 # Math signs set on one advance (the plus sign's, at least), their ink centred

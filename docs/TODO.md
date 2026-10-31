@@ -93,8 +93,7 @@ Left of `check-googlefonts`' warnings:
 - **Variable-font interpolation** (2026-10-27): a glyph keeps the font's
   28 masters where they match its drawings at every node of the full grid
   (about 800 glyphs), else it is interpolated on the grid, finer where
-  still off, pruned node by node with a 1-unit certificate (`tools/
-  build_vf.py`). At the held-out VALID places (`tools/vf_compare.py`,
+  still off, pruned node by node with a 1-unit certificate (`arris.vf`). At the held-out VALID places (`tools/vf_compare.py`,
   against the tagged 1.001 VFs) a point more than 60 units off at 88 glyph
   places upright (1.001: 160) and 144 italic (275); a mean difference over
   3 units at 553 (1,434) and 785 (2,118); 51 and 81 glyphs better, 21 and
@@ -114,7 +113,7 @@ Left of `check-googlefonts`' warnings:
 - **Variable-font size** (2026-10-27): 7.85 MB upright, 8.88 MB italic
   (fontbakery's 9 MB), by kerning only within a script, composites,
   pruning and IUP certified within 2 units, and the finer grids that buy
-  most per byte (`build_vf.TARGET`): all 477 in the upright, 124 of 508 in
+  most per byte (`ARRIS_VF_TARGET`): all 477 in the upright, 124 of 508 in
   the italic, which so gives up some accuracy (a mean difference over 3
   units at 1,136 held-out places, 785 with every finer grid; 1.001 had
   3,725 against today's drawings).

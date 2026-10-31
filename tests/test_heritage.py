@@ -73,8 +73,9 @@ def test_watch_axis_at_100_is_the_watch():
 def test_pixel_colon_is_the_watch_colon():
     """ss20's time colon lights the watch's colon pixels: two columns, rows
     3-4 and 8-9 of the twelve from the cap's top, and nothing else."""
-    import arris.glyphs.origin  # noqa: F401
     from shapely.geometry import Point
+
+    import arris.glyphs.origin  # noqa: F401
     g = draw('colon.tf.px', HERITAGE)
     ink = rings_to_shapely(g.rings())
     u = HERITAGE.cap / 12

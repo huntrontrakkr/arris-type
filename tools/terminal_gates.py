@@ -146,7 +146,7 @@ def gate_counters():
 
 
 def gate_vf(path='build/Arris[GRAD,WTCH,wght].ttf'):
-    """build_vf.py's interpolation check, for these glyphs only: the
+    """arris.vf's interpolation check (arris.vf.check), for these glyphs only: the
     variable font against exact drawings between its masters (mean outline
     difference, font units)."""
     from fontTools.ttLib import TTFont

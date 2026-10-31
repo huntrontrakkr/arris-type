@@ -42,7 +42,7 @@ cell keeps the rule (a junction's outer corner is cut, its crotch filled).
 it a slant's width away, so cell glyphs (`Spec.cell`) are drawn upright in
 the italics; their chamfers still become curves (the rounded corners ╭╮╯╰
 are curved, not slanted). `font.place`/`_place` draw them without the
-shear; `tools/build_vf.py` passes them unsheared to the italic masters.
+shear; the variable-font build (`arris.vf`) passes them unsheared to the italic masters.
 
 ## Box drawing
 

@@ -39,13 +39,14 @@ _DB: tuple[int, sqlite3.Connection] | None = None
 def hashes() -> dict[str, str]:
     """Every module of the package by a hash of its source, named from the
     package root ('draw', 'glyphs.technical'). version.py is left out: a
-    version is not a drawing's. font is in by its drawing functions alone:
-    its name table is not a drawing's either."""
+    version is not a drawing's; so is vf, the variable-font build, which
+    asks for drawings and makes none. font is in by its drawing functions
+    alone: its name table is not a drawing's either."""
     global _HASHES
     if _HASHES is None:
         out: dict[str, str] = {}
         for f in sorted(ROOT.rglob('*.py')):
-            if '__pycache__' in f.parts or f.name == 'version.py':
+            if '__pycache__' in f.parts or f.name == 'version.py' or f.is_relative_to(ROOT / 'vf'):
                 continue
             name = _module_name(f)
             if not name:
@@ -109,7 +110,7 @@ def _module_of(filename: str) -> str:
             m = _module_name(f.resolve())
         except ValueError:
             m = ''
-        if m in ('cache', 'version'):
+        if m in ('cache', 'version', 'vf') or m.startswith('vf.'):
             m = ''
         _FILES[filename] = m
     return m

@@ -7,9 +7,10 @@ measures of it that need no exact drawing to compare with:
 * crossings: how many pairs of the outline's segments cross properly,
   beyond what the masters themselves have (a contour turned inside out).
 
-Written for any array module with numpy's interface (``xp``): build_vf runs
-it with numpy on a coarse grid for every candidate alignment, and
-tools/vf_spikes.py with jax.numpy on the GPU over thousands of places.
+Written for any array module with numpy's interface (``xp``): the build
+(``measure.dense_errors``) runs it with numpy on a coarse grid for every
+candidate alignment, and tools/vf_spikes.py with jax.numpy on the GPU over
+thousands of places.
 """
 from __future__ import annotations
 

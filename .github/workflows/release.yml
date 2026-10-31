@@ -100,7 +100,7 @@ jobs:
           restore-keys: draw-vf-${{ matrix.name }}-
       - run: uv sync --frozen
       - name: Build
-        run: ARRIS_VF_CHECK=0 ARRIS_VF_WORKERS=$(nproc) uv run python tools/build_vf.py ${{ matrix.args }}
+        run: ARRIS_VF_CHECK=0 ARRIS_VF_WORKERS=$(nproc) uv run python -m arris.vf ${{ matrix.args }}
       - uses: actions/upload-artifact@v4
         with:
           name: fonts-variable-${{ matrix.name }}
