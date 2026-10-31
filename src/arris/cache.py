@@ -64,11 +64,11 @@ def hashes() -> dict[str, str]:
 def _module_name(f: Path) -> str:
     """A file's module name from the package root; '' for the package itself."""
     name = f.relative_to(ROOT).with_suffix('').as_posix().replace('/', '.')
-    name = name[:-len('.__init__')] if name.endswith('.__init__') else name
+    name = name.removesuffix('.__init__')
     return '' if name == '__init__' else name
 
 
-_IMPORT = re.compile(r'^[ \t]*from[ \t]+(\.+)([\w.]*)[ \t]+import[ \t]+([^\n#]+)', re.M)
+_IMPORT = re.compile(r'^[ \t]*from[ \t]+(\.+)([\w.]*)[ \t]+import[ \t]+([^\n#]+)', re.MULTILINE)
 
 
 def imports(name: str) -> frozenset[str]:
