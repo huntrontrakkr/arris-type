@@ -57,6 +57,18 @@ before a commercial distribution if wanted.
   italic it names every flip 1.006 fixed; `tests/test_skeleton.py` keeps a
   core sample passing. The JSON (`--json`) holds every feature's survival,
   for diffing one build against another.
+- Italic: which edge a bowl's chamfer line claims (`italic._segments`). A
+  45-degree line runs on, and the edge nearest where the chamfer was
+  recorded can be another's: the K's leg lay behind the Қ's and Җ's
+  descender corner at 300/−100 and, claimed, was curved to that corner, a
+  lens cut out of the leg; an accent's corner on the line of a corner of
+  the letter under it (ř ǒ õ ά ắ, в at one grade) held that corner
+  straight at single weights. Further than two breaks from its record a
+  chamfer's line now claims only an edge ahead of the record, with ink all
+  the way from the record to it: the rest of a chamfer whose start another
+  stroke swallowed (the ρ's bowl at its stem, the æ's, the 8's waist at its
+  spine), which is what the first skeleton runs had been losing. Faulting
+  glyph-styles in the skeleton check 58 → 44, nothing newly lost.
 
 ## 1.006 (2026-11-01)
 

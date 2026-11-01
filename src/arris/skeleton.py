@@ -224,7 +224,7 @@ def corners(g, rings, rec, p: Params) -> dict[str, bool]:
             # the upright stamps them warped, off the 45 degrees the record
             # names, and they are that glyph's own to check
             labels[idx] = f'stamp:{n - len(own)}'
-    segs = IT._segments(rings, rec)
+    segs = IT._segments(rings, rec, p)
     found: dict[int, list] = {}
     for s in segs:
         if s[2][0] == 'bowl':
