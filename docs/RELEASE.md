@@ -42,7 +42,7 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
-## 1.006 (unreleased)
+## 1.006 (2026-11-01)
 
 The build, after 1.005 took nine hours of runners for one release:
 
@@ -112,7 +112,11 @@ weight-dependent holds; the families, and what each is given:
   at every weight: two of the longer beaks across its height met from 650.
 - Cyrillic descenders (Қ Ң Ҷ Ҭ Җ Ҳ Ԥ Ҵ Ӌ Ӷ, the tails Ӊ Ӎ Ӆ Ҋ, Ц Щ): one
   stroke through a small bowl corner into the drop, the cursive ц's, in
-  place of two strokes meeting in an L.
+  place of two strokes meeting in an L, which the slant showed as a notch.
+  The drop still stands a module from its stem, less than a stroke from
+  Regular up, so the corner into it is held from about 200: whether the
+  italic keeps that step or drops straight from the stem is the next
+  decision, with the skeleton check below.
 - Drops (Ҙ Ҫ ҫ Ҿ ҿ): the drop meets the foot square and the foot's corners
   take the leg that leaves a flat before it (`cyrillic_ext.drop_leg`).
 - The ogonek (ą ę į ų ǫ, capitals): the italic's own, flush with the
@@ -132,7 +136,13 @@ flag at Thin; the shoulder of ʒ Ӡ Ʒ Ǥ ķ into its diagonal, held from about
 350; the ӄ's arm reaching its hook's corner from 850; the Ӽ's hook to 300;
 the watch-form s at watch 100 to 200; and in the upright, the ç's outline
 folds back on itself by eight units at 550 where `_close_jogs` slides a
-vertex past its neighbour.
+vertex past its neighbour. Next is a skeleton-fidelity check: the drawing
+is the letter's intent, a set of strokes with typed corners and ends, and
+weight an offset of it; a check that every feature of the strokes (ink
+along each centreline, white beside it, each corner, each free end, each
+counter) survives along every axis line, lost toward Black at most once
+and never regained, would have named each of these, and will drive what
+remains rather than a sweep of held corners.
 
 ## 1.005 (2026-10-30)
 
