@@ -467,9 +467,10 @@ def mark_width(p):
 
 def ogonek_mark(g, x):
     """The ogonek alone: from a foot at x on the baseline, turning right underneath."""
+    from .italic_forms import tail_run
     p = g.p
     yb = -p.desc + g.sh / 2 + 0.25 * p.m
-    g.stroke((x, g.sh / 2), B(x, yb, p.m / 2), (x + 1.5 * p.m + p.sv / 2, yb))
+    g.stroke((x, g.sh / 2), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))
 
 
 def horn_origin(p, case):

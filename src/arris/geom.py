@@ -292,11 +292,16 @@ def _dir_class(u) -> str:
     return 'steep'
 
 
-def _on_butt(a, b, butt) -> bool:
-    """Whether the edge a-b lies on one of the butt lines (see ``ink``)."""
-    for axis, v in butt:
+def _on_butt(a, b, butt, corner=None) -> bool:
+    """Whether the edge a-b lies on one of the butt lines (see ``ink``). A
+    line given with ends, ('y', value, lo, hi), holds only where ``corner``
+    (the vertex in question) lies between them: a mark meets its base square
+    under itself, and the base keeps its edge breaks elsewhere on the line."""
+    for line in butt:
+        axis, v = line[0], line[1]
         k = 0 if axis == 'x' else 1
-        if abs(a[k] - v) < BUTT_TOL and abs(b[k] - v) < BUTT_TOL:
+        on = abs(a[k] - v) < BUTT_TOL and abs(b[k] - v) < BUTT_TOL
+        if on and (len(line) < 4 or corner is None or line[2] <= corner[1 - k] <= line[3]):
             return True
     return False
 
@@ -344,7 +349,7 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
             kind = 'acute'
         elif 'steep' in (k1, k2) and 'diag' not in (k1, k2) and turn > 45:
             kind = 'steep'
-        if butt and (_on_butt(a, b, butt) or _on_butt(b, q, butt)):
+        if butt and (_on_butt(a, b, butt, b) or _on_butt(b, q, butt, b)):
             kind = None                                     # ink cut square where it meets a butt line
         kinds.append(kind)
     out = []

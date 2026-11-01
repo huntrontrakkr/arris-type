@@ -127,10 +127,16 @@ OPEN_BOWLS = (Squint('sh_auto', lambda p: AUTO_MIN, whites=True),)
 @ccap('uni0417', 'З', 9, 2, squint=OPEN_BOWLS)
 def Ze(g):
     """The 3 with the 2's beak on top."""
+    ze_shape(g)
+
+
+def ze_shape(g, foot_leg=None):
+    """З. ``foot_leg``: the leg of the lower bowl's foot corners (the default:
+    the parameter leg); Ҙ's drop hangs between them (cyrillic_ext.drop_leg)."""
     f = Frame(g, 9)
     p, H, d = f.p, f.p.cap, beak_depth(f.p)
     g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6), big(p)), f.P(3, 6))
-    g.stroke(f.P(3, 6), B(*f.P(8, 6)), B(*f.P(8, 1)), B(*f.P(1, 1)), (f.X(1), d))
+    g.stroke(f.P(3, 6), B(*f.P(8, 6)), B(*f.P(8, 1), foot_leg), B(*f.P(1, 1), foot_leg), (f.X(1), d))
 
 
 @ccap('uni0418', 'И', 10, 2, width=lambda p: REGISTRY['N'].width(p))
@@ -162,14 +168,26 @@ def Ef(g):
     g.stroke((f.W / 2, 0), (f.W / 2, f.p.cap))
 
 
+def _tse_foot(g, f, *stem):
+    """Ц's foot: the left stem's line on along the baseline to the body's
+    edge, and the descender dropped from its end. In the italic one stroke
+    through a small bowl corner into the drop (the cursive ц's tick), which
+    it curves; the upright's two strokes meet in an L."""
+    p, W = g.p, f.W
+    if p.slant:
+        g.stroke(*stem, B(W - p.sv / 2, f.Y(1), p.m / 2), (W - p.sv / 2, -0.8 * p.desc))
+        return
+    g.stroke(*stem, (W, f.Y(1)))
+    g.stroke((W - p.sv / 2, f.Y(1)), (W - p.sv / 2, -0.8 * p.desc))
+
+
 @ccap('uni0426', 'Ц', 10, 2)
 def Tse(g):
     f = Frame(g, 10)
     p, W = f.p, f.W
     g.clip = (0, -0.8 * p.desc, W, p.cap)
-    g.stroke(f.P(1, 12), f.P(1, 1), (W, f.Y(1)))
+    _tse_foot(g, f, f.P(1, 12), f.P(1, 1))
     g.stroke(f.P(8, 12), f.P(8, 1))
-    g.stroke((W - p.sv / 2, f.Y(1)), (W - p.sv / 2, -0.8 * p.desc))
 
 
 @ccap('uni0427', 'Ч', 9, 2)
@@ -192,10 +210,9 @@ def Shcha(g):
     p, W = f.p, f.W
     g.clip = (0, -0.8 * p.desc, W, p.cap)
     x3 = f.X(11)
-    g.stroke(f.P(1, 12), f.P(1, 1), (W, f.Y(1)))
+    _tse_foot(g, f, f.P(1, 12), f.P(1, 1))
     g.stroke((x3, f.Y(1)), (x3, p.cap))
     g.stroke((f.X(6), f.Y(1)), (f.X(6), p.cap))
-    g.stroke((W - p.sv / 2, f.Y(1)), (W - p.sv / 2, -0.8 * p.desc))
 
 
 def _sign(g, f, x0, x1):
@@ -312,10 +329,11 @@ def Ya(g):
 def Dje(g):
     f = Frame(g, 11)
     p = f.p
+    from .italic_forms import tail_run
     g.clip = (0, -p.desc, f.W, p.cap)
     g.stroke((0, f.Y(11)), (f.X(7), f.Y(11)))
     g.stroke(f.P(3, 0), f.P(3, 11))
-    g.stroke(f.P(3, 6.5), B(*f.P(10, 6.5)), B(*f.P(10, -2)), f.P(6, -2))
+    g.stroke(f.P(3, 6.5), B(*f.P(10, 6.5)), B(*f.P(10, -2)), (f.X(10) - tail_run(p, f.X(10) - f.X(6)), f.Y(-2)))
 
 
 @ccap('uni040B', 'Ћ', 11, 2)

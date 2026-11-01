@@ -37,7 +37,35 @@ def beak_depth(p, sh=None):
     the inner flank shorter than an edge break, the inner flank sets the depth.
     At the heritage weight both flanks are exactly one edge break."""
     sh = p.sh if sh is None else sh
-    return max(outer_leg(p, sh=sh) + p.c, sh + inner_leg(p, sh) + p.c)
+    d = sh + inner_leg(p, sh) + _flank(p)
+    if p.slant:
+        # never so deep that two beaks facing each other across a small
+        # capital's height meet: no deeper than leaves a stroke between them,
+        # or failing that the upright's depth (the small э at 800/+100: its
+        # beaks crossed and the stroke could not be drawn)
+        d = min(d, max(sh + inner_leg(p, sh) + p.c, (p.cap - sh) / 2))
+    return max(_shortest(p, sh), d)
+
+
+def _flank(p):
+    """The inner flank under the corner's inner chamfer: an edge break, and
+    in the italic TAIL_FLAT breaks more (italic_forms), clear of the jog
+    cleanup. One break long, it merged with the end's break at some weights
+    and not others (geom.JOG closes a step up to a break), the corner above
+    it was no corner there, and the italic held its shoulder straight at
+    those weights and curved it at the rest: the C's at 350 and 400."""
+    if p.slant:
+        from .italic_forms import TAIL_FLAT
+        return (1 + TAIL_FLAT) * p.c
+    return p.c
+
+
+def _shortest(p, sh):
+    """The shortest beak an opening may leave: its outer flank alone, an edge
+    break under the chamfer. (The italic's longer inner flank, _flank, is
+    the beak's own depth, not a floor under an opening: held to it, the small
+    э's two beaks crossed at 800/+100 and the stroke could not be drawn.)"""
+    return outer_leg(p, sh=sh) + p.c
 
 
 def beak_top(g):
@@ -46,14 +74,12 @@ def beak_top(g):
 
 def beak_bottom(g):
     # an opening may shorten the beak, but never past its outer flank
-    shortest = outer_leg(g.p, sh=g.sh) + g.p.c
-    return -g.ob + max(g.free('beak', beak_depth(g.p, g.sh)), shortest)
+    return -g.ob + max(g.free('beak', beak_depth(g.p, g.sh)), _shortest(g.p, g.sh))
 
 
 def _beak_limit(p):
-    """The shortest beak: its outer flank alone, an edge break under the
-    chamfer, at the thinnest horizontals a stack allows."""
-    return outer_leg(p, sh=STACK_MIN * p.sh) + p.c
+    """The shortest beak at the thinnest horizontals a stack allows."""
+    return _shortest(p, STACK_MIN * p.sh)
 
 
 # Openings of the figures that stack three bars (3 5 6 8 9). Heavier strokes

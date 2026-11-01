@@ -201,8 +201,9 @@ def Stigma(g):
     f = Frame(g, 9)
     p, d = f.p, beak_depth(f.p)
     g.clip = (0, -p.desc, f.W, p.cap)
+    from .italic_forms import tail_run
     g.stroke((f.X(8), p.cap - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 4)), B(*f.P(8, 4)),
-             B(*f.P(8, -2)), f.P(5, -2))
+             B(*f.P(8, -2)), (f.X(8) - tail_run(p, f.X(8) - f.X(5)), f.Y(-2)))
 
 
 @glow('uni03DB', 'ϛ', 9, 2)
@@ -211,7 +212,9 @@ def stigma(g):
     f = Frame(g, 9, 'lower')
     p = f.p
     g.clip = (0, -p.desc, f.W, p.xh)
-    g.stroke((f.W, f.Y(8)), B(*f.P(1, 8)), B(*f.P(1, 2.5)), B(*f.P(7, 2.5)), B(*f.P(7, -2)), f.P(4, -2))
+    from .italic_forms import tail_run
+    g.stroke((f.W, f.Y(8)), B(*f.P(1, 8)), B(*f.P(1, 2.5)), B(*f.P(7, 2.5)), B(*f.P(7, -2)),
+             (f.X(7) - tail_run(p, f.X(7) - f.X(4)), f.Y(-2)))
 
 
 @glow('uni03DD', 'ϝ', 7, 1)

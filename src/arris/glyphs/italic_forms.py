@@ -20,7 +20,7 @@ tail.
 from __future__ import annotations
 
 from ..draw import AUTO_SHARE, REGISTRY, B, Opening, _counter_white, glyph
-from ..params import SQRT2, inner_leg
+from ..params import SQRT2, inner_leg, outer_leg
 from .figures import jog
 from .letterframe import Frame, letter_width, white_scale
 from .lower import _dot, crotch_butt, shoulder
@@ -103,6 +103,45 @@ def tail_end(g, f, xs, y=None):
     u = p.ungraded()                                  # (grade moves no stroke)
     reach = max(_reach(p, TAIL), TAIL_FLOOR * u.sv, inner_leg(u) + (1 + TAIL_FLAT) * u.c)
     return (xs + p.sv / 2 + reach, f.Y(1) if y is None else y)
+
+
+def run_floor(p, leg=None, across=None):
+    """The least a stroke runs from the centre of a stem, past a bowl corner
+    there, to its end (a hook's tail, an ogonek's foot): on each of its two
+    edges the corner's chamfer, the end's edge break and TAIL_FLAT breaks of
+    flat between them, as tail_end keeps for the exit tails. Shorter, the
+    chamfer and the break merge (geom.JOG) and the corner, no longer one, is
+    held straight at that weight and curved at the next: the Ԧ's hook ended
+    in a point from 500 to 750 and in a curve at Black. ``leg`` the corner's
+    centreline leg (the parameter default: the chamfer legs follow it),
+    ``across`` the thickness of the stem the run leaves (a vertical stem's).
+    Measured on the strokes as drawn, grade included: graded heavier, the
+    chamfers and the breaks grow with the stroke, and a floor from the
+    ungraded stroke left the Ԧ's tail held from 200 to 700 at grade +100."""
+    d = (p.leg if leg is None else leg) - p.leg
+    outer, inner = outer_leg(p) + d, max(p.c, inner_leg(p) + d)
+    half = (p.sv if across is None else across) / 2
+    flat = (1 + TAIL_FLAT) * p.c
+    return max(half + inner + flat, outer - half + flat)
+
+
+def arm_floor(p):
+    """The least a horizontal arm runs from the centre of a stem to the centre
+    of a bowl corner at its end (a hook's arm, cyrillic_ext.hook_reach): on
+    each of its edges the crotch's fill at the stem, TAIL_FLAT breaks of flat
+    and the corner's chamfer. The ҧ's arm of three modules lost its
+    underside's flat at Regular, the crotch's fill met the corner's chamfer,
+    and the corner was held straight."""
+    flat = (1 + TAIL_FLAT) * p.c
+    return max(p.sv + inner_leg(p) + flat, outer_leg(p) + flat)
+
+
+def tail_run(p, run, leg=None):
+    """A hook's tail: ``run`` from the hook's stem, or in the italic at least
+    run_floor, so the corner into it curves at every weight. (The upright
+    keeps its drawing: a tail shorter than the corner's chamfer ends on it in
+    a point, as a beak does.)"""
+    return max(run, run_floor(p, leg)) if p.slant else run
 
 
 # --- Stems, entries and exits ------------------------------------------------

@@ -156,6 +156,17 @@ def cedilla(g, x, y, case):
     s = p.sv
     yb = -p.desc + g.sh / 2 + 0.25 * p.m
     g.stroke((x, g.sh / 2), (x, yb + 0.0), (x - 1.5 * p.m - s / 2, yb))
+    if p.slant:
+        # square to the base's underside, as the ogonek: the c's foot corner
+        # ends where the stem begins, and the corner rule's fill at the join
+        # merged with the corner's chamfer from 600 up, which held the
+        # corner straight (and folded the outline back on itself at 550)
+        from ..draw import _thickness
+        under = g.sh / 2 - _thickness(p, g.sh)((1.0, 0.0)) / 2    # (lower.crotch_butt)
+        g.butt += (('y', under, x - s / 2 - 1.0, x + s / 2 + 1.0),)
+
+
+OGONEK_ITALIC = 0.6   # stems: the italic ogonek's thickness (see ogonek)
 
 
 def ogonek(g, x, y, case):
@@ -167,6 +178,44 @@ def ogonek(g, x, y, case):
     base = g.extra[0]
     cut = base.intersection(LineString([(-1e4, 0.3 * g.sh), (1e4, 0.3 * g.sh)]))
     xs = [c[0] for gg in getattr(cut, 'geoms', [cut]) for c in getattr(gg, 'coords', [])]
+    if p.slant:
+        # The italic's hangs flush with the base's right edge where that edge
+        # runs down to the baseline (the end of the a's, i's and u's exit
+        # tails, the E's bar, an I's stem) and runs it on down; a quarter
+        # stem in, the slant showed a step at the join and a nose at 680/+60.
+        # It is OGONEK_ITALIC of a stem thick: an exit tail is as long as its
+        # own corner needs and little more, and a stem-thick ogonek at its end
+        # cut into that corner's chamfer and held it straight from 400 to 850.
+        # Where the edge ends on a bowl corner (the e's arm, the o's and U's
+        # bowls) it hangs under the bowl, clear of the corner. Its foot is at
+        # least run_floor long, so the corner into it curves at every weight
+        # (shorter, it was a slab at Black); and it meets the base's
+        # underside square, as the g's descender meets its foot
+        # (lower.crotch_butt): with the corner rule's fill there, the fill
+        # and the corner's chamfer merged at Black and the corner held.
+        from shapely.geometry import box
+
+        from ..params import outer_leg
+        from .italic_forms import TAIL_FLAT, run_floor
+        w = OGONEK_ITALIC * p.sv
+        top = p.cap if case == 'uc' else p.xh
+        body = base.intersection(box(-1e4, 0.0, 1e4, top))
+        if body.is_empty:
+            body = base
+        xr = body.bounds[2]
+        edge = body.intersection(LineString([(xr - 1.0, -1e4), (xr - 1.0, 1e4)]))
+        y_edge = 0.0 if edge.is_empty else edge.bounds[1]
+        if y_edge <= g.sh / 2 + 1.0:
+            x = xr - w / 2                                  # flush with a stem, a tail's end, a bar's end
+        else:
+            # a bowl corner at the foot of that edge (the e's arm, the o's and
+            # U's bowls): under the bowl, clear of the corner's outer chamfer
+            x = xr - outer_leg(p) - TAIL_FLAT * p.c - w / 2
+        under = base.intersection(box(x - w / 2, -1e4, x + w / 2, top))
+        g.stroke((x, g.sh / 2, w), B(x, yb, p.m / 2, w),
+                 (x + max(1.5 * p.m + p.sv / 2, run_floor(p, p.m / 2, w)), yb))
+        g.butt += (('y', 0.0 if under.is_empty else under.bounds[1], x - w / 2 - 1.0, x + w / 2 + 1.0),)
+        return
     x = (max(xs) - 0.75 * p.sv) if xs else x
     g.stroke((x, g.sh / 2), B(x, yb, p.m / 2), (x + 1.5 * p.m + p.sv / 2, yb))
 

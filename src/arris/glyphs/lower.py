@@ -43,11 +43,18 @@ def b(g):
 
 @low('c', 8, 2)
 def c(g):
+    c_shape(g)
+
+
+def c_shape(g, foot_leg=None):
+    """The c. ``foot_leg``: the leg of the foot's corners (the default: the
+    parameter leg); ҫ's drop hangs between them (cyrillic_ext.drop_leg)."""
     f = Frame(g, 8, 'lower')
     # The shortest beaks (the outer flank alone): an open mouth tells c from o.
     p = f.p
     d = outer_leg(p) + p.c
-    g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 1)), B(*f.P(7, 1)), (f.X(7), d))
+    g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 1), foot_leg), B(*f.P(7, 1), foot_leg),
+             (f.X(7), d))
 
 
 @low('d', 8, 2)

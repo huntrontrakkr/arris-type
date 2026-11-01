@@ -55,9 +55,17 @@ def B_(g):
 
 @cap('C', 9, 2)
 def C(g):
+    c_shape(g)
+
+
+def c_shape(g, foot_leg=None):
+    """The C: a bowl open on the right, a beak over and under the opening.
+    ``foot_leg``: the leg of the foot's corners (the default: the parameter
+    leg); Ҫ's drop hangs between them (cyrillic_ext.drop_leg)."""
     f = Frame(g, 9)
     p, H, d = f.p, f.p.cap, beak_depth(f.p)
-    g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)), (f.X(8), d))
+    g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1), foot_leg), B(*f.P(8, 1), foot_leg),
+             (f.X(8), d))
 
 
 @cap('D', 9, 2)

@@ -23,7 +23,7 @@ x with a descender). Accented letters are composed from their marks
 from __future__ import annotations
 
 from ..draw import B, REGISTRY, Opening, draw, glyph
-from ..params import SQRT2
+from ..params import SQRT2, outer_leg
 from .caps import big
 from .cyrillic import ALIASES as RU_ALIASES, ccap, mirror, sc, smallcap
 from .extra_latin import stamp
@@ -67,24 +67,54 @@ def descender(g, f, xs, xd, turn=False):
     than a descender)."""
     p = g.p
     yb = f.Y(1)
-    side = p.sv / 2 if xd >= xs else -p.sv / 2
-    g.stroke((xs, yb), (xd + side, yb))
+    if p.slant:
+        # the cursive ц's (italic_forms._u_stems): one stroke through a small
+        # bowl corner into the drop, which the italic curves. The upright's
+        # two strokes meet in an L; slanted, the step between the stem's edge
+        # and the drop's read as a notch at every weight from Regular up
+        foot = [(xs, yb), B(xd, yb, p.m / 2)]
+    else:
+        side = p.sv / 2 if xd >= xs else -p.sv / 2
+        g.stroke((xs, yb), (xd + side, yb))
+        foot = [(xd, yb)]
     if not turn:
-        g.stroke((xd, yb), (xd, -TAIL * p.desc))
+        g.stroke(*foot, (xd, -TAIL * p.desc))
         _down(g, TAIL * p.desc)
         return
     L = 0.75 * p.sv
     y_end = -p.desc
     y_turn = min(y_end + L, yb - p.sv)
-    g.stroke((xd, yb), (xd, y_turn), (xd - L, y_turn - L), end='h')
+    g.stroke(*foot, (xd, y_turn), (xd - L, y_turn - L), end='h')
     _down(g, p.desc)
 
 
 def drop(g, x):
-    """A stem dropped from the middle of a bowl's foot into the descender."""
+    """A stem dropped from the middle of a bowl's foot into the descender.
+    In the italic it meets the foot's underside square (no corner-rule fill
+    at the join, as the g's descender: lower.crotch_butt), and the foot's
+    corners take drop_leg."""
     p = g.p
     g.stroke((x, g.sh / 2), (x, -TAIL * p.desc))
     _down(g, TAIL * p.desc)
+    if p.slant:
+        from ..draw import _thickness
+        under = g.sh / 2 - _thickness(p, g.sh)((1.0, 0.0)) / 2    # the foot's underside (crotch_butt)
+        g.butt += (('y', under, x - p.sv / 2 - 1.0, x + p.sv / 2 + 1.0),)
+
+
+def drop_leg(p, span):
+    """The leg of a bowl's foot corners with a drop between them, ``span``
+    apart centre to centre: in the italic no longer than leaves the foot a
+    flat of TAIL_FLAT corner breaks between each corner's outer chamfer and
+    the drop's side (never under half a module, the tick's). With the
+    parameter leg the chamfer reached the drop from 800 up, the two merged,
+    and the italic curved the whole foot into a belly with no descender in
+    it (Ҙ Ҫ ҫ ҿ). The upright keeps the parameter leg (None)."""
+    if not p.slant:
+        return None
+    from .italic_forms import TAIL_FLAT
+    beyond = outer_leg(p) - p.leg                   # the outer chamfer past the centreline leg
+    return min(p.leg, max(p.m / 2, span / 2 - beyond - TAIL_FLAT * p.c))
 
 
 def hook_y(g, f):
@@ -97,9 +127,10 @@ def hook_y(g, f):
 def hook(g, f, x, y_from, reach=4.0):
     """A stem at x from y_from running on below the baseline and turning
     back left on a bowl corner (Ђ's and Ŋ's hook)."""
+    from .italic_forms import tail_run
     p = g.p
     yh = hook_y(g, f)
-    g.stroke((x, y_from), B(x, yh), (x - reach * p.m * white_scale(p), yh))
+    g.stroke((x, y_from), B(x, yh), (x - tail_run(p, reach * p.m * white_scale(p)), yh))
     _down(g, p.desc)
 
 
@@ -187,13 +218,17 @@ def Schwa(g):
 
 @ccap('uni0498', 'Ҙ', 9, 2)
 def Zedesc(g):
-    REGISTRY['uni0417'].fn(g)
+    from .cyrillic import ze_shape
+    f = Frame(g, 9)
+    ze_shape(g, drop_leg(g.p, f.X(8) - f.X(1)))
     drop(g, g.W / 2)
 
 
 @ccap('uni04AA', 'Ҫ', 9, 2)
 def Esdesc(g):
-    REGISTRY['C'].fn(g)
+    from .caps import c_shape
+    f = Frame(g, 9)
+    c_shape(g, drop_leg(g.p, f.X(8) - f.X(1)))
     drop(g, g.W / 2)
 
 
@@ -275,9 +310,10 @@ def Ghemidhook(g):
     f = Frame(g, 9)
     p = g.p
     _down(g, p.desc)
+    from .italic_forms import tail_run
     g.stroke(f.P(1, 0), f.P(1, 11), f.P(7, 11))
     yh = hook_y(g, f)
-    g.stroke(f.P(1, 6), B(*f.P(8, 6)), B(f.X(8), yh), (f.X(5), yh))
+    g.stroke(f.P(1, 6), B(*f.P(8, 6)), B(f.X(8), yh), (f.X(8) - tail_run(p, f.X(8) - f.X(5)), yh))
 
 
 def hook_reach(p):
@@ -286,6 +322,10 @@ def hook_reach(p):
     monospaced cell, no more than leaves the letter beside it two stems
     and a module and a half of white."""
     reach = p.sv + 2 * room(p)
+    if p.slant:
+        # in the italic at least an arm the hook's corner curves on (italic_forms.arm_floor)
+        from .italic_forms import arm_floor
+        reach = max(reach, arm_floor(p))
     if p.mono:
         reach = min(reach, max(p.fig_w - 2 * p.sv - 1.5 * room(p), 0.5 * p.sv))
     return reach
@@ -310,10 +350,11 @@ def Pemidhook(g):
     f = frame_in(g, 9, g.W - hook_reach(p))
     _down(g, p.desc)
     g.stroke(f.P(1, 0), f.P(1, 11), f.P(8, 11), f.P(8, 0))
+    from .italic_forms import tail_run
     xs = f.X(8)
     xh = xs + hook_reach(p)
     yh = hook_y(g, f)
-    g.stroke((xs, f.Y(6)), B(xh, f.Y(6)), B(xh, yh), (xh - 1.5 * room(p), yh))
+    g.stroke((xs, f.Y(6)), B(xh, f.Y(6)), B(xh, yh), (xh - tail_run(p, 1.5 * room(p)), yh))
 
 
 @ccap('uni0524', 'Ԥ', 10, 2)
@@ -423,9 +464,10 @@ def Kahook(g):
     a = Wa - p.cap + p.c - k                                # the arm: x - y = a
     yj = xs - a
     g.stroke((p.cap + a, p.cap), (xs, yj), start='h')
+    from .italic_forms import tail_run
     yh = min(yj, f.Y(6))
     yb = hook_y(g, f)
-    g.stroke((xs, yh), B(f.X(8), yh), B(f.X(8), yb), (f.X(4.5), yb))
+    g.stroke((xs, yh), B(f.X(8), yh), B(f.X(8), yb), (f.X(8) - tail_run(p, f.X(8) - f.X(4.5)), yb))
     _down(g, p.desc)
 
 
@@ -548,17 +590,18 @@ def Dekomi(g):
     g.stroke(f.P(8, 7), B(*f.P(1, 7)), B(*f.P(1, 1)), f.P(8, 1), closed=True)
 
 
-def _che_abkhaz(g, f, xl, xr, top, yb, ybot, beak):
+def _che_abkhaz(g, f, xl, xr, top, yb, ybot, beak, foot_leg=None):
     """Ҽ: an e (its eye closed above the bar, its arm open below) whose bar
-    runs on to the left past the bowl and leaves on a 45-degree upstroke."""
+    runs on to the left past the bowl and leaves on a 45-degree upstroke.
+    ``foot_leg``: the foot corners' leg (Ҿ's drop hangs between them)."""
     p = g.p
     g.stroke((xl, yb), (xr, yb), B(xr, top), B(xl, top), closed=True)
     if beak:
         d = beak_free(g)
-        g.stroke((xl, yb), B(xl, ybot), B(xr, ybot), (xr, d))
+        g.stroke((xl, yb), B(xl, ybot, foot_leg), B(xr, ybot, foot_leg), (xr, d))
         g.defaults_used['mouth'] = (yb - g.sh / 2) - d
     else:
-        g.stroke((xl, yb), B(xl, ybot), (xr, ybot))
+        g.stroke((xl, yb), B(xl, ybot, foot_leg), (xr, ybot))
     x1 = xl - p.sv / 2 - room(p)
     L = 1.5 * room(p) + p.sv / 2
     if p.mono:                                              # the cell's edge stops it
@@ -578,7 +621,8 @@ def Cheabkhasian(g):
 @glyph('uni04BE', 'Ҿ', letter_width(11, 2), kind='cap', openings=[MOUTH])
 def Chedescabkhasian(g):
     f = Frame(g, 11)
-    _che_abkhaz(g, f, f.X(3.5), f.X(10), f.Y(11), f.Y(6), f.Y(1), beak=True)
+    _che_abkhaz(g, f, f.X(3.5), f.X(10), f.Y(11), f.Y(6), f.Y(1), beak=True,
+                foot_leg=drop_leg(g.p, f.X(10) - f.X(3.5)))
     drop(g, (f.X(3.5) + f.X(10)) / 2)
 
 
@@ -768,7 +812,9 @@ def hadesc(g):
 
 @glyph('uni04AB', 'ҫ', letter_width(8, 2), kind='lower')
 def esdesc(g):
-    REGISTRY['c'].fn(g)
+    from .lower import c_shape
+    f = Frame(g, 8, 'lower')
+    c_shape(g, drop_leg(g.p, f.X(7) - f.X(1)))
     drop(g, g.W / 2)
 
 
@@ -850,7 +896,8 @@ def _che_small(g, desc=False):
     f = Frame(g, 10, 'lower')
     yb = g.free('bar', f.Y(4))                              # heavy weights raise the bar, as the e's
     g.defaults_used.update(bar=yb, arm=f.Y(1))
-    _che_abkhaz(g, f, f.X(3), f.X(9), f.Y(8), yb, f.Y(1), beak=False)
+    _che_abkhaz(g, f, f.X(3), f.X(9), f.Y(8), yb, f.Y(1), beak=False,
+                foot_leg=drop_leg(g.p, f.X(9) - f.X(3)) if desc else None)
     if desc:
         drop(g, (f.X(3) + f.X(9)) / 2)
 
@@ -943,17 +990,23 @@ def pedesc_ital(g):
     g.stroke(*arch, (xr, f.Y(1)), *_ctick(g, f, xr), start=cut)
 
 
-@ital('uni04A7', 11, 3)
+@ital('uni04A7', 11, 3, width=lambda p: REGISTRY['uni043F.ital'].width(p) + hook_reach(p))
 def pemidhook_ital(g):
-    """The italic п (an n) with the hook from the middle of its right stem."""
-    f = Frame(g, 11, 'lower')
+    """The italic п (an n) with the hook from the middle of its right stem:
+    the п in its own frame, the hook hook_reach beyond it, as the capital's
+    (Pemidhook; drawn in one frame, its arm of three modules was too short
+    for its corner from Regular up)."""
+    from .italic_forms import tail_run
+    p = g.p
+    f = frame_in(g, 8, g.W - hook_reach(p), 'lower')
     _free(g)
     xs, xr = f.X(1), f.X(7)
     g.stroke(f.P(1, 0), f.P(1, 9))
     entry(g, f, xs)
     arch, cut = shoulder(g, f, xs, xr, drop=BRANCH)
     g.stroke(*arch, (xr, 0), start=cut)
-    g.stroke(f.P(7, 4.5), B(*f.P(10, 4.5)), B(*f.P(10, -2)), f.P(8.5, -2))
+    xh = xr + hook_reach(p)
+    g.stroke((xr, f.Y(4.5)), B(xh, f.Y(4.5)), B(xh, f.Y(-2)), (xh - tail_run(p, 1.5 * room(p)), f.Y(-2)))
 
 
 # --- Accented letters ------------------------------------------------------

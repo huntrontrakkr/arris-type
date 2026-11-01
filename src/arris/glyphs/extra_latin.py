@@ -218,18 +218,20 @@ def longs(g):
 def eng(g):
     f = Frame(g, 8, 'lower')
     p = f.p
+    from .italic_forms import tail_run
     g.stroke(f.P(1, 0), f.P(1, 9))
     arch, cut = shoulder(g, f, f.X(1), f.X(7))
-    g.stroke(*arch, B(*f.P(7, -2)), f.P(3, -2), start=cut)
+    g.stroke(*arch, B(*f.P(7, -2)), (f.X(7) - tail_run(p, f.X(7) - f.X(3)), f.Y(-2)), start=cut)
 
 
 @glyph('Eng', 'Ŋ', letter_width(9, 2), kind='cap')
 def Eng(g):
     f = Frame(g, 9)
     p = f.p
+    from .italic_forms import tail_run
     g.clip = (0, -p.desc, f.W, p.cap)
     g.stroke(f.P(1, 0), f.P(1, 12))
-    g.stroke(f.P(1, 11), B(*f.P(8, 11)), B(*f.P(8, -2)), f.P(4, -2))
+    g.stroke(f.P(1, 11), B(*f.P(8, 11)), B(*f.P(8, -2)), (f.X(8) - tail_run(p, f.X(8) - f.X(4)), f.Y(-2)))
 
 
 @glyph('Thorn', 'Þ', letter_width(9, 2), kind='cap')
