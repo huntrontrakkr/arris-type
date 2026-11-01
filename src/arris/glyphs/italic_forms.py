@@ -20,7 +20,7 @@ tail.
 from __future__ import annotations
 
 from ..draw import AUTO_SHARE, REGISTRY, B, Opening, _counter_white, glyph
-from ..params import SQRT2
+from ..params import SQRT2, inner_leg
 from .figures import jog
 from .letterframe import Frame, letter_width, white_scale
 from .lower import _dot, shoulder
@@ -80,6 +80,7 @@ def tail(g, f, xs, y=None):
 
 
 TAIL_FLOOR = 0.7   # stems: the least an exit tail reaches, so its end keeps a flat past its chamfer
+TAIL_FLAT = 1.25   # corner breaks: the least flat an exit tail's top keeps between its corner and its end
 
 
 def tail_end(g, f, xs, y=None):
@@ -87,9 +88,21 @@ def tail_end(g, f, xs, y=None):
     the stem, but never under TAIL_FLOOR stems, so that toward Black (where
     the white narrows as the stem grows) the tail's top keeps a flat beyond
     its end's chamfer: the same construction at every weight, which the
-    variable font interpolates without a lump."""
+    variable font interpolates without a lump.
+
+    Nor so short that the tail's top keeps less than TAIL_FLAT corner breaks
+    of flat between the corner's inner chamfer and the end's (the inner leg,
+    the end's break and the flat): a step between parallel edges shorter
+    than a corner break is taken for a miss and closed (geom.JOG), which cut
+    the end's top off the tail and left the corner an S-bend the italic
+    cannot curve. In 1.005 that happened from 589 to about 740, where the
+    tail's flat (about one corner break from Medium up) fell under the
+    threshold: the h, l, d, n and the rest ended in a straight cut at
+    SemiBold and Bold and a curve either side."""
     p = g.p
-    return (xs + p.sv / 2 + max(_reach(p, TAIL), TAIL_FLOOR * p.ungraded().sv), f.Y(1) if y is None else y)   # (grade moves no stroke)
+    u = p.ungraded()                                  # (grade moves no stroke)
+    reach = max(_reach(p, TAIL), TAIL_FLOOR * u.sv, inner_leg(u) + (1 + TAIL_FLAT) * u.c)
+    return (xs + p.sv / 2 + reach, f.Y(1) if y is None else y)
 
 
 # --- Stems, entries and exits ------------------------------------------------
