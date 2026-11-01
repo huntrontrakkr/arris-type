@@ -78,6 +78,23 @@ before a commercial distribution if wanted.
   crossing (its depth, `vf.dense`) sees a long thin wedge as shallow.
   `tests/test_topology.py` holds the check to synthetic folds and a sample
   of drawings.
+- The variable fonts' folds (`arris.vf`). 1.006's fonts fold by 40 to 190
+  units at their own masters and between them: the build measured a
+  self-crossing by its depth, which sees a long thin wedge as shallow; the
+  grid nodes it predicts rather than draws were never compared with a
+  drawing; the italic's curves, built on the aligned upright rings, open a
+  collapsed corner into a loop; and the census its planes come from was
+  taken at grade 0 and +100 alone, so a drawing's jump on the other lines
+  was interpolated across a hundred units of weight. Now a fold is an
+  error of its own size (`measure.fold`, the topology check's measure)
+  wherever an alignment is measured: at the check's places, on the dense
+  grid, just off each master (where collapsed points open), when a master
+  is pruned, and, for the italic, on the curved outlines the font carries
+  (`measure.folds`, `italic.prepare_outlines`); the census's planes about
+  a jump are brought from ten units of weight apart to one by bisection
+  (`glyph._narrowed`), so a jump is a jump and not a wedge a reader can
+  land on; and every build ends by reading its own font with the topology
+  check (`build/topology.json`).
 - Italic: which edge a bowl's chamfer line claims (`italic._segments`). A
   45-degree line runs on, and the edge nearest where the chamfer was
   recorded can be another's: the K's leg lay behind the Қ's and Җ's

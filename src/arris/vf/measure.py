@@ -45,6 +45,7 @@ SPIKE = 20.0        # a point carried off the outline counts its distance over t
 # deep.)
 DENSE_TOL = 20.0    # font units: a point this far past its masters, or a crossing this deep, is as bad as LOCAL_TOL
 OFF = 0.02          # of an axis: just off a master, where its collapsed points open (a fold there is the master's own)
+DEFAULT_KEY: Place = (400.0, 0.0, 0.0)    # where an outline that cannot be measured is charged
 
 
 def fold(rings: Rings) -> float:
@@ -75,11 +76,20 @@ def folds(outlines: Sequence[Rings], mlocs: Sequence[Place], where: Sequence[Pla
                 if -1.0 <= q[i] <= 1.0 and (i != 2 or q[i] >= 0.0):
                     places.append((denormal(tuple(q)), m))        # type: ignore[arg-type]
     out: dict[Place, float] = {}
-    for loc, key in places:
-        try:
-            e = fold([r for r in interpolate(outlines, loc, vmodel) if len(set(r)) >= 3])
-        except Exception:  # noqa: BLE001  (an outline that cannot be made is as bad as it gets)
-            e = 1e9
+    try:
+        # every place at once (dense's arithmetic), the on-curve flags the first master's
+        base, D, R, _ = dense.from_masters(outlines, [normal(m) for m in mlocs], vmodel)
+        P = dense.outlines(np, np.array([normal(loc) for loc, _ in places]), base, D, R)
+    except Exception as e:  # noqa: BLE001  (outlines that cannot be modelled are as bad as it gets)
+        log.debug('folds: %s', e)
+        return {DEFAULT_KEY: 1e9}
+    flags = [[q[2:] for q in r] for r in outlines[0]]
+    for i, (_, key) in enumerate(places):
+        rings, k = [], 0
+        for fl in flags:
+            rings.append([(float(x), float(y), *f) for (x, y), f in zip(P[i, k:k + len(fl)], fl)])
+            k += len(fl)
+        e = fold([r for r in rings if len({q[:2] for q in r}) >= 3])
         if e > LOCAL_TOL and e > out.get(key, 0.0):
             out[key] = e
     return out

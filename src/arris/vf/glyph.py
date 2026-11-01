@@ -298,8 +298,12 @@ def _choose(ctx: Context, n: str, up: list[Drawn], exact: Exact,
                 # its cells, so where it matches the drawings at every node
                 # it is as good as the grid everywhere between)
                 where = CHECK + [m for m in nodes if m not in ns]
-                es = _merge(errors(al, exact, ns, where), curved.folds(al, ns, kind, k, variant, nodes, where))
+                es = errors(al, exact, ns, where)
                 err = max(es.values())
+                if err <= LOCAL_TOL or best is None or err < best.error:
+                    # (the italic's curved outlines read for a candidate that would be taken)
+                    es = _merge(es, curved.folds(al, ns, kind, k, variant, nodes, where))
+                    err = max(es.values())
                 log.debug('  %s %s %s %s %d: %.1f at %s', n, 'jogs' if jogs else 'no jogs', how, kind, k, err,
                           max(es, key=es.__getitem__))
                 first = err if first is None else first
