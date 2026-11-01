@@ -147,18 +147,22 @@ jobs:
         run: ARRIS_VF_WORKERS=2 uv run python tools/vf_compare.py "build/${{ matrix.font }}" "build/${{ matrix.font }}" --all
       - name: Topology (the font's outlines along the axes, arris.topology; the report an artifact)
         run: uv run python -m arris.topology "build/${{ matrix.font }}" --procs 2 --json "build/topology-${{ matrix.name }}.json" | tail -60 || true
+      - name: Nesting (each counter inside the lighter weight's, arris.steady; the report an artifact)
+        run: uv run python -m arris.steady "build/${{ matrix.font }}" --procs 2 --json "build/steady-${{ matrix.name }}.json" --limit 60 || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: topology-${{ matrix.name }}
-          path: build/topology-*.json
+          path: |
+            build/topology-*.json
+            build/steady-*.json
           if-no-files-found: ignore
 
   fontbakery:
     name: fontbakery ${{ matrix.name }}
     needs: [static, variable]
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120        # 1.007's upright variable font took 59 minutes
     strategy:
       fail-fast: false
       matrix:

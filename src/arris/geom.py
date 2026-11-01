@@ -40,6 +40,7 @@ class Stroke:
     closed: bool = False
     start: str = 'flat'  # cap at the first node: 'flat', 'h' or 'v'
     end: str = 'flat'
+    keep: tuple = ()     # ((nx, ny, c), ...): the stroke keeps only its ink with nx x + ny y >= c (a hidden end, _kept)
 
 
 def _sub(a, b): return (a[0] - b[0], a[1] - b[1])
@@ -196,7 +197,8 @@ REPAIRED: list = []
 
 
 def _scale_bowls(stroke: Stroke, k: float) -> Stroke:
-    return Stroke(tuple(Node(n.x, n.y, n.bowl * k, n.w) for n in stroke.nodes), stroke.closed, stroke.start, stroke.end)
+    return Stroke(tuple(Node(n.x, n.y, n.bowl * k, n.w) for n in stroke.nodes), stroke.closed, stroke.start, stroke.end,
+                  stroke.keep)
 
 
 def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = False,
@@ -413,9 +415,14 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     polys = []
     for i, st in enumerate(strokes):
         e = [] if segs is not None else None
-        polys.append(stroke_polygon(st, thick, c, rec, edges=e))
+        poly = stroke_polygon(st, thick, c, rec, edges=e)
         if e:
             segs.extend((a, b, ('s', i) + t) for a, b, t in e)
+        for j, h in enumerate(st.keep):
+            poly, line = _kept(poly, h)
+            if segs is not None and line is not None:
+                segs.append((line[0], line[1], ('s', i, 'keep', j)))
+        polys.append(poly)
     polys += list(extra)
     if not polys:
         return []
@@ -460,6 +467,32 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
             segs.extend((b[k], b[k + 1], ('clip', k)) for k in range(len(b) - 1))
         tags.extend(_name_edges(r, segs) for r in rings)
     return rings
+
+
+def _kept(poly, half):
+    """(the stroke's ink on the kept side of the line nx x + ny y = c, the
+    line as two far points): a stroke's end that is meant to hide inside
+    another stroke, cut where that stroke's outline runs, so that drifting
+    a unit as the weight changes it never comes out past it (the italic
+    e's bar, its end cut square and so parallel to the bowl's corner cut,
+    came out of it by up to eight units at the heaviest weights, and the
+    corner curved or was cut straight as the cleanup closed that step or
+    not). Nothing on the kept side moves."""
+    nx, ny, c = half
+    n = math.hypot(nx, ny)
+    nx, ny, c = nx / n, ny / n, c / n
+    p0 = (nx * c, ny * c)
+    t = (-ny, nx)
+    big = 1e5
+    a, b = _add(p0, _mul(t, big)), _sub(p0, _mul(t, big))
+    side = Polygon([a, b, _add(b, (nx * big, ny * big)), _add(a, (nx * big, ny * big))])
+    kept = poly.intersection(side)
+    if kept.is_empty:
+        return poly, None
+    if not isinstance(kept, Polygon):
+        parts = [g for g in getattr(kept, 'geoms', [kept]) if isinstance(g, Polygon)]
+        kept = max(parts, key=lambda g: g.area) if parts else poly
+    return kept, (a, b)
 
 
 def _name_edges(ring, segs, tol=1e-3):
