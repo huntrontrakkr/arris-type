@@ -57,6 +57,27 @@ before a commercial distribution if wanted.
   italic it names every flip 1.006 fixed; `tests/test_skeleton.py` keeps a
   core sample passing. The JSON (`--json`) holds every feature's survival,
   for diffing one build against another.
+- The topology check, `python -m arris.topology` (`arris.topology`): what
+  an Arris outline never does, tested along the axes. Each contour is one
+  simple ring that meets no other; no turn is sharper than 150 degrees (a
+  fold or a spike); no edge is shorter than a unit; no two parts of a
+  contour come nearer than a third of a break without meeting (a pinch, a
+  cluster of points). Run on the built variable fonts, every simple glyph
+  is read at its own masters, halfway between them on each axis, and along
+  the weight every ten units at five grades and three watches, straight
+  from the font's variations; `--drawings` reads the engine's drawings at
+  the heavy corners of the design space. A crossing is sized by the piece
+  it folds wrong (wound backwards, a spike of ink; not at all, a sliver of
+  white), so a notch a reader sees ranks above a hairline. On 1.006's
+  upright variable font: 680 of 1,787 glyphs cross themselves somewhere
+  between their masters, 91 of them by ten units or more (℉ ₘ ҽ ҿ ♧ ₪ Ҏ ð
+  ? æ ӡ $ ų ŧ …), 91 at the default grade and watch; the drawings do not.
+  The cause is the alignment that makes the masters point-compatible: a
+  point it adds sits a fraction of a unit off the outline at a master and
+  opens into a wedge between two, and the build's own measure of a
+  crossing (its depth, `vf.dense`) sees a long thin wedge as shallow.
+  `tests/test_topology.py` holds the check to synthetic folds and a sample
+  of drawings.
 - Italic: which edge a bowl's chamfer line claims (`italic._segments`). A
   45-degree line runs on, and the edge nearest where the chamfer was
   recorded can be another's: the K's leg lay behind the Қ's and Җ's

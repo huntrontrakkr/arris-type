@@ -116,6 +116,10 @@ and where the optical corrections come from. In short:
 * `tools/stroke_scan.py`: every glyph's strokes certified, upright and
   italic: no crossing outlines, nothing below the stroke floor, no swelling.
 * `tools/scan_counters.py`: counters that tighten or close at heavy weights.
+* `src/arris/topology.py`: every outline's topology along the axes, in the
+  drawings and in the built variable fonts between their masters: no contour
+  crosses itself, folds back, keeps an edge shorter than a unit or pinches
+  narrower than a break.
 * `tools/squint_scan.py`: holes and slots a squinting reader loses, weight
   by weight (`arris.vision.narrow_whites`).
 
