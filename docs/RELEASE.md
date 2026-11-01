@@ -42,7 +42,7 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
-## 1.006 (unreleased)
+## 1.006 (2026-11-01)
 
 The build, after 1.005 took nine hours of runners for one release:
 
@@ -75,6 +75,74 @@ The build, after 1.005 took nine hours of runners for one release:
   variable, Arris Mono, Arris Watch, and Arris as static weights), and so
   on jsDelivr and unpkg. A published release goes there by itself
   (`.github/workflows/npm.yml`, `tools/npm_package.py`); 1.005 is 1.5.0.
+
+The italic along the weight. The italic curves the upright's bowl corners,
+and holds one straight where the geometry beside it has degenerated (a leg
+that ran out, two chamfers abutting, a step the slant exposed). 1.005 held
+such corners at some weights and not others: the h's and l's feet ended in
+a straight cut from 589 to about 740 and a curve either side, the g's and
+y's descenders were sharp from 500 to 700, the Ԧ's hook ended in a point at
+Bold and a curve at Black, the Ҙ's descender vanished into a belly from
+800. A sweep of every italic letter and figure at 44 places each (weights
+100–900 at grades −100, 0 and +100 and watch 0 and 100) counted 1,268
+weight-dependent holds; the families, and what each is given:
+
+- Exit tails (h l i m n п т …): the tail keeps a flat clear of the jog
+  cleanup past its corner (`italic_forms.tail_end`, `TAIL_FLAT`).
+- g y д: the bowl's foot meets the descending stem square, without the
+  corner rule's fill (`lower.crotch_butt`).
+- Curves keep their weight round the bend: the inner curve is drawn on
+  shorter legs than its chamfer's (`italic._even_bend`). Quadratic pairs on
+  equal legs swelled the Thin o, c and e by a quarter at every bend. Black
+  is unchanged.
+- A bowl whose inner edge only ends at a sharp point (the e's at its bar,
+  the s's at its spine, the j's hook) curves on both edges; held, the e
+  straightened from 400 and the s from 250 to 450 (`italic._plan`). A
+  bowl's line claims a far segment only when no edge break owns it (the
+  y's flag at 850).
+- Hooks (Ԧ Ҧ ҧ Ӈ ӈ Ђ ђ Ŋ ŋ Ҕ ҕ Ӄ Ԓ Ӽ, ζ ς Ϛ ϛ): the tail past the corner
+  is at least `italic_forms.run_floor` on both of its edges, and a hook's
+  arm at least `arm_floor` (`cyrillic_ext.hook_reach`, which the Ԧ and ҧ
+  take their width from); the ҧ is drawn as the Ҧ is.
+- Beaks (C S J j 3 5 Э Є Ҫ Ҽ Ә and their composites): the inner flank
+  under the corner's chamfer is `TAIL_FLAT` breaks longer than the
+  upright's one (`figures._flank`), clear of the cleanup that merged it
+  with the end's break, and an opening shortens a beak no further than
+  that. A small capital's beaks (э з є) are the lowercase c's, chamfered
+  at every weight: two of the longer beaks across its height met from 650.
+- Cyrillic descenders (Қ Ң Ҷ Ҭ Җ Ҳ Ԥ Ҵ Ӌ Ӷ, the tails Ӊ Ӎ Ӆ Ҋ, Ц Щ): one
+  stroke through a small bowl corner into the drop, the cursive ц's, in
+  place of two strokes meeting in an L, which the slant showed as a notch.
+  The drop still stands a module from its stem, less than a stroke from
+  Regular up, so the corner into it is held from about 200: whether the
+  italic keeps that step or drops straight from the stem is the next
+  decision, with the skeleton check below.
+- Drops (Ҙ Ҫ ҫ Ҿ ҿ): the drop meets the foot square and the foot's corners
+  take the leg that leaves a flat before it (`cyrillic_ext.drop_leg`).
+- The ogonek (ą ę į ų ǫ, capitals): the italic's own, flush with the
+  base's right edge where it runs to the baseline, under the bowl where it
+  does not, 0.6 of a stem thick (`marks.OGONEK_ITALIC`), its foot at least
+  `run_floor`, square to the base. The cedilla meets the base square too.
+- Butt lines may be given ends (`geom.ink`): the join is square under the
+  mark alone.
+
+All of it in the italic alone: the upright's 2,229 drawings, hashed at six
+places before and after, are identical. Still weight-dependent, from 1.005
+and left for now: the waists of B (to 300) and 3 8 З Ɛ Ɓ ξ β ß (at Thin),
+where the point opens into a flat and the lower corner curves; the k's
+loop, round to 350 and sharp into its leg from 400; the æ's e, narrower
+than the e, holding its eye's corner to 550; the m's first arch under its
+flag at Thin; the shoulder of ʒ Ӡ Ʒ Ǥ ķ into its diagonal, held from about
+350; the ӄ's arm reaching its hook's corner from 850; the Ӽ's hook to 300;
+the watch-form s at watch 100 to 200; and in the upright, the ç's outline
+folds back on itself by eight units at 550 where `_close_jogs` slides a
+vertex past its neighbour. Next is a skeleton-fidelity check: the drawing
+is the letter's intent, a set of strokes with typed corners and ends, and
+weight an offset of it; a check that every feature of the strokes (ink
+along each centreline, white beside it, each corner, each free end, each
+counter) survives along every axis line, lost toward Black at most once
+and never regained, would have named each of these, and will drive what
+remains rather than a sweep of held corners.
 
 ## 1.005 (2026-10-30)
 

@@ -179,7 +179,9 @@ def zeta(g):
     xl, xr = f.X(1), f.X(7)
     y_top = f.Y(12)
     y_l = y_top - (xr - xl)
-    g.stroke((f.X(1.5), y_top), (xr, y_top), (xl, y_l), B(xl, f.Y(1)), B(xr, f.Y(1)), (xr, f.Y(-2)), f.P(5, -2))
+    from .italic_forms import tail_run
+    g.stroke((f.X(1.5), y_top), (xr, y_top), (xl, y_l), B(xl, f.Y(1)), B(xr, f.Y(1)), (xr, f.Y(-2)),
+             (xr - tail_run(p, xr - f.X(5)), f.Y(-2)))
 
 
 @glow('uni03B7', 'η', 8, 2)
@@ -267,8 +269,9 @@ def finalsigma(g):
     f = Frame(g, 8, 'lower')
     p, d = f.p, beak_depth(f.p)
     g.clip = (0, -p.desc, f.W, p.xh)
+    from .italic_forms import tail_run
     g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 2.5)), B(*f.P(7, 2.5)),
-             B(*f.P(7, -2)), f.P(4, -2))
+             B(*f.P(7, -2)), (f.X(7) - tail_run(p, f.X(7) - f.X(4)), f.Y(-2)))
 
 
 @glow('uni03C4', 'τ', 8, 1)
