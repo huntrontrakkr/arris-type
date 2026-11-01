@@ -12,6 +12,7 @@ from fontTools.varLib.models import VariationModel
 from shapely.geometry.base import BaseGeometry
 
 from arris.geom import rings_to_shapely
+from arris.topology import faults
 
 from . import dense
 from .space import CHECK, DENSE, MASTERS, MODEL, Place, location, model, normal
@@ -33,6 +34,15 @@ SPIKE = 20.0        # a point carried off the outline counts its distance over t
 # times LOCAL_TOL, made a glyph take a 116-unit spike over a twist 2 units
 # deep.)
 DENSE_TOL = 20.0    # font units: a point this far past its masters, or a crossing this deep, is as bad as LOCAL_TOL
+
+
+def fold(rings: Rings) -> float:
+    """The largest piece a contour of the outline folds wrong, in font units
+    (arris.topology: a contour that crosses itself, sized by the area it
+    winds backwards or not at all). A fold is an error of its own size: a
+    three-unit sliver is as bad as a LOCAL_TOL mean difference, where the
+    crossing's depth (dense.deepest) saw a long thin wedge as shallow."""
+    return max((f.size for f in faults(rings, 0.0, False, every=False) if f.kind == 'cross'), default=0.0)
 
 
 def interpolate(al: Sequence[Rings], loc: Place, vmodel: VariationModel = MODEL) -> Rings:
@@ -70,9 +80,10 @@ def errors(al: Sequence[Rings], exact: Callable[[Place], BaseGeometry], mlocs: S
     for loc in (where or CHECK):
         try:
             ex = exact(loc)
-            got = rings_to_shapely([r for r in interpolate(al, loc, vmodel) if len(set(r)) >= 3])
+            rings = [r for r in interpolate(al, loc, vmodel) if len(set(r)) >= 3]
+            got = rings_to_shapely(rings)
             err = max(got.symmetric_difference(ex).area / max(ex.boundary.length, 1),
-                      got.boundary.hausdorff_distance(ex.boundary) / SPIKE)
+                      got.boundary.hausdorff_distance(ex.boundary) / SPIKE, fold(rings))
         except Exception:  # noqa: BLE001  (an outline that cannot be made is as bad as it gets)
             err = 1e9
         out[loc] = err
@@ -86,9 +97,9 @@ def error(al: Sequence[Rings], exact: Callable[[Place], BaseGeometry], mlocs: Se
 
 
 def dense_errors(al: Sequence[Rings], mlocs: Sequence[Place]) -> dict[Place, float]:
-    """The places of DENSE where the interpolation overshoots its masters
-    or crosses itself deeper than they do, by the equivalent of a mean
-    outline difference (over LOCAL_TOL alone)."""
+    """The places of DENSE where the interpolation overshoots its masters,
+    crosses itself deeper than they do, or folds (``fold``, by its size),
+    by the equivalent of a mean outline difference (over LOCAL_TOL alone)."""
     vmodel = model(mlocs)
     base, D, R, nxt = dense.from_masters(al, [normal(m) for m in mlocs], vmodel)
     masters_pts = np.array([[q[:2] for r in m for q in r] for m in al], dtype=float)
@@ -99,9 +110,15 @@ def dense_errors(al: Sequence[Rings], mlocs: Sequence[Place]) -> dict[Place, flo
     P = dense.outlines(np, locs, base, D, R)
     d = dense.overshoot(np, P, lo, hi)
     x = dense.deepest(np, P, nxt, mask)
+    lens = [len(r) for r in al[0]]
     out: dict[Place, float] = {}
     for i, loc in enumerate(DENSE):
         e = max(d[i], x[i] - d0 if x[i] >= dense.DEPTH else 0.0) * LOCAL_TOL / DENSE_TOL
+        rings, k = [], 0
+        for ln in lens:
+            rings.append([tuple(q) for q in P[i, k:k + ln]])
+            k += ln
+        e = max(e, fold(rings))
         if e > LOCAL_TOL:
             out[loc] = e
     return out
