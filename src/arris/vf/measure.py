@@ -44,7 +44,7 @@ SPIKE = 20.0        # a point carried off the outline counts its distance over t
 # times LOCAL_TOL, made a glyph take a 116-unit spike over a twist 2 units
 # deep.)
 DENSE_TOL = 20.0    # font units: a point this far past its masters, or a crossing this deep, is as bad as LOCAL_TOL
-OFF = 0.02          # of an axis: just off a master, where its collapsed points open (a fold there is the master's own)
+OFFS = (0.01, 0.02, 0.04)   # of an axis: just off a master, where its collapsed points open (a fold there is the master's own)
 DEFAULT_KEY: Place = (400.0, 0.0, 0.0)    # where an outline that cannot be measured is charged
 
 
@@ -70,7 +70,7 @@ def folds(outlines: Sequence[Rings], mlocs: Sequence[Place], where: Sequence[Pla
     for m in mlocs:
         nm = normal(m)
         for i in range(3):
-            for s in (-OFF, OFF):
+            for s in [*(-o for o in OFFS), *OFFS]:
                 q = list(nm)
                 q[i] += s
                 if -1.0 <= q[i] <= 1.0 and (i != 2 or q[i] >= 0.0):
@@ -162,7 +162,7 @@ def dense_errors(al: Sequence[Rings], mlocs: Sequence[Place]) -> dict[Place, flo
     for m in mlocs:
         nm = normal(m)
         for i in range(3):
-            for s in (-OFF, OFF):
+            for s in [*(-o for o in OFFS), *OFFS]:
                 q = list(nm)
                 q[i] += s
                 if -1.0 <= q[i] <= 1.0 and (i != 2 or q[i] >= 0.0):
