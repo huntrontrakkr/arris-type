@@ -74,6 +74,7 @@ uv run python tools/build_fonts.py all italic   # Arris Italic (add mono for Arr
 uv run python -m arris.vf                       # the variable font, with its interpolation check
 uv run python -m arris.vf italic                # the italic variable font
 uv run pytest                                   # the figures against the watch's pixels
+uv run python -m arris.skeleton                 # every letter's features kept along the axes (--quick: the weight alone)
 uv run python tools/presentation.py             # the presentation: presentation/slides/*.png and arris.pdf
 uv run python tools/package.py                  # a release zip: build/release/Arris-<version>.zip
 ```

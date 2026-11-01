@@ -42,6 +42,22 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.007 (unreleased)
+
+- The skeleton check, `python -m arris.skeleton` (`arris.skeleton`): a
+  glyph's strokes are the letter's intent, and weight an offset of them.
+  The check reads the features off the strokes (ink along each segment's
+  centreline, white beside it clear of its corners and the strokes it
+  meets, each bowl corner present and in the italic curved, each free end
+  free, the counters and the pieces of ink counted) and tests each at every
+  weight from 100 to 900 at grades −100, 0 and +100 and watch 0 and 100, in
+  both styles. A feature may be lost toward Black, once; one lost and
+  regained, a counter that appears or a piece of ink that merges with
+  weight is a fault, and a feature lost under 500 is listed. Run on 1.005's
+  italic it names every flip 1.006 fixed; `tests/test_skeleton.py` keeps a
+  core sample passing. The JSON (`--json`) holds every feature's survival,
+  for diffing one build against another.
+
 ## 1.006 (2026-11-01)
 
 The build, after 1.005 took nine hours of runners for one release:
