@@ -29,11 +29,22 @@ class Opening:
     glyph. The glyph reads one free variable, ``free``; if the gap is narrower
     than its share of the stem in the watch's own drawing, the variable moves
     from its default toward ``limit(p)`` until the gap has that share again.
+
+    A share of the stem grows with the stem: a counter held to one is made
+    larger at every heavier weight (the italic k's loop dropped, its counter
+    grew from Bold to 875 and fell back to a diamond at Black, where the
+    loop ran out). ``hold`` (for a closed counter): the rule acts from the
+    weight of the cut where the drawing first falls short of its share,
+    and from there it keeps the tightest counter's area at what it was
+    there, shrinking as the stem grows (in proportion), so the counter
+    only ever gets smaller with the weight. (Its width, held instead, let
+    the area grow as the shape changed.)
     """
     measure: Callable[['Glyph'], float]
     free: str
     limit: Callable[[Params], float]
     max_ratio: float | None = None   # cap on the watch's share, if it is generous
+    hold: bool = False               # past the weight where it first acts, the counter it had there, shrinking (_engaged)
 
 
 @dataclass(frozen=True)
@@ -806,11 +817,11 @@ def _restroked(p, s):
 _CANON: dict = {}
 
 
-def _lighter(p):
-    """The parameters of the lighter weights of p's own cut, from the
-    Regular's up (every 100), if p is a font's own (a weight, grade and
-    watch balance of a cut: instances.params, Mono or not, italic or not);
-    else None (a set derived from one: small capitals, small figures)."""
+def _cut(p):
+    """(p's weight, the parameters of p's cut at any weight) if p is a
+    font's own (a weight, grade and watch balance of a cut:
+    instances.params, Mono or not, italic or not); else None (a set
+    derived from one: small capitals, small figures)."""
     if p not in _CANON:
         from .instances import params, stem
         out = None
@@ -822,23 +833,87 @@ def _lighter(p):
             lo, hi = (mid, hi) if stem(mid) < base_sv else (lo, mid)
         w = round((lo + hi) / 2, 3)
 
-        def at(w_, watch):
-            q = params(w_, grad, watch=watch).with_(mono=p.mono)
-            if p.slant:
-                from .italic import italic
-                q = italic(q)
-            return q
+        def make(watch):
+            def at(w_):
+                q = params(w_, grad, watch=watch).with_(mono=p.mono)
+                if p.slant:
+                    from .italic import italic
+                    q = italic(q)
+                return q
+            return at
         # the watch balance: the measured optics' share is 1 - watch (0 at
         # the watch's own proportions)
         for watch in sorted({round(1.0 - p.optical, 6), 1.0}):
             try:
-                if at(w, watch) == p:
-                    out = [at(w_, watch) for w_ in range(400, int(w), 100) if w_ < w]
+                if make(watch)(w) == p:
+                    out = (w, make(watch))
                     break
             except Exception:  # noqa: BLE001
                 pass
         _CANON[p] = out
     return _CANON[p]
+
+
+def _lighter(p):
+    """The parameters of the lighter weights of p's own cut, from the
+    Regular's up (every 100), if p is a font's own; else None (_cut)."""
+    cut = _cut(p)
+    if cut is None:
+        return None
+    w, at = cut
+    return [at(w_) for w_ in range(400, int(w), 100) if w_ < w]
+
+
+_ENGAGED: dict = {}
+ENGAGE_STEPS = 14     # bisection steps over the weight, from the Regular's to Black (a twentieth of a unit)
+
+
+def _counter_area(g) -> float:
+    """The area of the drawing's smallest closed counter (0 if it has none)."""
+    from shapely.geometry import Polygon
+    from .geom import rings_to_shapely
+    poly = rings_to_shapely(g.rings())
+    areas = [Polygon(h).area for part in getattr(poly, 'geoms', [poly]) for h in part.interiors]
+    return min(areas) if areas else 0.0
+
+
+def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
+    """The counter area an opening that holds (Opening.hold) keeps at p:
+    the area at the weight of p's cut where the drawing, its free variable
+    at its default, first falls short of the opening's share of the stem
+    (from the Regular's on; at the Regular if it is short there already),
+    times that weight's stem over p's. None if p is not a font's own cut
+    (the plain share then), or if p is lighter than that weight (the
+    rule's own test decides). Found once a cut."""
+    cut = _cut(p)
+    if cut is None:
+        return None
+    w, at = cut
+    op = spec.openings[k]
+    key = (spec.name, k, ratio, at(400), tuple(sorted(overrides.items())), width)
+    if key not in _ENGAGED:
+        def short(w_):
+            q = at(w_)
+            return op.measure(_build(spec, q, ot, ob, overrides, width)) < ratio * q.sv - 1e-6
+        if short(400.0):
+            we = 400.0
+        elif not short(900.0):
+            we = None
+        else:
+            lo, hi = 400.0, 900.0
+            for _ in range(ENGAGE_STEPS):
+                mid = (lo + hi) / 2
+                lo, hi = (lo, mid) if short(mid) else (mid, hi)
+            we = hi
+        if we is None:
+            _ENGAGED[key] = None
+        else:
+            q = at(we)
+            _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, width)), q.sv)
+    found = _ENGAGED[key]
+    if found is None or w < found[0]:
+        return None
+    return found[1] * found[2] / p.sv
 
 
 def _squint_monotone(spec, sq, p, ot, ob, overrides, width):
@@ -944,19 +1019,26 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
         target = ratio * p.sv
         if op.free not in g.defaults:                       # this drawing does not use it (a cell's upright form)
             continue
-        if op.measure(g) >= target - 1e-6:
+        measure = op.measure
+        if op.hold:
+            held = _engaged(spec, k, ratio, p, ot, ob, overrides, width)
+            if held is not None:
+                measure, target = _counter_area, held
+        if measure(g) >= target - 1e-6:
             continue
         a, b = g.defaults[op.free], op.limit(p)
         for _ in range(24):  # bisection: a is too closed, b assumed open enough
             mid = (a + b) / 2
             trial = _build(spec, p, ot, ob, {**overrides, op.free: mid}, width)
-            if op.measure(trial) >= target:
+            if measure(trial) >= target:
                 b = mid
             else:
                 a = mid
         overrides[op.free] = b
         g = _build(spec, p, ot, ob, overrides, width)
     auto = _auto_counters(spec)
+    if any(op.hold for op in spec.openings):
+        auto = None             # an opening that holds is the counter's rule (thinning would grow it again)
     if auto is not None:
         n, ratio = auto
         target = min(ratio, AUTO_SHARE) * p.sv

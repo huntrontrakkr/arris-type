@@ -295,11 +295,25 @@ def f_ital(g):
 
 # --- Cursive forms ---------------------------------------------------------
 
-@ital('k', 8, 1, openings=[Opening(_one_counter, 'loop', lambda p: 3.0, max_ratio=AUTO_SHARE)])
+K_FILL = (2.5, 0.5)     # breaks: the italic k's notch floor this far under the arch starts to fill, and is full by the second
+
+
+@ital('k', 8, 1, openings=[Opening(_one_counter, 'loop', lambda p: 3.0, max_ratio=AUTO_SHARE, hold=True)])
 def k_ital(g):
     """The looped k: the arm closes into a small bowl on the stem, and the
     leg leaves the bowl's foot at 45 degrees. At heavy weights the loop
-    reaches lower so it stays open."""
+    reaches lower so it stays open.
+
+    The arm leaves the stem as the n's shoulder does, with the notch under
+    it, which in the loop is a little step at the counter's top left. As
+    the weight grows the arm's diagonal shortens and the notch's floor (the
+    diagonal's level start) rises toward the arch's underside; reaching it,
+    the diagonal is shorter than it is thick and the notch would open into
+    a slot in the arch (and, far into the stem, the start comes out of the
+    stem's back: a nub at Black). So from K_FILL[0] breaks under the arch a
+    45-degree fill grows across the notch from its inner corner, the step
+    shrinking steadily, and by K_FILL[1] the arm's underside runs straight
+    into the stem, one shape on to Black."""
     f = Frame(g, 8, 'asc')
     _free(g)
     p = g.p
@@ -308,9 +322,27 @@ def k_ital(g):
     entry(g, f, xs, p.asc)
     ylo = f.Y(g.free('loop', 4.0))
     arch, cut = shoulder(g, f, xs, f.X(6.5), drop=BRANCH)
+    t = 1.0
+    if cut == 'h':
+        depth = (arch[1][1] - arch[0][1] - g.sh / 2) / p.c     # the notch's floor under the arch, in breaks
+        s = (K_FILL[0] - depth) / (K_FILL[0] - K_FILL[1])
+        t = 0.0 if s <= 0 else 1.0 if s >= 1 else s * s * (3 - 2 * s)
+    if t >= 1:
+        arch, cut = shoulder(g, f, xs, f.X(6.5), drop=BRANCH, notch=False)
     g.stroke(*arch, B(f.X(6.5), ylo), (xs, ylo), start=cut)
     x0 = f.X(3.5)
     g.stroke((x0, ylo), (x0 + ylo, 0), start='h', end='h')
+    if 0 < t < 1 and cut == 'h':
+        # the fill: a 45-degree stroke from the stem's centre whose underside
+        # cuts the notch's inner corner, t of the way across; above the
+        # notch's floor it lies inside the arm, its top a quarter break short
+        # of the arm's (drawn last, so the other strokes keep their names)
+        (xa, ya), k = arch[0], p.sd / SQRT2
+        notch = xa + k - (xs + p.sv / 2)                    # the floor's run out from the stem
+        if notch > 0:
+            w = t * notch / SQRT2 + p.c / 4
+            at = xa + k - (1 - t) * notch - w / SQRT2       # the fill's centreline on the floor's line
+            g.stroke((xs, ya - (at - xs), w), (at + p.c, ya + p.c), start='v', end='h')
 
 
 @ital('y', 8, 2)
