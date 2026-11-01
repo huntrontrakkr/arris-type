@@ -87,3 +87,11 @@ def test_the_drawings_never_cross_themselves(style):
             for f in faults(contours, p.c, style == 'italic', every=False):
                 crossed.append((name, (w, g, x), f.kind, f.size))
     assert crossed == []
+
+
+def test_the_build_sizes_a_fold_the_same_way():
+    from arris.vf.measure import fold
+    bow = [(0, 0), (200, 200), (200, 0), (0, 200)]
+    square = [(0, 0), (200, 0), (200, 200), (0, 200)]
+    assert fold([square]) == 0.0
+    assert fold([bow]) >= 90

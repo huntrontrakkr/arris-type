@@ -15,7 +15,17 @@ from arris.geom import rings_to_shapely
 from arris.topology import faults
 
 from . import dense
-from .space import CHECK, DENSE, MASTERS, MODEL, Place, location, model, normal
+from .space import (
+    CHECK,
+    DENSE,
+    MASTERS,
+    MODEL,
+    Place,
+    denormal,
+    location,
+    model,
+    normal,
+)
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +44,7 @@ SPIKE = 20.0        # a point carried off the outline counts its distance over t
 # times LOCAL_TOL, made a glyph take a 116-unit spike over a twist 2 units
 # deep.)
 DENSE_TOL = 20.0    # font units: a point this far past its masters, or a crossing this deep, is as bad as LOCAL_TOL
+OFF = 0.02          # of an axis: just off a master, where its collapsed points open (a fold there is the master's own)
 
 
 def fold(rings: Rings) -> float:
@@ -42,7 +53,36 @@ def fold(rings: Rings) -> float:
     winds backwards or not at all). A fold is an error of its own size: a
     three-unit sliver is as bad as a LOCAL_TOL mean difference, where the
     crossing's depth (dense.deepest) saw a long thin wedge as shallow."""
-    return max((f.size for f in faults(rings, 0.0, False, every=False) if f.kind == 'cross'), default=0.0)
+    curved = any(len(q) > 2 and not q[2] for r in rings for q in r)       # an italic outline: its curves sampled
+    return max((f.size for f in faults(rings, 0.0, curved, every=False) if f.kind == 'cross'), default=0.0)
+
+
+def folds(outlines: Sequence[Rings], mlocs: Sequence[Place], where: Sequence[Place]) -> dict[Place, float]:
+    """The fold (``fold``) of the outlines' interpolation at each place of
+    ``where``, at the dense grid, and just off each master (as
+    dense_errors reads the aligned rings: this reads curved outlines, the
+    italic's, whose corners an alignment's zigzag opens into a loop that
+    the straight rings barely show), keyed as dense_errors keys them;
+    those over LOCAL_TOL."""
+    vmodel = model(mlocs)
+    places: list[tuple[Place, Place]] = [(m, m) for m in list(where) + list(DENSE)]
+    for m in mlocs:
+        nm = normal(m)
+        for i in range(3):
+            for s in (-OFF, OFF):
+                q = list(nm)
+                q[i] += s
+                if -1.0 <= q[i] <= 1.0 and (i != 2 or q[i] >= 0.0):
+                    places.append((denormal(tuple(q)), m))        # type: ignore[arg-type]
+    out: dict[Place, float] = {}
+    for loc, key in places:
+        try:
+            e = fold([r for r in interpolate(outlines, loc, vmodel) if len(set(r)) >= 3])
+        except Exception:  # noqa: BLE001  (an outline that cannot be made is as bad as it gets)
+            e = 1e9
+        if e > LOCAL_TOL and e > out.get(key, 0.0):
+            out[key] = e
+    return out
 
 
 def interpolate(al: Sequence[Rings], loc: Place, vmodel: VariationModel = MODEL) -> Rings:
@@ -103,7 +143,21 @@ def dense_errors(al: Sequence[Rings], mlocs: Sequence[Place]) -> dict[Place, flo
     vmodel = model(mlocs)
     base, D, R, nxt = dense.from_masters(al, [normal(m) for m in mlocs], vmodel)
     masters_pts = np.array([[q[:2] for r in m for q in r] for m in al], dtype=float)
-    locs = np.array([normal(m) for m in DENSE])
+    # the dense grid, and just off each master along each axis: a point the
+    # alignment collapsed onto a neighbour opens there, and a fold that
+    # shows only within a few units of a master (the ♧ at 405 after its
+    # master at 400, by 45 units) is charged to the master, where a finer
+    # grid cannot go and another alignment must
+    places: list[tuple[Place, Place]] = [(m, m) for m in DENSE]
+    for m in mlocs:
+        nm = normal(m)
+        for i in range(3):
+            for s in (-OFF, OFF):
+                q = list(nm)
+                q[i] += s
+                if -1.0 <= q[i] <= 1.0 and (i != 2 or q[i] >= 0.0):
+                    places.append((tuple(q), m))     # type: ignore[arg-type]
+    locs = np.array([normal(m) if k < len(DENSE) else m for k, (m, _) in enumerate(places)])
     lo, hi = masters_pts.min(axis=0), masters_pts.max(axis=0)
     mask = dense.pair_mask(nxt)
     d0 = float(dense.deepest(np, masters_pts, nxt, mask).max())
@@ -112,13 +166,13 @@ def dense_errors(al: Sequence[Rings], mlocs: Sequence[Place]) -> dict[Place, flo
     x = dense.deepest(np, P, nxt, mask)
     lens = [len(r) for r in al[0]]
     out: dict[Place, float] = {}
-    for i, loc in enumerate(DENSE):
+    for i, (_, key) in enumerate(places):
         e = max(d[i], x[i] - d0 if x[i] >= dense.DEPTH else 0.0) * LOCAL_TOL / DENSE_TOL
         rings, k = [], 0
         for ln in lens:
             rings.append([tuple(q) for q in P[i, k:k + ln]])
             k += ln
         e = max(e, fold(rings))
-        if e > LOCAL_TOL:
-            out[loc] = e
+        if e > LOCAL_TOL and e > out.get(key, 0.0):
+            out[key] = e
     return out

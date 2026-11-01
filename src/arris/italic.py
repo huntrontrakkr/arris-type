@@ -414,18 +414,32 @@ def _chamfer_map(rings_, record, p: Params):
     return controls, ends
 
 
-def aligned_outlines(aligned, originals, records, params_):
+def prepare_outlines(originals, records, params_):
+    """What ``aligned_outlines`` reads of each master, made once: its warp,
+    and its chamfer map from the record split from the warp (curved on the
+    exact drawing, then moved: outline). The maps do not depend on the
+    alignment, so one preparation serves every candidate alignment of a
+    glyph."""
+    out = []
+    for o, r, p in zip(originals, records, params_):
+        rec, warp = split_warp(r)
+        out.append((warp, _chamfer_map(o, rec, p)))
+    return out
+
+
+def aligned_outlines(aligned, originals, records, params_, prepared=None):
     """Italic outlines for point-compatible upright masters
     (``variable.align``). A segment that is a chamfer in any master carries
     a control point in every master: at the corner it cut where it is a
     chamfer, at its middle (a straight curve) where it is not. So a curve
     grows from a straight edge as the weight moves, and every master has the
-    same points with the same flags."""
+    same points with the same flags. ``prepared``: ``prepare_outlines`` of
+    the masters, else made here."""
     k = len(aligned)
-    split = [split_warp(r) for r in records]               # curved on the exact drawing, then moved (outline)
-    records = [r for r, _ in split]
-    warps = [w for _, w in split]
-    maps = [_chamfer_map(originals[mi], records[mi], params_[mi]) for mi in range(k)]
+    if prepared is None:
+        prepared = prepare_outlines(originals, records, params_)
+    warps = [w for w, _ in prepared[:k]]
+    maps = [m for _, m in prepared[:k]]
     out = [[] for _ in range(k)]
     for ci in range(len(aligned[0])):
         n = len(aligned[0][ci])

@@ -98,6 +98,13 @@ def normal(place: Place) -> tuple[float, float, float]:
     return _normal(w, AXES[0]), _normal(g, AXES[1]), _normal(t, AXES[2])
 
 
+def denormal(norm: Sequence[float]) -> Place:
+    """A normalised place back in the axes' own units."""
+    w, g, t = (a.default + v * (a.default - a.minimum) if v < 0 else a.default + v * (a.maximum - a.default)
+               for v, a in zip(norm, AXES))
+    return (w, g, t)
+
+
 def location(place: Place) -> dict[str, float]:
     """A place as fontTools' models take it: its normalised value by axis tag."""
     return dict(zip(AXIS_TAGS, normal(place)))
