@@ -145,6 +145,14 @@ jobs:
           path: build
       - name: Interpolation check (the font against the drawings at the check's places)
         run: ARRIS_VF_WORKERS=2 uv run python tools/vf_compare.py "build/${{ matrix.font }}" "build/${{ matrix.font }}" --all
+      - name: Topology (the font's outlines along the axes, arris.topology; the report an artifact)
+        run: uv run python -m arris.topology "build/${{ matrix.font }}" --procs 2 --json "build/topology-${{ matrix.name }}.json" | tail -60 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: topology-${{ matrix.name }}
+          path: build/topology-*.json
+          if-no-files-found: ignore
 
   fontbakery:
     name: fontbakery ${{ matrix.name }}
