@@ -84,11 +84,30 @@ def f_(g):
     g.stroke(f.P(0, 8), f.P(6, 8))
 
 
+def crotch_butt(g, y):
+    """In the italic, the line along the bottom edge of a horizontal drawn on
+    ``y`` (as the strokes take its thickness), for ``Glyph.butt``: a bowl's
+    foot meeting a stem that runs on down into a descender (g y д) meets it
+    square there, without the corner rule's 45-degree fill. With the fill,
+    the white between it and the descender's corner below ran out from about
+    500 to 750 (the fill takes up to a corner break of the stem's edge; the
+    corner's inner chamfer then started on the fill's diagonal), and the
+    italic, which curves a corner only between straight edges, held that
+    corner straight on both its edges there and curved it either side. Flush,
+    the corner always meets the stem's edge or, heavier, the foot's, and
+    curves at every weight."""
+    if not g.p.slant:
+        return ()
+    from ..draw import _thickness
+    return (('y', y - _thickness(g.p, g.sh)((1.0, 0.0)) / 2),)
+
+
 @low('g', 8, 2)
 def g_(g):
     f = Frame(g, 8, 'lower')
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
     g.stroke(f.P(7, 9), B(*f.P(7, -2)), f.P(1, -2))
+    g.butt += crotch_butt(g, f.Y(1))
 
 
 def shoulder(g, f, xs, x_right, top=8, drop=2):

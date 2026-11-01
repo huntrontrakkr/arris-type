@@ -23,7 +23,7 @@ from ..draw import AUTO_SHARE, REGISTRY, B, Opening, _counter_white, glyph
 from ..params import SQRT2, inner_leg
 from .figures import jog
 from .letterframe import Frame, letter_width, white_scale
-from .lower import _dot, shoulder
+from .lower import _dot, crotch_butt, shoulder
 
 TAIL = 1.75      # modules of white an exit tail reaches past its stem
 FLAG = 1.5       # modules an entry flag reaches left of its stem (and down)
@@ -282,6 +282,7 @@ def y_ital(g):
     g.stroke(f.P(1, 9), B(*f.P(1, 1)), f.P(7, 1))
     entry(g, f, f.X(1))
     g.stroke(f.P(7, 9), B(*f.P(7, -2)), f.P(1, -2))
+    g.butt += crotch_butt(g, f.Y(1))                    # the foot meets the descender square (lower.crotch_butt)
 
 
 @ital('s', 8, 2)
