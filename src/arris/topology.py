@@ -60,6 +60,7 @@ HAIRPIN = 165.0   # degrees: a turn sharper than this at a vertex is a fold or a
 TINY = 1.0        # font units: an edge shorter than this, and not nothing, is a point off its neighbour
 SAME = 0.25       # font units: points this near are one (a master's peak in F2Dot14 leaves a scalar of 0.9999)
 PINCH = 0.35      # breaks: ink or white narrower than this between parts of one contour that do not meet
+LOCAL = 2.0     # breaks: nearer than this along the contour, a vertex and an edge are one corner, not a pinch
 SMALL = 4.0       # breaks: a whole contour within this (a counter opening between two masters) is not pinched
 AXES = ('wght', 'GRAD', 'WTCH')
 RANGE = {'wght': (100.0, 400.0, 900.0), 'GRAD': (-100.0, 0.0, 100.0), 'WTCH': (0.0, 0.0, 100.0)}
@@ -234,9 +235,13 @@ def _turns(pts: Sequence[tuple[float, float]]) -> list[float]:
     return out
 
 
-def _pinches(pts: Sequence[tuple[float, float]], gap: float) -> list[tuple[int, int, float]]:
+def _pinches(pts: Sequence[tuple[float, float]], gap: float, local: float = 0.0) -> list[tuple[int, int, float]]:
     """(vertex, edge, distance) for every vertex nearer than `gap` to an edge
-    of its contour it is not an end of, nor next to."""
+    of its contour it is not an end of, nor next to, nor within `local` of
+    along the contour: a vertex that near its edge the short way round is
+    the corner the two make (a notch's flanks closing to their tip, the end
+    chamfers of a stroke barely two breaks thick), not two parts of the
+    letter meeting."""
     n = len(pts)
     if n < 4:
         return []
@@ -255,6 +260,12 @@ def _pinches(pts: Sequence[tuple[float, float]], gap: float) -> list[tuple[int, 
     # least a chamfer's height off it in any drawing: no need to spare them)
     for k in (-1, 0):
         D[idx, (idx + k) % n] = np.inf
+    if local:
+        cum = np.concatenate([[0.0], np.cumsum(np.sqrt(L2))])
+        total = cum[-1]
+        fwd = (cum[None, :n] - cum[:n, None]) % total        # along the contour, vertex i forward to vertex j
+        walk = np.minimum(fwd, total - fwd)                   # the shorter way round
+        D[np.minimum(walk, np.roll(walk, -1, axis=1)) < local] = np.inf   # to edge j: its start or its end
     near = np.argwhere(D < gap)
     return [(int(i), int(j), float(D[i, j])) for i, j in near]
 
@@ -303,7 +314,7 @@ def faults(contours, c: float, italic: bool = False, every: bool = True, tiny: b
         xs, ys = [q[0] for q in coarse], [q[1] for q in coarse]
         if max(max(xs) - min(xs), max(ys) - min(ys)) <= SMALL * c:
             continue                                 # a whole small contour: a counter opening, not a pinch
-        for v, e, d in _pinches(coarse, PINCH * c):
+        for v, e, d in _pinches(coarse, PINCH * c, LOCAL * c):
             out.append(Fault('pinch', i, v, round(d, 2)))
     return out
 

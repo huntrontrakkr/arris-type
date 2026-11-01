@@ -59,6 +59,15 @@ def test_a_pinch_is_found_only_where_the_contour_is_large():
     assert 'pinch' not in _kinds([small])
 
 
+def test_a_notch_and_a_thin_stroke_end_are_corners_not_pinches():
+    # a V notch with a vertex on one flank near the tip
+    notch = [(0, 0), (300, 0), (300, 300), (170, 300), (154, 284), (150, 280), (130, 300), (0, 300)]
+    assert 'pinch' not in _kinds([notch])
+    # a bar barely two breaks thick: its end chamfers close to a short flat
+    bar = [(0, 0), (180, 0), (200, 20), (200, 28), (180, 48), (0, 48)]
+    assert 'pinch' not in _kinds([bar])
+
+
 def test_two_contours_that_cross_meet():
     a = [(0, 0), (200, 0), (200, 200), (0, 200)]
     b = [(100, 100), (300, 100), (300, 300), (100, 300)]

@@ -91,6 +91,9 @@ def B(x, y, leg=None, w=None):
     return ('bowl', x, y, leg, w)
 
 
+NUDGE = (0, -2, 2, -4, 4, -8, 8, -12, 12)   # units: the steps a settling stroke tries off a coincidence with the drawing it meets (Glyph.settle)
+
+
 @dataclass
 class Glyph:
     p: Params
@@ -190,6 +193,33 @@ class Glyph:
 
     def rings(self):
         return self.outline(record=False)[0]
+
+    def settle(self, cands) -> bool:
+        """Draw the first of the candidate stroke sets (each a list of
+        ``stroke`` argument tuples) whose outline the topology check
+        (``arris.topology``) finds clean, in the italic too. A bar placed by
+        rule can still land an edge a unit from a jog of the letter it
+        crosses (the ŧ's at 900: a hairline fold where the crossbar's
+        underside met the bar's top), and a step of a few units (NUDGE)
+        clears it. None clean: the first stands, for the check to name."""
+        from . import italic as IT
+        from .topology import faults
+        p = self.p
+        n = len(self.strokes)
+        for strokes in cands:
+            del self.strokes[n:]
+            for st in strokes:
+                self.stroke(*st)
+            rings, rec = self.outline(record=bool(p.slant))
+            if faults([[(q[0], q[1], True) for q in r] for r in rings], p.c):
+                continue
+            if p.slant and faults(IT.outline(rings, rec, p), p.c, True):
+                continue
+            return True
+        del self.strokes[n:]
+        for st in cands[0]:
+            self.stroke(*st)
+        return False
 
     def outline(self, record: bool = True, tags: list | None = None):
         """(rings, chamfer record): see ``geom.ink``. Stamped glyphs bring

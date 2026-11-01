@@ -77,7 +77,37 @@ before a commercial distribution if wanted.
   opens into a wedge between two, and the build's own measure of a
   crossing (its depth, `vf.dense`) sees a long thin wedge as shallow.
   `tests/test_topology.py` holds the check to synthetic folds and a sample
-  of drawings.
+  of drawings. A vertex within two breaks of an edge along its own
+  contour is the corner the two make (a notch's flanks, the end chamfers
+  of a thin stroke), not a pinch.
+- Drawings that adapt where weight closed a feature (docs/DESIGN.md, "A
+  feature weight would swallow adapts"). The ŧ's bar reads the t's slot
+  and keeps a module of white above and below it, moving and thinning (to
+  0.7 of the stroke) as the slot narrows; the fill under its nub left of
+  the stem stays half a break clear of the hook's chamfer (landing on it,
+  the fill bent the bowl's line, and the italic held the hook's corner
+  straight at 600 and curved it again at 800 with the watch's strokes);
+  where no white can remain it fills the slot whole, in one piece, and
+  runs on past the t's right edge as a bump; and it reads its own outline
+  with the topology check, stepping a few units off a coincidence with the
+  t's jogs (a hairline fold at 900). 1.006's ŧ was a blob with a hairpin
+  fold at 900/+100/100. The hooks of g, y and the italic y thin their
+  horizontal to the stack minimum, then deepen into the font's descent (up
+  to 70 units) before the slot under the body closes, which at Black it
+  did. The ₽'s bar keeps the least white of a sign under the bowl and two
+  and a half breaks of foot below it (the fill under the bar and the
+  foot's chamfer are parallel diagonals, and a shorter step between them
+  the corner rule closes into one line: the chevron of Mono at 700),
+  thinning to the stack minimum and then growing the foot down past the
+  baseline, 32 units at Black. The ℘'s hook, the j's by intent, was 30
+  units wide at Regular and shut at 600: it now stands a stem and the
+  least white left of the stem, and far enough out that its two outer
+  corners keep a break of flat between them (meeting in a point they held
+  the italic's curves straight to 500), the sign growing to the left by as
+  much, and it deepens like the g's where its corner would reach the
+  bowl's fill. A bar placed by rule can still land on a jog of the letter
+  it crosses: `Glyph.settle` draws the first of a few positions, two to
+  twelve units apart, that the topology check finds clean.
 - The variable fonts' folds (`arris.vf`). 1.006's fonts fold by 40 to 190
   units at their own masters and between them: the build measured a
   self-crossing by its depth, which sees a long thin wedge as shallow; the

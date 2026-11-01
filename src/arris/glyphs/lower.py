@@ -8,9 +8,9 @@ V on m, gables on v and w.
 from __future__ import annotations
 
 from ..draw import B, Opening, glyph
-from ..params import SQRT2, outer_leg
-from .figures import beak_depth, jog
-from .letterframe import Frame, k_arms, letter_width
+from ..params import SQRT2, inner_leg, outer_leg
+from .figures import STACK_MIN, beak_depth, jog
+from .letterframe import Frame, k_arms, least_white, letter_width
 
 
 def low(char, wm, stems, width=None, openings=()):
@@ -109,11 +109,35 @@ def crotch_butt(g, y):
     return (('y', y - _thickness(g.p, g.sh)((1.0, 0.0)) / 2),)
 
 
+HOOK_ROOM = 70.0   # units below the drawing's descender that the font's descent (250) allows a hook to deepen into
+
+
+def hook(g, f, x_stem=7, x_end=1):
+    """The descending hook of g, y and the italic y: the stem down from the
+    body into a bowl corner and a horizontal back under it. The slot above
+    the horizontal (under the g's bowl, the y's arm) is the descender less
+    the horizontal and the corner's inner leg: at Black it closed, and the
+    hook was a blob. It adapts, by the least that keeps the slot: the
+    horizontal thins to the stack minimum of a bar as far as the slot asks,
+    then the hook deepens into the font's descent (HOOK_ROOM) as far as
+    still needed. (The owner's rule: a feature weight would swallow grows
+    or makes room by the smallest change that keeps it.)"""
+    p = g.p
+    w = min(g.sh, max(STACK_MIN * g.sh, p.desc - inner_leg(p) - least_white(p)))
+    slot = p.desc - w - inner_leg(p)
+    extra = min(HOOK_ROOM, max(0.0, least_white(p) - slot))
+    yh = -(p.desc + extra) + w / 2
+    if extra:
+        x0, y0, x1, y1 = g.clip
+        g.clip = (x0, min(y0, -(p.desc + extra)), x1, y1)
+    g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), (f.X(x_end), yh))
+
+
 @low('g', 8, 2)
 def g_(g):
     f = Frame(g, 8, 'lower')
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    g.stroke(f.P(7, 9), B(*f.P(7, -2)), f.P(1, -2))
+    hook(g, f)
     g.butt += crotch_butt(g, f.Y(1))
 
 
@@ -349,7 +373,7 @@ def y(g):
     # meeting the stem one edge break above the baseline.
     a = (xr - p.sv / 2) + p.c - k_                          # x + y = a
     g.stroke((xl, p.xh), (xl, a - xl), (xr, a - xr))
-    g.stroke(f.P(7, 9), B(*f.P(7, -2)), f.P(1, -2))
+    hook(g, f)
 
 
 @low('z', 8, 1)

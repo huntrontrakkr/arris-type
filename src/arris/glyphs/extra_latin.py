@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from shapely import affinity
 
-from ..draw import AUTO_SHARE, B, REGISTRY, Opening, _counter_white, draw, glyph
+from ..draw import AUTO_SHARE, B, NUDGE, REGISTRY, Opening, _counter_white, draw, glyph
 from ..geom import rings_to_shapely
 from ..params import SQRT2
 from .caps import big
-from .figures import beak_depth
+from .figures import STACK_MIN, beak_depth
 from .lower import shoulder
 from .letterframe import Frame, k_arms, letter_width
 
@@ -137,11 +137,88 @@ def Tbar(g):
     _bar(g, w / 2 - 2 * p.m, w / 2 + 2 * p.m, p.cap / 2)
 
 
+def _slot(g, w, x1):
+    """The t's slot: the white right of its stem between the crossbar and the
+    hook, where the ŧ's bar lies. Read off the t's own ink along the bar's run
+    there, six cuts from the stem to the bar's end: the slot's top and foot,
+    the right edge of the t's ink, the t's rings and the first cut's x."""
+    from shapely.geometry import LineString
+    p = g.p
+    rings, _ = draw('t', p).outline(record=False)
+    ink = rings_to_shapely([[tuple(q[:2]) for q in r] for r in rings])
+    col, wm = (3, 9) if p.mono else (2, 7)                     # the t's stem column in its frame (lower.t)
+    xs = p.sv / 2 + (w - p.sv) * (col - 1) / (wm - 2) + p.sv / 2 + p.c
+    top, foot = p.xh, 0.0
+    for k in range(6):
+        xc = xs + (x1 - p.c - xs) * k / 5
+        cut = ink.intersection(LineString([(xc, -p.desc), (xc, p.asc)]))
+        spans = [(gm.bounds[1], gm.bounds[3]) for gm in getattr(cut, 'geoms', [cut]) if not gm.is_empty]
+        top = min([top] + [lo for lo, hi in spans if lo > p.xh / 2])
+        foot = max([foot] + [hi for lo, hi in spans if hi < p.xh / 2])
+    return top, foot, ink.bounds[2], rings, xs
+
+
 @glyph('tbar', 'ŧ', width_of('t'), kind='lower')
 def tbar(g):
+    # The bar lies in the slot between the t's crossbar and its hook, at
+    # 0.45 of the x-height, a stroke thick, from the left edge to a module
+    # short of the right. Toward Black the slot narrows (at Black with the
+    # watch's strokes it is 190 units for a 175-unit stroke) and the bar
+    # filled it: the ŧ was a blob. The bar adapts, by the least that keeps
+    # it a bar: it thins to what the slot holds with a module of white on
+    # each side, no thinner than the stack minimum of a bar (0.7 of the
+    # stroke), and moves off the x-height's 0.45 only as far as that asks;
+    # and where even that leaves no white it runs on past the t's
+    # right edge by a module, so a bump of bar stands clear of the mass
+    # where the slot has closed (the owner: the tiny bump is fine).
     p = g.p
     w = stamp(g, 't')
-    _bar(g, 0, REGISTRY['t'].width(p) - p.m, p.xh * 0.45)
+    x1 = REGISTRY['t'].width(p) - p.m
+    top, foot, right, rings, xs = _slot(g, w, x1)
+    # Left of the stem the bar is a short nub, and the fill under it, a break
+    # at 45 degrees, runs parallel to the hook's outer chamfer on the stem's
+    # left edge: landing near that chamfer's top it leaves a step between
+    # two parallel diagonals, a hairline or a jog, and bends the bowl's line
+    # off 45 degrees, which the italic (curving that line) held straight at
+    # 600 with the watch's strokes and curved again at 800. So the bar's
+    # underside keeps its fill half a break above that top as well as a
+    # module of white below it in the slot. (The fills on the stem's other
+    # corners meet their neighbours mirrored, closing into a V: harmless.)
+    stem_l = xs - p.c - p.sv
+    leg = max([foot] + [q[1] for r in rings for q in r if abs(q[0] - stem_l) <= 1 and q[1] < p.xh / 2])
+    low, high = max(foot + p.m, leg + 1.5 * p.c), top - p.m
+    floor = STACK_MIN * g.sh
+    thick = min(g.sh, max(floor, high - low))
+    if high - low >= thick:
+        y = min(max(p.xh * 0.45, low + thick / 2), high - thick / 2)
+        cands, seen = [], set()
+        for d in NUDGE:
+            y_ = min(max(y + d, low + thick / 2), high - thick / 2)
+            t_ = thick if y_ != y or d == 0 else thick - abs(d)      # pinned: thinner instead
+            if t_ >= floor and (y_, t_) not in seen:
+                seen.add((y_, t_))
+                cands.append([((0, y_, t_), (x1, y_, t_))])
+        g.settle(cands)
+        return
+    # no white to keep: right of the stem the bar fills the slot whole, a
+    # break over, so no sliver is left, and runs on past the right edge, a
+    # bump a module long; left of it the nub stays a stroke thick where it
+    # fits between the hook's chamfer and the crossbar's arm with half a
+    # break of notch above it (the two meet in the stem), and where it does
+    # not the fill runs through to the left edge
+    xc = stem_l + p.sv / 2
+    y, thick, x1 = (top + foot) / 2, max(g.sh, top - foot + p.c), max(x1, right + p.m)
+    tn = min(g.sh, top - p.c / 2 - low)
+    cands, seen = [], set()
+    if tn >= floor:
+        for d in NUDGE:
+            yn = min(max(low + tn / 2 + d, low + tn / 2), top - p.c / 2 - tn / 2)
+            if yn not in seen:
+                seen.add(yn)
+                cands.append([((0, yn, tn), (xc, yn, tn)), ((xc, y, thick), (x1, y, thick))])
+    cands.append([((0, y, thick), (x1, y, thick))])
+    g.settle(cands)
+
 
 
 @glyph('Ldot', 'Ŀ', width_of('L', 1.0), kind='cap')
