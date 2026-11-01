@@ -10,11 +10,15 @@ cuts chamfers.
 * **Curves.** Every chamfer the drawing recorded as one (a bowl's corner,
   an edge break, the steps of the 2's notch and the 4's clip) becomes a
   quadratic curve tangent to the edges it joins, its control point the
-  corner it cut. A bowl's corner curves on both its edges or on neither.
+  corner it cut. A bowl's corner curves on both its edges or on neither,
+  and its inner curve is drawn on shorter legs than the chamfer's, so the
+  stroke keeps its own weight round the bend (``_even_bend``).
 * **Sharp where the upright is sharp.** Corners the upright never chamfers
   stay sharp: beaks, the 3's and 8's waists, the meeting of two diagonals,
   a diagonal's end. Soft bowls against those points are what keeps the
-  italic Arris.
+  italic Arris. A bowl whose inner edge only ends at such a point (the e's
+  bowl at its bar, the s's at its spine, the j's hook) curves both edges,
+  and the point stays a point.
 * **Italic forms.** Where a glyph has an italic drawing (``name.ital``),
   the italic uses it (``draw.draw``): the single-storey a, the descending f.
 """
@@ -101,13 +105,19 @@ def _corner(a, b, turn_left):
     return c1 if (side > 0) != turn_left else c2
 
 
+FAR = 1.0   # font units: a bowl's line claims a segment this far from where it was recorded only if no edge break owns it
+
+
 def _segments(rings_, record):
     """Every 45-degree recorded chamfer in the rings: (ring, i, owner,
-    smooth, turn_left). Each recorded chamfer line is one edge: the
+    smooth, turn_left, corner). Each recorded chamfer line is one edge: the
     segment on it nearest where it was recorded. (A 45-degree line runs on,
     and another corner's edge can lie on it far away, as an accent's on the
     line of a corner of the letter under it: claimed by that corner, the
-    accent's sharp end held its curve straight, so á's a was not a's.)"""
+    accent's sharp end held its curve straight, so á's a was not a's. And
+    an edge break that happens to lie on a bowl's line far from the bowl
+    is the break's: the italic y's flag at 850 lay on its bowl's line 181
+    units away, and the bowl, holding it, held its own corner straight.)"""
     claims = {}
     for ri, ring in enumerate(rings_):
         pts = [tuple(q) for q in ring]
@@ -120,8 +130,11 @@ def _segments(rings_, record):
                 key = (own, k)
                 if own[0] == 'chord' or key not in claims or far < claims[key][0]:
                     claims[key] = (far, ri, i)
+    breaks = {(ri, i) for (own, _), (_, ri, i) in claims.items() if own[0] == 'chord'}
     owner = {}
     for (own, k), (far, ri, i) in claims.items():
+        if own[0] == 'bowl' and far > FAR and (ri, i) in breaks:
+            continue
         owner.setdefault((ri, i), own)
     out = []
     for ri, ring in enumerate(rings_):
@@ -141,8 +154,83 @@ def _segments(rings_, record):
             corner = bool(turns) and not (len(turns) == 2 and (turns[0] > 0) != (turns[1] > 0))
             # an S-bend or a straight run is no corner: it cannot curve, and holds its pair straight
             smooth = corner and _joins_smoothly(vin, seg) and _joins_smoothly(vout, seg)
-            out.append((ri, i, own, smooth, corner and turns[0] > 0))
+            out.append((ri, i, own, smooth, corner and turns[0] > 0, corner))
     return out
+
+
+def _ring_pts(ring):
+    pts = [tuple(q) for q in ring]
+    if len(pts) > 1 and math.dist(pts[0], pts[-1]) < _TOL:
+        pts = pts[:-1]
+    return pts
+
+
+def _even_bend(rings_, segs, curved, p: Params):
+    """{(ring, index): moved point} that keeps a curved bowl corner's stroke
+    as heavy round the bend as along its chamfer.
+
+    The corner's two edges are 45-degree chamfers with legs Lo (outer) and Li
+    (inner), each made a quadratic curve whose control point is the corner
+    it cut. A quadratic's apex lies a quarter of its leg from that corner
+    along the diagonal, so with both curves on their chamfers' legs the
+    stroke is (Lo - Li) / (2 sqrt 2) wider at the bend than the chamfer:
+    a fifth with equal strokes, a quarter at Thin (the italic o, c and e
+    swelled at their corners). Drawn on legs 2 Li - Lo, the inner curve's
+    apex lies exactly a chamfer's width inside the outer's; its control
+    point stays at its corner and its ends slide along the edges it joins,
+    so the silhouette is unchanged and the counter's corner a little
+    tighter. Never under the edge break c (the upright's own inner rule):
+    at the heaviest weights the bend keeps part of its swell. Only where
+    both edges the inner chamfer joins are horizontal or vertical."""
+    pairs: dict = {}
+    for ri, i, own, *_ in segs:
+        if own[0] == 'bowl' and (ri, i) in curved:
+            pairs.setdefault(own, []).append((ri, i))
+    moved = {}
+    for own, edges in pairs.items():
+        if len(edges) != 2:
+            continue
+        legs = []
+        for ri, i in edges:
+            pts = _ring_pts(rings_[ri])
+            a, b = pts[i], pts[(i + 1) % len(pts)]
+            legs.append(abs(b[0] - a[0]))
+        (lo, _), (li, (ri, i)) = sorted(zip(legs, edges), reverse=True)
+        target = max(p.c, 2 * li - lo)
+        if li - target < 0.5:
+            continue
+        pts = _ring_pts(rings_[ri])
+        n = len(pts)
+        a, b = pts[i], pts[(i + 1) % n]
+        vin = (a[0] - pts[i - 1][0], a[1] - pts[i - 1][1])
+        vout = (pts[(i + 2) % n][0] - b[0], pts[(i + 2) % n][1] - b[1])
+        if not (_axis(vin) and _axis(vout)):
+            continue
+        q = _corner(a, b, curved[(ri, i)])
+        k = target / li
+        moved[(ri, i)] = (q[0] + (a[0] - q[0]) * k, q[1] + (a[1] - q[1]) * k)
+        moved[(ri, (i + 1) % n)] = (q[0] + (b[0] - q[0]) * k, q[1] + (b[1] - q[1]) * k)
+    return moved
+
+
+def _plan(rings_, p: Params, record):
+    """({(ring, index): turn_left} for the segments that curve, {(ring,
+    index): moved point}) for a drawing (see curve_rings)."""
+    segs = _segments(rings_, record)
+    edges: dict = {}
+    for s in segs:
+        if s[2][0] == 'bowl':
+            edges.setdefault(s[2], []).append(s)
+    held = set()
+    for own, ss in edges.items():
+        outer = [s for s in ss if s[4]]              # the cut: a left turn, ink on the left
+        inner = [s for s in ss if not s[4]]
+        if any(not s[3] for s in outer) or any(not s[5] for s in inner) or \
+                (not outer and any(not s[3] for s in inner)):
+            held.add(own)
+    curved = {(ri, i): left for ri, i, own, smooth, left, _ in segs
+              if (own[0] == 'bowl' and own not in held) or (own[0] != 'bowl' and smooth)}
+    return curved, _even_bend(rings_, segs, curved, p)
 
 
 def curve_rings(rings_, p: Params, record):
@@ -152,23 +240,25 @@ def curve_rings(rings_, p: Params, record):
     A bowl's corner is a pair of chamfers, the stroke's outer and inner
     edges, and they are curved together or not at all: a curve on one edge
     against a straight other would swell the stroke (or, bulging across it,
-    cross the outline). A corner whose either edge meets a sharp point (a
-    waist, a beak's tip, a diagonal junction) stays straight on both, so the
-    point stays sharp. Edge breaks curve on their own."""
-    segs = _segments(rings_, record)
-    blocked = {own for _, _, own, smooth, _ in segs if own[0] == 'bowl' and not smooth}
-    curved = {(ri, i): left for ri, i, own, smooth, left in segs
-              if smooth and own not in blocked}
+    cross the outline). Its inner curve is drawn on shorter legs, so the
+    stroke keeps its weight round the bend (_even_bend). A corner whose
+    outer edge meets a sharp point (a waist, a beak's tip, a diagonal
+    junction) stays straight on both, so the point stays sharp, and so
+    does one whose inner edge is no corner at all (an S-bend). An inner
+    edge that only ends at such a point curves with its outer edge: held,
+    it straightened the bowl at the weights where the bar or spine reached
+    it (the italic e from 400, the s from 250 to 450, the j's hook), and
+    curved at the others. Edge breaks curve on their own."""
+    curved, moved = _plan(rings_, p, record)
     out = []
     for ri, ring in enumerate(rings_):
-        pts = [tuple(q) for q in ring]
-        if len(pts) > 1 and math.dist(pts[0], pts[-1]) < _TOL:
-            pts = pts[:-1]
+        pts = _ring_pts(ring)
         n = len(pts)
         c = []
         for i in range(n):
             a, b = pts[i], pts[(i + 1) % n]
-            c.append((a[0], a[1], True))
+            m = moved.get((ri, i), a)
+            c.append((m[0], m[1], True))
             if (ri, i) in curved:
                 q = _corner(a, b, curved[(ri, i)])
                 c.append((q[0], q[1], False))
@@ -274,14 +364,18 @@ def _key(q):
 
 
 def _chamfer_map(rings_, record, p: Params):
-    """{(a, b): control} for every chamfer segment a-b a drawing curves."""
-    out = {}
-    for c in curve_rings(rings_, p, record):
-        n = len(c)
-        for i, (x, y, on) in enumerate(c):
-            if not on:
-                out[(_key(c[i - 1]), _key(c[(i + 1) % n]))] = (x, y)
-    return out
+    """({(a, b): control} for every chamfer segment a-b a drawing curves,
+    {a: moved a} for the ends an even bend slides), keyed by the drawing's
+    own points."""
+    curved, moved = _plan(rings_, p, record)
+    controls, ends = {}, {}
+    for (ri, i), left in curved.items():
+        pts = _ring_pts(rings_[ri])
+        a, b = pts[i], pts[(i + 1) % len(pts)]
+        controls[(_key(a), _key(b))] = _corner(a, b, left)
+    for (ri, i), m in moved.items():
+        ends[_key(_ring_pts(rings_[ri])[i])] = m
+    return controls, ends
 
 
 def aligned_outlines(aligned, originals, records, params_):
@@ -299,16 +393,18 @@ def aligned_outlines(aligned, originals, records, params_):
     out = [[] for _ in range(k)]
     for ci in range(len(aligned[0])):
         n = len(aligned[0][ci])
-        curved = [any((_key(aligned[mi][ci][j]), _key(aligned[mi][ci][(j + 1) % n])) in maps[mi]
+        curved = [any((_key(aligned[mi][ci][j]), _key(aligned[mi][ci][(j + 1) % n])) in maps[mi][0]
                       for mi in range(k)) for j in range(n)]
         for mi in range(k):
             ring = aligned[mi][ci]
+            controls, ends = maps[mi]
             c = []
             for j in range(n):
                 a, b = ring[j], ring[(j + 1) % n]
-                c.append((a[0], a[1], True))
+                m = ends.get(_key(a), a)                  # an even bend's end, slid toward its corner
+                c.append((m[0], m[1], True))
                 if curved[j]:
-                    ctrl = maps[mi].get((_key(a), _key(b)), ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2))
+                    ctrl = controls.get((_key(a), _key(b)), ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2))
                     c.append((ctrl[0], ctrl[1], False))
             out[mi].append(shear(warped([c], warps[mi])[0], params_[mi]))
     return out
