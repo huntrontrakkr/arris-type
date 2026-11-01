@@ -339,7 +339,60 @@ def _fill_gaps(cols, norms, locs, ends=None):
             fill[i] = min(cands, key=lambda q: math.dist(norms[mi](q), r))
         for c, q in zip(cols, fill):
             c[mi] = q
+    if ends is None and locs:
+        _unfold(cols, real, locs)
     return cols
+
+
+def _unfold(cols, real, locs):
+    """Each run of points a master lacks, collapsed by ``_fill_gaps`` onto
+    the real point before it or after it by nearness, is given the collapse
+    (all onto the one before, all onto the one after, or the first so many
+    onto the one before and the rest onto the one after) from which the
+    ring opens toward the master's nearest master that has the run without
+    folding (arris.topology's measure, a tenth and half of the way there).
+    Nearness alone opened a run from the wrong end, and the points crossed
+    their neighbours a few units off the master: the ♧ by 45 units at 406
+    after its master at 400, gone by 410."""
+    # (topology draws on the engine, which draws on this module: imported here)
+    from .topology import faults
+    k, n = len(cols[0]), len(cols)
+
+    def fold(ring):
+        return max((f.size for f in faults([ring], 0.0, False, every=False) if f.kind == 'cross'), default=0.0)
+
+    def score(ring, other):
+        return sum(fold([(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u) for a, b in zip(ring, other)])
+                   for u in (0.1, 0.5))
+    for mi in range(k):
+        if all(real[i][mi] for i in range(n)) or not any(real[i][mi] for i in range(n)):
+            continue
+        start = next(j for j in range(n) if real[j][mi])
+        runs, cur = [], []
+        for t in range(1, n + 1):
+            idx = (start + t) % n
+            if not real[idx][mi]:
+                cur.append(idx)
+            elif cur:
+                runs.append(cur)
+                cur = []
+        ring = [c[mi] for c in cols]
+        for run in runs:
+            before, after = cols[(run[0] - 1) % n][mi], cols[(run[-1] + 1) % n][mi]
+            have = [m for m in range(k) if real[run[0]][m]]
+            src = min(have, key=lambda m: (math.dist(locs[m], locs[mi]), m))
+            other = [c[src] for c in cols]
+            best = (score(ring, other), None)
+            for split in range(len(run) + 1):
+                trial = list(ring)
+                for t, idx in enumerate(run):
+                    trial[idx] = before if t < split else after
+                sc = score(trial, other)
+                if sc < best[0] - 1e-9:
+                    best = (sc, split)
+            if best[1] is not None:
+                for t, idx in enumerate(run):
+                    ring[idx] = cols[idx][mi] = before if t < best[1] else after
 
 
 def _align_open(paths, norms, locs=None, turn=TURN):
