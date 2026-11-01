@@ -42,7 +42,7 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
-## 1.007 (unreleased)
+## 1.007
 
 - The skeleton check, `python -m arris.skeleton` (`arris.skeleton`): a
   glyph's strokes are the letter's intent, and weight an offset of them.
@@ -124,7 +124,15 @@ before a commercial distribution if wanted.
   a jump are brought from ten units of weight apart to one by bisection
   (`glyph._narrowed`), so a jump is a jump and not a wedge a reader can
   land on; and every build ends by reading its own font with the topology
-  check (`build/topology.json`).
+  check (`build/topology.json`). Measured on 1.007's upright variable font:
+  of its 750 simple glyphs, 27 still fold by ten units or more somewhere
+  between their masters (1.006: 91) and 162 by three or more; the worst are
+  ∄ (62 units, at 200/+100/100), ₘ (24, at 400/−50), ⅓ and ⅕ (19, at
+  140/+50/100) and ų (17, at 812/0/100); the drawings fold nowhere. These
+  lie between masters that are each clean, and a denser measuring grid does
+  not move them (a trial of the 26 worst): the alignment's correspondences
+  between neighbouring masters are the next work. The italic's numbers are
+  in the release's check job (its topology artifact).
 - Italic: which edge a bowl's chamfer line claims (`italic._segments`). A
   45-degree line runs on, and the edge nearest where the chamfer was
   recorded can be another's: the K's leg lay behind the Қ's and Җ's
