@@ -51,7 +51,7 @@ from shapely.geometry import Point, Polygon, box
 
 from . import italic as IT
 from .draw import REGISTRY, _thickness, draw
-from .geom import MIN_COUNTER, rings_to_shapely, stroke_polygon
+from .geom import MIN_COUNTER, Node, Stroke, rings_to_shapely, stroke_polygon
 from .instances import params
 from .params import Params, outer_leg
 
@@ -105,10 +105,19 @@ def probes(g, p: Params) -> list[Probe]:
     inner_clip = clip.buffer(-c) if clip is not None else None
     raw = [stroke_polygon(s, th, c) for s in g.strokes]
     extra = [e for e in g.extra if not e.is_empty]
-    beside = []
-    for i in range(len(raw)):
-        parts = [q for j, q in enumerate(raw) if j != i] + extra
-        beside.append(shapely.union_all(parts).buffer(JUNCTION * c) if parts else None)
+    # each segment's own ink, for what a stroke's other segments put beside one
+    # of them (the Ӡ's return under its bar, a w's diagonals): plain strokes of
+    # two nodes, so a bowl's chamfers do not shorten them
+    pieces = []
+    for s in g.strokes:
+        nodes, n = s.nodes, len(s.nodes)
+        segs = range(n if s.closed else n - 1)
+        pieces.append([stroke_polygon(Stroke((Node(nodes[k].x, nodes[k].y, 0.0, nodes[k].w),
+                                              Node(nodes[(k + 1) % n].x, nodes[(k + 1) % n].y))), th, c)
+                       if math.hypot(nodes[(k + 1) % n].x - nodes[k].x, nodes[(k + 1) % n].y - nodes[k].y) > 1e-6
+                       else None for k in segs])
+    others = [shapely.union_all([q for j, q in enumerate(raw) if j != i] + extra) if (len(raw) > 1 or extra) else None
+              for i in range(len(raw))]
     out: list[Probe] = []
 
     def readable(q):
@@ -152,9 +161,17 @@ def probes(g, p: Params) -> list[Probe]:
                 if body:
                     out.append(Probe(f'body:{i}:{k}', inside=body))
                 off = w / 2 + MARGIN * c
+                # ink that may lie beside this segment: the other strokes, and
+                # this stroke's other segments, its neighbours included (past
+                # the corner they run alongside it where the angle is acute:
+                # the w's inner diagonals, the Ӡ's return under its bar)
+                near = [q for j, q in enumerate(pieces[i]) if q is not None and j != k]
+                if others[i] is not None:
+                    near.append(others[i])
+                beside = shapely.union_all(near).buffer(JUNCTION * c) if near else None
                 for side, sign in (('L', 1), ('R', -1)):
                     pts = [(q[0] + sign * nv[0] * off, q[1] + sign * nv[1] * off) for q in centre]
-                    pts = [q for q in pts if readable(q) and (beside[i] is None or not beside[i].covers(Point(q)))]
+                    pts = [q for q in pts if readable(q) and (beside is None or not beside.covers(Point(q)))]
                     if pts:
                         out.append(Probe(f'side:{i}:{k}:{side}', outside=tuple(pts)))
         if s.closed or n < 2:
@@ -164,7 +181,7 @@ def probes(g, p: Params) -> list[Probe]:
             if u is None:
                 continue
             tip = (e.x, e.y)
-            if beside[i] is not None and beside[i].covers(Point(tip)):
+            if others[i] is not None and others[i].buffer(JUNCTION * c).covers(Point(tip)):
                 continue                                    # runs into another stroke: a junction, not an end
             if not readable(tip):
                 continue                                    # cut by the body: not an end either
