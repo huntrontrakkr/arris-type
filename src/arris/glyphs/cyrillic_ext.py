@@ -142,8 +142,10 @@ def beak_free(g):
     """A beak's depth, which a mouth's opening may shorten, never past its
     outer flank (as the 3's and 5's: figures.beak_bottom)."""
     from ..params import outer_leg
+    from .figures import _shortest
     p = g.p
-    return max(g.free('beak', beak_depth(p, g.sh)), outer_leg(p, sh=g.sh) + p.c)
+    floor = _shortest(p, g.sh) if p.slant else outer_leg(p, sh=g.sh) + p.c
+    return max(g.free('beak', beak_depth(p, g.sh)), floor)
 
 
 # A mouth, where a beak faces a bar (Ә Ҽ Ҩ), keeps three quarters of its

@@ -37,14 +37,22 @@ def beak_depth(p, sh=None):
     the inner flank shorter than an edge break, the inner flank sets the depth.
     At the heritage weight both flanks are exactly one edge break."""
     sh = p.sh if sh is None else sh
+    if _small_italic(p):
+        return outer_leg(p, sh=sh) + p.c
     d = sh + inner_leg(p, sh) + _flank(p)
     if p.slant:
-        # never so deep that two beaks facing each other across a small
-        # capital's height meet: no deeper than leaves a stroke between them,
-        # or failing that the upright's depth (the small э at 800/+100: its
-        # beaks crossed and the stroke could not be drawn)
-        d = min(d, max(sh + inner_leg(p, sh) + p.c, (p.cap - sh) / 2))
+        d = min(d, (p.cap - p.c) / 2)                   # two beaks across a height never meet
     return max(_shortest(p, sh), d)
+
+
+def _small_italic(p) -> bool:
+    """An italic small capital (э з є, cyrillic.sc). Its beaks are the
+    lowercase c's, the outer flank alone, chamfered at every weight: with
+    the capital's longer flank (_flank) two beaks across its height met
+    from 650 up (at 800/+100 they crossed and the stroke could not be
+    drawn), and with the upright's the corner above the flank was held at
+    some weights and curved at others, as the capital's was."""
+    return bool(p.slant) and p.cap <= p.xh + 1e-6
 
 
 def _flank(p):
@@ -62,10 +70,14 @@ def _flank(p):
 
 def _shortest(p, sh):
     """The shortest beak an opening may leave: its outer flank alone, an edge
-    break under the chamfer. (The italic's longer inner flank, _flank, is
-    the beak's own depth, not a floor under an opening: held to it, the small
-    э's two beaks crossed at 800/+100 and the stroke could not be drawn.)"""
-    return outer_leg(p, sh=sh) + p.c
+    break under the chamfer. In the italic the inner flank keeps its length
+    too (_flank): shortened under it, the beak's corner is held at the
+    weights the opening binds and curved at the rest (the Ҽ's and Ә's
+    mouths from 600)."""
+    outer = outer_leg(p, sh=sh) + p.c
+    if _small_italic(p) or not p.slant:
+        return outer
+    return max(outer, sh + inner_leg(p, sh) + _flank(p))
 
 
 def beak_top(g):
