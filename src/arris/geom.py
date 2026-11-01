@@ -40,6 +40,7 @@ class Stroke:
     closed: bool = False
     start: str = 'flat'  # cap at the first node: 'flat', 'h' or 'v'
     end: str = 'flat'
+    keep: tuple = ()     # ((nx, ny, c), ...): the stroke keeps only its ink with nx x + ny y >= c (a hidden end, _kept)
 
 
 def _sub(a, b): return (a[0] - b[0], a[1] - b[1])
@@ -196,7 +197,8 @@ REPAIRED: list = []
 
 
 def _scale_bowls(stroke: Stroke, k: float) -> Stroke:
-    return Stroke(tuple(Node(n.x, n.y, n.bowl * k, n.w) for n in stroke.nodes), stroke.closed, stroke.start, stroke.end)
+    return Stroke(tuple(Node(n.x, n.y, n.bowl * k, n.w) for n in stroke.nodes), stroke.closed, stroke.start, stroke.end,
+                  stroke.keep)
 
 
 def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = False,
@@ -413,9 +415,14 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     polys = []
     for i, st in enumerate(strokes):
         e = [] if segs is not None else None
-        polys.append(stroke_polygon(st, thick, c, rec, edges=e))
+        poly = stroke_polygon(st, thick, c, rec, edges=e)
         if e:
             segs.extend((a, b, ('s', i) + t) for a, b, t in e)
+        for j, h in enumerate(st.keep):
+            poly, line = _kept(poly, h)
+            if segs is not None and line is not None:
+                segs.append((line[0], line[1], ('s', i, 'keep', j)))
+        polys.append(poly)
     polys += list(extra)
     if not polys:
         return []
@@ -462,6 +469,32 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     return rings
 
 
+def _kept(poly, half):
+    """(the stroke's ink on the kept side of the line nx x + ny y = c, the
+    line as two far points): a stroke's end that is meant to hide inside
+    another stroke, cut where that stroke's outline runs, so that drifting
+    a unit as the weight changes it never comes out past it (the italic
+    e's bar, its end cut square and so parallel to the bowl's corner cut,
+    came out of it by up to eight units at the heaviest weights, and the
+    corner curved or was cut straight as the cleanup closed that step or
+    not). Nothing on the kept side moves."""
+    nx, ny, c = half
+    n = math.hypot(nx, ny)
+    nx, ny, c = nx / n, ny / n, c / n
+    p0 = (nx * c, ny * c)
+    t = (-ny, nx)
+    big = 1e5
+    a, b = _add(p0, _mul(t, big)), _sub(p0, _mul(t, big))
+    side = Polygon([a, b, _add(b, (nx * big, ny * big)), _add(a, (nx * big, ny * big))])
+    kept = poly.intersection(side)
+    if kept.is_empty:
+        return poly, None
+    if not isinstance(kept, Polygon):
+        parts = [g for g in getattr(kept, 'geoms', [kept]) if isinstance(g, Polygon)]
+        kept = max(parts, key=lambda g: g.area) if parts else poly
+    return kept, (a, b)
+
+
 def _name_edges(ring, segs, tol=1e-3):
     """The name of each edge of a ring (point i to i + 1): the named input
     edge it lies along, overlapping it most (``ink``'s tags); an edge that
@@ -505,6 +538,8 @@ def _name_edges(ring, segs, tol=1e-3):
 
 MIN_COUNTER = 0.2   # pinholes (under a fifth of a stem, squared) fill in
 JOG = 1.0           # a step between parallel edges shorter than this share of the chamfer leg is closed (_close_jogs)
+JOG_RAMP = 1.0      # ... wholly under this share of JOG; between, partly (a step shrinking through the threshold closes
+                    # smoothly). Off (1.0): at 0.5 the steps it kept folded the variable font's ½ by 10 units and $ by 5
 STRAY = 3.0         # degrees: a vertex bending less than this between two long edges goes (_close_jogs)
 POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
 SLIT = 0.35         # white narrower than twice this share of the chamfer leg, and long, is a slit
@@ -575,7 +610,14 @@ def _close_jogs(pts, eps, moved):
     module more is not made (the step is a feature, not a miss). A vertex
     bending less than STRAY degrees between two long edges also goes.
     Choices are made by geometry alone, so a symmetric drawing stays
-    symmetric."""
+    symmetric.
+
+    A step between JOG_RAMP and all of the threshold closes in part, the
+    shorter edge moving that share of the way, so the step left runs from
+    nothing at JOG_RAMP to the whole threshold at the threshold: closed
+    whole below the threshold and not at all above it, a step shrinking
+    with the weight jumped by a break as it passed it (the italic k's
+    notch at 824 on the light grade, a twentieth of its counter)."""
     pts = list(pts)
     # vertices on a straight line (a stroke's end inside another's edge):
     # no corner there, and they hide the jogs beside them
@@ -617,6 +659,32 @@ def _close_jogs(pts, eps, moved):
             skip.add((a, b))
             continue
         limit = _len(step) + eps
+        L = _len(step)
+        if L > JOG_RAMP * eps:
+            # the shorter edge moves part of the way: its line through the step's point that far along
+            part = max(0.0, min(1.0, (eps - L) / ((1.0 - JOG_RAMP) * eps)))
+            if part <= 0.0:
+                skip.add((a, b))
+                continue
+            if _len(e_in) < _len(e_out):
+                a2 = _add(a, _mul(step, part))
+                q = _line_meet(pp, _sub(prev, pp), a2, u_in)
+                if q is None or _len(_sub(q, prev)) > limit or len({hh, h, i, j}) < 4:
+                    skip.add((a, b))
+                    continue
+                moved[prev], moved[a] = q, a2
+                pts[h], pts[i] = q, a2
+                skip.add((a2, b))
+            else:
+                b2 = _sub(b, _mul(step, part))
+                q = _line_meet(nn, _sub(nxt, nn), b2, u_out)
+                if q is None or _len(_sub(q, nxt)) > limit or len({i, j, k, kk}) < 4:
+                    skip.add((a, b))
+                    continue
+                moved[nxt], moved[b] = q, b2
+                pts[k], pts[j] = q, b2
+                skip.add((a, b2))
+            continue
         if _len(e_in) < _len(e_out):                       # the incoming edge moves onto the outgoing's line
             q = _line_meet(pp, _sub(prev, pp), b, u_out)
             if q is None or _len(_sub(q, prev)) > limit or len({hh, h, i, j}) < 4:

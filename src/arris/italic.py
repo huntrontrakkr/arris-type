@@ -95,6 +95,13 @@ def _joins_smoothly(v, seg) -> bool:
     return _axis(v) or (_diag(v) and abs(_cross(v, seg)) <= 1e-4 * math.hypot(*v) * math.hypot(*seg))
 
 
+def _square(v, seg) -> bool:
+    """Whether the edge v is a 45-degree edge square to the chamfer seg: the
+    axis edge between them shrunk to nothing (a counter whose side closed
+    to a point as the weight grew)."""
+    return _diag(v) and abs(v[0] * seg[0] + v[1] * seg[1]) <= 1e-4 * math.hypot(*v) * math.hypot(*seg)
+
+
 def _corner(a, b, turn_left):
     """The corner a 45-degree chamfer a-b cut: where the horizontal and the
     vertical through its ends meet, outside the ink for a cut (left turns,
@@ -190,6 +197,11 @@ def _segments(rings_, record, p: Params):
             corner = bool(turns) and not (len(turns) == 2 and (turns[0] > 0) != (turns[1] > 0))
             # an S-bend or a straight run is no corner: it cannot curve, and holds its pair straight
             smooth = corner and _joins_smoothly(vin, seg) and _joins_smoothly(vout, seg)
+            if own[0] == 'chord' and corner and not smooth:
+                # an edge break against a 45-degree edge square to it stands where an axis edge
+                # between them shrank to nothing: curved as it was while that edge was there (the
+                # italic k's counter, its side a point at 665 on the heavy grade, curved again at 675)
+                smooth = all(_joins_smoothly(v, seg) or _square(v, seg) for v in (vin, vout))
             out.append((ri, i, own, smooth, corner and turns[0] > 0, corner))
     return out
 

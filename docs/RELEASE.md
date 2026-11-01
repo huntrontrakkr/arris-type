@@ -42,6 +42,65 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.008
+
+- White that only shrinks. Stack a glyph's weights as slices and its
+  white should only taper: a counter at a heavier weight lies inside the
+  same counter at a lighter one, so it never grows, never moves outward
+  (no notch, flag or slot appearing), and closes but never opens. The
+  nesting check, `python -m arris.steady` (`arris.steady`), tests it on a
+  built variable font: each counter followed along the weight every ten
+  units at five grade-and-watch lines, moved onto the lighter one by the
+  translation that leaves least of it outside, and faulted where any part
+  lies more than three units outside (or where it opens); `--drawings`
+  reads the engine's drawings of named glyphs instead. On 1.007: 109
+  italic glyphs and 83 upright (the italic k 19.5 units at 750, Q, ø,
+  ε έ, β, $, Д, ⅇ, and the circled and boxed operators and the clocks).
+  The release's check job runs it on both variable fonts (an artifact
+  beside the topology report). `tests/test_steady.py`.
+- The rules that keep white held it to a share of the stem, which grows
+  with the stem, so they made a counter larger at every heavier weight:
+  the italic k's loop dropped and its counter grew from Bold to 875 on the
+  heavy grade, then fell to a diamond at Black where the loop ran out. An
+  opening on a counter (`Opening.hold`: the k's loop, the italic e and æ,
+  ø and the slashed letters, Q, the Cyrillic tick, ∅) and the
+  closed-counter thinning now hold: from the weight of the cut where the
+  drawing first falls short of its share, the counter keeps its area there
+  times that weight's stem over the current one's (read on the cut's own
+  drawings, and in the italic on the curved outline the reader sees).
+  Against 1.007's drawings: k 10% growth to 2%, e 8 to 3, æ 10 to 6,
+  ъ 17 to 5, љ and њ jumps of 18 to 19% to 7 and 6, б 8 to 3.
+- The italic k at the heavy end. Its arm leaves the stem as the n's
+  shoulder does, the notch under it a step at the loop's top left, kept as
+  it was to about Medium. As the weight grows the arm's diagonal shortens
+  and the notch's floor rises to the arch, where the stroke folded and the
+  notch opened into a slot in the arch (the flag at 800, the notch at
+  775); at Black the arm's level start came out of the stem's back (a nub
+  of three points 14 to 17 units apart). Now a 45-degree fill grows across
+  the notch from 2.5 breaks under the arch and closes it by half a break,
+  and from there the arm starts at the stem's centre
+  (`lower.shoulder(notch=False)`): the counter keeps one shape to Black.
+- A stroke's end that hides inside another is cut where the other's
+  outline runs (`Stroke.keep`, `geom._kept`). The italic e's and æ's bars
+  end square, parallel to the bowl's lower-left corner cut, drawn to lie
+  on it; drifting with the weight they came out past it by up to eight
+  units at Black, a step the cleanup closed at some weights and not at
+  others, and the italic curved that corner or cut it straight with it
+  (straight from 825 on the heavy grade, 725 at watch 100). The corner is
+  curved at every weight now.
+- The italic curves an edge break against a 45-degree edge square to it,
+  as it did while the axis edge between them was there: a counter whose
+  side closed to a point (the k's at 665 on the heavy grade) straightened
+  its corner there and curved it again where the side reopened.
+- The release's fontbakery jobs have two hours (1.007's upright variable
+  font took 59 of its 60 minutes).
+- Not yet: the rules capped by nesting (`draw._Nesting`, `ARRIS_NEST=1`),
+  proved on a test set (the Q keeps its tail to Black) but off: the
+  drawings still spill where geometry, not a rule, moves a counter out
+  (ø's bowl corner turns plain at 900, Ҩ's form switches at 860); the
+  italic ε έ fold between masters; the symbols' white rule holds white to
+  a share of the stroke as the others did.
+
 ## 1.007
 
 - The skeleton check, `python -m arris.skeleton` (`arris.skeleton`): a

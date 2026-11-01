@@ -217,7 +217,7 @@ def P(g):
     g.stroke(f.P(1, 11), B(*f.P(8, 11)), B(*f.P(8, 6)), f.P(1, 6))
 
 
-@cap('Q', 10, 2, openings=[Opening(lambda g: g.counter_size(), 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=0.85)])
+@cap('Q', 10, 2, openings=[Opening(lambda g: g.counter_size(), 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=0.85, hold=True)])
 def Q(g):
     f = Frame(g, 10)
     p = f.p

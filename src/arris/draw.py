@@ -6,6 +6,8 @@ spacing is added when the font is assembled.
 """
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -29,11 +31,22 @@ class Opening:
     glyph. The glyph reads one free variable, ``free``; if the gap is narrower
     than its share of the stem in the watch's own drawing, the variable moves
     from its default toward ``limit(p)`` until the gap has that share again.
+
+    A share of the stem grows with the stem: a counter held to one is made
+    larger at every heavier weight (the italic k's loop dropped, its counter
+    grew from Bold to 875 and fell back to a diamond at Black, where the
+    loop ran out). ``hold`` (for a closed counter): the rule acts from the
+    weight of the cut where the drawing first falls short of its share,
+    and from there it keeps the tightest counter's area at what it was
+    there, shrinking as the stem grows (in proportion), so the counter
+    only ever gets smaller with the weight. (Its width, held instead, let
+    the area grow as the shape changed.)
     """
     measure: Callable[['Glyph'], float]
     free: str
     limit: Callable[[Params], float]
     max_ratio: float | None = None   # cap on the watch's share, if it is generous
+    hold: bool = False               # past the weight where it first acts, the counter it had there, shrinking (_engaged)
 
 
 @dataclass(frozen=True)
@@ -177,7 +190,7 @@ class Glyph:
         sizes = self.counters()
         return min(sizes) if sizes else 1e4
 
-    def stroke(self, *pts, closed=False, start='flat', end='flat', part=None):
+    def stroke(self, *pts, closed=False, start='flat', end='flat', part=None, keep=()):
         if part:
             self.parts.setdefault(part, []).append(len(self.strokes))
         nodes = []
@@ -188,7 +201,7 @@ class Glyph:
             else:
                 # (x, y) or (x, y, w): w is the thickness of the segment that follows
                 nodes.append(Node(q[0], q[1], 0.0, q[2] if len(q) > 2 else None))
-        self.strokes.append(Stroke(tuple(nodes), closed, start, end))
+        self.strokes.append(Stroke(tuple(nodes), closed, start, end, tuple(keep)))
         return self
 
     def rings(self):
@@ -806,11 +819,11 @@ def _restroked(p, s):
 _CANON: dict = {}
 
 
-def _lighter(p):
-    """The parameters of the lighter weights of p's own cut, from the
-    Regular's up (every 100), if p is a font's own (a weight, grade and
-    watch balance of a cut: instances.params, Mono or not, italic or not);
-    else None (a set derived from one: small capitals, small figures)."""
+def _cut(p):
+    """(p's weight, the parameters of p's cut at any weight) if p is a
+    font's own (a weight, grade and watch balance of a cut:
+    instances.params, Mono or not, italic or not); else None (a set
+    derived from one: small capitals, small figures)."""
     if p not in _CANON:
         from .instances import params, stem
         out = None
@@ -822,23 +835,106 @@ def _lighter(p):
             lo, hi = (mid, hi) if stem(mid) < base_sv else (lo, mid)
         w = round((lo + hi) / 2, 3)
 
-        def at(w_, watch):
-            q = params(w_, grad, watch=watch).with_(mono=p.mono)
-            if p.slant:
-                from .italic import italic
-                q = italic(q)
-            return q
+        def make(watch):
+            def at(w_):
+                q = params(w_, grad, watch=watch).with_(mono=p.mono)
+                if p.slant:
+                    from .italic import italic
+                    q = italic(q)
+                return q
+            return at
         # the watch balance: the measured optics' share is 1 - watch (0 at
         # the watch's own proportions)
         for watch in sorted({round(1.0 - p.optical, 6), 1.0}):
             try:
-                if at(w, watch) == p:
-                    out = [at(w_, watch) for w_ in range(400, int(w), 100) if w_ < w]
+                if make(watch)(w) == p:
+                    out = (w, make(watch))
                     break
             except Exception:  # noqa: BLE001
                 pass
         _CANON[p] = out
     return _CANON[p]
+
+
+def _lighter(p):
+    """The parameters of the lighter weights of p's own cut, from the
+    Regular's up (every 100), if p is a font's own; else None (_cut)."""
+    cut = _cut(p)
+    if cut is None:
+        return None
+    w, at = cut
+    return [at(w_) for w_ in range(400, int(w), 100) if w_ < w]
+
+
+_ENGAGED: dict = {}
+ENGAGE_STEPS = 14     # bisection steps over the weight, from the Regular's to Black (a twentieth of a unit)
+HOLD_DECAY = 1.0      # a held counter's area goes as (the stem where the rule engaged / the stem) ** this
+
+
+def _counter_area(g) -> float:
+    """The area of the drawing's smallest closed counter as the reader sees
+    it (0 if it has none): in the italic, of its curved outline (its
+    corners curve or not as the counter's shape changes, a tenth of the
+    counter's area at a step)."""
+    if g.p.slant:
+        from .italic import flatten, outline
+        rings, record = g.outline()[:2]
+        signed = []
+        for c in outline(rings, record, g.p):              # curved (and warped, sheared: the area is the same)
+            pts = flatten(c)
+            signed.append(0.5 * sum(pts[i][0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * pts[i][1]
+                                    for i in range(len(pts))))
+        if not signed:
+            return 0.0
+        outer = max(signed, key=abs)
+        holes = [abs(a) for a in signed if a * outer < 0]
+        return min(holes) if holes else 0.0
+    from shapely.geometry import Polygon
+    from .geom import rings_to_shapely
+    poly = rings_to_shapely(g.rings())
+    areas = [Polygon(h).area for part in getattr(poly, 'geoms', [poly]) for h in part.interiors]
+    return min(areas) if areas else 0.0
+
+
+def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
+    """The counter area an opening that holds (Opening.hold) keeps at p:
+    the area at the weight of p's cut where the drawing, its free variable
+    at its default, first falls short of the opening's share of the stem
+    (from the Regular's on; at the Regular if it is short there already),
+    times that weight's stem over p's. None if p is not a font's own cut
+    (the plain share then), or if p is lighter than that weight (the
+    rule's own test decides). Found once a cut."""
+    cut = _cut(p)
+    if cut is None:
+        return None
+    w, at = cut
+    op = spec.openings[k]
+    key = (spec.name, k, ratio, at(400), tuple(sorted(overrides.items())))
+    if key not in _ENGAGED:
+        # read on the cut's own drawings, each in its own width (a graded weight is drawn in its
+        # ungraded body: the reference is the cut's, whatever body p is drawn in)
+        def short(w_):
+            q = at(w_)
+            return op.measure(_build(spec, q, ot, ob, overrides, None)) < ratio * q.sv - 1e-6
+        if short(400.0):
+            we = 400.0
+        elif not short(900.0):
+            we = None
+        else:
+            lo, hi = 400.0, 900.0
+            for _ in range(ENGAGE_STEPS):
+                mid = (lo + hi) / 2
+                lo, hi = (lo, mid) if short(mid) else (mid, hi)
+            we = hi
+        if we is None:
+            _ENGAGED[key] = None
+        else:
+            q = at(we)
+            _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, None)), q.sv)
+    found = _ENGAGED[key]
+    if found is None or w < found[0]:
+        return None
+    return found[1] * (found[2] / p.sv) ** HOLD_DECAY
 
 
 def _squint_monotone(spec, sq, p, ot, ob, overrides, width):
@@ -931,12 +1027,13 @@ def _read(g, count, whites) -> float:
     return _squint(g, count=count)
 
 
-def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
-    spec = REGISTRY[name]
-    if p.slant and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
-        spec = REGISTRY[f'{name}.ital']
+def _opened(spec, p, ot, ob, width, nest=True):
+    """(the drawing, its overrides) with the spec's openings applied (draw's
+    first step, before the closed-counter thinning). Not remembered: a
+    drawing must run its glyph's code to be stamped with it (arris.cache)."""
     overrides: dict = {}
     g = _build(spec, p, ot, ob, overrides, width)
+    nesting = _Nesting.at(spec.name, g, p, ot, ob, width) if spec.openings and nest else None
     for k, op in enumerate(spec.openings):
         ratio = _heritage_ratio(spec, k)
         if op.max_ratio is not None:
@@ -944,31 +1041,204 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
         target = ratio * p.sv
         if op.free not in g.defaults:                       # this drawing does not use it (a cell's upright form)
             continue
-        if op.measure(g) >= target - 1e-6:
+        measure = op.measure
+        if op.hold:
+            held = _engaged(spec, k, ratio, p, ot, ob, overrides, width)
+            if held is not None:
+                measure, target = _counter_area, held
+        if measure(g) >= target - 1e-6:
             continue
-        a, b = g.defaults[op.free], op.limit(p)
+        a0 = a = g.defaults[op.free]
+        b = op.limit(p)
         for _ in range(24):  # bisection: a is too closed, b assumed open enough
             mid = (a + b) / 2
             trial = _build(spec, p, ot, ob, {**overrides, op.free: mid}, width)
-            if op.measure(trial) >= target:
+            if measure(trial) >= target:
                 b = mid
             else:
                 a = mid
+        if nesting is not None:
+            free = op.free
+            b = nesting.clamp(lambda v: _build(spec, p, ot, ob, {**overrides, free: v}, width), a0, b)
         overrides[op.free] = b
         g = _build(spec, p, ot, ob, overrides, width)
+    return g, overrides
+
+
+_AUTO_ENGAGED: dict = {}
+
+
+def _auto_engaged(spec, n, share, p, ot, ob, width) -> float | None:
+    """The counter area the closed-counter thinning keeps at p, as an
+    opening that holds does (_engaged): from the weight of p's cut where
+    the drawing (its openings applied) first lets its tightest counter
+    under its share of the stem, that counter's area there, times that
+    weight's stem over p's. A share of a stem that grows made the counter
+    grow with the weight (the horizontals thinning more than the strokes
+    grew): ø Q Æ œ б Ҩ љ … by up to a seventh from Bold to Black."""
+    cut = _cut(p)
+    if cut is None:
+        return None
+    w, at = cut
+    key = (spec.name, n, share, at(400))
+    if key not in _AUTO_ENGAGED:
+        def short(w_):                                      # on the cut's own drawings, as _engaged
+            q = at(w_)
+            return _counter_white(_opened(spec, q, ot, ob, None, nest=False)[0], n) < share * q.sv - 1e-6
+        if short(400.0):
+            we = 400.0
+        elif not short(900.0):
+            we = None
+        else:
+            lo, hi = 400.0, 900.0
+            for _ in range(ENGAGE_STEPS):
+                mid = (lo + hi) / 2
+                lo, hi = (lo, mid) if short(mid) else (mid, hi)
+            we = hi
+        if we is None:
+            _AUTO_ENGAGED[key] = None
+        else:
+            q = at(we)
+            _AUTO_ENGAGED[key] = (we, _counter_area(_opened(spec, q, ot, ob, None, nest=False)[0]), q.sv)
+    found = _AUTO_ENGAGED[key]
+    if found is None or w < found[0]:
+        return None
+    return found[1] * (found[2] / p.sv) ** HOLD_DECAY
+
+
+NEST = os.environ.get('ARRIS_NEST', '0') == '1'   # a white-keeping rule never puts a counter outside its lighter
+                                                  # anchor's (_Nesting). Off while it is proved on a test set:
+                                                  # ARRIS_NEST=1, with ARRIS_CACHE= (the cache keys on the code,
+                                                  # not this), draws with it
+NEST_TOL = 0.5        # font units: the white a rule leaves outside the lighter counters, over their length, it may
+
+
+def _white(rings):
+    """The counters of a drawing's rings, as one shape."""
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+    from .geom import rings_to_shapely
+    poly = rings_to_shapely(rings)
+    return unary_union([Polygon(h) for part in getattr(poly, 'geoms', [poly]) for h in part.interiors])
+
+
+def _raw_rings(g):
+    """g's ink before the optical warp (its drawing's own frame)."""
+    warp = getattr(g, 'warp', None)
+    g.warp = None
+    try:
+        return g.outline(record=False)[0]
+    finally:
+        g.warp = warp
+
+
+_NEST_REF: dict = {}
+
+
+class _Nesting:
+    """The white a rule may leave at p: inside the counters of p's lighter
+    anchor (the next lighter named weight of its cut, drawn by the same
+    rules, so down to the Regular), moved onto p's drawing by the
+    translation that leaves least of the lighter ink outside p's. Stack a
+    glyph's weights and its white only tapers: a counter at a heavier
+    weight lies inside the one at a lighter weight, never growing, never
+    moving outward. A rule that keeps white (an opening's free variable,
+    the closed-counter thinning) goes only as far as that allows: 1.007's
+    held a counter to a share of a stem that kept growing (the italic k's
+    loop dropped and its counter grew from Bold to 875; the Q's tail
+    swung out and its counter opened to a P)."""
+
+    def __init__(self, ref_white, shift):
+        self.ref = ref_white
+        self.shift = shift
+
+    @classmethod
+    def at(cls, name, g, p, ot, ob, width):
+        if not NEST or not p.floor or p.sv <= _regular_sv(p) or not g.strokes or g.extra:
+            return None
+        lighter = _lighter(p)
+        if not lighter:
+            return None
+        q = lighter[-1]
+        key = (name, q, ot, ob, width)
+        if key not in _NEST_REF:
+            from .geom import rings_to_shapely
+            h = draw(name, q, ot, ob, width)
+            rings = _raw_rings(h)
+            _NEST_REF[key] = (rings_to_shapely(rings), _white(rings), h.W)
+        ink_q, white_q, w_q = _NEST_REF[key]
+        if white_q.is_empty:
+            return None
+        from scipy.optimize import minimize
+        from shapely import affinity
+        from .geom import rings_to_shapely
+        here = rings_to_shapely(_raw_rings(g))
+
+        def outside(t):
+            return affinity.translate(ink_q, t[0], t[1]).difference(here).area
+        starts = [(0.0, 0.0), ((g.W - w_q) / 2, 0.0), (g.W - w_q, 0.0)]
+        best = min(starts, key=outside)
+        res = minimize(outside, best, method='Nelder-Mead',
+                       options={'xatol': 0.1, 'fatol': 0.5, 'maxiter': 120,
+                                'initial_simplex': [best, (best[0] + 3, best[1]), (best[0], best[1] + 3)]})
+        t = (float(res.x[0]), float(res.x[1])) if res.fun < outside(best) else best
+        return cls(affinity.translate(white_q, t[0], t[1]), t)
+
+    def spill(self, h) -> float:
+        """The white of the drawing h outside the lighter counters, over the
+        length of its counters (font units)."""
+        white = _white(_raw_rings(h))
+        if white.is_empty:
+            return 0.0
+        return white.difference(self.ref).area / max(white.length, 1.0)
+
+    def clamp(self, build, a, b):
+        """The furthest a free variable goes from a (the drawing as it is)
+        toward b (what the rule asked) without its counters reaching further
+        outside the lighter ones than the drawing already does. (Where the
+        drawing itself lies a little outside them, the e at Black on the
+        heavy grade, a rule that may not act at all left its bar at full
+        weight and the bar's end came out past the bowl.)"""
+        allow = self.spill(build(a)) + NEST_TOL
+        if self.spill(build(b)) <= allow:
+            return b
+        lo, hi = a, b
+        for _ in range(8):                                  # to a 256th of the way
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if self.spill(build(mid)) <= allow else (lo, mid)
+        return lo
+
+
+def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
+    spec = REGISTRY[name]
+    if p.slant and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
+        spec = REGISTRY[f'{name}.ital']
+    g, overrides = _opened(spec, p, ot, ob, width)
+    nesting = _Nesting.at(name, g, p, ot, ob, width)
     auto = _auto_counters(spec)
+    if any(op.hold for op in spec.openings):
+        auto = None             # an opening that holds is the counter's rule (thinning on its own share grew it again)
     if auto is not None:
         n, ratio = auto
-        target = min(ratio, AUTO_SHARE) * p.sv
-        if _counter_white(g, n) < target - 1e-6:
+        share = min(ratio, AUTO_SHARE)
+        target = share * p.sv
+
+        def measure(h):
+            return _counter_white(h, n)
+        held = _auto_engaged(spec, n, share, p, ot, ob, width)
+        if held is not None:
+            measure, target = _counter_area, held
+        if measure(g) < target - 1e-6:
             a, b = 1.0, AUTO_MIN
             for _ in range(24):
                 mid = (a + b) / 2
                 trial = _build(spec, p, ot, ob, {**overrides, 'sh_auto': mid}, width)
-                if _counter_white(trial, n) >= target:
+                if measure(trial) >= target:
                     b = mid
                 else:
                     a = mid
+            if nesting is not None:
+                b = nesting.clamp(lambda v: _build(spec, p, ot, ob, {**overrides, 'sh_auto': v}, width), 1.0, b)
             overrides['sh_auto'] = b
             g = _build(spec, p, ot, ob, overrides, width)
     if auto is not None and not spec.squint and p.sv > _regular_sv(p) * 1.15:
@@ -987,6 +1257,9 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                         b = mid
                     else:
                         a = mid
+            if nesting is not None:
+                b = nesting.clamp(lambda v: _build(spec, p, ot, ob, {**overrides, 'sh_auto': v}, width),
+                                  overrides.get('sh_auto', 1.0), b)
             trial = _build(spec, p, ot, ob, {**overrides, 'sh_auto': b}, width)
             if len(trial.rings()) == len(g.rings()):         # it thins; it never changes the topology
                 overrides['sh_auto'] = b                      # (the variable font's masters must agree)
@@ -1040,6 +1313,8 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                         b = mid
                     else:
                         a = mid
+            if nesting is not None:
+                b = nesting.clamp(lambda v: _build(spec, _lightened(p, v), ot, ob, overrides, width), 1.0, b)
             g = _build(spec, _lightened(p, b), ot, ob, overrides, width)
             g.lightened = b
     # the optical corrections move the settled drawing (openings, counters

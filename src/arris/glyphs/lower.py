@@ -141,7 +141,7 @@ def g_(g):
     g.butt += crotch_butt(g, f.Y(1))
 
 
-def shoulder(g, f, xs, x_right, top=8, drop=2):
+def shoulder(g, f, xs, x_right, top=8, drop=2, notch=True):
     """An arch's shoulder, as the r's: it leaves the stem at 45 degrees
     ``drop`` modules below the arch (two; the italic's branch lower), an
     edge break into the stem, and leaves a notch
@@ -151,7 +151,14 @@ def shoulder(g, f, xs, x_right, top=8, drop=2):
     The diagonal needs room between the stems. Where there is less (the
     monospaced m, the heaviest weights) it rises less and starts further
     into the stem, down to the plain square join, so the arch keeps its
-    counter and the drawing changes continuously with weight."""
+    counter and the drawing changes continuously with weight.
+
+    ``notch`` False: the notch filled, the diagonal's underside running
+    straight into the stem (the italic k at its heavy weights, k_ital).
+    The diagonal then starts at the stem's centre, cut along it: cut level,
+    its start is k = sd/√2 each side of x0, 16 units more than half a stem
+    at Black, and far into the stem its left corner comes out of the
+    stem's back (a nub of three points)."""
     p = g.p
     k = p.sd / 2 ** 0.5
     y_top = f.Y(top)
@@ -162,6 +169,8 @@ def shoulder(g, f, xs, x_right, top=8, drop=2):
     if rise < 1e-3 * p.m:
         return [(xs, y_top), B(x_right, y_top)], 'flat'
     x0 = xs + rise / full * (x_full - xs)
+    if not notch:
+        return [(xs, y_top - rise - (x0 - xs)), (x0 + rise, y_top), B(x_right, y_top)], 'v'
     return [(x0, y_top - rise), (x0 + rise, y_top), B(x_right, y_top)], 'h'
 
 
