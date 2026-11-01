@@ -166,7 +166,7 @@ def dense_errors(al: Sequence[Rings], mlocs: Sequence[Place]) -> dict[Place, flo
                 q = list(nm)
                 q[i] += s
                 if -1.0 <= q[i] <= 1.0 and (i != 2 or q[i] >= 0.0):
-                    places.append((tuple(q), m))     # type: ignore[arg-type]
+                    places.append(((q[0], q[1], q[2]), m))
     locs = np.array([normal(m) if k < len(DENSE) else m for k, (m, _) in enumerate(places)])
     lo, hi = masters_pts.min(axis=0), masters_pts.max(axis=0)
     mask = dense.pair_mask(nxt)
