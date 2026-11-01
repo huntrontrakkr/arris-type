@@ -49,7 +49,7 @@ from . import composites
 from .composites import Composite
 from .context import Context
 from .encode import Own, gvar_bytes, prune, tuples
-from .measure import LOCAL_TOL, Rings, errors, predicted
+from .measure import LOCAL_TOL, Rings, errors, folds, predicted
 from .space import (
     CHECK,
     DEFAULT,
@@ -237,6 +237,47 @@ def _candidates(n: str, variant: list[Drawn], how: str,
             yield 'predicted grid', k, predicted(sub, nodes, vmodel), nodes
 
 
+def _merge(a: dict[Place, float], b: dict[Place, float]) -> dict[Place, float]:
+    out = dict(a)
+    for k, v in b.items():
+        out[k] = max(out.get(k, 0.0), v)
+    return out
+
+
+class _Curved:
+    """The italic outlines a candidate alignment gives the font, and their
+    folds (measure.folds): the choice must hold for the curved outlines the
+    font carries, whose corners an alignment's zigzag opens into a loop the
+    straight rings barely show (the e at 800/-100/0: 78 units). The masters'
+    preparation (italic.prepare_outlines) is made once per set of drawings."""
+
+    def __init__(self, ctx: Context, n: str) -> None:
+        self.ctx, self.n = ctx, n
+        self.prepared: dict[int, tuple[list, list]] = {}
+
+    def _prep(self, variant: Sequence[Drawn], nodes_: Sequence[Place]) -> tuple[list, list]:
+        key = id(variant)
+        if key not in self.prepared:
+            cps = [self.ctx.p(m).with_(slant=0.0) if REGISTRY[self.n].cell else self.ctx.p(m) for m in nodes_]
+            self.prepared[key] = (cps, ital.prepare_outlines([u.rings for u in variant], [u.record for u in variant], cps))
+        return self.prepared[key]
+
+    def folds(self, al: Sequence[Rings], ns: Sequence[Place], kind: str, k: int, variant: Sequence[Drawn],
+              nodes_: Sequence[Place], where: Sequence[Place]) -> dict[Place, float]:
+        if not self.ctx.italic:
+            return {}
+        try:
+            cps, prep = self._prep(variant, nodes_)
+            if kind != 'predicted grid':
+                outs = ital.aligned_outlines(al, None, None, cps[:len(al)], prepared=prep)
+            else:
+                outs = predicted(ital.aligned_outlines(al[:k], None, None, cps[:k], prepared=prep), ns, _LEAD_MODELS[k])
+            return folds(outs, ns, where)
+        except Exception as e:  # noqa: BLE001  (outlines that cannot be curved are as bad as it gets)
+            log.debug('  %s italic outlines: %s', self.n, e)
+            return {DEFAULT: 1e9}
+
+
 def _choose(ctx: Context, n: str, up: list[Drawn], exact: Exact,
             nodes: list[Place]) -> tuple[Best | None, float | None]:
     """Candidates, in order, until one interpolates within LOCAL_TOL (else
@@ -247,6 +288,7 @@ def _choose(ctx: Context, n: str, up: list[Drawn], exact: Exact,
     those again with the masters drawn without the jog closing. With the
     first candidate's error."""
     best, first = None, None
+    curved = _Curved(ctx, n)
     for jogs in (True, False):
         variant = up if jogs else [_drawn(ctx, n, m, False) for m in nodes]
         for how in ('named', 'tree', 'star'):
@@ -258,6 +300,10 @@ def _choose(ctx: Context, n: str, up: list[Drawn], exact: Exact,
                 where = CHECK + [m for m in nodes if m not in ns]
                 es = errors(al, exact, ns, where)
                 err = max(es.values())
+                if err <= LOCAL_TOL or best is None or err < best.error:
+                    # (the italic's curved outlines read for a candidate that would be taken)
+                    es = _merge(es, curved.folds(al, ns, kind, k, variant, nodes, where))
+                    err = max(es.values())
                 log.debug('  %s %s %s %s %d: %.1f at %s', n, 'jogs' if jogs else 'no jogs', how, kind, k, err,
                           max(es, key=es.__getitem__))
                 first = err if first is None else first
@@ -281,14 +327,18 @@ def _refine(ctx: Context, n: str, best: Best, exact: Exact, nodes: list[Place],
     drawings overall. With the errors over ``places`` as the grid stands."""
     jogs, how = best.choice.jogs, best.choice.how
     axes, ns, var = [list(a) for a in GRID_AXES], list(nodes), list(best.drawn)
+    curved = _Curved(ctx, n)
 
     def realign(var: list[Drawn], ns: list[Place]) -> list[Rings]:
         return align([u.rings for u in var], None if how == 'star' else [normal(m) for m in ns],
                      names=[u.edges for u in var] if how == 'named' else None)
+
+    def measure(al_: list[Rings], ns_: list[Place], var_: list[Drawn]) -> dict[Place, float]:
+        return _merge(errors(al_, exact, ns_, places), curved.folds(al_, ns_, 'finer grid', len(ns_), var_, ns_, places))
     errs: dict[Place, float] | None
     try:
         al = realign(var, ns)
-        errs = errors(al, exact, ns, places)
+        errs = measure(al, ns, var)
     except ValueError:
         errs = None
     tried: set[Place] = set()
@@ -317,7 +367,7 @@ def _refine(ctx: Context, n: str, best: Best, exact: Exact, nodes: list[Place],
                 al2 = realign(var2, ns + new)
             except ValueError:
                 continue
-            errs2 = errors(al2, exact, ns + new, places)
+            errs2 = measure(al2, ns + new, var2)
             if step is None or _total(errs2) < _total(step[0]):
                 step = (errs2, ax2, ns + new, var2, al2)
         # kept if the glyph comes nearer its drawings overall (the worst
@@ -389,6 +439,49 @@ def _cost(res: Finished) -> int:
     return gvar_bytes(tuples(mlocs, outlines, advances))
 
 
+JUMP = 1.0   # units of weight: how close the two planes about a drawing's jump are brought
+
+
+def _structure(ctx: Context, n: str, m: Place) -> str:
+    return ','.join(str(len(r)) for r in _drawn(ctx, n, m).rings)
+
+
+def _narrowed(ctx: Context, n: str, planes: Sequence[Place]) -> list[Place]:
+    """The census's planes about each jump of the drawing (ten units of
+    weight apart, the census's step) brought to JUMP apart by bisection on
+    the drawing's structure (the rings' point counts, as the census reads
+    it). Between the two planes the font interpolates across the jump, and
+    a structure that changes folds as it goes (the ♧'s counter, between its
+    planes at 400 and 410, by 45 units at 406): a jump confined to a unit
+    of weight is a jump, not a wedge a reader can land on."""
+    out: list[Place] = []
+    planes = sorted(planes)
+    i = 0
+    while i < len(planes):
+        a = planes[i]
+        b = planes[i + 1] if i + 1 < len(planes) else None
+        if b is None or a[1:] != b[1:] or not 0 < b[0] - a[0] <= 10:
+            out.append(a)
+            i += 1
+            continue
+        try:
+            sa, sb = _structure(ctx, n, a), _structure(ctx, n, b)
+            if sa != sb:
+                lo, hi = a, b
+                while hi[0] - lo[0] > JUMP:
+                    mid: Place = (round((lo[0] + hi[0]) / 2, 2), a[1], a[2])
+                    if _structure(ctx, n, mid) == sa:
+                        lo = mid
+                    else:
+                        hi = mid
+                a, b = lo, hi
+        except Exception as e:  # noqa: BLE001  (a drawing that fails between the planes: the planes stay as they are)
+            log.debug('  %s narrowing %s-%s: %s', n, a, b, e)
+        out += [a, b]
+        i += 2
+    return out
+
+
 def glyph(n: str) -> GlyphResult:
     """One glyph, start to end, in the Context ``use`` gave this process."""
     ctx = _CTX
@@ -414,7 +507,7 @@ def glyph(n: str) -> GlyphResult:
     best0, errs = best, None
     # the places the census found this glyph's drawing jumping at: the
     # refinement measures there too, and a plane there confines the jump
-    jumps = [q for q in ctx.planes.get(n, []) if q not in CHECK and q not in REFINE]
+    jumps = [q for q in _narrowed(ctx, n, ctx.planes.get(n, [])) if q not in CHECK and q not in REFINE]
     places = CHECK + REFINE + jumps
     if jumps and best is not None and best.error <= LOCAL_TOL:
         at_jumps = max(errors(best.aligned, exact, best.nodes, jumps).values())

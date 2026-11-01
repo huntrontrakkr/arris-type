@@ -195,6 +195,30 @@ tight-stack rule of the a, e and s, applied wherever it is needed rather
 than declared letter by letter. A stroke that crosses a bowl (the ø's
 slash, the ¢'s bar) thins instead.
 
+**A feature weight would swallow adapts.** The openings rule is one case
+of a general one. Toward Black a stroke's growth reaches the whites around
+it, and where a white is part of what the letter is (the slot under the
+t's crossbar that holds the ŧ's bar, the white between a g's or a y's hook
+and its body), the drawing gives way by the least that keeps the feature,
+in this order: the stroke moves toward the open side; it thins, down to
+the stack minimum of a bar (0.7 of the weight's own); its neighbourhood
+grows (a hook deepens into the font's descent, by up to 70 units); and
+only where no white can remain does the feature close whole, in one piece
+without a sliver, leaving a bump to say it was there (the ŧ's bar runs on
+past the t's right edge). Each move is measured on the drawing itself, the
+white read off the ink along the feature, so it follows every axis, not
+the weight alone; and a fill the corner rule adds at a stroke's end is
+kept half a break clear of a parallel chamfer, or the two leave a step
+between them (a hairline, and a bowl line the italic cannot curve). A bar
+placed by rule can still land an edge a unit from a jog of the letter it
+crosses, so a bar is settled: drawn, read with the topology check
+(`arris.topology`), and stepped a few units off such a coincidence
+(`Glyph.settle`). The ŧ's bar, the ₽'s bar and foot and the ℘'s hook are
+drawn this way.
+The skeleton check (`arris.skeleton`) holds that no feature flickers along
+any axis, and the topology check that nothing on the way folds, spikes or
+pinches.
+
 **Symbols keep their parts apart.** A symbol's white between its parts
 (the notch under an arrow's barb, the gap between a pilcrow's stems, the
 spaces between an asterisk's spokes) is drawn to grow with its strokes

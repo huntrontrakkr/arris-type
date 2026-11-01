@@ -17,10 +17,13 @@
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from ..draw import B, REGISTRY, draw, glyph
-from ..params import SQRT2
+from ..params import SQRT2, outer_leg
 from .figures import beak_depth, jog
-from .letterframe import STEEP, Frame, heft, letter_width
+from .letterframe import STEEP, Frame, heft, least_white, letter_width
+from .lower import HOOK_ROOM
 from .symkit import MIRROR, TURN, across, fit_inner, set_tight, sign, small_all, stamp_t, tight
 
 ALIASES = {0x212A: 'K', 0x212B: 'Aring'}
@@ -348,16 +351,41 @@ def scriptl(g):
     g.stroke((xs, y_top), B(xs, g.sh / 2), (g.W, g.sh / 2))
 
 
-@sign('weierstrass', '℘', letter_width(9, 2), kind='lower')
+def _weierstrass(p):
+    """(the sign's body, the overhang its hook stands out left of it). The
+    hook's upturn stands a stem and the least white of a sign left of the
+    stem, and far enough that the hook's two outer corners leave a break of
+    flat between their chamfers (meeting in a point, they held the italic's
+    curves straight at 200 to 500 with the watch's strokes and let them
+    curve from 600); where the body's first column is nearer than that
+    (from Regular on: the hook was 30 units wide at 400, and shut at 600)
+    it stands out past the body, which grows to the left by as much."""
+    W = letter_width(9, 2)(p)
+    x1, x3 = p.sv / 2, p.sv / 2 + 2 * (W - p.sv) / 7
+    inner = max(least_white(p), 2 * outer_leg(p) - 2 * p.sv + p.c)
+    return W, x1 - min(x1, x3 - p.sv - inner)
+
+
+@sign('weierstrass', '℘', lambda p: sum(_weierstrass(p)), kind='lower')
 def weierstrass(g):
     """A p whose stem enters on the 1's flag and whose descender turns back
-    up on the j's hook."""
-    f = Frame(g, 9, 'lower')
-    p = f.p
-    xs = f.X(3)
-    g.clip = (-g.W, -p.desc, 2 * g.W, p.xh)
-    g.stroke((xs, p.xh), B(xs, f.Y(-2)), B(f.X(1), f.Y(-2)), (f.X(1), f.Y(-2) + g.sh / 2 + beak_depth(p)))
-    g.stroke((xs, f.Y(8)), B(*f.P(8, 8)), B(*f.P(8, 1)), (xs, f.Y(1)), closed=True)
+    up on the j's hook, the hook as wide as the least white of a sign asks
+    (_weierstrass)."""
+    p = g.p
+    W, over = _weierstrass(p)
+    f = Frame(SimpleNamespace(p=p, W=W, sh=g.sh, clip=None), 9, 'lower')
+    xs, xb = f.X(3) + over, f.X(8) + over
+    # the hook's corner under the stem: its outer chamfer runs up the stem's
+    # right edge toward the bowl's bottom fill, a parallel diagonal a break
+    # long, and a step under a break between the two the corner rule closes
+    # into one line; from 550 the step hovered about a break (closed at
+    # some weights, kept at others: a flicker). The hook deepens into the
+    # font's descent by what keeps the step a break and a half
+    drop = min(HOOK_ROOM, max(0.0, 2.5 * p.c - (p.desc - outer_leg(p))))
+    yh = f.Y(-2) - drop
+    g.clip = (-g.W, -p.desc - drop, 2 * g.W, p.xh)
+    g.stroke((xs, p.xh), B(xs, yh), B(p.sv / 2, yh), (p.sv / 2, f.Y(-2) + g.sh / 2 + beak_depth(p)))
+    g.stroke((xs, f.Y(8)), B(xb, f.Y(8)), B(xb, f.Y(1)), (xs, f.Y(1)), closed=True)
     _entry(g, xs, p.xh)
 
 

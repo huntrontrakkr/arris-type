@@ -20,10 +20,10 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from ..draw import B, REGISTRY, draw, glyph, white_features
+from ..draw import B, NUDGE, REGISTRY, draw, glyph, white_features
 from ..params import SQRT2
 from .caps import big
-from .figures import beak_depth, heaviness, jog
+from .figures import STACK_MIN, beak_depth, heaviness, jog
 from .letterframe import STEEP, Frame, growing_width, letter_width
 from .symkit import _condensed, across, set_tight, sign, tight_width
 
@@ -431,13 +431,41 @@ def peso(g):
 
 @cur('uni20BD', '₽', lambda p: REGISTRY['P'].width(p) + bar_inset(p))
 def ruble(g):
-    """P with a bar across its stem below the bowl."""
+    """P with a bar across its stem below the bowl: the least white of a
+    sign above the bar, under the bowl, and a foot below it. The foot is
+    two and a half breaks: the fill under the bar at the stem's edge and
+    the foot's own chamfer are parallel diagonals, a break each, and the
+    stem's edge between them must stand half a break or the corner rule
+    closes them into one line, the bar and foot a chevron (Mono at 700).
+    Toward Black the bowl leaves room for neither at a stroke's thickness
+    (at 900 the foot was 32 units, a stub the bar merged with): the bar
+    thins, to the stack minimum of a bar, and the foot then grows down past
+    the baseline by what is still missing. It settles where the topology
+    check finds it clean (Glyph.settle)."""
     p = g.p
     dx, hang = bar_inset(p), bar_hang(p)
     inset_letter(g, 'P', dx, g.W - dx)
     f = frame(p, g.W - dx, 9)
-    y = min(f.Y(3), f.Y(6) - g.sh - wmin(p))
-    g.stroke((-hang, y), (dx + p.sv + bar_out(p) + 1.5 * p.m, y))
+    under = f.Y(6) - g.sh / 2 - wmin(p)                 # the bar's top reaches this at most, under the bowl
+    foot = max(p.m, 2.5 * p.c)
+    t = min(g.sh, max(STACK_MIN * g.sh, under - foot))
+    y = min(f.Y(3), under - t / 2)
+    x0, x1, stem = -hang, dx + p.sv + bar_out(p) + 1.5 * p.m, dx + p.sv / 2
+    cands, seen = [], set()
+    for d in NUDGE:
+        y_ = min(y + d, under - t / 2)
+        if y_ in seen:
+            continue
+        seen.add(y_)
+        drop = max(0.0, foot - (y_ - t / 2))
+        strokes = [((x0, y_, t), (x1, y_, t))]
+        if drop:
+            strokes.append(((stem, y_), (stem, -drop)))
+        cands.append(strokes)
+    if g.clip is not None:
+        cx0, cy0, cx1, cy1 = g.clip
+        g.clip = (cx0, min(cy0, -max(foot - (y - t / 2) + 12, 0.0)), cx1, cy1)
+    g.settle(cands)
 
 
 @cur('franc', '₣', lambda p: REGISTRY['F'].width(p) + bar_inset(p))

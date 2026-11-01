@@ -13,7 +13,7 @@ from fontTools.varLib.iup import iup_delta, iup_delta_optimize
 from fontTools.varLib.models import VariationModel, supportScalar
 
 from .composites import Composite
-from .measure import Rings
+from .measure import Rings, fold
 from .space import AXIS_TAGS, DEFAULT, MASTERS, MODEL, NODES, Place, location, model
 
 type Own = tuple[list[Place], dict[Place, Rings]]   # a glyph's own masters, and its outlines at those past the font's
@@ -37,17 +37,31 @@ def prune(nodes: Sequence[Place], rings: Sequence[Rings], advs: Sequence[float],
     fewer)."""
     vals = np.array([[q[:2] for r in rings[i] for q in r] + [(advs[i], 0.0)] for i in range(len(nodes))], dtype=float)
     loc = [location(m) for m in nodes]
+    lens = [len(r) for r in rings[0]]
+
+    def folded(pts: np.ndarray) -> float:
+        rs, k = [], 0
+        for ln in lens:
+            rs.append([tuple(q) for q in pts[k:k + ln]])
+            k += ln
+        return fold(rs)
 
     def off(keep: list[int], at: list[int]) -> float:
         """The farthest the model over keep is from the masters at, or
         they from the box the masters kept span (the font's own masters
         must span every point's range: tools/vf_spikes.py reads a point
-        past them as carried off)."""
+        past them as carried off), or the fold the model makes there
+        (measure.fold: a master dropped must not leave a wedge where it
+        stood)."""
         vmodel = VariationModel([loc[i] for i in keep], axisOrder=AXIS_TAGS)
         deltas = np.array(vmodel.getDeltas(list(vals[keep])))
         lo, hi = vals[keep].min(axis=0), vals[keep].max(axis=0)
-        return max(max(float(np.abs(np.tensordot(vmodel.getScalars(loc[j]), deltas, 1) - vals[j]).max()),
-                       float(np.maximum(lo - vals[j], vals[j] - hi).max())) for j in at)
+        worst = 0.0
+        for j in at:
+            got = np.tensordot(vmodel.getScalars(loc[j]), deltas, 1)
+            worst = max(worst, float(np.abs(got - vals[j]).max()), float(np.maximum(lo - vals[j], vals[j] - hi).max()),
+                        folded(got[:-1]))
+        return worst
     every = list(range(len(nodes)))
     default = list(nodes).index(DEFAULT)
     alone = {i: off([j for j in every if j != i], [i]) for i in every if i != default}

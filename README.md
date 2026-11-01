@@ -74,6 +74,7 @@ uv run python tools/build_fonts.py all italic   # Arris Italic (add mono for Arr
 uv run python -m arris.vf                       # the variable font, with its interpolation check
 uv run python -m arris.vf italic                # the italic variable font
 uv run pytest                                   # the figures against the watch's pixels
+uv run python -m arris.skeleton                 # every letter's features kept along the axes (--quick: the weight alone)
 uv run python tools/presentation.py             # the presentation: presentation/slides/*.png and arris.pdf
 uv run python tools/package.py                  # a release zip: build/release/Arris-<version>.zip
 ```
@@ -115,6 +116,10 @@ and where the optical corrections come from. In short:
 * `tools/stroke_scan.py`: every glyph's strokes certified, upright and
   italic: no crossing outlines, nothing below the stroke floor, no swelling.
 * `tools/scan_counters.py`: counters that tighten or close at heavy weights.
+* `src/arris/topology.py`: every outline's topology along the axes, in the
+  drawings and in the built variable fonts between their masters: no contour
+  crosses itself, folds back, keeps an edge shorter than a unit or pinches
+  narrower than a break.
 * `tools/squint_scan.py`: holes and slots a squinting reader loses, weight
   by weight (`arris.vision.narrow_whites`).
 

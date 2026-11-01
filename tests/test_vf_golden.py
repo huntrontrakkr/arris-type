@@ -52,7 +52,10 @@ def fingerprint(font: Path, report: Path | None = None) -> dict:
                      'gvar': [(sorted(tv.axes.items()), [list(c) if c is not None else None for c in tv.coordinates])
                               for tv in gvar.variations.get(n, [])]}
     tables = {tag: hashlib.sha1(f.getTableData(tag)).hexdigest()
-              for tag in sorted(f.keys()) if tag not in ('GlyphOrder', 'head', 'glyf', 'gvar', 'loca', 'hmtx')}
+              for tag in sorted(f.keys()) if tag not in ('GlyphOrder', 'head', 'glyf', 'gvar', 'loca', 'hmtx', 'name')}
+    # the name table without the version (the unique ID and the version string): a release is not a change
+    names = sorted((r.nameID, r.platformID, r.platEncID, r.langID, r.toUnicode()) for r in f['name'].names if r.nameID not in (3, 5))
+    tables['name'] = hashlib.sha1(repr(names).encode()).hexdigest()
     out = {'order': f.getGlyphOrder(), 'glyphs': glyphs, 'tables': tables}
     if report is not None and report.exists():
         out['check'] = json.loads(report.read_text())

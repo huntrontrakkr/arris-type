@@ -42,6 +42,110 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.007
+
+- The skeleton check, `python -m arris.skeleton` (`arris.skeleton`): a
+  glyph's strokes are the letter's intent, and weight an offset of them.
+  The check reads the features off the strokes (ink along each segment's
+  centreline, white beside it clear of its corners and the strokes it
+  meets, each bowl corner present and in the italic curved, each free end
+  free, the counters and the pieces of ink counted) and tests each at every
+  weight from 100 to 900 at grades −100, 0 and +100 and watch 0 and 100, in
+  both styles. A feature may be lost toward Black, once; one lost and
+  regained, a counter that appears or a piece of ink that merges with
+  weight is a fault, and a feature lost under 500 is listed. Run on 1.005's
+  italic it names every flip 1.006 fixed; `tests/test_skeleton.py` keeps a
+  core sample passing. The JSON (`--json`) holds every feature's survival,
+  for diffing one build against another.
+- The topology check, `python -m arris.topology` (`arris.topology`): what
+  an Arris outline never does, tested along the axes. Each contour is one
+  simple ring that meets no other; no turn is sharper than 150 degrees (a
+  fold or a spike); no edge is shorter than a unit; no two parts of a
+  contour come nearer than a third of a break without meeting (a pinch, a
+  cluster of points). Run on the built variable fonts, every simple glyph
+  is read at its own masters, halfway between them on each axis, and along
+  the weight every ten units at five grades and three watches, straight
+  from the font's variations; `--drawings` reads the engine's drawings at
+  the heavy corners of the design space. A crossing is sized by the piece
+  it folds wrong (wound backwards, a spike of ink; not at all, a sliver of
+  white), so a notch a reader sees ranks above a hairline. On 1.006's
+  upright variable font: 680 of 1,787 glyphs cross themselves somewhere
+  between their masters, 91 of them by ten units or more (℉ ₘ ҽ ҿ ♧ ₪ Ҏ ð
+  ? æ ӡ $ ų ŧ …), 91 at the default grade and watch; the drawings do not.
+  The cause is the alignment that makes the masters point-compatible: a
+  point it adds sits a fraction of a unit off the outline at a master and
+  opens into a wedge between two, and the build's own measure of a
+  crossing (its depth, `vf.dense`) sees a long thin wedge as shallow.
+  `tests/test_topology.py` holds the check to synthetic folds and a sample
+  of drawings. A vertex within two breaks of an edge along its own
+  contour is the corner the two make (a notch's flanks, the end chamfers
+  of a thin stroke), not a pinch.
+- Drawings that adapt where weight closed a feature (docs/DESIGN.md, "A
+  feature weight would swallow adapts"). The ŧ's bar reads the t's slot
+  and keeps a module of white above and below it, moving and thinning (to
+  0.7 of the stroke) as the slot narrows; the fill under its nub left of
+  the stem stays half a break clear of the hook's chamfer (landing on it,
+  the fill bent the bowl's line, and the italic held the hook's corner
+  straight at 600 and curved it again at 800 with the watch's strokes);
+  where no white can remain it fills the slot whole, in one piece, and
+  runs on past the t's right edge as a bump; and it reads its own outline
+  with the topology check, stepping a few units off a coincidence with the
+  t's jogs (a hairline fold at 900). 1.006's ŧ was a blob with a hairpin
+  fold at 900/+100/100. The hooks of g, y and the italic y thin their
+  horizontal to the stack minimum, then deepen into the font's descent (up
+  to 70 units) before the slot under the body closes, which at Black it
+  did. The ₽'s bar keeps the least white of a sign under the bowl and two
+  and a half breaks of foot below it (the fill under the bar and the
+  foot's chamfer are parallel diagonals, and a shorter step between them
+  the corner rule closes into one line: the chevron of Mono at 700),
+  thinning to the stack minimum and then growing the foot down past the
+  baseline, 32 units at Black. The ℘'s hook, the j's by intent, was 30
+  units wide at Regular and shut at 600: it now stands a stem and the
+  least white left of the stem, and far enough out that its two outer
+  corners keep a break of flat between them (meeting in a point they held
+  the italic's curves straight to 500), the sign growing to the left by as
+  much, and it deepens like the g's where its corner would reach the
+  bowl's fill. A bar placed by rule can still land on a jog of the letter
+  it crosses: `Glyph.settle` draws the first of a few positions, two to
+  twelve units apart, that the topology check finds clean.
+- The variable fonts' folds (`arris.vf`). 1.006's fonts fold by 40 to 190
+  units at their own masters and between them: the build measured a
+  self-crossing by its depth, which sees a long thin wedge as shallow; the
+  grid nodes it predicts rather than draws were never compared with a
+  drawing; the italic's curves, built on the aligned upright rings, open a
+  collapsed corner into a loop; and the census its planes come from was
+  taken at grade 0 and +100 alone, so a drawing's jump on the other lines
+  was interpolated across a hundred units of weight. Now a fold is an
+  error of its own size (`measure.fold`, the topology check's measure)
+  wherever an alignment is measured: at the check's places, on the dense
+  grid, just off each master (where collapsed points open), when a master
+  is pruned, and, for the italic, on the curved outlines the font carries
+  (`measure.folds`, `italic.prepare_outlines`); the census's planes about
+  a jump are brought from ten units of weight apart to one by bisection
+  (`glyph._narrowed`), so a jump is a jump and not a wedge a reader can
+  land on; and every build ends by reading its own font with the topology
+  check (`build/topology.json`). Measured on 1.007's upright variable font:
+  of its 750 simple glyphs, 27 still fold by ten units or more somewhere
+  between their masters (1.006: 91) and 162 by three or more; the worst are
+  ∄ (62 units, at 200/+100/100), ₘ (24, at 400/−50), ⅓ and ⅕ (19, at
+  140/+50/100) and ų (17, at 812/0/100); the drawings fold nowhere. These
+  lie between masters that are each clean, and a denser measuring grid does
+  not move them (a trial of the 26 worst): the alignment's correspondences
+  between neighbouring masters are the next work. The italic's numbers are
+  in the release's check job (its topology artifact).
+- Italic: which edge a bowl's chamfer line claims (`italic._segments`). A
+  45-degree line runs on, and the edge nearest where the chamfer was
+  recorded can be another's: the K's leg lay behind the Қ's and Җ's
+  descender corner at 300/−100 and, claimed, was curved to that corner, a
+  lens cut out of the leg; an accent's corner on the line of a corner of
+  the letter under it (ř ǒ õ ά ắ, в at one grade) held that corner
+  straight at single weights. Further than two breaks from its record a
+  chamfer's line now claims only an edge ahead of the record, with ink all
+  the way from the record to it: the rest of a chamfer whose start another
+  stroke swallowed (the ρ's bowl at its stem, the æ's, the 8's waist at its
+  spine), which is what the first skeleton runs had been losing. Faulting
+  glyph-styles in the skeleton check 58 → 44, nothing newly lost.
+
 ## 1.006 (2026-11-01)
 
 The build, after 1.005 took nine hours of runners for one release:

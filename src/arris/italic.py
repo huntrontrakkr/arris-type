@@ -66,11 +66,11 @@ ON = 0.5   # font units: how near a segment must lie to a recorded chamfer
 
 def _owners(a, b, record):
     """The recorded corners the segment a-b may belong to: [(owner, line,
-    distance)], ('bowl', index) for each of a bowl's two chamfer lines it
-    lies on (with its distance from where the line was recorded), ('chord',
-    index) for an edge break whose ends it is."""
+    along)], ('bowl', index) for each of a bowl's two chamfer lines it lies
+    on (with how far along the line from where it was recorded the segment
+    begins: 0 across the record, negative behind it), ('chord', index) for
+    an edge break whose ends it is."""
     out = []
-    mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
     for idx, r in enumerate(record):
         if r[0] == 'chord':
             if ((math.dist(a, r[1]) < ON and math.dist(b, r[2]) < ON)
@@ -79,11 +79,11 @@ def _owners(a, b, record):
         else:
             for k, (q, d) in enumerate(r[1:]):
                 if all(abs(_cross((pt[0] - q[0], pt[1] - q[1]), d)) < ON for pt in (a, b)):
-                    # how far the segment lies from the recorded point
+                    # where the segment lies along the line from the recorded point
                     u = ((a[0] - q[0]) * d[0] + (a[1] - q[1]) * d[1], (b[0] - q[0]) * d[0] + (b[1] - q[1]) * d[1])
                     dd = math.hypot(*d) or 1.0
-                    far = 0.0 if min(u) <= 0 <= max(u) else min(abs(u[0]), abs(u[1])) / dd
-                    out.append((('bowl', idx), k, far))
+                    along = 0.0 if min(u) <= 0 <= max(u) else min(u, key=abs) / dd
+                    out.append((('bowl', idx), k, along))
     return out
 
 
@@ -105,19 +105,47 @@ def _corner(a, b, turn_left):
     return c1 if (side > 0) != turn_left else c2
 
 
-FAR = 1.0   # font units: a bowl's line claims a segment this far from where it was recorded only if no edge break owns it
+FAR = 1.0    # font units: a bowl's line claims a segment this far from where it was recorded only if no edge break owns it
+NEAR = 2.0   # breaks: within this of its record a chamfer is its own however it got there; beyond, only ahead of it and through ink
 
 
-def _segments(rings_, record):
+def _inside(pt, rings_) -> bool:
+    """Whether a point is in the ink the rings bound (even-odd)."""
+    x, y = pt
+    inside = False
+    for ring in rings_:
+        pts = [tuple(q) for q in ring]
+        n = len(pts)
+        for i in range(n):
+            (x0, y0), (x1, y1) = pts[i], pts[(i + 1) % n]
+            if (y0 > y) != (y1 > y) and x0 + (y - y0) * (x1 - x0) / (y1 - y0) > x:
+                inside = not inside
+    return inside
+
+
+def _through_ink(q, e, rings_, step) -> bool:
+    """Whether the stretch from q to e lies in ink, sampled every step."""
+    n = max(2, math.ceil(math.dist(q, e) / step))
+    return all(_inside((q[0] + (e[0] - q[0]) * t / n, q[1] + (e[1] - q[1]) * t / n), rings_) for t in range(1, n))
+
+
+def _segments(rings_, record, p: Params):
     """Every 45-degree recorded chamfer in the rings: (ring, i, owner,
     smooth, turn_left, corner). Each recorded chamfer line is one edge: the
-    segment on it nearest where it was recorded. (A 45-degree line runs on,
-    and another corner's edge can lie on it far away, as an accent's on the
-    line of a corner of the letter under it: claimed by that corner, the
-    accent's sharp end held its curve straight, so á's a was not a's. And
-    an edge break that happens to lie on a bowl's line far from the bowl
-    is the break's: the italic y's flag at 850 lay on its bowl's line 181
-    units away, and the bowl, holding it, held its own corner straight.)"""
+    segment on it nearest where it was recorded. Within NEAR breaks of the
+    record any segment is the chamfer's own (polish and stamping move one a
+    few units); further, only one ahead of the record along the chamfer
+    with ink all the way from the record to it, the rest of a chamfer whose
+    start another stroke swallowed (the ρ's bowl at its stem, the æ's, the
+    8's waist at its spine), and never an edge break's (the italic y's flag
+    at 850, 181 units along its bowl's line). A 45-degree line runs on, and
+    another edge can lie on it: an accent's corner on the line of a corner
+    of the letter under it, which claimed it and, holding the accent's
+    sharp end, held its own curve straight, so á's a was not a's; the Ǒ's
+    caron on the O's line at Black, through the O's stroke and the white
+    above it; the K's leg behind the Қ's descender corner at 300/-100,
+    which claimed and curved it to a corner far off it, a lens cut out of
+    the leg."""
     claims = {}
     for ri, ring in enumerate(rings_):
         pts = [tuple(q) for q in ring]
@@ -126,15 +154,23 @@ def _segments(rings_, record):
             a, b = pts[i], pts[(i + 1) % n]
             if not _diag((b[0] - a[0], b[1] - a[1])):
                 continue
-            for own, k, far in _owners(a, b, record):
+            for own, k, along in _owners(a, b, record):
                 key = (own, k)
-                if own[0] == 'chord' or key not in claims or far < claims[key][0]:
-                    claims[key] = (far, ri, i)
+                if own[0] == 'chord' or key not in claims or abs(along) < abs(claims[key][0]):
+                    claims[key] = (along, ri, i)
     breaks = {(ri, i) for (own, _), (_, ri, i) in claims.items() if own[0] == 'chord'}
     owner = {}
-    for (own, k), (far, ri, i) in claims.items():
-        if own[0] == 'bowl' and far > FAR and (ri, i) in breaks:
-            continue
+    for (own, k), (along, ri, i) in claims.items():
+        if own[0] == 'bowl' and abs(along) > FAR:
+            if (ri, i) in breaks:
+                continue
+            if abs(along) > NEAR * p.c:
+                pts = rings_[ri]
+                a, b = tuple(pts[i]), tuple(pts[(i + 1) % len(pts)])
+                q, d = record[own[1]][1 + k]
+                near = min((a, b), key=lambda e: abs((e[0] - q[0]) * d[0] + (e[1] - q[1]) * d[1]))
+                if along < 0 or not _through_ink(q, near, rings_, p.c / 2):
+                    continue
         owner.setdefault((ri, i), own)
     out = []
     for ri, ring in enumerate(rings_):
@@ -216,7 +252,7 @@ def _even_bend(rings_, segs, curved, p: Params):
 def _plan(rings_, p: Params, record):
     """({(ring, index): turn_left} for the segments that curve, {(ring,
     index): moved point}) for a drawing (see curve_rings)."""
-    segs = _segments(rings_, record)
+    segs = _segments(rings_, record, p)
     edges: dict = {}
     for s in segs:
         if s[2][0] == 'bowl':
@@ -378,18 +414,32 @@ def _chamfer_map(rings_, record, p: Params):
     return controls, ends
 
 
-def aligned_outlines(aligned, originals, records, params_):
+def prepare_outlines(originals, records, params_):
+    """What ``aligned_outlines`` reads of each master, made once: its warp,
+    and its chamfer map from the record split from the warp (curved on the
+    exact drawing, then moved: outline). The maps do not depend on the
+    alignment, so one preparation serves every candidate alignment of a
+    glyph."""
+    out = []
+    for o, r, p in zip(originals, records, params_):
+        rec, warp = split_warp(r)
+        out.append((warp, _chamfer_map(o, rec, p)))
+    return out
+
+
+def aligned_outlines(aligned, originals, records, params_, prepared=None):
     """Italic outlines for point-compatible upright masters
     (``variable.align``). A segment that is a chamfer in any master carries
     a control point in every master: at the corner it cut where it is a
     chamfer, at its middle (a straight curve) where it is not. So a curve
     grows from a straight edge as the weight moves, and every master has the
-    same points with the same flags."""
+    same points with the same flags. ``prepared``: ``prepare_outlines`` of
+    the masters, else made here."""
     k = len(aligned)
-    split = [split_warp(r) for r in records]               # curved on the exact drawing, then moved (outline)
-    records = [r for r, _ in split]
-    warps = [w for _, w in split]
-    maps = [_chamfer_map(originals[mi], records[mi], params_[mi]) for mi in range(k)]
+    if prepared is None:
+        prepared = prepare_outlines(originals, records, params_)
+    warps = [w for w, _ in prepared[:k]]
+    maps = [m for _, m in prepared[:k]]
     out = [[] for _ in range(k)]
     for ci in range(len(aligned[0])):
         n = len(aligned[0][ci])

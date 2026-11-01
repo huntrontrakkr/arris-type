@@ -115,7 +115,24 @@ def run(settings: Settings) -> Path:
         log.info('interpolation check left to tools/vf_compare.py (ARRIS_VF_CHECK=0)')
         return settings.font
     check.check(settings, names, outlines.shown)
+    topology_report(settings)
     return settings.font
+
+
+def topology_report(settings: Settings) -> None:
+    """The built font's outlines along the axes (arris.topology): every
+    simple glyph at its masters, between them and along the weight; the
+    glyphs that fold by three units or more logged, every fault written
+    beside the check's report."""
+    from arris import topology
+    reps = topology.scan_font(settings.font, procs=settings.workers)
+    worst = sorted(((max((x.size for x in r.faults if x.kind == 'cross'), default=0.0), r.name) for r in reps), reverse=True)
+    bad = [(w, n) for w, n in worst if w >= 3.0]
+    log.info('topology: %d of %d glyphs fold by 3 units or more somewhere; worst %s',
+             len(bad), len(reps), ', '.join(f'{n} {w:.0f}' for w, n in bad[:12]))
+    out = settings.out / ('topology_italic.json' if settings.italic else 'topology.json')
+    topology.dump(reps, out)
+    log.info('topology faults written to %s', out)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
