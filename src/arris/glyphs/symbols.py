@@ -70,7 +70,7 @@ def Euro(g):
 
 
 @glyph('cent', '¢', letter_width(8, 2), kind='lower',
-       openings=[Opening(lambda g: _counter_white(g, 1), 'slash', lambda p: 0.5, max_ratio=AUTO_SHARE)],
+       openings=[Opening(lambda g: _counter_white(g, 1), 'slash', lambda p: 0.5, max_ratio=AUTO_SHARE, hold=True)],
        squint=(Squint('stem', lambda p: 0.0, form=True),))
 def cent(g):
     p = g.p

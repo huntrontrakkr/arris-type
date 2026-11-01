@@ -373,7 +373,7 @@ def s_ital(g):
              (xr, y_lo), B(xr, yb), (f.X(0), yb))
 
 
-@ital('e', 8, 2, openings=[Opening(_one_counter, 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
+@ital('e', 8, 2, openings=[Opening(_one_counter, 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE, hold=True)])
 def e_ital(g):
     """The cursive e: its bar a 45-degree stroke rising from the left side
     into the top right corner, the eye the triangle above it; the lower arm
@@ -390,7 +390,7 @@ def e_ital(g):
 
 
 @ital('ae', 14, 3, width=lambda p: REGISTRY['a.ital'].width(p) + REGISTRY['e.ital'].width(p) - p.sv,
-      openings=[Opening(lambda g: _counter_white(g, 2), 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
+      openings=[Opening(lambda g: _counter_white(g, 2), 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE, hold=True)])
 def ae_ital(g):
     """The single-storey a and the cursive e on one stem: the a's bowl on
     its left, the e's eye and exit on its right."""

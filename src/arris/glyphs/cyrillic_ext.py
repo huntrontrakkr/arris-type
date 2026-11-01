@@ -512,7 +512,7 @@ def _tick(g, x_corner, y_corner, inside):
     g.stroke((a - y0, y0), (a - y1, y1), start='h', end='h')
 
 
-_TICK = Opening(lambda g: g.counter_size(), 'tick', lambda p: 0.0, max_ratio=0.85)
+_TICK = Opening(lambda g: g.counter_size(), 'tick', lambda p: 0.0, max_ratio=0.85, hold=True)
 
 
 @glyph('uni048E', 'Ҏ', letter_width(9, 2), kind='cap', openings=[_TICK])

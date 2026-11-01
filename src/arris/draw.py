@@ -866,10 +866,27 @@ def _lighter(p):
 
 _ENGAGED: dict = {}
 ENGAGE_STEPS = 14     # bisection steps over the weight, from the Regular's to Black (a twentieth of a unit)
+HOLD_DECAY = 1.0      # a held counter's area goes as (the stem where the rule engaged / the stem) ** this
 
 
 def _counter_area(g) -> float:
-    """The area of the drawing's smallest closed counter (0 if it has none)."""
+    """The area of the drawing's smallest closed counter as the reader sees
+    it (0 if it has none): in the italic, of its curved outline (its
+    corners curve or not as the counter's shape changes, a tenth of the
+    counter's area at a step)."""
+    if g.p.slant:
+        from .italic import flatten, outline
+        rings, record = g.outline()[:2]
+        signed = []
+        for c in outline(rings, record, g.p):              # curved (and warped, sheared: the area is the same)
+            pts = flatten(c)
+            signed.append(0.5 * sum(pts[i][0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * pts[i][1]
+                                    for i in range(len(pts))))
+        if not signed:
+            return 0.0
+        outer = max(signed, key=abs)
+        holes = [abs(a) for a in signed if a * outer < 0]
+        return min(holes) if holes else 0.0
     from shapely.geometry import Polygon
     from .geom import rings_to_shapely
     poly = rings_to_shapely(g.rings())
@@ -890,11 +907,13 @@ def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
         return None
     w, at = cut
     op = spec.openings[k]
-    key = (spec.name, k, ratio, at(400), tuple(sorted(overrides.items())), width)
+    key = (spec.name, k, ratio, at(400), tuple(sorted(overrides.items())))
     if key not in _ENGAGED:
+        # read on the cut's own drawings, each in its own width (a graded weight is drawn in its
+        # ungraded body: the reference is the cut's, whatever body p is drawn in)
         def short(w_):
             q = at(w_)
-            return op.measure(_build(spec, q, ot, ob, overrides, width)) < ratio * q.sv - 1e-6
+            return op.measure(_build(spec, q, ot, ob, overrides, None)) < ratio * q.sv - 1e-6
         if short(400.0):
             we = 400.0
         elif not short(900.0):
@@ -909,11 +928,11 @@ def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
             _ENGAGED[key] = None
         else:
             q = at(we)
-            _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, width)), q.sv)
+            _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, None)), q.sv)
     found = _ENGAGED[key]
     if found is None or w < found[0]:
         return None
-    return found[1] * found[2] / p.sv
+    return found[1] * (found[2] / p.sv) ** HOLD_DECAY
 
 
 def _squint_monotone(spec, sq, p, ot, ob, overrides, width):
@@ -1006,10 +1025,10 @@ def _read(g, count, whites) -> float:
     return _squint(g, count=count)
 
 
-def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
-    spec = REGISTRY[name]
-    if p.slant and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
-        spec = REGISTRY[f'{name}.ital']
+def _opened(spec, p, ot, ob, width):
+    """(the drawing, its overrides) with the spec's openings applied (draw's
+    first step, before the closed-counter thinning). Not remembered: a
+    drawing must run its glyph's code to be stamped with it (arris.cache)."""
     overrides: dict = {}
     g = _build(spec, p, ot, ob, overrides, width)
     for k, op in enumerate(spec.openings):
@@ -1036,18 +1055,74 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
                 a = mid
         overrides[op.free] = b
         g = _build(spec, p, ot, ob, overrides, width)
+    return g, overrides
+
+
+_AUTO_ENGAGED: dict = {}
+
+
+def _auto_engaged(spec, n, share, p, ot, ob, width) -> float | None:
+    """The counter area the closed-counter thinning keeps at p, as an
+    opening that holds does (_engaged): from the weight of p's cut where
+    the drawing (its openings applied) first lets its tightest counter
+    under its share of the stem, that counter's area there, times that
+    weight's stem over p's. A share of a stem that grows made the counter
+    grow with the weight (the horizontals thinning more than the strokes
+    grew): ø Q Æ œ б Ҩ љ … by up to a seventh from Bold to Black."""
+    cut = _cut(p)
+    if cut is None:
+        return None
+    w, at = cut
+    key = (spec.name, n, share, at(400))
+    if key not in _AUTO_ENGAGED:
+        def short(w_):                                      # on the cut's own drawings, as _engaged
+            q = at(w_)
+            return _counter_white(_opened(spec, q, ot, ob, None)[0], n) < share * q.sv - 1e-6
+        if short(400.0):
+            we = 400.0
+        elif not short(900.0):
+            we = None
+        else:
+            lo, hi = 400.0, 900.0
+            for _ in range(ENGAGE_STEPS):
+                mid = (lo + hi) / 2
+                lo, hi = (lo, mid) if short(mid) else (mid, hi)
+            we = hi
+        if we is None:
+            _AUTO_ENGAGED[key] = None
+        else:
+            q = at(we)
+            _AUTO_ENGAGED[key] = (we, _counter_area(_opened(spec, q, ot, ob, None)[0]), q.sv)
+    found = _AUTO_ENGAGED[key]
+    if found is None or w < found[0]:
+        return None
+    return found[1] * (found[2] / p.sv) ** HOLD_DECAY
+
+
+def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
+    spec = REGISTRY[name]
+    if p.slant and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
+        spec = REGISTRY[f'{name}.ital']
+    g, overrides = _opened(spec, p, ot, ob, width)
     auto = _auto_counters(spec)
     if any(op.hold for op in spec.openings):
-        auto = None             # an opening that holds is the counter's rule (thinning would grow it again)
+        auto = None             # an opening that holds is the counter's rule (thinning on its own share grew it again)
     if auto is not None:
         n, ratio = auto
-        target = min(ratio, AUTO_SHARE) * p.sv
-        if _counter_white(g, n) < target - 1e-6:
+        share = min(ratio, AUTO_SHARE)
+        target = share * p.sv
+
+        def measure(h):
+            return _counter_white(h, n)
+        held = _auto_engaged(spec, n, share, p, ot, ob, width)
+        if held is not None:
+            measure, target = _counter_area, held
+        if measure(g) < target - 1e-6:
             a, b = 1.0, AUTO_MIN
             for _ in range(24):
                 mid = (a + b) / 2
                 trial = _build(spec, p, ot, ob, {**overrides, 'sh_auto': mid}, width)
-                if _counter_white(trial, n) >= target:
+                if measure(trial) >= target:
                     b = mid
                 else:
                     a = mid

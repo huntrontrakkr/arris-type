@@ -82,7 +82,7 @@ def _split_counters(n):
     """Opening for a stroke that crosses a bowl: the n counters it makes keep
     half their share of the stem (as every closed counter does), by thinning
     the crossing stroke to half."""
-    return Opening(lambda g: _counter_white(g, n), 'slash', lambda p: 0.5, max_ratio=AUTO_SHARE)
+    return Opening(lambda g: _counter_white(g, n), 'slash', lambda p: 0.5, max_ratio=AUTO_SHARE, hold=True)
 
 
 @glyph('Oslash', 'Ø', width_of('O'), kind='cap', openings=[_split_counters(2)])
