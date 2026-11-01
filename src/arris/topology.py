@@ -1,9 +1,9 @@
 """Every outline's topology along the axes: what the design never does.
 
 An Arris outline is a union of strokes, polished (geom): each contour one
-simple ring, no two meeting; no turn sharper than a diagonal against a
-stem (an outer corner is cut at 45 degrees, an inner one is at most a
-right angle or a diagonal's 135); no edge shorter than a polish sliver;
+simple ring, no two meeting; no turn sharper than the steepest diagonal
+against a stem (an outer corner is cut at 45 degrees; the N's 2:1 diagonal
+meets its stem at 153 degrees of turn); no edge shorter than a polish sliver;
 no two parts of a contour nearer than a break unless they meet. Whatever
 breaks one of these is a defect, in a drawing (a jog closed past its
 neighbour: the ç at 550) or in the variable font between its masters (a
@@ -56,7 +56,7 @@ from . import italic as IT
 from .instances import params
 from .params import Params
 
-HAIRPIN = 150.0   # degrees: a turn sharper than this at a vertex is a fold or a spike (the design's sharpest is 135)
+HAIRPIN = 165.0   # degrees: a turn sharper than this at a vertex is a fold or a spike (the design's sharpest, a 2:1 diagonal into a stem, N's, is 153.4; a fold is 175 and over)
 TINY = 1.0        # font units: an edge shorter than this, and not nothing, is a point off its neighbour
 SAME = 0.25       # font units: points this near are one (a master's peak in F2Dot14 leaves a scalar of 0.9999)
 PINCH = 0.35      # breaks: ink or white narrower than this between parts of one contour that do not meet
