@@ -42,6 +42,44 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.010
+
+- Even colour at the heavy end. The width formula counts a k, K, z or Z
+  as one stem, so as the strokes grow these letters do not widen and get
+  darker than the n beside them: at Black the upright k was 1.43 times the
+  n's density (ink over advance times x-height), where fourteen comparable
+  sans sit at 1.18 to 1.21; z 1.21 (0.94 to 1.04), Z and K 1.14 (0.92 to
+  1.02). Their diagonals now thin from Regular to Black (`draw.EVEN`,
+  `_evened`): k by 24% at Black, K by 18%, Z by 30%, halfway to the
+  others; the italic k by 15% (from 18% its loop no longer draws at watch
+  100) and the z by 15% (more, its diagonal met the bars at a corner the
+  cleanup made at some heavy masters and not others, and the variable font
+  folded between them by 6 units). Widths, the light half and the Mono are
+  unchanged; spacing and kerning follow the outlines. Every glyph drawn
+  from them follows, and the letters drawn with the k's or K's own arms
+  take the same share (ĸ ƙ Ƙ Ҡ Ҝ, the Bulgarian к).
+- A thinned letter places its diagonals by the full stroke
+  (`letterframe.placing`): only their weight changes, and nothing the
+  placement decides (the k's arm junction, the z's step) moves along the
+  weight. Placed by the thinner stroke they had moved, and a trial
+  variable font folded where they switched (ҟ by 12 to 15 units).
+- Bars keep a cross at every weight (`extra_latin.t_bar`), ħ đ Ħ Đ Ð Ŧ ҟ Ҟ
+  Ғ Ӻ and what is drawn from them. An arm or a stub is drawn as a fill
+  against the stem and a cut at its end, a break each, and toward Black
+  the bars, a module or less past their stems, ran with the stems' tops
+  into arrowheads. Now every arm reaches at least two modules past the
+  stem at every weight, three breaks toward Black, and the bar keeps its
+  full stroke (the owner: longer, not thinner, and not a T), coming down so
+  that three breaks of stem stand above it, no lower than the white above
+  the letter under it; near Black, where ħ's and đ's ascender is too short
+  for both, the stub is what is left. Ҟ's bar ends at its stem on the
+  right where a module's arm would close on the K's arm, a flag to the
+  left.
+- Қ Ҟ ҟ draw their K or k in its own body: on a grade, a room taken at
+  the graded stem left ҟ's k 3.75 units wider than the k, and its arm
+  left the stem (at 500 on the heavy grade).
+- Checked: RESULT.
+
 ## 1.009
 
 - Back to 1.007's drawings for every glyph but the italic k. 1.008 held

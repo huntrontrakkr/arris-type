@@ -26,7 +26,7 @@ from ..draw import B, REGISTRY, Opening, draw, glyph
 from ..params import SQRT2, outer_leg
 from .caps import big
 from .cyrillic import ALIASES as RU_ALIASES, ccap, mirror, sc, smallcap
-from .extra_latin import stamp
+from .extra_latin import stamp, t_bar
 from .figures import MOUTH_SHARE, _beak_limit, beak_depth, jog
 from .letterframe import Frame, k_arms, letter_width, white_scale
 
@@ -134,10 +134,6 @@ def hook(g, f, x, y_from, reach=4.0):
     _down(g, p.desc)
 
 
-def cross_bar(g, x0, x1, y):
-    g.stroke((x0, y), (x1, y))
-
-
 def beak_free(g):
     """A beak's depth, which a mouth's opening may shorten, never past its
     outer flank (as the 3's and 5's: figures.beak_bottom)."""
@@ -162,14 +158,14 @@ def Ghestroke(g):
     p = g.p
     dx = 1.5 * room(p)
     stamp(g, 'uni0413', dx, width=g.W - dx)
-    cross_bar(g, 0, dx + p.sv + 2 * room(p), p.cap / 2)
+    t_bar(g, dx, dx + p.sv, p.cap / 2, dx, 2 * room(p))
 
 
 @ccap('uni049A', 'Қ', 9, 1, width=plus_room('K'))
 def Kadesc(g):
     f = Frame(g, 9)
     p = g.p
-    Wk = g.W - room(p)
+    Wk = g.W - room(p.ungraded())                           # the K's own body (graded: drawn in the ungraded one)
     stamp(g, 'K', width=Wk)
     k = p.sd / SQRT2
     x_leg = Wk + p.c - k - f.Y(1)                           # the leg's centre on the foot's line
@@ -370,10 +366,22 @@ def Pedesc(g):
 @ccap('uni049E', 'Ҟ', 9, 1, width=plus_room('K'))
 def Kastroke(g):
     """K with Ħ's bar through the top of its stem."""
+    from ..draw import _evened
     p = g.p
-    dx = room(p)
+    dx = room(p.ungraded())                                 # the K in its own body (Қ)
     stamp(g, 'K', dx, width=g.W - dx)
-    cross_bar(g, 0, dx + p.sv + room(p), 0.75 * p.cap + g.sh / 4)
+    # Right of the stem the bar faces the K's arm (x - y = a, letterframe.k_arms,
+    # placed by the full stroke, drawn as thin as the K's): a module's arm while a
+    # break of white stays between it and the arm; where less would (900 on the
+    # light grade, watch 100: 11 units) the bar ends at the stem, a flag to the
+    # left (run on into the arm, it walled off specks of white and made a slab)
+    xs_r = dx + p.sv
+    a = g.W - dx - p.cap + p.c - p.sd / SQRT2 + dx
+    k = _evened(REGISTRY['K'], p).sd / SQRT2
+
+    def reach_r(yb, yt):
+        return room(p) if yb + a - k - (xs_r + room(p)) >= p.c else 0.0
+    t_bar(g, dx, xs_r, 0.75 * p.cap + g.sh / 4, dx, reach_r, top=p.cap, floor=p.cap / 2 + g.sh / 2 + p.m)
 
 
 @ccap('uni04B4', 'Ҵ', 13, 3)
@@ -560,7 +568,7 @@ def Ghestrokehook(g):
     dx = 1.5 * room(p)
     stamp(g, 'uni0413', dx, width=g.W - dx)
     xs = dx + p.sv / 2
-    cross_bar(g, 0, dx + p.sv + 2 * room(p), p.cap / 2)
+    t_bar(g, dx, dx + p.sv, p.cap / 2, dx, 2 * room(p))
     xh = xs + hook_reach(p)
     yb = -p.desc + g.sh / 2
     g.stroke((xs, g.sh / 2), B(xh, g.sh / 2), B(xh, yb), (xs, yb))
@@ -861,9 +869,12 @@ def kastroke(g):
     Latin), Ħ's bar through its ascender."""
     from ..draw import _build
     p = g.p
-    dx = room(p)
+    # the k in its own body: a graded weight is drawn in its ungraded body, and
+    # a room taken at the graded stem left the k 3.75 units wider than itself at
+    # 500 on the heavy grade, its arm's junction too short to keep the stem
+    dx = room(p.ungraded())
     g.add_glyph(_build(REGISTRY['k'], p, 0.0, 0.0, {}, g.W - dx), dx)
-    cross_bar(g, 0, dx + p.sv + room(p), (p.xh + p.asc) / 2 + p.m / 2)
+    t_bar(g, dx, dx + p.sv, (p.xh + p.asc) / 2 + p.m / 2, dx, room(p), top=p.asc, floor=p.xh)
 
 
 @glyph('uni0495', 'ҕ', letter_width(8, 2), kind='lower')

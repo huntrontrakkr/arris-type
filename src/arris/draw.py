@@ -393,6 +393,8 @@ def _build(spec, p, ot, ob, overrides, width=None):
         # where it stands in it, when it is stamped (add_glyph), not at a
         # cell of its own parameters
         g.cell = ((g.W - p.fig_adv) / 2, (g.W + p.fig_adv) / 2)
+    g.p = _evened(spec, p)
+    g.p_full = p if g.p is not p else None    # (letterframe.placing)
     _DEPTH[0] += 1
     try:
         spec.fn(g)
@@ -648,6 +650,35 @@ def _white_reference(spec, p):
 
 def _lightened(p: Params, k: float) -> Params:
     return p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k)
+
+
+# Even colour at the heavy end: the share of its diagonals' thickness a
+# crowded letter gives up by Black, from nothing at Regular (_evened). Its
+# width is the formula's, so as the strokes grow a k, K, z or Z gets darker
+# than the n beside it (at Black 1.43 times the n's density for the k, where
+# fourteen comparable sans sit at 1.18 to 1.21); this takes it halfway to
+# them. Letters drawn with the k's or K's own arms take the same. The italic
+# k to 0.15: from 0.18 its loop no longer draws at watch 100. The z to 0.15
+# (a quarter of the way): thinner, its diagonal met the bars at a corner the
+# cleanup made at some heavy masters and not others (21, 22 or 24 points),
+# and the variable font folded between them. Not the Mono.
+EVEN = {'k': 0.24, 'kgreenlandic': 0.24, 'uni0199': 0.24, 'uni043A.loclBGR': 0.24, 'k.ital': 0.15,
+        'K': 0.18, 'uni0198': 0.18, 'uni04A0': 0.18, 'uni049C': 0.18,
+        'z': 0.15, 'Z': 0.30}
+
+
+def _evened(spec, p: Params) -> Params:
+    """p with a crowded letter's diagonals thinner (EVEN): by its share at
+    Black, in proportion to how far the stem has grown past Regular's."""
+    share = EVEN.get(spec.name)
+    if not share or p.mono:
+        return p
+    from .instances import stem
+    t = (p.sv - stem(400)) / (stem(900) - stem(400))
+    if t <= 0:
+        return p
+    f = 1 - share * min(t, 1.0)
+    return p.with_(sd=p.sd * f, ss=p.ss * f)
 
 
 LOCK_MIN = 0.75     # the most the topology lock lightens a drawing's strokes
