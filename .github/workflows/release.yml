@@ -175,7 +175,7 @@ jobs:
               pair: 'build/Arris-Regular.ttf build/Arris-Black.ttf build/Arris-Italic.ttf build/Arris-BlackItalic.ttf' }
           - { name: italic, artifacts: 'fonts-static-italic', files: 'build/Arris-Italic.ttf build/Arris-BlackItalic.ttf',
               skip: '-x opentype/STAT/ital_axis', pair: '' }
-          - { name: mono, artifacts: 'fonts-static-mono', files: 'build/ArrisMono-Regular.ttf build/ArrisMono-Black.ttf', skip: '', pair: '' }
+          - { name: mono, artifacts: 'fonts-static-mono', files: 'build/ArrisMono-Regular.ttf build/ArrisMono-Bold.ttf', skip: '', pair: '' }
           - { name: variable upright, artifacts: 'fonts-variable-*', files: '"build/Arris[GRAD,WTCH,wght].ttf"', skip: '',
               pair: '"build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf"' }
           - { name: variable italic, artifacts: 'fonts-variable-italic', files: '"build/Arris-Italic[GRAD,WTCH,wght].ttf"',
@@ -254,7 +254,7 @@ jobs:
           m = re.search(rf'^## {re.escape(v)}\b.*?\n(.*?)(?=^## |\Z)', notes, re.S | re.M)
           body = (
               'Arris is a chamfered sans: octagonal and monoline, every outer corner cut at 45 degrees. '
-              'Nine weights in upright, italic and mono, plus variable fonts with weight, grade and watch axes. '
+              'Nine weights in upright and italic, Mono in Regular and Bold, plus variable fonts with weight, grade and watch axes. '
               'Free and open under the SIL Open Font License 1.1, with no Reserved Font Name.\n\n'
               f'**Download:** `Arris-{v}.zip` below: the static fonts (TTF), the two variable fonts, '
               'web fonts (WOFF2), the licence and a README.\n\n'

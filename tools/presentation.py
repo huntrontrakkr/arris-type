@@ -1,7 +1,7 @@
 """The Arris presentation: thirty-odd designed slides set in the built fonts.
 
 Each slide is a 1920x1080 HTML page (CSS: the variable font's three axes,
-OpenType features, the Mono family's nine weights); headless Chromium
+OpenType features, the Mono family's two weights); headless Chromium
 renders them to presentation/slides/NN-name.png and the whole deck to one
 vector PDF, presentation/arris.pdf. Build the fonts first (README).
 
@@ -27,9 +27,7 @@ def font_css():
     vfi = (BUILD / 'Arris-Italic[GRAD,WTCH,wght].ttf').as_uri()
     css = [f"@font-face {{ font-family: 'Arris'; src: url('{vf}'); font-weight: 100 900; font-style: normal; }}",
            f"@font-face {{ font-family: 'Arris'; src: url('{vfi}'); font-weight: 100 900; font-style: italic; }}"]
-    names = ['Thin', 'ExtraLight', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold', 'Black']
-    for i, n in enumerate(names):
-        w = 100 * (i + 1)
+    for n, w in (('Regular', 400), ('Bold', 700)):                  # Mono's two weights (instances.MONO_WEIGHTS)
         up = (BUILD / f'ArrisMono-{n}.ttf').as_uri()
         it = (BUILD / f'ArrisMono-{"Italic" if n == "Regular" else n + "Italic"}.ttf').as_uri()
         css.append(f"@font-face {{ font-family: 'Arris Mono'; src: url('{up}'); font-weight: {w}; font-style: normal; }}")
@@ -168,7 +166,7 @@ def cover():
     body = f"""
 <div class="stack">{lines}</div>
 <div class="side">
-  <div class="kicker label">A typeface in nine weights,<br>upright, italic and mono</div>
+  <div class="kicker label">A typeface in nine weights,<br>upright and italic, and a mono</div>
   <div class="tag">a chamfered sans</div>
   <div class="facts">
     <div><span class="accent">Thin → Black</span><br>Upright, Italic, Mono, Watch</div>

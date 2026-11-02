@@ -2,7 +2,12 @@
 
 A note, 2026-11-02 (Eastern): the plan, the evidence for it, and what the
 owner decided. Since done on `mono-grid`: the held strokes (section 3, the
-letters' bar and slash helpers) and Mono's one cell (section 2, B).
+letters' bar and slash helpers) and Mono's one cell (section 2, B). And the
+owner's call (2026-11-02): Mono ships only the two weights the site shows,
+Regular and Bold with their italics (`instances.MONO_WEIGHTS`); the build,
+the release workflow, the npm package and the proofs follow. The engine's
+hold past Bold (`draw.MONO_HOLD`) stays for a Mono drawn heavier, which no
+font now ships.
 
 ## 1. The problem: Mono's cell follows the weight
 

@@ -18,8 +18,8 @@ import arris.glyphs  # noqa: E402,F401
 from arris.draw import REGISTRY  # noqa: E402
 from arris.glyphs.ligatures import LIGATURES  # noqa: E402
 
-FONTS = ['build/ArrisMono-Thin.ttf', 'build/ArrisMono-Regular.ttf', 'build/ArrisMono-Black.ttf',
-         'build/ArrisMono-BlackItalic.ttf']
+FONTS = ['build/ArrisMono-Regular.ttf', 'build/ArrisMono-Bold.ttf', 'build/ArrisMono-Italic.ttf',
+         'build/ArrisMono-BoldItalic.ttf']
 PER_ROW = 11
 
 if __name__ == '__main__':
