@@ -647,10 +647,12 @@ the monospaced cut, dots (. , : ; and the tittles) are half
 as big again as the stem at Regular, easing to a fifth more at Black: a dot
 looks lighter than a stroke of its width, and code turns on them.
 
-Arris Mono ships in two weights, Regular and Bold, each with its italic
-(`instances.MONO_WEIGHTS`). It keeps one cell, ten modules (600 units), at
-every weight the engine draws, so Regular and Bold share a grid in an editor
-or a terminal (the cell
+Arris Mono ships in Fira Code's six weights, Light (300), Regular, Retina
+(450, a Regular a little heavier for light text on dense screens), Medium,
+SemiBold and Bold, each with its italic (`instances.MONO_WEIGHTS`,
+`MONO_NAMES`). It keeps one cell, ten modules (600 units), at every weight
+the engine draws, so every weight shares a grid in an editor or a terminal
+(the cell
 had followed the figures, which widen with the weight: 528 at Thin, 682 at
 Black). A glyph is drawn in the body the proportional figures have at its
 weight, held between nine modules and nine and a half (`params.MONO_CELL`,

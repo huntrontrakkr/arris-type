@@ -18,13 +18,13 @@ from pathlib import Path
 from arris.draw import REGISTRY
 from arris.font import build
 from arris.glyphs.features import fea
-from arris.instances import HERITAGE_OPTICS, MONO_WEIGHTS, NAMES, OPTICS, STEMS, params
+from arris.instances import HERITAGE_OPTICS, MONO_NAMES, MONO_WEIGHTS, NAMES, OPTICS, STEMS, params
 from arris.italic import italic
 
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 watch = 'watch' in sys.argv[2:]
 mono = 'mono' in sys.argv[2:]
-# 'all': every weight; Mono's are Regular and Bold (MONO_WEIGHTS)
+# 'all': every weight; Mono's are Fira Code's six, Light to Bold with Retina (MONO_WEIGHTS)
 weights = [int(w) for w in sys.argv[1].split(',')] if len(sys.argv) > 1 and sys.argv[1] != 'all' else \
     (list(MONO_WEIGHTS) if mono else list(STEMS))
 ital = 'italic' in sys.argv[2:]
@@ -51,7 +51,7 @@ if mono and ital and __name__ == '__main__':
 
 def one(w):
     p = params(w, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono)
-    style = NAMES[w]
+    style = (MONO_NAMES if mono else NAMES)[w]
     if ital:
         p = italic(p)
         style = 'Italic' if style == 'Regular' else f'{style} Italic'
