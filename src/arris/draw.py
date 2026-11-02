@@ -40,7 +40,10 @@ class Opening:
     and from there it keeps the tightest counter's area at what it was
     there, shrinking as the stem grows (in proportion), so the counter
     only ever gets smaller with the weight. (Its width, held instead, let
-    the area grow as the shape changed.)
+    the area grow as the shape changed.) The italic k's alone: 1.008 held
+    the e, æ, ø, Q and the closed-counter thinning too, and where a counter
+    is small when the rule first acts (the italic e's eye) it shrank to a
+    sliver by Black, the letter clogged; 1.009 put them back.
     """
     measure: Callable[['Glyph'], float]
     free: str
@@ -190,7 +193,7 @@ class Glyph:
         sizes = self.counters()
         return min(sizes) if sizes else 1e4
 
-    def stroke(self, *pts, closed=False, start='flat', end='flat', part=None, keep=()):
+    def stroke(self, *pts, closed=False, start='flat', end='flat', part=None):
         if part:
             self.parts.setdefault(part, []).append(len(self.strokes))
         nodes = []
@@ -201,7 +204,7 @@ class Glyph:
             else:
                 # (x, y) or (x, y, w): w is the thickness of the segment that follows
                 nodes.append(Node(q[0], q[1], 0.0, q[2] if len(q) > 2 else None))
-        self.strokes.append(Stroke(tuple(nodes), closed, start, end, tuple(keep)))
+        self.strokes.append(Stroke(tuple(nodes), closed, start, end))
         return self
 
     def rings(self):
@@ -253,6 +256,8 @@ class Glyph:
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished)
         rec = (rec or []) + self.extra_chamfers if record else []
+        if record and getattr(self, 'square', False):
+            rec = rec + [('square',)]                   # italic.SQUARE: the italic k's edge breaks
         warp = getattr(self, 'warp', None)
         if warp is not None:
             if p.slant:
@@ -331,7 +336,7 @@ def _thickness(p: Params, sh: float) -> Thickness:
 def _warped(r, f):
     """A chamfer record entry with every point's y passed through f (a
     direction is carried by moving a point a unit along it)."""
-    if r[0] == 'warp':
+    if r[0] in ('warp', 'square'):
         return r
     if r[0] == 'bowl':
         return ('bowl',) + tuple(((q[0], f(q[1])), (d[0], f(q[1] + d[1]) - f(q[1]))) for q, d in r[1:])
@@ -343,6 +348,8 @@ def _warped(r, f):
 
 
 def _moved(r, dx, dy):
+    if r[0] == 'square':
+        return r
     if r[0] == 'warp':
         f = r[1]
         return ('warp', Shifted(f, dy)) if dy else r
@@ -1065,47 +1072,6 @@ def _opened(spec, p, ot, ob, width, nest=True):
     return g, overrides
 
 
-_AUTO_ENGAGED: dict = {}
-
-
-def _auto_engaged(spec, n, share, p, ot, ob, width) -> float | None:
-    """The counter area the closed-counter thinning keeps at p, as an
-    opening that holds does (_engaged): from the weight of p's cut where
-    the drawing (its openings applied) first lets its tightest counter
-    under its share of the stem, that counter's area there, times that
-    weight's stem over p's. A share of a stem that grows made the counter
-    grow with the weight (the horizontals thinning more than the strokes
-    grew): ø Q Æ œ б Ҩ љ … by up to a seventh from Bold to Black."""
-    cut = _cut(p)
-    if cut is None:
-        return None
-    w, at = cut
-    key = (spec.name, n, share, at(400))
-    if key not in _AUTO_ENGAGED:
-        def short(w_):                                      # on the cut's own drawings, as _engaged
-            q = at(w_)
-            return _counter_white(_opened(spec, q, ot, ob, None, nest=False)[0], n) < share * q.sv - 1e-6
-        if short(400.0):
-            we = 400.0
-        elif not short(900.0):
-            we = None
-        else:
-            lo, hi = 400.0, 900.0
-            for _ in range(ENGAGE_STEPS):
-                mid = (lo + hi) / 2
-                lo, hi = (lo, mid) if short(mid) else (mid, hi)
-            we = hi
-        if we is None:
-            _AUTO_ENGAGED[key] = None
-        else:
-            q = at(we)
-            _AUTO_ENGAGED[key] = (we, _counter_area(_opened(spec, q, ot, ob, None, nest=False)[0]), q.sv)
-    found = _AUTO_ENGAGED[key]
-    if found is None or w < found[0]:
-        return None
-    return found[1] * (found[2] / p.sv) ** HOLD_DECAY
-
-
 NEST = os.environ.get('ARRIS_NEST', '0') == '1'   # a white-keeping rule never puts a counter outside its lighter
                                                   # anchor's (_Nesting). Off while it is proved on a test set:
                                                   # ARRIS_NEST=1, with ARRIS_CACHE= (the cache keys on the code,
@@ -1225,9 +1191,6 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
 
         def measure(h):
             return _counter_white(h, n)
-        held = _auto_engaged(spec, n, share, p, ot, ob, width)
-        if held is not None:
-            measure, target = _counter_area, held
         if measure(g) < target - 1e-6:
             a, b = 1.0, AUTO_MIN
             for _ in range(24):

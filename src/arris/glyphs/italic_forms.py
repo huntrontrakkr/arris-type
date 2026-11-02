@@ -317,6 +317,7 @@ def k_ital(g):
     f = Frame(g, 8, 'asc')
     _free(g)
     p = g.p
+    g.square = True         # its counter's side closes to a point and opens again: curved throughout (italic.SQUARE)
     xs = f.X(1)
     g.stroke(f.P(1, 13), f.P(1, 0))
     entry(g, f, xs, p.asc)
@@ -373,22 +374,7 @@ def s_ital(g):
              (xr, y_lo), B(xr, yb), (f.X(0), yb))
 
 
-def _corner_cut(g, bowl):
-    """The half-plane inside a bowl's lower-left corner cut, (1, 1, c) for
-    x + y >= c: where a bar rising at 45 degrees from that corner keeps its
-    ink. Its end, cut square, is parallel to the corner cut and drawn to lie
-    on it; a unit inside at one weight and out at the next, it came out past
-    the corner by up to eight units at Black, and the italic cut the corner
-    straight wherever the cleanup left that step (geom._kept). ``bowl``: the
-    points of the bowl's stroke."""
-    from ..draw import _thickness
-    from ..geom import stroke_polygon
-    g.stroke(*bowl, end='h')
-    poly = stroke_polygon(g.strokes.pop(), _thickness(g.p, g.sh), g.p.c)
-    return (1.0, 1.0, min(x + y for x, y in poly.exterior.coords))
-
-
-@ital('e', 8, 2, openings=[Opening(_one_counter, 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE, hold=True)])
+@ital('e', 8, 2, openings=[Opening(_one_counter, 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
 def e_ital(g):
     """The cursive e: its bar a 45-degree stroke rising from the left side
     into the top right corner, the eye the triangle above it; the lower arm
@@ -399,14 +385,13 @@ def e_ital(g):
     p = g.p
     xl, xr = f.X(1), f.X(7)
     yt = f.Y(8)
+    g.stroke((xl, yt - (xr - xl), p.sd * g.free('bar', 1.0)), (xr, yt))
     L = _reach(p, FLAG)
-    bowl = ((xr, yt), B(xl, yt), B(xl, f.Y(1)), (f.X(6), f.Y(1)), (f.X(6) + L, f.Y(1) + L))
-    g.stroke((xl, yt - (xr - xl), p.sd * g.free('bar', 1.0)), (xr, yt), keep=(_corner_cut(g, bowl),))
-    g.stroke(*bowl, end='h')
+    g.stroke((xr, yt), B(xl, yt), B(xl, f.Y(1)), (f.X(6), f.Y(1)), (f.X(6) + L, f.Y(1) + L), end='h')
 
 
 @ital('ae', 14, 3, width=lambda p: REGISTRY['a.ital'].width(p) + REGISTRY['e.ital'].width(p) - p.sv,
-      openings=[Opening(lambda g: _counter_white(g, 2), 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE, hold=True)])
+      openings=[Opening(lambda g: _counter_white(g, 2), 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
 def ae_ital(g):
     """The single-storey a and the cursive e on one stem: the a's bowl on
     its left, the e's eye and exit on its right."""
@@ -416,10 +401,9 @@ def ae_ital(g):
     xl, xm, xr = f.X(1), f.X(7), f.X(13)
     yt = f.Y(8)
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    g.stroke((xm, yt - (xr - xm), p.sd * g.free('bar', 1.0)), (xr, yt))
     L = _reach(p, FLAG)
-    bowl = ((xr, yt), B(xm, yt), B(xm, f.Y(1)), (f.X(12), f.Y(1)), (f.X(12) + L, f.Y(1) + L))
-    g.stroke((xm, yt - (xr - xm), p.sd * g.free('bar', 1.0)), (xr, yt), keep=(_corner_cut(g, bowl),))
-    g.stroke(*bowl, end='h')
+    g.stroke((xr, yt), B(xm, yt), B(xm, f.Y(1)), (f.X(12), f.Y(1)), (f.X(12) + L, f.Y(1) + L), end='h')
 
 
 # --- Cyrillic italic ---------------------------------------------------------

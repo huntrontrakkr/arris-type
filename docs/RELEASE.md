@@ -42,6 +42,34 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.009
+
+- Back to 1.007's drawings for every glyph but the italic k. 1.008 held
+  the counters of the italic e, æ, ø, Q, the slashed letters, the Cyrillic
+  tick and ∅, and the closed-counter thinning, at their area from the
+  weight their rule first acted, shrinking with the stem; where a counter
+  is small when its rule first acts (the italic e's eye) it shrank to a
+  sliver by Black and the letter clogged. The hold stays on the italic
+  k's loop alone, with its notch fill: the italic k is 1.008's.
+- 1.008's curve at a counter side closed to a point (an edge break
+  against a 45-degree edge square to it) is the italic k's alone, marked
+  in its chamfer record (`italic.SQUARE`): everywhere, it changed the
+  curves of 511 other italic glyphs.
+- The italic e's and æ's bar ends are 1.007's again (`Stroke.keep` and
+  `geom._kept` removed, with the partial jog closing that was off): the
+  lower-left corner turns straight from 825 on the heavy grade, as in
+  1.007.
+- Checked: all 2,212 glyphs drawn from 1.007's code and from 1.009's at
+  19 places (six weights by three grades, and Black at watch 100). The
+  upright is 1.007's throughout; the italic is 1.007's but for the k and
+  the three built from it (ķ ǩ ₖ), which are 1.008's.
+- The drawing cache's key is new (`cache.KEY` v3), so the release draws
+  every glyph afresh: in a cache shared with other versions' runs, a row
+  that was not 1.009's drawing passed its stamp and stood for the italic
+  $ at 600 to 900 on grade 100, watch 25. A trial build of the golden
+  glyphs and the k from an empty cache is 1.007's but for the k.
+- The nesting check (`arris.steady`) and the two-hour fontbakery jobs stay.
+
 ## 1.008
 
 - White that only shrinks. Stack a glyph's weights as slices and its

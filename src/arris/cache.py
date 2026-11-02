@@ -24,7 +24,10 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-KEY = 'v2'                                  # the shape of keys and stamps: change it and every row is new
+KEY = 'v3'                                  # the shape of keys and stamps: change it and every row is new
+                                            # (v3, 1.009: in a cache shared with other versions' runs, a row that
+                                            # was not 1.009's drawing passed its stamp and stood for the italic $
+                                            # at 600-900 on grade 100, watch 25; every row anew for the release)
 LEAVES = frozenset({'font', 'cache'})      # in by their own code alone: font builds fonts from drawings and the
                                             # cache keeps them; what they import is not a drawing's
 

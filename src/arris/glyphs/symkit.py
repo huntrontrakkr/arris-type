@@ -38,6 +38,8 @@ def _xform_rec(r, M, dx, dy):
 
     def vec(v):
         return (a * v[0] + b * v[1], c * v[0] + d * v[1])
+    if r[0] == 'square':
+        return r
     if r[0] == 'warp':
         # the optical correction's vertical warp, carried through a map that
         # keeps verticals vertical (mirror, flip, half turn): y' = d y + dy
