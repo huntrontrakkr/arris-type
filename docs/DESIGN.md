@@ -658,6 +658,21 @@ Black). A glyph is drawn in the body the proportional figures have at its
 weight, held between nine modules and nine and a half (`params.MONO_CELL`,
 `MONO_BODY`): a module of margin to SemiBold, half a module from Bold on.
 
+A cell crowds what the proportional cut spreads out, so every Mono glyph,
+as the font will carry it (placed in its cell, in whole units, curved in
+the italic), is checked for the faults the topology check names: a contour
+that crosses itself or another, a fold, white or ink pinched narrower than
+a break. One that has any lightens its strokes together, as little as
+clears it and at most to the topology lock's limit (`draw._flawed`, the
+outline lock): the fractions at SemiBold and Bold, ↂ, ∛ ∜, ‰ ‱. A sign set
+from letters (₷ ⅷ ₧) uses Mono's own letters in the italic, the upright's
+slanted (`Params.plain`), not the cursive forms whose tails closed in the
+cell; a wave or zigzag arrow settles on the first clean run between its
+pattern and its head (⇜ ⇝ at Light). Crossings under a unit, which no size
+shows, are let be (the italic α's foot). No two characters of the printable
+set touch side by side at any weight: the narrowest white between
+neighbours is the slashed Ø's, 15 units at Bold.
+
 In the monospaced cut the hyphen sits on the math axis, in line with
 `+ = < >` and the arrows it grows into. `ss03` turns `<=` `>=` back into their characters (for languages where
 they are arrows); `cv01` is the single-storey a (both cuts), `cv02` the
