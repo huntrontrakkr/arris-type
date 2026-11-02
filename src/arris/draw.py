@@ -893,8 +893,8 @@ def _cut(p):
         def make(watch):
             def at(w_):
                 q = params(w_, grad, watch=watch).with_(mono=p.mono)
-                if p.cursive or p.flags:
-                    q = q.with_(cursive=p.cursive, flags=p.flags)
+                if p.cursive:
+                    q = q.with_(cursive=True)
                 if p.slant:
                     from .italic import italic
                     q = italic(q)
