@@ -63,6 +63,11 @@ before a commercial distribution if wanted.
   19 places (six weights by three grades, and Black at watch 100). The
   upright is 1.007's throughout; the italic is 1.007's but for the k and
   the three built from it (ķ ǩ ₖ), which are 1.008's.
+- The drawing cache's key is new (`cache.KEY` v3), so the release draws
+  every glyph afresh: in a cache shared with other versions' runs, a row
+  that was not 1.009's drawing passed its stamp and stood for the italic
+  $ at 600 to 900 on grade 100, watch 25. A trial build of the golden
+  glyphs and the k from an empty cache is 1.007's but for the k.
 - The nesting check (`arris.steady`) and the two-hour fontbakery jobs stay.
 
 ## 1.008
