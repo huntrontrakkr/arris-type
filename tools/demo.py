@@ -22,7 +22,7 @@ VFI = 'build/Arris-Italic[GRAD,WTCH,wght].ttf'
 REG = 'build/Arris-Regular.ttf'
 MONO = 'build/ArrisMono-Regular.ttf'
 MONOI = 'build/ArrisMono-Italic.ttf'
-LABEL = 'build/ArrisMono-Medium.ttf'
+LABEL = 'build/ArrisMono-Bold.ttf'
 
 PANGRAM = 'Sphinx of black quartz, judge my vow · 0123456789'
 

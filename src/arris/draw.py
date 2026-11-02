@@ -108,6 +108,11 @@ def B(x, y, leg=None, w=None):
 
 
 NUDGE = (0, -2, 2, -4, 4, -8, 8, -12, 12)   # units: the steps a settling stroke tries off a coincidence with the drawing it meets (Glyph.settle)
+# The strokes added to a letter (the bar of Đ Ħ ŧ, the slash of Ø Ł, a bar across a stem) stop gaining
+# weight here: past it they keep this weight while the letter goes on getting heavier, so the white beside
+# them stays open and they read at every weight (docs/research/mono-cell.md §3). 600 is the weight whose
+# stem is the watch's own two modules (120 units).
+EXTRA_HOLD = 600.0
 
 
 @dataclass
@@ -131,6 +136,28 @@ class Glyph:
     zones: list = field(default_factory=list)   # (x0, y0, x1, y1) boxes whose white the Squint rule watches
     cell: tuple[float, float] | None = None     # Mono: the cell (x0, x1) no ink may pass (see _build)
     extra_src: list = field(default_factory=list)   # (ink in extra, stamped glyph, its rings, affine map): names its edges
+
+    def held(self, direction=(1.0, 0.0)) -> float:
+        """The thickness of a stroke added to the letter, running in
+        ``direction``: the glyph's own (its horizontals as it thins them) up
+        to EXTRA_HOLD, and from there on that weight's, in the same cut
+        (grade, watch, Mono and slant kept). Never heavier than the glyph's
+        own. A set derived from a font's (small capitals, small figures) keeps
+        its own."""
+        return _thickness(self.p, self.sh)(direction) * self.held_share(direction)
+
+    def held_share(self, direction=(1.0, 0.0)) -> float:
+        """Glyph.held as a share of the glyph's own thickness in ``direction``
+        (1 up to EXTRA_HOLD), for a drawing that sets a stroke's thickness
+        itself."""
+        p = self.p
+        cut = _cut(p)
+        if cut is None or cut[0] <= EXTRA_HOLD:
+            return 1.0
+        q = cut[1](EXTRA_HOLD)
+        k = self.sh / max(p.sh, 1e-9)                       # the glyph's own thinning of its horizontals, kept
+        own = _thickness(p, self.sh)(direction)
+        return min(1.0, _thickness(q, max(q.sh * k, q.floor))(direction) / max(own, 1e-9))
 
     def free(self, name: str, default: float) -> float:
         """A free variable of the drawing (see Opening)."""
@@ -210,7 +237,7 @@ class Glyph:
     def rings(self):
         return self.outline(record=False)[0]
 
-    def settle(self, cands) -> bool:
+    def settle(self, cands, curves: bool = False) -> bool:
         """Draw the first of the candidate stroke sets (each a list of
         ``stroke`` argument tuples) whose outline the topology check
         (``arris.topology``) finds clean, in the italic too. A bar placed by
@@ -222,19 +249,40 @@ class Glyph:
         from .topology import faults
         p = self.p
         n = len(self.strokes)
-        for strokes in cands:
+        def put(st):                                        # (point, ...) or (point, ..., {stroke's keywords})
+            if st and isinstance(st[-1], dict):
+                self.stroke(*st[:-1], **st[-1])
+            else:
+                self.stroke(*st)
+        best = None
+        for j, strokes in enumerate(cands):
             del self.strokes[n:]
             for st in strokes:
-                self.stroke(*st)
+                put(st)
             rings, rec = self.outline(record=bool(p.slant))
             if faults([[(q[0], q[1], True) for q in r] for r in rings], p.c):
                 continue
             if p.slant and faults(IT.outline(rings, rec, p), p.c, True):
                 continue
+            if not (curves and p.slant):
+                return True
+            # ``curves`` (a diagonal stroke added to a letter, in the italic): a 45-degree edge of the
+            # stroke lying on the line of one of the letter's chamfers claims it and holds it straight
+            # (italic._segments; the ł's foot at 650 and 670, 2026-11-02): of the clean candidates,
+            # the one that leaves the most chamfers curved, the first on a tie. Not for bars: a level
+            # stroke lies on no such line, and counting its own edge breaks curves them (the italic
+            # ҟ's bar went round-ended at 500)
+            k = len(IT._plan(rings, p, IT.split_warp(rec)[0])[0])
+            if best is None or k > best[0]:
+                best = (k, j)
+        if best is not None:
+            del self.strokes[n:]
+            for st in cands[best[1]]:
+                put(st)
             return True
         del self.strokes[n:]
         for st in cands[0]:
-            self.stroke(*st)
+            put(st)
         return False
 
     def outline(self, record: bool = True, tags: list | None = None):
@@ -1175,7 +1223,71 @@ class _Nesting:
         return lo
 
 
+# Arris Mono past Bold: a glyph whose closed counters would shut in the cell (too many strokes for its
+# ten modules at Black: Æ Œ æ œ Ǆ Ф ⅅ ℙ ↀ ⌘ ...) stops getting heavier at the weight where they start to:
+# the letter unchanged, drawn as at that weight from there to Black (docs/research/mono-cell.md). It shuts
+# where its tightest closed counter falls under 0.6 of the Bold's and under a quarter of the stem, where it
+# loses a counter and white with it, or where its counters keep under 0.35 of the Bold's white (Ф's bowls
+# merging into a lozenge with two slits); a form that drops strokes by design at Black (₩ ₦ with one bar)
+# gains white and is left alone. The weight is found once a cut, so ExtraBold is never heavier than Black.
+MONO_HOLD = 700.0
+_MONO_HELD: dict = {}
+
+
+def _counters(g):
+    """(count, total area, tightest: the widest circle inside the narrowest) of a drawing's closed counters."""
+    import shapely
+    from shapely.geometry import Polygon
+    from .geom import rings_to_shapely
+    ink = rings_to_shapely(g.rings())
+    holes = [Polygon(r) for poly in getattr(ink, 'geoms', [ink]) if poly.geom_type == 'Polygon'
+             for r in poly.interiors]
+    holes = [h for h in holes if h.area >= 1.0]
+    tight = min((shapely.maximum_inscribed_circle(h, tolerance=1.0).length for h in holes), default=None)
+    return len(holes), sum(h.area for h in holes), tight
+
+
+def _shuts(c, ref, sv) -> bool:
+    n_p, a_p, t_p = c
+    n_q, a_q, t_q = ref
+    return (t_p is not None and t_q is not None and t_p < 0.6 * t_q and t_p < 0.25 * sv) or (n_p < n_q and a_p < a_q) \
+        or (n_p and a_q and a_p < 0.35 * a_q)
+
+
+def _mono_held(name, p, ot, ob, width):
+    """The parameters to draw a Mono glyph at: its own, or those of the weight where its counters start to
+    shut in the cell, past it (MONO_HOLD)."""
+    if not p.mono:
+        return p
+    cut = _cut(p)
+    if cut is None or cut[0] <= MONO_HOLD:
+        return p
+    w, at = cut
+    key = (name, at(MONO_HOLD), ot, ob, width)
+    if key not in _MONO_HELD:
+        _MONO_HELD[key] = None                              # while it is found, a drawing that asks again (a rule's
+        ref = _counters(_draw(name, at(MONO_HOLD), ot, ob, width))   # reference at Black) is drawn as it is
+
+        def shut(w_):
+            q = at(w_)
+            return _shuts(_counters(_draw(name, q, ot, ob, width)), ref, q.sv)
+        held = None
+        if shut(900.0):
+            lo, hi = MONO_HOLD, 900.0
+            for _ in range(7):                              # to under 2 of weight
+                mid = (lo + hi) / 2
+                lo, hi = (lo, mid) if shut(mid) else (mid, hi)
+            held = lo
+        _MONO_HELD[key] = held
+    held = _MONO_HELD[key]
+    return p if held is None or w <= held else at(held)
+
+
 def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
+    return _draw(name, _mono_held(name, p, ot, ob, width), ot, ob, width)
+
+
+def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
     spec = REGISTRY[name]
     if p.slant and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
         spec = REGISTRY[f'{name}.ital']

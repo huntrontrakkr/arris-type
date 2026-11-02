@@ -39,14 +39,22 @@ def plus_width(*names, gap=0.0):
 
 
 def _bar(g, x0, x1, y):
-    g.stroke((x0, y), (x1, y))
+    """A bar added across a letter: it stops gaining weight at EXTRA_HOLD
+    (Glyph.held), and settles a few units off where its edge would land on
+    one of the letter's (Glyph.settle)."""
+    t = g.held()
+    g.settle([[((x0, y + d, t), (x1, y + d))] for d in NUDGE])
 
 
 # --- Bars and slashes over existing letters ----------------------------------
 
 def _slashbar(g, x, y, e):
-    """A short 45-degree stroke through a stem (the Polish l's stroke)."""
-    g.stroke((x - e, y - e), (x + e, y + e), start='v', end='v')
+    """A short 45-degree stroke through a stem (the Polish l's stroke); it
+    stops gaining weight at EXTRA_HOLD (Glyph.held), and its reach ``e``
+    (the callers': the stem's half and a module and a half, from the held
+    stem) stops growing with it, so it does not run down into the foot."""
+    t = g.held((1, 1))
+    g.settle([[((x - e, y - e + d, t), (x + e, y + e + d), {'start': 'v', 'end': 'v'})] for d in NUDGE], curves=True)
 
 
 @glyph('Lslash', 'Ł', width_of('L', 1.5), kind='cap')
@@ -54,7 +62,7 @@ def Lslash(g):
     p = g.p
     dx = 1.5 * p.m
     stamp(g, 'L', dx, width=g.W - dx)
-    _slashbar(g, dx + p.sv / 2, 0.45 * p.cap, 1.5 * p.m + p.sv / 2)
+    _slashbar(g, dx + p.sv / 2, 0.45 * p.cap, 1.5 * p.m + g.held((0, 1)) / 2)
 
 
 @glyph('lslash', 'ł', width_of('l', 1.5), kind='lower')
@@ -63,7 +71,7 @@ def lslash(g):
     sub = draw('l', p, width=g.W - 1.5 * p.m if p.mono else None)
     stamp(g, 'l', width=sub.W if p.mono else None)
     xs = sub.defaults_used['stem'] if not p.mono else g.W / 2
-    _slashbar(g, xs, 0.55 * p.xh + p.m, 1.5 * p.m + p.sv / 2)
+    _slashbar(g, xs, 0.55 * p.xh + p.m, 1.5 * p.m + g.held((0, 1)) / 2)
 
 
 def _oslash(g, name, top):
@@ -74,7 +82,7 @@ def _oslash(g, name, top):
     # at heavy weights the slash thins so the two halves of the counter stay open
     a = w / 2 - top / 2                                     # x - y = a
     lo, hi = -0.75 * p.m, top + 0.75 * p.m
-    g.stroke((lo + a, lo, p.sd * g.free('slash', 1.0)), (hi + a, hi), start='h', end='h')
+    g.stroke((lo + a, lo, p.sd * g.held_share((1, 1)) * g.free('slash', 1.0)), (hi + a, hi), start='h', end='h')
     g.clip = (-p.m, lo, w + p.m, hi)
 
 
@@ -187,8 +195,9 @@ def tbar(g):
     stem_l = xs - p.c - p.sv
     leg = max([foot] + [q[1] for r in rings for q in r if abs(q[0] - stem_l) <= 1 and q[1] < p.xh / 2])
     low, high = max(foot + p.m, leg + 1.5 * p.c), top - p.m
-    floor = STACK_MIN * g.sh
-    thick = min(g.sh, max(floor, high - low))
+    bar = g.sh * g.held_share()                             # the bar stops gaining weight at EXTRA_HOLD
+    floor = STACK_MIN * bar
+    thick = min(bar, max(floor, high - low))
     if high - low >= thick:
         y = min(max(p.xh * 0.45, low + thick / 2), high - thick / 2)
         cands, seen = [], set()
@@ -208,7 +217,7 @@ def tbar(g):
     # not the fill runs through to the left edge
     xc = stem_l + p.sv / 2
     y, thick, x1 = (top + foot) / 2, max(g.sh, top - foot + p.c), max(x1, right + p.m)
-    tn = min(g.sh, top - p.c / 2 - low)
+    tn = min(bar, top - p.c / 2 - low)
     cands, seen = [], set()
     if tn >= floor:
         for d in NUDGE:

@@ -21,9 +21,9 @@ def fonts():
     vfi = (BUILD / 'Arris-Italic[GRAD,WTCH,wght].ttf').as_uri()
     css = [f"@font-face {{ font-family: 'Arris'; src: url('{vf}'); font-weight: 100 900; font-style: normal; }}",
            f"@font-face {{ font-family: 'Arris'; src: url('{vfi}'); font-weight: 100 900; font-style: italic; }}"]
-    for i, n in enumerate(NAMES):
+    for n, w in (('Regular', 400), ('Bold', 700)):                  # Mono's two weights (instances.MONO_WEIGHTS)
         css.append(f"@font-face {{ font-family: 'Arris Mono'; src: url('{(BUILD / f'ArrisMono-{n}.ttf').as_uri()}'); "
-                   f"font-weight: {100 * (i + 1)}; }}")
+                   f"font-weight: {w}; }}")
     return '\n'.join(css)
 
 
@@ -32,11 +32,12 @@ def page(title, folio, rows):
             f'<div class="rows">{rows}</div><footer>{html.escape(FOX)}</footer></section>')
 
 
-def weights(italic=False, family='Arris', size=24):
+def weights(italic=False, family='Arris', size=24, names=None):
     style = 'italic' if italic else 'normal'
-    return ''.join(f'<div class="r"><span class="lab">{100 * (i + 1)} {n}{" Italic" if italic else ""}</span>'
-                   f'<span class="s" style="font-family:\'{family}\';font-weight:{100 * (i + 1)};font-style:{style};font-size:{size}pt">{FOX}</span></div>'
-                   for i, n in enumerate(NAMES))
+    rows = names or [(100 * (i + 1), n) for i, n in enumerate(NAMES)]
+    return ''.join(f'<div class="r"><span class="lab">{w} {n}{" Italic" if italic else ""}</span>'
+                   f'<span class="s" style="font-family:\'{family}\';font-weight:{w};font-style:{style};font-size:{size}pt">{FOX}</span></div>'
+                   for w, n in rows)
 
 
 def waterfall():
@@ -53,7 +54,7 @@ def waterfall():
 
 
 def mono():
-    rows = weights(family='Arris Mono', size=19)
+    rows = weights(family='Arris Mono', size=19, names=[(400, 'Regular'), (700, 'Bold')])
     for pt in (28, 14, 10):
         rows += (f'<div class="r"><span class="lab">Mono {pt} pt</span>'
                  f'<span class="s" style="font-family:\'Arris Mono\';font-weight:400;font-size:{pt}pt">{FOX} -&gt; 0O 1lI</span></div>')

@@ -20,6 +20,9 @@ from .params import SQRT2, Params
 # Stem / cap: Regular 0.125, SemiBold 0.167 (the watch's figures), Bold 0.194,
 # Black 0.243; measured neutral sans faces run 0.128 Regular and 0.227 Bold,
 # chamfered ones 0.122 and 0.197 (docs/research/reference-fonts.md).
+# Arris Mono ships two weights, the two the site shows: Regular and Bold, each with its italic
+# (the owner, 2026-11-02). The engine still draws Mono at any weight; the build makes these.
+MONO_WEIGHTS = (400, 700)
 STEMS = {100: 24, 200: 44, 300: 66, 400: 90, 500: 105, 600: 120, 700: 140, 800: 158, 900: 175}
 NAMES = {100: 'Thin', 200: 'ExtraLight', 300: 'Light', 400: 'Regular', 500: 'Medium',
          600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black'}

@@ -65,6 +65,14 @@ the release (fixes kept breaking things elsewhere that only this shows).
   minute, variable fonts 25, checks 37: fontbakery on the variable fonts
   is most of it, then the GPU check).
 
+- **Mono on one cell; extra bits that stop gaining weight** (2026-11-02):
+  Mono's cell follows the weight (528 Thin … 578 Regular … 630 Bold … 682
+  Black), so Bold drifts off a Regular grid. The plan: 600 at every weight,
+  and the bits added to letters (crossbars, slashes, hooks, tails, curls)
+  keep the weight they have where their white would start to close, re-placed
+  as the letter grows. Evidence and open decisions in
+  `docs/research/mono-cell.md`.
+
 ## For Google Fonts (if the family goes there)
 
 Done 2026-10-25: West African Latin (Ɛ ɛ Ɔ ɔ Ɲ ɲ Ɓ ɓ Ɗ ɗ Ƙ ƙ Ƴ ƴ, U+0329),

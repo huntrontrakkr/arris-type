@@ -83,7 +83,7 @@ def sheet(out, px, *blocks):
 
 M = 'build/ArrisMono-{}.ttf'
 P = 'build/Arris-{}.ttf'
-WEIGHTS = [('Thin', 'Thin'), ('Regular', 'Regular'), ('Black', 'Black'), ('BlackItalic', 'Black Italic')]
+WEIGHTS = [('Regular', 'Regular'), ('Bold', 'Bold'), ('Italic', 'Italic'), ('BoldItalic', 'Bold Italic')]
 
 if __name__ == '__main__':
     box = write('box.txt', table(0x2500, 0x257F, 32))

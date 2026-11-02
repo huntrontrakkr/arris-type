@@ -12,6 +12,15 @@ from dataclasses import dataclass, replace
 
 SQRT2 = math.sqrt(2)
 
+# Arris Mono's cell, in modules: ten at every weight, so Regular, Bold and
+# Black text keep one grid (the cell had followed the figures, which widen
+# with the weight: 528 units at Thin to 682 at Black, and a Bold word pushed
+# a Regular line off it). A glyph is drawn in the body: the proportional
+# figures' at that weight, kept between nine modules (a module of margin,
+# as at the Regular) and nine and a half (half a module, at Bold and up).
+MONO_CELL = 10.0
+MONO_BODY = (9.0, 9.5)
+
 
 @dataclass(frozen=True)
 class Params:
@@ -28,7 +37,7 @@ class Params:
     c: float = 30.0            # edge break on every right-angled corner
     fig_w: float = 540.0       # tabular figure body (9 modules)
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
-    mono: bool = False         # monospaced: every glyph on the figures' pitch
+    mono: bool = False         # monospaced: every glyph on one cell (MONO_CELL), whatever the weight
     grade_k: float = 1.0       # grade: strokes scaled by this, widths and spacing untouched
     grad: float = 0.0          # the grade itself (GRAD), for the lighter weights of the same cut (draw._lighter)
     slant: float = 0.0         # italic: tan of the slant (outlines are sheared when built)
@@ -48,6 +57,9 @@ class Params:
         before = dict(zip(strokes, self.raw)) if self.raw else {f: getattr(self, f) for f in strokes}
         before.update({f: kw[f] for f in strokes if f in kw})
         p = replace(self, **kw, raw=None)
+        if kw.get('mono') and not self.mono:                # turning monospaced: Mono's one cell (MONO_CELL)
+            lo, hi = MONO_BODY
+            p = replace(p, fig_adv=MONO_CELL * p.m, fig_w=min(max(p.fig_w, lo * p.m), hi * p.m))
         if p.floor and min(before.values()) < p.floor:
             p = replace(p, raw=tuple(before[f] for f in strokes),
                         **{f: max(before[f], p.floor) for f in strokes})
