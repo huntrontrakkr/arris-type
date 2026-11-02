@@ -16,7 +16,8 @@ These drawings give it a hand as well, from moves the upright already makes:
 
 The monospaced italic keeps the upright forms: a cell has no room for a
 tail. Its ``ss04`` ("Cursive italic") offers two of them anyway, the f and
-the k (``MONO_CURSIVE``), drawn narrower until they fit the cell.
+the k (``MONO_CURSIVE``), drawn narrower until they fit the cell; ``ss05``,
+with it, runs an underscore into the f's tail (``JOIN``).
 """
 from __future__ import annotations
 
@@ -145,21 +146,25 @@ def register_cursive(names):
 
 def cursive_fea(names) -> str:
     subs = '\n'.join(f'    sub {n} by {n}.ss04;' for n in names)
+    out = f'feature ss04 {{\n    featureNames {{ name "Cursive italic"; }};\n{subs}\n}} ss04;\n'
     into = ' '.join(f'{n}.ss04' for n in _joined(names))
-    if into:                                                # after the swaps: the join sees the cursive f
-        subs += f"\n    sub {JOIN}' [{into}] by {JOIN}.ss04;"
-    return f'feature ss04 {{\n    featureNames {{ name "Cursive italic"; }};\n{subs}\n}} ss04;\n'
+    if into:                                                # after ss04's swaps: the join sees the cursive f
+        out += (f'feature {JOIN_TAG} {{\n    featureNames {{ name "Underscore into the cursive f"; }};\n'
+                f"    sub {JOIN}' [{into}] by {JOIN}.{JOIN_TAG};\n}} {JOIN_TAG};\n")
+    return out
 
 
-# --- The underscore into the f (ss04; the owner's, 2026-11-02) ---------------------------------------------
+# --- The underscore into the f (ss05, with ss04; the owner's, 2026-11-02) ----------------------------------
 # The descending f ends in a tail on the underscore's line, a cell's margin short of an underscore before
-# it. With ss04 on, that underscore (JOIN.ss04) runs on into the tail, so `is_fresh` reads as one line
-# into the f. It is the underscore as it stands in its cell, its bar run on at its own height and weight
-# past the cell's edge until it is under the tail: a one-cell piece that draws past its cell, as a
-# ligature does ('liga' kind, so the cell does not cut it). The tail keeps its own end above the bar:
-# where the f's tail is the heavier, its chamfer shows as a step up into it.
+# it. With ss05 on as well as ss04 (its own switch, off by default: ss04 alone is the letters, nothing
+# else), that underscore (JOIN.ss05) runs on into the tail, so `is_fresh` reads as one line into the f.
+# It is the underscore as it stands in its cell, its bar run on at its own height and weight past the
+# cell's edge until it is under the tail: a one-cell piece that draws past its cell, as a ligature does
+# ('liga' kind, so the cell does not cut it). The tail keeps its own end above the bar: where the f's
+# tail is the heavier, its chamfer shows as a step up into it.
 
 JOIN = 'underscore'
+JOIN_TAG = 'ss05'
 
 
 def _joined(names):
@@ -196,10 +201,10 @@ def _join_underscore(g):
 
 
 def register_join(names):
-    """JOIN.ss04, if the cursive set has a letter for it to run into."""
+    """JOIN.ss05, if the cursive set has a letter for it to run into."""
     if not _joined(names):
         return []
-    alt = f'{JOIN}.ss04'
+    alt = f'{JOIN}.{JOIN_TAG}'
     if alt not in REGISTRY:
         glyph(alt, None, 'fig_w', kind=('liga', 1))(_join_underscore)
     return [alt]

@@ -550,10 +550,11 @@ descending f and the looped k (and the letters built on them, ǩ ḟ ķ ₖ ⅎ)
 each drawn as in the proportional italic, narrowed until its ink fits the
 600 cell with a quarter-module to spare, and centred in it, so a line keeps
 its grid with the set on or off (`italic_forms.MONO_CURSIVE`). The f's tail
-lies on the underscore's line, so with the set on an underscore before it
-runs on, at its own height and weight, past its cell's edge and under the
-tail: `is_fresh` reads as one line into the f (`italic_forms.JOIN`). Where
-the tail is the heavier (Regular), its chamfer shows as a step up into it.
+lies on the underscore's line, so with `ss05` on as well (its own switch,
+off by default) an underscore before it runs on, at its own height and
+weight, past its cell's edge and under the tail: `is_fresh` reads as one
+line into the f (`italic_forms.JOIN`). Where the tail is the heavier
+(Regular), its chamfer shows as a step up into it.
 
 **Variable.** The italic's variable font aligns the upright masters, then
 curves them: a segment that is a chamfer in any master carries a control
