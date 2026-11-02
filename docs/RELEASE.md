@@ -42,6 +42,30 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.010
+
+- Arris Mono in Fira Code's six weights, each with its italic: Light,
+  Regular, Retina (450), Medium, SemiBold and Bold (`instances.MONO_WEIGHTS`).
+  Every weight keeps one cell, ten modules (600 units), so a Bold word keeps
+  a Regular line's grid in an editor or a terminal (the cell had followed
+  the figures' width, 578 at Regular, 630 at Bold).
+- Mono's outline lock: a Mono glyph whose outline would cross, fold or
+  pinch in the cell lightens its strokes as little as clears it (the
+  fractions at SemiBold and Bold, ↂ, ∛ ∜, ‰ ‱, ₯ Ɲ Ҋ ↭). In Mono Italic a
+  sign set from letters (₷ ⅷ ₧) uses the font's own letters; the wave and
+  zigzag arrows settle on a clean lead. No two printable characters touch
+  side by side at any weight.
+- Mono alignment, after Fira Code (`calt`, on by default): `- + *`
+  touching a lowercase letter drop to the lowercase middle (`kebab-case`,
+  `x*y`); `:` rises beside a capital or a chevron (`A:B`, `<:`); `x` between
+  figures or in `0x` is a times sign (`1920×1080`, `0×FF`).
+- Mono Italic: `ss04`, "Cursive italic", the descending f and the looped k
+  drawn into the cell; with it `ss05`, "Underscore into the cursive f"
+  (`is_fresh` as one line into the f). Both off by default.
+- Strokes added to a letter (the bars and slashes of Đ Ħ Ŧ ŧ Ł Ø Ғ Ҟ Ұ ℏ)
+  stop gaining weight at SemiBold and are re-placed in the white the
+  heavier letter leaves, so they stay visible to Black (`draw.EXTRA_HOLD`).
+
 ## 1.009
 
 - Back to 1.007's drawings for every glyph but the italic k. 1.008 held
