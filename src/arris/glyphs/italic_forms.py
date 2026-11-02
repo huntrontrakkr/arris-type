@@ -30,17 +30,125 @@ FLAG = 1.5       # modules an entry flag reaches left of its stem (and down)
 BRANCH = 3       # modules below the arch where an italic shoulder leaves its stem
 
 
+UPRIGHT_IN_CELL = ('uni0448', 'uni0449')   # ш щ: in Mono's cell their cursive drawing closes up at Bold; no tail to show there
+CELL_GAP = 0.25   # modules: Mono's cursive set keeps its ink this far inside the cell, so neighbours' tails never touch
+
+
+def _in_cell(g, fn, stems):
+    """Mono's cursive set (ss04): the italic's own drawing, drawn as much
+    narrower than the body as its tails and flags need to stay inside the
+    cell, then centred in it, ink and all. The upright's body is the same;
+    the letter gives up width, not its tail. A letter of three stems (m ш щ)
+    has no width to give: it keeps its body and its arches, without a tail
+    or a flag (``bare``)."""
+    from ..draw import Glyph
+    from ..geom import rings_to_shapely
+    p = g.p
+    W0 = g.W
+    lo, hi = (W0 - p.fig_adv) / 2 + CELL_GAP * p.m, (W0 + p.fig_adv) / 2 - CELL_GAP * p.m
+    shrink, h = 0.0, None
+    for _ in range(4):
+        h = Glyph(p, g.name, ot=g.ot, ob=g.ob, W=W0 - shrink, overrides=dict(g.overrides))
+        h.sh_auto = g.sh_auto
+        h.bare = stems >= 3
+        fn(h)
+        x0, _, x1, _ = rings_to_shapely(h.rings()).bounds
+        over = max(0.0, x1 - x0 - (hi - lo))
+        if over <= 0.5:
+            break
+        shrink += over * (W0 - shrink) / max(x1 - x0, 1.0)
+    dx = (lo + hi) / 2 - (x0 + x1) / 2
+    g.add_glyph(h, dx, 0.0)
+    g.defaults.update(h.defaults)
+    g.defaults_used.update({k: (v + dx if k == 'stem' else v) for k, v in h.defaults_used.items()})
+
+
 def ital(name, wm, stems, width=None, openings=()):
     """An italic drawing of ``name`` (``draw`` uses it wherever p.slant)."""
     def deco(fn):
         def wrapped(g):
-            if g.p.mono:                                    # the cell keeps the upright form
-                return REGISTRY[name].fn(g)
+            if g.p.mono and (not g.p.cursive or name in UPRIGHT_IN_CELL):   # the cell keeps the upright form,
+                return REGISTRY[name].fn(g)                                  # unless asked (ss04)
+            if g.p.mono:
+                return _in_cell(g, fn, stems)
             return fn(g)
         glyph(f'{name}.ital', None, width or letter_width(wm, stems), kind=REGISTRY[name].kind,
               openings=openings)(wrapped)
+        if name not in UPRIGHT_IN_CELL:
+            CURSIVE.append(name)
         return fn
     return deco
+
+
+# --- Mono's cursive set (ss04) -------------------------------------------------
+# In Arris Mono Italic every glyph that draws one of the italic's own letters
+# (the letter, and what is built on it: á ñ ü ł ħ ...) has an alternate,
+# NAME.ss04, the same glyph drawn with the cursive forms; ss04 swaps them in.
+# The entry flags are a set of their own (Params.flags): not in the fonts yet.
+
+CURSIVE: list = []      # the letters with an italic drawing of their own, as the cell takes it
+
+
+def cursive_set(names, p, workers=4):
+    """The glyphs among ``names`` whose drawing, in Mono Italic at p, draws
+    one of the cursive letters: found by drawing each with the cursive set on
+    and noting what it draws (draw.TRACE). Weight does not change which."""
+    from multiprocessing import get_context
+    global _P
+    _P = p.with_(cursive=True)
+    names = [n for n in names if n not in CURSIVE_SKIP and _letter(n)]
+    with get_context('fork').Pool(workers) as pool:
+        hit = pool.map(_draws_cursive, names, chunksize=16)
+    return [n for n, h in zip(names, hit) if h]
+
+
+# Letters only: the small Roman numerals (ⅲ ⅶ ...), ℀ ℁ ℆ and ₷ draw letters
+# too, but the cursive i's tails ran into each other and the c's into the
+# slash; and ƴ, whose hooked y crossed itself at Bold, keeps its upright form.
+CURSIVE_SKIP = ('uni01B4',)
+
+
+def _letter(name):
+    import unicodedata
+    u = REGISTRY[name].unicode
+    return u is None or unicodedata.category(chr(u)).startswith('L')
+
+
+_P = None
+
+
+def _draws_cursive(name):
+    from .. import draw as D
+    seen = set()
+    D.TRACE.append(seen)
+    try:
+        D.draw(name, _P)
+    except Exception:                                       # noqa: BLE001 (a glyph that cannot be drawn so is left out)
+        return False
+    finally:
+        D.TRACE.remove(seen)
+    return bool(seen & set(CURSIVE))
+
+
+def register_cursive(names):
+    """NAME.ss04 for each name: the glyph drawn with Mono's cursive set."""
+    out = []
+    for n in names:
+        alt = f'{n}.ss04'
+        if alt not in REGISTRY:
+            spec = REGISTRY[n]
+
+            def fn(g, n=n):
+                from ..draw import draw
+                g.add_glyph(draw(n, g.p.with_(cursive=True), g.ot, g.ob, width=g.W))
+            glyph(alt, None, spec.width, kind=spec.kind)(fn)
+        out.append(alt)
+    return out
+
+
+def cursive_fea(names) -> str:
+    subs = '\n'.join(f'    sub {n} by {n}.ss04;' for n in names)
+    return f'feature ss04 {{\n    featureNames {{ name "Cursive italic"; }};\n{subs}\n}} ss04;\n'
 
 
 def _one_counter(g):
@@ -64,6 +172,8 @@ def entry(g, f, xs, top=None):
     square FLAG modules down. The stem keeps its flat top (on the x-height,
     or ``top``)."""
     p = g.p
+    if p.mono and (not p.flags or getattr(g, 'bare', False)):   # Mono's cursive set: the flags are a set of their own
+        return
     top = p.xh if top is None else top
     k = p.sd / SQRT2
     a = xs - p.sv / 2 + p.c - top + k                       # centreline: x - y = a
@@ -75,6 +185,8 @@ def tail(g, f, xs, y=None):
     """Points that end a stem on the baseline with the t's foot: a corner
     and a short stroke to the right."""
     p = g.p
+    if getattr(g, 'bare', False):                           # Mono's cursive m ш щ: the stem ends on the baseline
+        return [(xs, f.Y(0))]
     yb = f.Y(1) if y is None else y
     return [B(xs, yb), tail_end(g, f, xs, yb)]
 

@@ -38,6 +38,8 @@ class Params:
     fig_w: float = 540.0       # tabular figure body (9 modules)
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
     mono: bool = False         # monospaced: every glyph on one cell (MONO_CELL), whatever the weight
+    cursive: bool = False      # Mono's italic with the italic's own cursive forms (ss04) instead of the slanted upright's
+    flags: bool = False        # with cursive: the entry flags too (a set of their own)
     grade_k: float = 1.0       # grade: strokes scaled by this, widths and spacing untouched
     grad: float = 0.0          # the grade itself (GRAD), for the lighter weights of the same cut (draw._lighter)
     slant: float = 0.0         # italic: tan of the slant (outlines are sheared when built)
@@ -81,7 +83,7 @@ class Params:
         return s
 
     def scaled(self, k: float) -> 'Params':
-        keep = ('mono', 'grade_k', 'grad', 'slant', 'raw')
+        keep = ('mono', 'cursive', 'flags', 'grade_k', 'grad', 'slant', 'raw')
         out = Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})
         return replace(out, raw=tuple(v * k for v in self.raw) if self.raw else None)
 

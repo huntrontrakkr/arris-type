@@ -893,6 +893,8 @@ def _cut(p):
         def make(watch):
             def at(w_):
                 q = params(w_, grad, watch=watch).with_(mono=p.mono)
+                if p.cursive or p.flags:
+                    q = q.with_(cursive=p.cursive, flags=p.flags)
                 if p.slant:
                     from .italic import italic
                     q = italic(q)
@@ -1283,7 +1285,12 @@ def _mono_held(name, p, ot, ob, width):
     return p if held is None or w <= held else at(held)
 
 
+TRACE: list = []   # open sets that collect the name of every glyph drawn while they are open (italic_forms.cursive_set)
+
+
 def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
+    for t in TRACE:
+        t.add(name)
     return _draw(name, _mono_held(name, p, ot, ob, width), ot, ob, width)
 
 
