@@ -11,6 +11,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'src'))
+from arris.instances import MONO_NAMES  # noqa: E402
+
 BUILD = ROOT / 'build'
 FOX = 'The quick brown fox jumps over the lazy dog'
 NAMES = ['Thin', 'ExtraLight', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold', 'Black']
@@ -21,7 +24,7 @@ def fonts():
     vfi = (BUILD / 'Arris-Italic[GRAD,WTCH,wght].ttf').as_uri()
     css = [f"@font-face {{ font-family: 'Arris'; src: url('{vf}'); font-weight: 100 900; font-style: normal; }}",
            f"@font-face {{ font-family: 'Arris'; src: url('{vfi}'); font-weight: 100 900; font-style: italic; }}"]
-    for n, w in (('Regular', 400), ('Bold', 700)):                  # Mono's two weights (instances.MONO_WEIGHTS)
+    for w, n in MONO_NAMES.items():                                 # Mono's weights (instances.MONO_WEIGHTS)
         css.append(f"@font-face {{ font-family: 'Arris Mono'; src: url('{(BUILD / f'ArrisMono-{n}.ttf').as_uri()}'); "
                    f"font-weight: {w}; }}")
     return '\n'.join(css)
@@ -54,7 +57,7 @@ def waterfall():
 
 
 def mono():
-    rows = weights(family='Arris Mono', size=19, names=[(400, 'Regular'), (700, 'Bold')])
+    rows = weights(family='Arris Mono', size=19, names=list(MONO_NAMES.items()))
     for pt in (28, 14, 10):
         rows += (f'<div class="r"><span class="lab">Mono {pt} pt</span>'
                  f'<span class="s" style="font-family:\'Arris Mono\';font-weight:400;font-size:{pt}pt">{FOX} -&gt; 0O 1lI</span></div>')

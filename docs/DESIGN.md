@@ -545,6 +545,16 @@ its neighbours than a slanted upright s (closest pair 0.51 against 0.41 at
 11 arcminutes), and the cursive e is as far from c as the upright e is
 from o. Accented letters and the ordinals take the italic forms; the
 monospaced italic keeps the upright's, its cells having no room for tails.
+`ss04` ("Cursive italic") turns two of them on in Mono Italic, the
+descending f and the looped k (and the letters built on them, ǩ ḟ ķ ₖ ⅎ):
+each drawn as in the proportional italic, narrowed until its ink fits the
+600 cell with a quarter-module to spare, and centred in it, so a line keeps
+its grid with the set on or off (`italic_forms.MONO_CURSIVE`). The f's tail
+lies on the underscore's line, so with `ss05` on as well (its own switch,
+off by default) an underscore before it runs on, at its own height and
+weight, past its cell's edge and under the tail: `is_fresh` reads as one
+line into the f (`italic_forms.JOIN`). Where the tail is the heavier
+(Regular), its chamfer shows as a step up into it.
 
 **Variable.** The italic's variable font aligns the upright masters, then
 curves them: a segment that is a chamfer in any master carries a control
@@ -648,14 +658,31 @@ the monospaced cut, dots (. , : ; and the tittles) are half
 as big again as the stem at Regular, easing to a fifth more at Black: a dot
 looks lighter than a stroke of its width, and code turns on them.
 
-Arris Mono ships in two weights, Regular and Bold, each with its italic
-(`instances.MONO_WEIGHTS`). It keeps one cell, ten modules (600 units), at
-every weight the engine draws, so Regular and Bold share a grid in an editor
-or a terminal (the cell
+Arris Mono ships in Fira Code's six weights, Light (300), Regular, Retina
+(450, a Regular a little heavier for light text on dense screens), Medium,
+SemiBold and Bold, each with its italic (`instances.MONO_WEIGHTS`,
+`MONO_NAMES`). It keeps one cell, ten modules (600 units), at every weight
+the engine draws, so every weight shares a grid in an editor or a terminal
+(the cell
 had followed the figures, which widen with the weight: 528 at Thin, 682 at
 Black). A glyph is drawn in the body the proportional figures have at its
 weight, held between nine modules and nine and a half (`params.MONO_CELL`,
 `MONO_BODY`): a module of margin to SemiBold, half a module from Bold on.
+
+A cell crowds what the proportional cut spreads out, so every Mono glyph,
+as the font will carry it (placed in its cell, in whole units, curved in
+the italic), is checked for the faults the topology check names: a contour
+that crosses itself or another, a fold, white or ink pinched narrower than
+a break. One that has any lightens its strokes together, as little as
+clears it and at most to the topology lock's limit (`draw._flawed`, the
+outline lock): the fractions at SemiBold and Bold, ↂ, ∛ ∜, ‰ ‱. A sign set
+from letters (₷ ⅷ ₧) uses Mono's own letters in the italic, the upright's
+slanted (`Params.plain`), not the cursive forms whose tails closed in the
+cell; a wave or zigzag arrow settles on the first clean run between its
+pattern and its head (⇜ ⇝ at Light). Crossings under a unit, which no size
+shows, are let be (the italic α's foot). No two characters of the printable
+set touch side by side at any weight: the narrowest white between
+neighbours is the slashed Ø's, 15 units at Bold.
 
 In the monospaced cut the hyphen sits on the math axis, in line with
 `+ = < >` and the arrows it grows into. `ss03` turns `<=` `>=` back into their characters (for languages where

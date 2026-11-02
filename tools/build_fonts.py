@@ -18,13 +18,13 @@ from pathlib import Path
 from arris.draw import REGISTRY
 from arris.font import build
 from arris.glyphs.features import fea
-from arris.instances import HERITAGE_OPTICS, MONO_WEIGHTS, NAMES, OPTICS, STEMS, params
+from arris.instances import HERITAGE_OPTICS, MONO_NAMES, MONO_WEIGHTS, NAMES, OPTICS, STEMS, params
 from arris.italic import italic
 
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 watch = 'watch' in sys.argv[2:]
 mono = 'mono' in sys.argv[2:]
-# 'all': every weight; Mono's are Regular and Bold (MONO_WEIGHTS)
+# 'all': every weight; Mono's are Fira Code's six, Light to Bold with Retina (MONO_WEIGHTS)
 weights = [int(w) for w in sys.argv[1].split(',')] if len(sys.argv) > 1 and sys.argv[1] != 'all' else \
     (list(MONO_WEIGHTS) if mono else list(STEMS))
 ital = 'italic' in sys.argv[2:]
@@ -35,18 +35,28 @@ def _liga(n):
 
 
 # italic drawings replace their uprights (arris.italic); ligatures are the monospaced cut's
-names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital') and (mono or not _liga(n))]
+names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital') and not n.endswith('.ss04')
+                 and (mono or not _liga(n))]
 Path('build').mkdir(exist_ok=True)
+
+# Mono Italic: the cursive set (ss04), an alternate for every glyph that draws one of the italic's own letters
+cursive = []
+if mono and ital and __name__ == '__main__':
+    from arris.glyphs.italic_forms import cursive_fea, cursive_set, register_cursive, register_join
+    cursive = cursive_set(names, italic(params(400, optics=OPTICS).with_(mono=True)),
+                          workers=int(os.environ.get('ARRIS_CURSIVE_WORKERS', os.cpu_count() or 4)))
+    names = names + register_cursive(cursive) + register_join(cursive)
+    print('cursive set:', len(cursive), 'glyphs', flush=True)
 
 
 def one(w):
     p = params(w, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono)
-    style = NAMES[w]
+    style = (MONO_NAMES if mono else NAMES)[w]
     if ital:
         p = italic(p)
         style = 'Italic' if style == 'Regular' else f'{style} Italic'
     path = f"build/{family.replace(' ', '')}-{style.replace(' ', '')}.ttf"
-    build(path, names, p, family=family, style=style, weight=w, fea=fea(mono=mono))
+    build(path, names, p, family=family, style=style, weight=w, fea=fea(mono=mono) + (cursive_fea(cursive) if cursive else ''))
     return path
 
 

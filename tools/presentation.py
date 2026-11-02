@@ -1,7 +1,7 @@
 """The Arris presentation: thirty-odd designed slides set in the built fonts.
 
 Each slide is a 1920x1080 HTML page (CSS: the variable font's three axes,
-OpenType features, the Mono family's two weights); headless Chromium
+OpenType features, the Mono family's six weights); headless Chromium
 renders them to presentation/slides/NN-name.png and the whole deck to one
 vector PDF, presentation/arris.pdf. Build the fonts first (README).
 
@@ -17,6 +17,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'src'))
+from arris.instances import MONO_NAMES  # noqa: E402
+
 BUILD = Path(__import__('os').environ.get('ARRIS_BUILD', ROOT / 'build'))
 OUT = ROOT / 'presentation'
 W, H = 1920, 1080
@@ -27,7 +30,7 @@ def font_css():
     vfi = (BUILD / 'Arris-Italic[GRAD,WTCH,wght].ttf').as_uri()
     css = [f"@font-face {{ font-family: 'Arris'; src: url('{vf}'); font-weight: 100 900; font-style: normal; }}",
            f"@font-face {{ font-family: 'Arris'; src: url('{vfi}'); font-weight: 100 900; font-style: italic; }}"]
-    for n, w in (('Regular', 400), ('Bold', 700)):                  # Mono's two weights (instances.MONO_WEIGHTS)
+    for w, n in MONO_NAMES.items():                                 # Mono's weights (instances.MONO_WEIGHTS)
         up = (BUILD / f'ArrisMono-{n}.ttf').as_uri()
         it = (BUILD / f'ArrisMono-{"Italic" if n == "Regular" else n + "Italic"}.ttf').as_uri()
         css.append(f"@font-face {{ font-family: 'Arris Mono'; src: url('{up}'); font-weight: {w}; font-style: normal; }}")
