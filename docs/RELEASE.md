@@ -42,6 +42,24 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.009
+
+- Back to 1.007's drawings for every glyph but the italic k. 1.008 held
+  the counters of the italic e, æ, ø, Q, the slashed letters, the Cyrillic
+  tick and ∅, and the closed-counter thinning, at their area from the
+  weight their rule first acted, shrinking with the stem; where a counter
+  is small when its rule first acts (the italic e's eye) it shrank to a
+  sliver by Black and the letter clogged. The hold stays on the italic
+  k's loop alone, with its notch fill and the italic's curve at a closed
+  side: the italic k is 1.008's.
+- The italic e's and æ's bar ends are 1.007's again (`Stroke.keep` and
+  `geom._kept` removed, with the partial jog closing that was off): the
+  lower-left corner turns straight from 825 on the heavy grade, as in
+  1.007.
+- Checked: every glyph drawn from 1.007's code and from 1.009's, upright
+  and italic, at RESULT.
+- The nesting check (`arris.steady`) and the two-hour fontbakery jobs stay.
+
 ## 1.008
 
 - White that only shrinks. Stack a glyph's weights as slices and its

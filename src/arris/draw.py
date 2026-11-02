@@ -193,7 +193,7 @@ class Glyph:
         sizes = self.counters()
         return min(sizes) if sizes else 1e4
 
-    def stroke(self, *pts, closed=False, start='flat', end='flat', part=None, keep=()):
+    def stroke(self, *pts, closed=False, start='flat', end='flat', part=None):
         if part:
             self.parts.setdefault(part, []).append(len(self.strokes))
         nodes = []
@@ -204,7 +204,7 @@ class Glyph:
             else:
                 # (x, y) or (x, y, w): w is the thickness of the segment that follows
                 nodes.append(Node(q[0], q[1], 0.0, q[2] if len(q) > 2 else None))
-        self.strokes.append(Stroke(tuple(nodes), closed, start, end, tuple(keep)))
+        self.strokes.append(Stroke(tuple(nodes), closed, start, end))
         return self
 
     def rings(self):
