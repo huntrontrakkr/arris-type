@@ -42,47 +42,39 @@ def _bar(g, x0, x1, y):
     g.stroke((x0, y), (x1, y))
 
 
-ARM = 3.0       # breaks: the least a bar reaches past the stem it crosses (t_bar)
-STUB = 3.0      # breaks: the least of the stem left standing above a bar near its top
+ARM = 3.0       # breaks: the least a bar reaches past the stem it crosses (t_bar), toward Black
+ARM_M = 2.0     # modules: and at every weight
+STUB = 3.0      # breaks: the stem left standing above a bar near its top, where it fits
 
 
 def t_bar(g, xl, xr, y, reach_l, reach_r, top=None, floor=None, free=(True, True)):
     """A bar across a stem (its edges xl and xr; or across two, the outer
-    edges) centred at y, reaching reach_l and reach_r past it: a t's shape at
-    every weight. Toward Black the stroke grew and the bar's reach and the
-    stem above it did not, and an arm or a stub is drawn as a fill against
+    edges) centred at y, reaching reach_l and reach_r past it: a cross, a
+    t's shape, at every weight. An arm or a stub is drawn as a fill against
     the stem (a break at 45 degrees in each inner corner) and a cut at its
     end (a break at each outer corner): shorter than two breaks it is all
-    cut and fill, a point, and the bar, its arms and the stem's top ran
-    together into an arrowhead (ħ đ Ħ ҟ Ҟ Ғ Ŧ). So an arm reaches at least
-    ARM breaks past the stem, a fill, a flat and a cut (on a side that is free:
-    where the letter's own diagonal comes near, as the k's arm under ҟ's bar,
-    it keeps its reach), and below a stem's top at ``top`` at least STUB
-    breaks stand above the bar: the bar comes down for it, no lower than
-    ``floor`` (its underside, keeping the white above the letter under it);
-    a reach may be a function of the bar's underside and top, where it lies;
-    where that leaves no room it thins, to STACK_MIN of a bar; and where even
-    that does not fit, the stem ends in it, a T, the bar on its top. Light
-    weights, where reach and stem stand clear of the cuts, are as drawn."""
+    fill and cut, a point, and toward Black the bars of ħ đ Ħ Đ Ŧ ҟ Ҟ Ғ ran
+    with their stems into arrowheads. So an arm reaches at least ARM_M
+    modules past the stem, and ARM breaks where that is more (on a side that
+    is free: where the letter's own diagonal comes near, as the K's arm
+    beside Ҟ's bar, it keeps its reach; a reach may be a function of the
+    bar's underside and top, where it lies). The bar keeps its full stroke
+    (thinned or set on the stem's top as a T, the owner: a big capital T,
+    not a cross), and below a stem's top at ``top`` it comes down so that
+    STUB breaks of stem stand above it, no lower than ``floor`` (its
+    underside, keeping the white above the letter under it): where the
+    ascender is too short for both, near Black, the stub is what is left."""
     p = g.p
-    rl = max(reach_l, ARM * p.c) if free[0] else reach_l
-    rr = max(reach_r, ARM * p.c) if free[1] and not callable(reach_r) else reach_r
+    least = max(ARM_M * p.m, ARM * p.c)
+    rl = max(reach_l, least) if free[0] else reach_l
+    rr = max(reach_r, least) if free[1] and not callable(reach_r) else reach_r
     t = g.sh
     if top is not None:
         hi = top - STUB * p.c                               # the bar's top no higher
-        lo = -1e9 if floor is None else floor               # its underside no lower
         if y + t / 2 > hi:
-            if hi - t >= lo:
-                y = hi - t / 2
-            elif hi - lo >= STACK_MIN * g.sh:
-                t = hi - lo
-                y = lo + t / 2
-            else:
-                # the stem ends in the bar, a T: the bar on its top (Ħ's counter
-                # under it opens up there, the bar moving up out of it; filling down
-                # to keep it made a slab a bar and a half thick)
-                t = max(STACK_MIN * g.sh, min(g.sh, top - lo))
-                y = top - t / 2
+            y = hi - t / 2
+        if floor is not None:
+            y = max(y, floor + t / 2)
     if callable(rr):                                        # a reach that depends on where the bar lies
         rr = rr(y - t / 2, y + t / 2)
     g.stroke((xl - rl, y, t), (xr + rr, y))
