@@ -278,4 +278,7 @@ feature case {{
         from .ligatures import fea as ligature_fea
         text += ligature_fea()
     text += alternates_fea(mono)        # after the ligatures: ss03 replaces what calt made
+    if mono:
+        from .alignment import fea as alignment_fea
+        text += alignment_fea()         # after the ligatures: a sign one took is not there to move
     return text

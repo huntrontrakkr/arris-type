@@ -637,6 +637,17 @@ ending on its arms; and `<=` `>=`, a full-size ≤ and ≥ on the 2:1 chevron.
 signs' bars through. Sequences that would only be drawn closer together
 (`||` `::` `..` `!!` `//` `>>` `/*` `<*>`) are left as their characters.
 
+**Alignment** (`calt` too, after the ligatures, after Fira Code's;
+`glyphs/alignment.py`): in Mono the hyphen, plus and asterisk sit on the
+capitals' middle, the axis the arrows and = < > share. Touching a
+lowercase letter (`kebab-case`, `a+b`, `x*y`) they drop to the lowercase
+middle; the colon rises to the capitals' middle (the time colon) touching a
+capital or beside a chevron (`A:B`, `HH:MM`, `<:`); an x between figures or
+in `0x` before a hex digit is a times sign (`1920x1080`, `0xFF`). Between a
+capital and a lowercase letter nothing moves (`A-b`), and a sign doubled is
+left alone (`Foo::Bar`; `--` and `++` are ligatures), so a run never has
+one sign high and the next low.
+
 The signs underneath agree with each other: < and > are 2:1 chevrons
 filling the operator box, as tall as + (and ≤ ≥ ≮ ≶ ≺ build on the same
 chevron); the bars of = stand 1.6 bars apart, the white every stacked sign
