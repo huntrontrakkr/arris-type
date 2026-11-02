@@ -14,7 +14,7 @@ from ..params import SQRT2
 from .caps import big
 from .figures import STACK_MIN, beak_depth
 from .lower import shoulder
-from .letterframe import Frame, k_arms, letter_width, widening_like
+from .letterframe import Frame, k_arms, letter_width
 
 
 def stamp(g, name, dx=0.0, dy=0.0, width=None, clear=False):
@@ -277,7 +277,7 @@ def napostrophe(g):
 
 # --- Redrawn -----------------------------------------------------------------
 
-@glyph('kgreenlandic', 'ĸ', widening_like(8, 1, 2), kind='lower')
+@glyph('kgreenlandic', 'ĸ', letter_width(8, 1), kind='lower')
 def kgreenlandic(g):
     f = Frame(g, 8, 'lower')
     g.stroke(f.P(1, 0), f.P(1, 9))
