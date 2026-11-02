@@ -1070,13 +1070,14 @@ def arrow_glyph(name, char, spec: Drawing, kind_sides=0.8):
         ctx = Ctx(g.p, g.sh, Turn(spec.theta))
         _, strokes = centre(ctx, strokes, g.W)
         g.clip = None
-        if spec.shaft not in ('wave', 'squiggle'):
+        if not (p0.mono and isinstance(spec, Spec) and spec.shaft in ('wave', 'squiggle')):
             emit(g, strokes)
             return
         # A zigzag's last leg meets the head's 45-degree edge almost along
         # it; at Light, in the italic, the corner cut there folded back
-        # (⇜ ⇝ in Mono Light Italic). The drawing settles on the first lead
-        # whose outline is clean: the plain one wherever it already is.
+        # (⇜ ⇝ in Mono Light Italic). In Mono the drawing settles on the
+        # first lead whose outline is clean: the plain one wherever it
+        # already is.
         cands = [strokes]
         for lead in LEADS:
             _, s2, k2 = layout(replace(spec, lead=lead), p0, g.sh)
