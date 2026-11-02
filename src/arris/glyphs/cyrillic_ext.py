@@ -366,11 +366,22 @@ def Pedesc(g):
 @ccap('uni049E', 'Ҟ', 9, 1, width=plus_room('K'))
 def Kastroke(g):
     """K with Ħ's bar through the top of its stem."""
+    from ..draw import _evened
     p = g.p
     dx = room(p.ungraded())                                 # the K in its own body (Қ)
     stamp(g, 'K', dx, width=g.W - dx)
-    t_bar(g, dx, dx + p.sv, 0.75 * p.cap + g.sh / 4, dx, room(p), top=p.cap, floor=p.cap / 2 + g.sh / 2 + p.m,
-          free=(True, False))
+    # Right of the stem the bar faces the K's arm (x - y = a, letterframe.k_arms,
+    # placed by the full stroke, drawn as thin as the K's): a module's arm while a
+    # break of white stays between it and the arm; where less would (900 on the
+    # light grade, watch 100: 11 units) the bar ends at the stem, a flag to the
+    # left (run on into the arm, it walled off specks of white and made a slab)
+    xs_r = dx + p.sv
+    a = g.W - dx - p.cap + p.c - p.sd / SQRT2 + dx
+    k = _evened(REGISTRY['K'], p).sd / SQRT2
+
+    def reach_r(yb, yt):
+        return room(p) if yb + a - k - (xs_r + room(p)) >= p.c else 0.0
+    t_bar(g, dx, xs_r, 0.75 * p.cap + g.sh / 4, dx, reach_r, top=p.cap, floor=p.cap / 2 + g.sh / 2 + p.m)
 
 
 @ccap('uni04B4', 'Ҵ', 13, 3)

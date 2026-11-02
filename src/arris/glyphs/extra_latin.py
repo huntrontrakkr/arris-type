@@ -60,12 +60,13 @@ def t_bar(g, xl, xr, y, reach_l, reach_r, top=None, floor=None, free=(True, True
     it keeps its reach), and below a stem's top at ``top`` at least STUB
     breaks stand above the bar: the bar comes down for it, no lower than
     ``floor`` (its underside, keeping the white above the letter under it);
+    a reach may be a function of the bar's underside and top, where it lies;
     where that leaves no room it thins, to STACK_MIN of a bar; and where even
     that does not fit, the stem ends in it, a T, the bar on its top. Light
     weights, where reach and stem stand clear of the cuts, are as drawn."""
     p = g.p
     rl = max(reach_l, ARM * p.c) if free[0] else reach_l
-    rr = max(reach_r, ARM * p.c) if free[1] else reach_r
+    rr = max(reach_r, ARM * p.c) if free[1] and not callable(reach_r) else reach_r
     t = g.sh
     if top is not None:
         hi = top - STUB * p.c                               # the bar's top no higher
@@ -77,8 +78,13 @@ def t_bar(g, xl, xr, y, reach_l, reach_r, top=None, floor=None, free=(True, True
                 t = hi - lo
                 y = lo + t / 2
             else:
+                # the stem ends in the bar, a T: the bar on its top (Ħ's counter
+                # under it opens up there, the bar moving up out of it; filling down
+                # to keep it made a slab a bar and a half thick)
                 t = max(STACK_MIN * g.sh, min(g.sh, top - lo))
                 y = top - t / 2
+    if callable(rr):                                        # a reach that depends on where the bar lies
+        rr = rr(y - t / 2, y + t / 2)
     g.stroke((xl - rl, y, t), (xr + rr, y))
 
 
