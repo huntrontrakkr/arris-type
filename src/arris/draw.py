@@ -108,6 +108,11 @@ def B(x, y, leg=None, w=None):
 
 
 NUDGE = (0, -2, 2, -4, 4, -8, 8, -12, 12)   # units: the steps a settling stroke tries off a coincidence with the drawing it meets (Glyph.settle)
+# The strokes added to a letter (the bar of Đ Ħ ŧ, the slash of Ø Ł, a bar across a stem) stop gaining
+# weight here: past it they keep this weight while the letter goes on getting heavier, so the white beside
+# them stays open and they read at every weight (docs/research/mono-cell.md §3). 600 is the weight whose
+# stem is the watch's own two modules (120 units).
+EXTRA_HOLD = 600.0
 
 
 @dataclass
@@ -131,6 +136,28 @@ class Glyph:
     zones: list = field(default_factory=list)   # (x0, y0, x1, y1) boxes whose white the Squint rule watches
     cell: tuple[float, float] | None = None     # Mono: the cell (x0, x1) no ink may pass (see _build)
     extra_src: list = field(default_factory=list)   # (ink in extra, stamped glyph, its rings, affine map): names its edges
+
+    def held(self, direction=(1.0, 0.0)) -> float:
+        """The thickness of a stroke added to the letter, running in
+        ``direction``: the glyph's own (its horizontals as it thins them) up
+        to EXTRA_HOLD, and from there on that weight's, in the same cut
+        (grade, watch, Mono and slant kept). Never heavier than the glyph's
+        own. A set derived from a font's (small capitals, small figures) keeps
+        its own."""
+        return _thickness(self.p, self.sh)(direction) * self.held_share(direction)
+
+    def held_share(self, direction=(1.0, 0.0)) -> float:
+        """Glyph.held as a share of the glyph's own thickness in ``direction``
+        (1 up to EXTRA_HOLD), for a drawing that sets a stroke's thickness
+        itself."""
+        p = self.p
+        cut = _cut(p)
+        if cut is None or cut[0] <= EXTRA_HOLD:
+            return 1.0
+        q = cut[1](EXTRA_HOLD)
+        k = self.sh / max(p.sh, 1e-9)                       # the glyph's own thinning of its horizontals, kept
+        own = _thickness(p, self.sh)(direction)
+        return min(1.0, _thickness(q, max(q.sh * k, q.floor))(direction) / max(own, 1e-9))
 
     def free(self, name: str, default: float) -> float:
         """A free variable of the drawing (see Opening)."""
@@ -210,7 +237,7 @@ class Glyph:
     def rings(self):
         return self.outline(record=False)[0]
 
-    def settle(self, cands) -> bool:
+    def settle(self, cands, curves: bool = False) -> bool:
         """Draw the first of the candidate stroke sets (each a list of
         ``stroke`` argument tuples) whose outline the topology check
         (``arris.topology``) finds clean, in the italic too. A bar placed by
@@ -222,19 +249,40 @@ class Glyph:
         from .topology import faults
         p = self.p
         n = len(self.strokes)
-        for strokes in cands:
+        def put(st):                                        # (point, ...) or (point, ..., {stroke's keywords})
+            if st and isinstance(st[-1], dict):
+                self.stroke(*st[:-1], **st[-1])
+            else:
+                self.stroke(*st)
+        best = None
+        for j, strokes in enumerate(cands):
             del self.strokes[n:]
             for st in strokes:
-                self.stroke(*st)
+                put(st)
             rings, rec = self.outline(record=bool(p.slant))
             if faults([[(q[0], q[1], True) for q in r] for r in rings], p.c):
                 continue
             if p.slant and faults(IT.outline(rings, rec, p), p.c, True):
                 continue
+            if not (curves and p.slant):
+                return True
+            # ``curves`` (a diagonal stroke added to a letter, in the italic): a 45-degree edge of the
+            # stroke lying on the line of one of the letter's chamfers claims it and holds it straight
+            # (italic._segments; the ł's foot at 650 and 670, 2026-11-02): of the clean candidates,
+            # the one that leaves the most chamfers curved, the first on a tie. Not for bars: a level
+            # stroke lies on no such line, and counting its own edge breaks curves them (the italic
+            # ҟ's bar went round-ended at 500)
+            k = len(IT._plan(rings, p, IT.split_warp(rec)[0])[0])
+            if best is None or k > best[0]:
+                best = (k, j)
+        if best is not None:
+            del self.strokes[n:]
+            for st in cands[best[1]]:
+                put(st)
             return True
         del self.strokes[n:]
         for st in cands[0]:
-            self.stroke(*st)
+            put(st)
         return False
 
     def outline(self, record: bool = True, tags: list | None = None):

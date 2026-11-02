@@ -135,7 +135,12 @@ def hook(g, f, x, y_from, reach=4.0):
 
 
 def cross_bar(g, x0, x1, y):
-    g.stroke((x0, y), (x1, y))
+    """A bar added across a letter's stem: it stops gaining weight at
+    EXTRA_HOLD (Glyph.held), and settles a few units off where its edge
+    would land on one of the letter's (Glyph.settle)."""
+    from ..draw import NUDGE
+    t = g.held()
+    g.settle([[((x0, y + d, t), (x1, y + d))] for d in NUDGE])
 
 
 def beak_free(g):
@@ -203,8 +208,7 @@ def Ustraightstroke(g):
 
 
 def _stem_bar(g, x, y):
-    reach = g.p.sv / 2 + bar_reach(g.p)
-    g.stroke((x - reach, y), (x + reach, y))
+    cross_bar(g, x - (g.p.sv / 2 + bar_reach(g.p)), x + g.p.sv / 2 + bar_reach(g.p), y)
 
 
 @glyph('uni04D8', 'Ә', letter_width(9, 2), kind='cap', openings=[MOUTH])
