@@ -295,6 +295,8 @@ def _notdef(p: Params):
     x0, x1 = min(x for x, _ in pts), max(x for x, _ in pts)
     y0, y1 = min(y for _, y in pts), max(y for _, y in pts)
     g.add_glyph(sub, W / 2 - (x0 + x1) / 2, H / 2 - (y0 + y1) / 2)
+    if p.mono:                                              # in Mono's cell, centred, like every other glyph
+        lsb = (p.fig_adv - W) / 2
     return _tt_glyph(_contours(g.rings()), lsb), W + 2 * lsb
 
 
@@ -436,7 +438,7 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     fb.setupCharacterMap(cmap)
     glyphs, hmtx = {}, {}
     glyphs['.notdef'], adv = _notdef(p)
-    hmtx['.notdef'] = (adv, 40)
+    hmtx['.notdef'] = (adv, round((adv - 480) / 2))
     glyphs['space'] = TTGlyphPen(None).glyph()
     hmtx['space'] = (round(space if space is not None else (p.fig_adv if p.mono else 0.45 * p.xh)), 0)
     keep = placed is not None

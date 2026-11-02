@@ -20,7 +20,7 @@ Specimen, and the fonts to download: **[arristype.com](https://arristype.com)**.
 | **Arris** | Proportional letters, tabular figures. Measured optics. Nine weights. |
 | **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem). |
 | **Arris Italic**, **Arris Mono Italic** | Slanted ten degrees, every chamfer a curve, every point the upright keeps sharp kept sharp; a single-storey a and a descending f. Nine weights each. |
-| **Arris Mono** | Every glyph on the figures' 10-module pitch: slabbed I, footed i l r, dotted zero, and programming ligatures (`->` `=>` `!=` `===` `<=` `:=` `|>` `</>` `<$>` `#{` …) that keep every character in its cell. |
+| **Arris Mono** | Every glyph on one 10-module cell, the same at every weight (a Bold word keeps a Regular line's grid): slabbed I, footed i l r, dotted zero, and programming ligatures (`->` `=>` `!=` `===` `<=` `:=` `|>` `</>` `<$>` `#{` …) that keep every character in its cell. |
 | **Arris[GRAD,WTCH,wght]**, **Arris-Italic[GRAD,WTCH,wght]** | Variable: weight 100–900, grade −100–100, watch proportions 0–100; linked as one family on the `ital` axis. |
 
 Coverage, about 2,150 code points (details in `docs/coverage/`):

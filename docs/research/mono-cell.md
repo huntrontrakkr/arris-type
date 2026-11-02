@@ -1,7 +1,8 @@
 # Mono on one cell, and the extra bits that stop gaining weight
 
-A note, 2026-11-02 (Eastern). Nothing here is in the font code yet: it is the
-plan, the evidence for it, and what the owner decided.
+A note, 2026-11-02 (Eastern): the plan, the evidence for it, and what the
+owner decided. Since done on `mono-grid`: the held strokes (section 3, the
+letters' bar and slash helpers) and Mono's one cell (section 2, B).
 
 ## 1. The problem: Mono's cell follows the weight
 
@@ -87,12 +88,16 @@ The pieces exist:
   of white on both sides (TODO #32), and `cyrillic_ext.cross_bar`,
   `extra_latin` and `currency` draw most bars through shared helpers.
 
-What is new: the glyph code marks its extra strokes (a context on the glyph,
-around the helpers that draw bars, slashes, hooks and tails), and those
-strokes take their thickness from the params of the weight where the glyph's
-white first falls short (found as `_engaged` finds it), while their position
-is solved against the letter's strokes at the weight being drawn. Marking at
-the helpers covers most glyphs at once; the rest are marked one by one.
+As built (`draw.EXTRA_HOLD`, `Glyph.held`): one weight for every glyph,
+600, where the stem is the watch's own two modules. An added stroke takes
+the glyph's own thickness up to it and that weight's from there to Black, in
+the same cut (grade, watch, Mono, slant); a slash's reach stops growing with
+it. A per-glyph weight (where its white first falls short, as `_engaged`
+finds it) was the alternative: one weight keeps every bar in a line the same
+colour, and is simpler to check. The helpers that use it: `extra_latin._bar`,
+`_slashbar`, `_oslash`, the ŧ's bar, `cyrillic_ext.cross_bar` and
+`_stem_bar`, ℏ. The currency signs' pairs of bars keep their own rule
+(`currency.pair_t`, `BARS_OR_ONE`); hooks and tails are not marked yet.
 
 The wide forms (Æ Œ æ œ, Ф ф, N И) are not extra bits: their strokes are the
 letter. They need the body B gives and, where that is not enough, the
@@ -127,6 +132,5 @@ Fira builds from its pieces. Of Fira's 56 that Arris lacks:
 
 ## 5. Open
 
-1. The owner's go for B and for the rule in section 3.
-2. Ligatures: the ~9 joins only, or the spacing ones too (and §8 rewritten).
-3. `/\` `\/`: full height, or scaled to the x-height as Fira's.
+1. Done: B (`params.MONO_CELL`, `MONO_BODY`), and the rule in section 3.
+2. Ligatures: set aside by the owner for now.
