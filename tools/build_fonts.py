@@ -35,8 +35,18 @@ def _liga(n):
 
 
 # italic drawings replace their uprights (arris.italic); ligatures are the monospaced cut's
-names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital') and (mono or not _liga(n))]
+names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital') and not n.endswith('.ss04')
+                 and (mono or not _liga(n))]
 Path('build').mkdir(exist_ok=True)
+
+# Mono Italic: the cursive set (ss04), an alternate for every glyph that draws one of the italic's own letters
+cursive = []
+if mono and ital and __name__ == '__main__':
+    from arris.glyphs.italic_forms import cursive_fea, cursive_set, register_cursive, register_join
+    cursive = cursive_set(names, italic(params(400, optics=OPTICS).with_(mono=True)),
+                          workers=int(os.environ.get('ARRIS_CURSIVE_WORKERS', os.cpu_count() or 4)))
+    names = names + register_cursive(cursive) + register_join(cursive)
+    print('cursive set:', len(cursive), 'glyphs', flush=True)
 
 
 def one(w):
@@ -46,7 +56,7 @@ def one(w):
         p = italic(p)
         style = 'Italic' if style == 'Regular' else f'{style} Italic'
     path = f"build/{family.replace(' ', '')}-{style.replace(' ', '')}.ttf"
-    build(path, names, p, family=family, style=style, weight=w, fea=fea(mono=mono))
+    build(path, names, p, family=family, style=style, weight=w, fea=fea(mono=mono) + (cursive_fea(cursive) if cursive else ''))
     return path
 
 

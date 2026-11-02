@@ -15,7 +15,9 @@ These drawings give it a hand as well, from moves the upright already makes:
   leaves on an upstroke.
 
 The monospaced italic keeps the upright forms: a cell has no room for a
-tail.
+tail. Its ``ss04`` ("Cursive italic") offers two of them anyway, the f and
+the k (``MONO_CURSIVE``), drawn narrower until they fit the cell; ``ss05``,
+with it, runs an underscore into the f's tail (``JOIN``).
 """
 from __future__ import annotations
 
@@ -30,17 +32,182 @@ FLAG = 1.5       # modules an entry flag reaches left of its stem (and down)
 BRANCH = 3       # modules below the arch where an italic shoulder leaves its stem
 
 
+# Mono's cursive set (ss04): the owner's two, the descending f and the looped k (2026-11-02; the whole
+# italic set in the cell was too much). Every other letter keeps the slanted upright's form.
+MONO_CURSIVE = ('f', 'k')
+CELL_GAP = 0.25   # modules: Mono's cursive set keeps its ink this far inside the cell, so neighbours' tails never touch
+
+
+def _in_cell(g, fn):
+    """Mono's cursive set (ss04): the italic's own drawing, drawn as much
+    narrower than the body as its hooks and tails need to stay inside the
+    cell, then centred in it, ink and all, so the cell (and the grid) is the
+    same. The letter gives up width, not its tail."""
+    from ..draw import Glyph
+    from ..geom import rings_to_shapely
+    p = g.p
+    W0 = g.W
+    lo, hi = (W0 - p.fig_adv) / 2 + CELL_GAP * p.m, (W0 + p.fig_adv) / 2 - CELL_GAP * p.m
+    shrink, h = 0.0, None
+    for _ in range(4):
+        h = Glyph(p, g.name, ot=g.ot, ob=g.ob, W=W0 - shrink, overrides=dict(g.overrides))
+        h.sh_auto = g.sh_auto
+        fn(h)
+        x0, _, x1, _ = rings_to_shapely(h.rings()).bounds
+        over = max(0.0, x1 - x0 - (hi - lo))
+        if over <= 0.5:
+            break
+        shrink += over * (W0 - shrink) / max(x1 - x0, 1.0)
+    dx = (lo + hi) / 2 - (x0 + x1) / 2
+    g.add_glyph(h, dx, 0.0)
+    g.defaults.update(h.defaults)
+    g.defaults_used.update({k: (v + dx if k == 'stem' else v) for k, v in h.defaults_used.items()})
+
+
 def ital(name, wm, stems, width=None, openings=()):
     """An italic drawing of ``name`` (``draw`` uses it wherever p.slant)."""
     def deco(fn):
         def wrapped(g):
-            if g.p.mono:                                    # the cell keeps the upright form
-                return REGISTRY[name].fn(g)
+            if g.p.mono and (not g.p.cursive or name not in MONO_CURSIVE):   # the cell keeps the upright form,
+                return REGISTRY[name].fn(g)                                    # but for ss04's letters
+            if g.p.mono:
+                return _in_cell(g, fn)
             return fn(g)
         glyph(f'{name}.ital', None, width or letter_width(wm, stems), kind=REGISTRY[name].kind,
               openings=openings)(wrapped)
+        if name in MONO_CURSIVE:
+            CURSIVE.append(name)
         return fn
     return deco
+
+
+# --- Mono's cursive set (ss04) -------------------------------------------------
+# In Arris Mono Italic every glyph that draws one of ss04's letters (the letter,
+# and what is built on it: ḟ ķ ǩ ﬁ ...) has an alternate, NAME.ss04, the same
+# glyph drawn with the cursive form; ss04 swaps them in.
+
+CURSIVE: list = []      # MONO_CURSIVE, as registered
+
+
+def cursive_set(names, p, workers=4):
+    """The glyphs among ``names`` whose drawing, in Mono Italic at p, draws
+    one of the cursive letters: found by drawing each with the cursive set on
+    and noting what it draws (draw.TRACE). Weight does not change which."""
+    from multiprocessing import get_context
+    global _P
+    _P = p.with_(cursive=True)
+    names = [n for n in names if n not in CURSIVE_SKIP and _letter(n)]
+    with get_context('fork').Pool(workers) as pool:
+        hit = pool.map(_draws_cursive, names, chunksize=16)
+    return [n for n, h in zip(names, hit) if h]
+
+
+# Letters only: a symbol built on a letter (℀, the Roman numerals) keeps its own.
+CURSIVE_SKIP: tuple = ()
+
+
+def _letter(name):
+    import unicodedata
+    u = REGISTRY[name].unicode
+    return u is None or unicodedata.category(chr(u)).startswith('L')
+
+
+_P = None
+
+
+def _draws_cursive(name):
+    from .. import draw as D
+    seen = set()
+    D.TRACE.append(seen)
+    try:
+        D.draw(name, _P)
+    except Exception:                                       # noqa: BLE001 (a glyph that cannot be drawn so is left out)
+        return False
+    finally:
+        D.TRACE.remove(seen)
+    return bool(seen & set(CURSIVE))
+
+
+def register_cursive(names):
+    """NAME.ss04 for each name: the glyph drawn with Mono's cursive set."""
+    out = []
+    for n in names:
+        alt = f'{n}.ss04'
+        if alt not in REGISTRY:
+            spec = REGISTRY[n]
+
+            def fn(g, n=n):
+                from ..draw import draw
+                g.add_glyph(draw(n, g.p.with_(cursive=True), g.ot, g.ob, width=g.W))
+            glyph(alt, None, spec.width, kind=spec.kind)(fn)
+        out.append(alt)
+    return out
+
+
+def cursive_fea(names) -> str:
+    subs = '\n'.join(f'    sub {n} by {n}.ss04;' for n in names)
+    out = f'feature ss04 {{\n    featureNames {{ name "Cursive italic"; }};\n{subs}\n}} ss04;\n'
+    into = ' '.join(f'{n}.ss04' for n in _joined(names))
+    if into:                                                # after ss04's swaps: the join sees the cursive f
+        out += (f'feature {JOIN_TAG} {{\n    featureNames {{ name "Underscore into the cursive f"; }};\n'
+                f"    sub {JOIN}' [{into}] by {JOIN}.{JOIN_TAG};\n}} {JOIN_TAG};\n")
+    return out
+
+
+# --- The underscore into the f (ss05, with ss04; the owner's, 2026-11-02) ----------------------------------
+# The descending f ends in a tail on the underscore's line, a cell's margin short of an underscore before
+# it. With ss05 on as well as ss04 (its own switch, off by default: ss04 alone is the letters, nothing
+# else), that underscore (JOIN.ss05) runs on into the tail, so `is_fresh` reads as one line into the f.
+# It is the underscore as it stands in its cell, its bar run on at its own height and weight past the
+# cell's edge until it is under the tail: a one-cell piece that draws past its cell, as a ligature does
+# ('liga' kind, so the cell does not cut it). The tail keeps its own end above the bar: where the f's
+# tail is the heavier, its chamfer shows as a step up into it.
+
+JOIN = 'underscore'
+JOIN_TAG = 'ss05'
+
+
+def _joined(names):
+    """The cursive glyphs an underscore runs into: the f, and the letters that are an f with a mark."""
+    import unicodedata
+    out = []
+    for n in names:
+        u = REGISTRY[n].unicode
+        if n == 'f' or (u is not None and unicodedata.normalize('NFD', chr(u))[0] == 'f'):
+            out.append(n)
+    return out
+
+
+def _join_underscore(g):
+    from ..draw import draw
+    from ..geom import rings_to_shapely
+    from .ligatures import _runs
+    p = g.p
+    us = draw(JOIN, p)
+    f = draw('f.ss04', p)
+    du = (p.fig_w - us.W) / 2                       # each where it stands in its cell, in this glyph's frame
+    df = p.fig_adv + (p.fig_w - f.W) / 2            # (whose x = 0 is its body's left: a 'liga' piece's)
+    x0, y0, x1, y1 = rings_to_shapely(us.rings()).bounds
+    tail = rings_to_shapely(f.rings())
+    # where the tail is the bar's full height (past its end's chamfers), and on by a chamfer and a
+    # quarter-module, so the bar's own cut end is hidden in the tail
+    runs = [_runs(tail, y=y) for y in (y0 + 0.5, y1 - 0.5)]
+    end = du + x1                                   # (an f with no tail there, as a check draws it upright: as is)
+    if all(runs):
+        end = df + max(min(r[0] for r in rs) for rs in runs) + p.c + 0.25 * p.m
+    g.p = us.p                                      # the underscore's own (Mono fits it to the cell: symkit)
+    g.clip = (du + x0, y0 - p.cap, end, y1 + p.cap)
+    g.stroke((du + x0, (y0 + y1) / 2, y1 - y0), (end, (y0 + y1) / 2))
+
+
+def register_join(names):
+    """JOIN.ss05, if the cursive set has a letter for it to run into."""
+    if not _joined(names):
+        return []
+    alt = f'{JOIN}.{JOIN_TAG}'
+    if alt not in REGISTRY:
+        glyph(alt, None, 'fig_w', kind=('liga', 1))(_join_underscore)
+    return [alt]
 
 
 def _one_counter(g):
@@ -64,6 +231,8 @@ def entry(g, f, xs, top=None):
     square FLAG modules down. The stem keeps its flat top (on the x-height,
     or ``top``)."""
     p = g.p
+    if p.mono:                                              # Mono's cursive letters leave their entry flags out
+        return
     top = p.xh if top is None else top
     k = p.sd / SQRT2
     a = xs - p.sv / 2 + p.c - top + k                       # centreline: x - y = a
