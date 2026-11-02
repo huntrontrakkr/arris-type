@@ -50,38 +50,35 @@ before a commercial distribution if wanted.
   n's density (ink over advance times x-height), where fourteen comparable
   sans sit at 1.18 to 1.21; z 1.21 (0.94 to 1.04), Z and K 1.14 (0.92 to
   1.02). Their diagonals now thin from Regular to Black (`draw.EVEN`,
-  `_evened`), taking them halfway to the others: k by 24% at Black, K by
-  18%, z and Z by 30%, the italic k by 15% (from 18% its loop no longer
-  draws at watch 100). Widths, the light half and the Mono are unchanged;
-  spacing and kerning follow the outlines.
-- Every glyph drawn from them follows (the accents, Ǆ ǅ ǆ Ǳ ǲ ǳ, Ẓ ẓ,
-  к ќ Ќ Қ қ Ҝ ҝ Ҟ ҟ Ҡ ҡ, ₖ, ₭), and the letters drawn with the k's or K's
-  own arms take the same share (ĸ ƙ Ƙ Ҡ Ҝ, the Bulgarian к): 39 glyphs.
+  `_evened`): k by 24% at Black, K by 18%, Z by 30%, halfway to the
+  others; the italic k by 15% (from 18% its loop no longer draws at watch
+  100) and the z by 15% (more, its diagonal met the bars at a corner the
+  cleanup made at some heavy masters and not others, and the variable font
+  folded between them by 6 units). Widths, the light half and the Mono are
+  unchanged; spacing and kerning follow the outlines. Every glyph drawn
+  from them follows, and the letters drawn with the k's or K's own arms
+  take the same share (ĸ ƙ Ƙ Ҡ Ҝ, the Bulgarian к).
 - A thinned letter places its diagonals by the full stroke
-  (`letterframe.placing`): only their weight changes, so nothing the
+  (`letterframe.placing`): only their weight changes, and nothing the
   placement decides (the k's arm junction, the z's step) moves along the
   weight. Placed by the thinner stroke they had moved, and a trial
-  variable font folded where they switched (ҟ by 12 to 15 units, z by 6).
-- Bars keep a t's shape (`extra_latin.t_bar`). An arm or a stub is drawn
-  as a fill against the stem and a cut at its end, a break each; shorter
-  than two breaks it is all fill and cut, and toward Black the bars of
-  ħ đ Ħ Đ Ð Ŧ ҟ Ҟ Ғ Ӻ ran with their stems into arrowheads. Now an arm
-  reaches at least three breaks past the stem and three breaks of stem
-  stand above a bar near its top: the bar comes down for them, then
-  thins to 0.7 of a bar, and where even that leaves no room the stem
-  ends in the bar, a T (ħ đ from 700, Ҟ Ħ at 900, ҟ on the heavy grade
-  at 800). Light weights are as drawn.
+  variable font folded where they switched (ҟ by 12 to 15 units).
+- Bars keep a cross at every weight (`extra_latin.t_bar`), ħ đ Ħ Đ Ð Ŧ ҟ Ҟ
+  Ғ Ӻ and what is drawn from them. An arm or a stub is drawn as a fill
+  against the stem and a cut at its end, a break each, and toward Black
+  the bars, a module or less past their stems, ran with the stems' tops
+  into arrowheads. Now every arm reaches at least two modules past the
+  stem at every weight, three breaks toward Black, and the bar keeps its
+  full stroke (the owner: longer, not thinner, and not a T), coming down so
+  that three breaks of stem stand above it, no lower than the white above
+  the letter under it; near Black, where ħ's and đ's ascender is too short
+  for both, the stub is what is left. Ҟ's bar ends at its stem on the
+  right where a module's arm would close on the K's arm, a flag to the
+  left.
 - Қ Ҟ ҟ draw their K or k in its own body: on a grade, a room taken at
   the graded stem left ҟ's k 3.75 units wider than the k, and its arm
   left the stem (at 500 on the heavy grade).
-- Checked: every glyph drawn at four heavy places in both styles, the
-  thinning watched: these 39 build a thinned letter and no other does.
-  On them, topology, skeleton and nesting against 1.009's code: nothing
-  new (the italic Ҝ and Ҟ pinch in 1.009 too, and the ₭ gains a hole at
-  200 to 300, below where anything thins; the italic k's counter spills
-  17.9 units where 1.009's spilled 19.1). The italic k's share was searched along every axis
-  (500 to 900 every 20, five watches, three grades): 0.15 draws at
-  every place, 0.18 fails at watch 100.
+- Checked: RESULT.
 
 ## 1.009
 

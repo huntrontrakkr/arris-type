@@ -658,10 +658,13 @@ def _lightened(p: Params, k: float) -> Params:
 # than the n beside it (at Black 1.43 times the n's density for the k, where
 # fourteen comparable sans sit at 1.18 to 1.21); this takes it halfway to
 # them. Letters drawn with the k's or K's own arms take the same. The italic
-# k to 0.15: from 0.18 its loop no longer draws at watch 100. Not the Mono.
+# k to 0.15: from 0.18 its loop no longer draws at watch 100. The z to 0.15
+# (a quarter of the way): thinner, its diagonal met the bars at a corner the
+# cleanup made at some heavy masters and not others (21, 22 or 24 points),
+# and the variable font folded between them. Not the Mono.
 EVEN = {'k': 0.24, 'kgreenlandic': 0.24, 'uni0199': 0.24, 'uni043A.loclBGR': 0.24, 'k.ital': 0.15,
         'K': 0.18, 'uni0198': 0.18, 'uni04A0': 0.18, 'uni049C': 0.18,
-        'z': 0.30, 'Z': 0.30}
+        'z': 0.15, 'Z': 0.30}
 
 
 def _evened(spec, p: Params) -> Params:
