@@ -1223,7 +1223,51 @@ class _Nesting:
         return lo
 
 
+# Arris Mono past Bold: a glyph whose closed counters would shut in the cell (too many strokes for its
+# ten modules at Black: Æ Œ æ œ Ǆ Ф ⅅ ℙ ⇔ ⌘ ...) keeps its Bold drawing, the letter unchanged, only no
+# heavier (docs/research/mono-cell.md). It shuts if its tightest closed counter falls under half the Bold's
+# and under a quarter of the stem, or it loses a counter and white with it; a form that drops strokes by
+# design at Black (₩ ₦ with one bar) gains white and is left alone.
+MONO_HOLD = 700.0
+_MONO_HELD: dict = {}
+
+
+def _counters(g):
+    """(count, total area, tightest: the widest circle inside the narrowest) of a drawing's closed counters."""
+    import shapely
+    from shapely.geometry import Polygon
+    from .geom import rings_to_shapely
+    ink = rings_to_shapely(g.rings())
+    holes = [Polygon(r) for poly in getattr(ink, 'geoms', [ink]) if poly.geom_type == 'Polygon'
+             for r in poly.interiors]
+    holes = [h for h in holes if h.area >= 1.0]
+    tight = min((shapely.maximum_inscribed_circle(h, tolerance=1.0).length for h in holes), default=None)
+    return len(holes), sum(h.area for h in holes), tight
+
+
+def _mono_held(name, p, ot, ob, width):
+    """The parameters to draw a Mono glyph at: its own, or Bold's where its counters would shut (MONO_HOLD)."""
+    if not p.mono:
+        return p
+    cut = _cut(p)
+    if cut is None or cut[0] <= MONO_HOLD:
+        return p
+    key = (name, p, ot, ob, width)
+    if key not in _MONO_HELD:
+        q = cut[1](MONO_HOLD)
+        n_p, a_p, t_p = _counters(_draw(name, p, ot, ob, width))
+        n_q, a_q, t_q = _counters(_draw(name, q, ot, ob, width))
+        shut = (t_p is not None and t_q is not None and t_p < 0.5 * t_q and t_p < 0.25 * p.sv) or \
+            (n_p < n_q and a_p < a_q)
+        _MONO_HELD[key] = q if shut else p
+    return _MONO_HELD[key]
+
+
 def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
+    return _draw(name, _mono_held(name, p, ot, ob, width), ot, ob, width)
+
+
+def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
     spec = REGISTRY[name]
     if p.slant and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
         spec = REGISTRY[f'{name}.ital']
