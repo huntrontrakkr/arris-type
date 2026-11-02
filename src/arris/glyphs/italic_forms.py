@@ -15,7 +15,8 @@ These drawings give it a hand as well, from moves the upright already makes:
   leaves on an upstroke.
 
 The monospaced italic keeps the upright forms: a cell has no room for a
-tail.
+tail. Its ``ss04`` ("Cursive italic") offers two of them anyway, the f and
+the k (``MONO_CURSIVE``), drawn narrower until they fit the cell.
 """
 from __future__ import annotations
 
@@ -144,7 +145,64 @@ def register_cursive(names):
 
 def cursive_fea(names) -> str:
     subs = '\n'.join(f'    sub {n} by {n}.ss04;' for n in names)
+    into = ' '.join(f'{n}.ss04' for n in _joined(names))
+    if into:                                                # after the swaps: the join sees the cursive f
+        subs += f"\n    sub {JOIN}' [{into}] by {JOIN}.ss04;"
     return f'feature ss04 {{\n    featureNames {{ name "Cursive italic"; }};\n{subs}\n}} ss04;\n'
+
+
+# --- The underscore into the f (ss04; the owner's, 2026-11-02) ---------------------------------------------
+# The descending f ends in a tail on the underscore's line, a cell's margin short of an underscore before
+# it. With ss04 on, that underscore (JOIN.ss04) runs on into the tail, so `is_fresh` reads as one line
+# into the f. It is the underscore as it stands in its cell, its bar run on at its own height and weight
+# past the cell's edge until it is under the tail: a one-cell piece that draws past its cell, as a
+# ligature does ('liga' kind, so the cell does not cut it). The tail keeps its own end above the bar:
+# where the f's tail is the heavier, its chamfer shows as a step up into it.
+
+JOIN = 'underscore'
+
+
+def _joined(names):
+    """The cursive glyphs an underscore runs into: the f, and the letters that are an f with a mark."""
+    import unicodedata
+    out = []
+    for n in names:
+        u = REGISTRY[n].unicode
+        if n == 'f' or (u is not None and unicodedata.normalize('NFD', chr(u))[0] == 'f'):
+            out.append(n)
+    return out
+
+
+def _join_underscore(g):
+    from ..draw import draw
+    from ..geom import rings_to_shapely
+    from .ligatures import _runs
+    p = g.p
+    us = draw(JOIN, p)
+    f = draw('f.ss04', p)
+    du = (p.fig_w - us.W) / 2                       # each where it stands in its cell, in this glyph's frame
+    df = p.fig_adv + (p.fig_w - f.W) / 2            # (whose x = 0 is its body's left: a 'liga' piece's)
+    x0, y0, x1, y1 = rings_to_shapely(us.rings()).bounds
+    tail = rings_to_shapely(f.rings())
+    # where the tail is the bar's full height (past its end's chamfers), and on by a chamfer and a
+    # quarter-module, so the bar's own cut end is hidden in the tail
+    runs = [_runs(tail, y=y) for y in (y0 + 0.5, y1 - 0.5)]
+    end = du + x1                                   # (an f with no tail there, as a check draws it upright: as is)
+    if all(runs):
+        end = df + max(min(r[0] for r in rs) for rs in runs) + p.c + 0.25 * p.m
+    g.p = us.p                                      # the underscore's own (Mono fits it to the cell: symkit)
+    g.clip = (du + x0, y0 - p.cap, end, y1 + p.cap)
+    g.stroke((du + x0, (y0 + y1) / 2, y1 - y0), (end, (y0 + y1) / 2))
+
+
+def register_join(names):
+    """JOIN.ss04, if the cursive set has a letter for it to run into."""
+    if not _joined(names):
+        return []
+    alt = f'{JOIN}.ss04'
+    if alt not in REGISTRY:
+        glyph(alt, None, 'fig_w', kind=('liga', 1))(_join_underscore)
+    return [alt]
 
 
 def _one_counter(g):

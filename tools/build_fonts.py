@@ -42,10 +42,10 @@ Path('build').mkdir(exist_ok=True)
 # Mono Italic: the cursive set (ss04), an alternate for every glyph that draws one of the italic's own letters
 cursive = []
 if mono and ital and __name__ == '__main__':
-    from arris.glyphs.italic_forms import cursive_fea, cursive_set, register_cursive
+    from arris.glyphs.italic_forms import cursive_fea, cursive_set, register_cursive, register_join
     cursive = cursive_set(names, italic(params(400, optics=OPTICS).with_(mono=True)),
                           workers=int(os.environ.get('ARRIS_CURSIVE_WORKERS', os.cpu_count() or 4)))
-    names = names + register_cursive(cursive)
+    names = names + register_cursive(cursive) + register_join(cursive)
     print('cursive set:', len(cursive), 'glyphs', flush=True)
 
 
