@@ -34,7 +34,7 @@ apart"):
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
 
 from ..draw import B, REGISTRY, _lightened, _thickness, glyph
@@ -335,8 +335,9 @@ def wave_flat(ctx):
 
 
 def wave_lead(ctx):
-    """Straight shaft between a wave and the barbs' ends."""
-    return max(0.5 * ctx.p.sv, 0.5 * ctx.p.m)
+    """Straight shaft between a wave and the barbs' ends (longer by the
+    drawing's ``lead``, when the arrow settles: LEADS)."""
+    return max(0.5 * ctx.p.sv, 0.5 * ctx.p.m) * getattr(ctx, 'lead', 1.0)
 
 
 def pattern_min(ctx, kind):
@@ -488,6 +489,7 @@ class Spec(Drawing):
     strike: bool = False
     long: bool = False
     marks: str = ''          # 'dblbar': two strokes across the shaft
+    lead: float = 1.0        # the straight run between a wave or zigzag and its head, of wave_lead's
 
     @property
     def n(self):
@@ -508,6 +510,7 @@ class Spec(Drawing):
         return shaft_offsets(ctx, self.n)
 
     def depth(self, ctx, h):
+        ctx.lead = self.lead
         offs = self.offs(ctx)
         d = head(ctx, self.head, h, offs).depth
         if self.tail == 'head':
@@ -531,6 +534,7 @@ class Spec(Drawing):
         return Drawing.free(self)
 
     def parts(self, ctx, Ls, h):
+        ctx.lead = self.lead
         offs = self.offs(ctx)
         hp = head(ctx, self.head, h, offs)
         tparts, starts, cap0 = tail(ctx, self.tail, -Ls, h, offs, self)
@@ -1059,14 +1063,34 @@ def arrow_glyph(name, char, spec: Drawing, kind_sides=0.8):
         return layout(spec, p, p.sh)[0]
 
     def fn(g, spec=spec):
-        W, strokes, kk = layout(spec, g.p, g.sh)
+        p0 = g.p
+        W, strokes, kk = layout(spec, p0, g.sh)
         if kk != 1.0:
-            g.p = _lightened(g.p, kk)
-        _, strokes = centre(Ctx(g.p, g.sh, Turn(spec.theta)), strokes, g.W)
-        emit(g, strokes)
+            g.p = _lightened(p0, kk)
+        ctx = Ctx(g.p, g.sh, Turn(spec.theta))
+        _, strokes = centre(ctx, strokes, g.W)
         g.clip = None
+        if not (p0.mono and isinstance(spec, Spec) and spec.shaft in ('wave', 'squiggle')):
+            emit(g, strokes)
+            return
+        # A zigzag's last leg meets the head's 45-degree edge almost along
+        # it; at Light, in the italic, the corner cut there folded back
+        # (⇜ ⇝ in Mono Light Italic). In Mono the drawing settles on the
+        # first lead whose outline is clean: the plain one wherever it
+        # already is.
+        cands = [strokes]
+        for lead in LEADS:
+            _, s2, k2 = layout(replace(spec, lead=lead), p0, g.sh)
+            if k2 == kk:
+                cands.append(centre(ctx, s2, g.W)[1])
+        g.settle([[tuple(B(q[1], q[2], q[3], q[4]) if q[0] == 'bowl' else q for q in nodes)
+                   + ({'closed': closed, 'start': start, 'end': end},)
+                   for nodes, closed, start, end in s] for s in cands])
     glyph(name, char, width, kind=('punct', kind_sides))(fn)
     return fn
+
+
+LEADS = (1.5, 2.0, 3.0)   # the leads a wave or zigzag arrow may settle on, past the plain one
 
 
 DIR = {'right': 0, 'up': 90, 'left': 180, 'down': 270,

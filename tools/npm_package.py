@@ -10,7 +10,7 @@ a site can install or load from a CDN:
     index.css         Arris (variable), Arris Mono and Arris Watch
     arris.css         Arris alone: the variable fonts, upright and italic
     arris-static.css  Arris as nine static weights a style, instead of arris.css
-    mono.css          Arris Mono, Regular and Bold, upright and italic
+    mono.css          Arris Mono, six weights (Light to Bold, with Retina), upright and italic
     watch.css         Arris Watch, nine weights
     package.json  README.md  OFL.txt  AUTHORS.txt
 
@@ -29,7 +29,7 @@ from pathlib import Path
 
 NAME = '@arristype/arris'
 REPO = 'https://github.com/huntrontrakkr/arris-type'
-WEIGHTS = {'Thin': 100, 'ExtraLight': 200, 'Light': 300, 'Regular': 400, 'Medium': 500,
+WEIGHTS = {'Thin': 100, 'ExtraLight': 200, 'Light': 300, 'Regular': 400, 'Retina': 450, 'Medium': 500,
            'SemiBold': 600, 'Bold': 700, 'ExtraBold': 800, 'Black': 900}
 # the variable fonts under names a bundler takes as they are (no brackets or commas)
 VARIABLE = {'Arris[GRAD,WTCH,wght].woff2': 'Arris-Variable.woff2',
@@ -103,7 +103,7 @@ h1   {{ font-weight: 850; font-variation-settings: "GRAD" 50, "WTCH" 100; }}
 |---|---|---|
 | `arris.css` | Arris | The variable fonts, upright and italic: any weight from 100 to 900, and grade and watch through `font-variation-settings`. |
 | `arris-static.css` | Arris | Nine static weights a style, instead of `arris.css` (use one or the other). |
-| `mono.css` | Arris Mono | Regular and Bold, upright and italic, every glyph on one advance. |
+| `mono.css` | Arris Mono | Six weights, Light (300) to Bold (700) with Retina (450), upright and italic, every glyph on one advance. |
 | `watch.css` | Arris Watch | Nine weights with the watch's own stroke balance. |
 | `index.css` | all three | `arris.css`, `mono.css` and `watch.css`. |
 
