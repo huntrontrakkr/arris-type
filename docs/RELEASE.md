@@ -42,6 +42,30 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.010
+
+- Even colour at the heavy end. The width formula counts a k, K, z or Z
+  as one stem, so as the strokes grow these letters do not widen and get
+  darker than the n beside them: at Black the upright k was 1.43 times the
+  n's density (ink over advance times x-height), where fourteen comparable
+  sans sit at 1.18 to 1.21; z 1.21 (0.94 to 1.04), Z and K 1.14 (0.92 to
+  1.02). Their diagonals now thin from Regular to Black (`draw.EVEN`,
+  `_evened`), taking them halfway to the others: k by 24% at Black, K by
+  18%, z and Z by 30%, the italic k by 15% (from 18% its loop no longer
+  draws at watch 100). Widths, the light half and the Mono are unchanged;
+  spacing and kerning follow the outlines.
+- Every glyph drawn from them follows (the accents, Ǆ ǅ ǆ Ǳ ǲ ǳ, Ẓ ẓ,
+  к ќ Ќ Қ қ Ҝ ҝ Ҟ ҟ Ҡ ҡ, ₖ, ₭), and the letters drawn with the k's or K's
+  own arms take the same share (ĸ ƙ Ƙ Ҡ Ҝ, the Bulgarian к): 39 glyphs.
+- Checked: every glyph drawn at four heavy places in both styles, the
+  thinning watched: these 39 build a thinned letter and no other does.
+  On them, topology, skeleton and nesting against 1.009's code: nothing
+  new (the italic Ҝ and Ҟ pinch in 1.009 too, and the ₭ gains a hole at
+  200 to 300, below where anything thins; the italic k's counter spills
+  17.9 units where 1.009's spilled 19.1). The italic k's share was searched along every axis
+  (500 to 900 every 20, five watches, three grades): 0.15 draws at
+  every place, 0.18 fails at watch 100.
+
 ## 1.009
 
 - Back to 1.007's drawings for every glyph but the italic k. 1.008 held
