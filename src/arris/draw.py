@@ -1296,7 +1296,7 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
 
 def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
     spec = REGISTRY[name]
-    if p.slant and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
+    if p.slant and not p.plain and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
         spec = REGISTRY[f'{name}.ital']
     g, overrides = _opened(spec, p, ot, ob, width)
     nesting = _Nesting.at(name, g, p, ot, ob, width)
@@ -1459,7 +1459,46 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
                 if _topology(trial) in (_topology_reference(spec, p), _topology(g)):
                     g = trial
                     g.lightened = k_min
+    # Mono's outline lock: in the cell a crowded glyph can fold, cross or
+    # pinch where its strokes meet, a fault the topology check names that
+    # the lock above (parts and counters) does not see: the fractions at
+    # SemiBold and Bold, ⅷ, ↂ, ∛, the italic's ₯ Ɲ ↭, ‱ whose rings touch
+    # once rounded. As the font carries it, a Mono glyph with such a fault
+    # lightens its strokes together, as little as clears it, at most to
+    # LOCK_MIN; one it cannot clear stays as drawn, for the check to name.
+    # A glyph as a font carries it: not a part drawn inside another (a
+    # composite is locked whole), not a terminal cell (never slanted).
+    if p.mono and _DEPTH[0] == 0 and _cell_kind(spec) and not spec.cell and _flawed(g, p):
+        k0 = getattr(g, 'lightened', 1.0)
+        k = 1.0
+        while k - FLAW_STEP >= LOCK_MIN - 1e-9:
+            k -= FLAW_STEP
+            h = settled(k0 * k)
+            if not _flawed(h, p):
+                g = h
+                g.lightened = k0 * k
+                break
     return g
+
+
+FLAW_STEP = 0.02    # the outline lock's step of lightening
+FLAW_CROSS = 1.0    # a crossing smaller than this (units) no size shows: the outline lock lets it be
+
+
+def _flawed(g, p: Params) -> bool:
+    """Whether a Mono drawing, as the font will carry it (placed in its
+    cell, in whole units, curved and sheared in the italic), has a fault the
+    topology check names: a crossing of a unit or more, contours that meet,
+    a fold, a pinch. Tiny edges and sub-unit crossings do not count."""
+    from .topology import faults
+    dx = (p.fig_adv - g.W) / 2
+    if p.slant:
+        from .italic import outline
+        rings, rec = g.outline(record=True)
+        contours = [[(round(x + dx), round(y), on) for x, y, on in c] for c in outline(rings, rec, p)]
+    else:
+        contours = [[(round(q[0] + dx), round(q[1]), True) for q in r] for r in g.rings()]
+    return any(f.kind not in ('tiny', 'cross') or f.size >= FLAW_CROSS for f in faults(contours, p.c, bool(p.slant)))
 
 
 _ANCHOR: dict = {}

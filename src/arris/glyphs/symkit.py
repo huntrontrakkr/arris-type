@@ -189,9 +189,12 @@ def tight(names: tuple, p, zone: tuple, cell: float | None = None):
 def set_tight(g, names, zone=None, mono_cell=True, p=None):
     """Stamp ``names`` side by side as one sign, centred in g's body.
     Letters keep their proportional forms in the monospaced cut (a slab I
-    beside a slab I would touch); there the group is condensed to the cell."""
+    beside a slab I would touch); there the group is condensed to the cell.
+    In Mono's italic they are its own letters, the upright's slanted (as it
+    sets them in text, with no room for tails): the cursive m's tail, the
+    italic i's, closed on their stems condensed in the cell (₷ ⅷ)."""
     p0 = p or g.p
-    pp = p0.with_(mono=False)
+    pp = p0.with_(mono=False, plain=bool(p0.mono and p0.slant))
     zone = zone or (0.0, p0.cap)
     cell = g.W if (p0.mono and mono_cell) else None
     pk, lay, w = tight(tuple(names), pp, tuple(zone), cell)
