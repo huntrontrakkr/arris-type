@@ -1226,8 +1226,9 @@ class _Nesting:
 # Arris Mono past Bold: a glyph whose closed counters would shut in the cell (too many strokes for its
 # ten modules at Black: Æ Œ æ œ Ǆ Ф ⅅ ℙ ↀ ⌘ ...) stops getting heavier at the weight where they start to:
 # the letter unchanged, drawn as at that weight from there to Black (docs/research/mono-cell.md). It shuts
-# where its tightest closed counter falls under half the Bold's and under a quarter of the stem, or it
-# loses a counter and white with it; a form that drops strokes by design at Black (₩ ₦ with one bar)
+# where its tightest closed counter falls under 0.6 of the Bold's and under a quarter of the stem, where it
+# loses a counter and white with it, or where its counters keep under 0.35 of the Bold's white (Ф's bowls
+# merging into a lozenge with two slits); a form that drops strokes by design at Black (₩ ₦ with one bar)
 # gains white and is left alone. The weight is found once a cut, so ExtraBold is never heavier than Black.
 MONO_HOLD = 700.0
 _MONO_HELD: dict = {}
@@ -1249,7 +1250,8 @@ def _counters(g):
 def _shuts(c, ref, sv) -> bool:
     n_p, a_p, t_p = c
     n_q, a_q, t_q = ref
-    return (t_p is not None and t_q is not None and t_p < 0.5 * t_q and t_p < 0.25 * sv) or (n_p < n_q and a_p < a_q)
+    return (t_p is not None and t_q is not None and t_p < 0.6 * t_q and t_p < 0.25 * sv) or (n_p < n_q and a_p < a_q) \
+        or (n_p and a_q and a_p < 0.35 * a_q)
 
 
 def _mono_held(name, p, ot, ob, width):
