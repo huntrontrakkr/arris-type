@@ -40,7 +40,10 @@ class Opening:
     and from there it keeps the tightest counter's area at what it was
     there, shrinking as the stem grows (in proportion), so the counter
     only ever gets smaller with the weight. (Its width, held instead, let
-    the area grow as the shape changed.)
+    the area grow as the shape changed.) The italic k's alone: 1.008 held
+    the e, æ, ø, Q and the closed-counter thinning too, and where a counter
+    is small when the rule first acts (the italic e's eye) it shrank to a
+    sliver by Black, the letter clogged; 1.009 put them back.
     """
     measure: Callable[['Glyph'], float]
     free: str
@@ -1065,54 +1068,6 @@ def _opened(spec, p, ot, ob, width, nest=True):
     return g, overrides
 
 
-_AUTO_ENGAGED: dict = {}
-
-
-def _auto_engaged(spec, n, share, p, ot, ob, width) -> float | None:
-    """The counter area the closed-counter thinning keeps at p, as an
-    opening that holds does (_engaged): from the weight of p's cut where
-    the drawing (its openings applied) first lets its tightest counter
-    under its share of the stem, that counter's area there, times that
-    weight's stem over p's. A share of a stem that grows made the counter
-    grow with the weight (the horizontals thinning more than the strokes
-    grew): ø Q Æ œ б Ҩ љ … by up to a seventh from Bold to Black."""
-    cut = _cut(p)
-    if cut is None:
-        return None
-    w, at = cut
-    key = (spec.name, n, share, at(400))
-    if key not in _AUTO_ENGAGED:
-        def short(w_):                                      # on the cut's own drawings, as _engaged
-            q = at(w_)
-            return _counter_white(_opened(spec, q, ot, ob, None, nest=False)[0], n) < share * q.sv - 1e-6
-        if short(400.0):
-            we = 400.0
-        elif not short(900.0):
-            we = None
-        else:
-            lo, hi = 400.0, 900.0
-            for _ in range(ENGAGE_STEPS):
-                mid = (lo + hi) / 2
-                lo, hi = (lo, mid) if short(mid) else (mid, hi)
-            we = hi
-        if we is None:
-            _AUTO_ENGAGED[key] = None
-        else:
-            q = at(we)
-            _AUTO_ENGAGED[key] = (we, _counter_area(_opened(spec, q, ot, ob, None, nest=False)[0]), q.sv)
-    found = _AUTO_ENGAGED[key]
-    if found is None or w < found[0]:
-        return None
-    return found[1] * (found[2] / p.sv) ** HOLD_DECAY
-
-
-NEST = os.environ.get('ARRIS_NEST', '0') == '1'   # a white-keeping rule never puts a counter outside its lighter
-                                                  # anchor's (_Nesting). Off while it is proved on a test set:
-                                                  # ARRIS_NEST=1, with ARRIS_CACHE= (the cache keys on the code,
-                                                  # not this), draws with it
-NEST_TOL = 0.5        # font units: the white a rule leaves outside the lighter counters, over their length, it may
-
-
 def _white(rings):
     """The counters of a drawing's rings, as one shape."""
     from shapely.geometry import Polygon
@@ -1225,9 +1180,6 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
 
         def measure(h):
             return _counter_white(h, n)
-        held = _auto_engaged(spec, n, share, p, ot, ob, width)
-        if held is not None:
-            measure, target = _counter_area, held
         if measure(g) < target - 1e-6:
             a, b = 1.0, AUTO_MIN
             for _ in range(24):

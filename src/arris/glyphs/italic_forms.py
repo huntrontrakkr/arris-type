@@ -388,7 +388,7 @@ def _corner_cut(g, bowl):
     return (1.0, 1.0, min(x + y for x, y in poly.exterior.coords))
 
 
-@ital('e', 8, 2, openings=[Opening(_one_counter, 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE, hold=True)])
+@ital('e', 8, 2, openings=[Opening(_one_counter, 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
 def e_ital(g):
     """The cursive e: its bar a 45-degree stroke rising from the left side
     into the top right corner, the eye the triangle above it; the lower arm
@@ -406,7 +406,7 @@ def e_ital(g):
 
 
 @ital('ae', 14, 3, width=lambda p: REGISTRY['a.ital'].width(p) + REGISTRY['e.ital'].width(p) - p.sv,
-      openings=[Opening(lambda g: _counter_white(g, 2), 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE, hold=True)])
+      openings=[Opening(lambda g: _counter_white(g, 2), 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
 def ae_ital(g):
     """The single-storey a and the cursive e on one stem: the a's bowl on
     its left, the e's eye and exit on its right."""
