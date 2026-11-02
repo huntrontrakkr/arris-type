@@ -317,6 +317,7 @@ def k_ital(g):
     f = Frame(g, 8, 'asc')
     _free(g)
     p = g.p
+    g.square = True         # its counter's side closes to a point and opens again: curved throughout (italic.SQUARE)
     xs = f.X(1)
     g.stroke(f.P(1, 13), f.P(1, 0))
     entry(g, f, xs, p.asc)

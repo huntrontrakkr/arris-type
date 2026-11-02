@@ -256,6 +256,8 @@ class Glyph:
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished)
         rec = (rec or []) + self.extra_chamfers if record else []
+        if record and getattr(self, 'square', False):
+            rec = rec + [('square',)]                   # italic.SQUARE: the italic k's edge breaks
         warp = getattr(self, 'warp', None)
         if warp is not None:
             if p.slant:
@@ -334,7 +336,7 @@ def _thickness(p: Params, sh: float) -> Thickness:
 def _warped(r, f):
     """A chamfer record entry with every point's y passed through f (a
     direction is carried by moving a point a unit along it)."""
-    if r[0] == 'warp':
+    if r[0] in ('warp', 'square'):
         return r
     if r[0] == 'bowl':
         return ('bowl',) + tuple(((q[0], f(q[1])), (d[0], f(q[1] + d[1]) - f(q[1]))) for q, d in r[1:])
@@ -346,6 +348,8 @@ def _warped(r, f):
 
 
 def _moved(r, dx, dy):
+    if r[0] == 'square':
+        return r
     if r[0] == 'warp':
         f = r[1]
         return ('warp', Shifted(f, dy)) if dy else r
