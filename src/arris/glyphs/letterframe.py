@@ -19,6 +19,7 @@ so counters change far less than strokes.
 from __future__ import annotations
 
 import math
+from types import SimpleNamespace
 
 from ..params import SQRT2
 
@@ -62,6 +63,22 @@ def heft(p) -> float:
     """How far the stem is past Regular's (a module and a half), in units;
     0 at Regular and lighter."""
     return max(0.0, p.sv - 1.5 * p.m)
+
+
+def widening_like(wm: float, stems: float, like: float):
+    """A body that keeps the formula's width to Regular and from there
+    widens by as much as one with ``like`` stems does. The k's arm and leg
+    thicken as a stem does, but the formula counts them as no stem, so its
+    k kept its width to Black while the n widened by a quarter, and its
+    loop had no room for the heavier strokes; this one widens as the n."""
+    own, other = letter_width(wm, stems), letter_width(wm, like)
+
+    def width(p):
+        if heft(p) <= 0:
+            return own(p)
+        r = SimpleNamespace(sv=1.5 * p.m, m=p.m)      # the same cut at Regular's stem: all the formula reads
+        return own(r) + other(p) - other(r)
+    return width
 
 
 def growing_width(wm: float, stems: float, k: float):

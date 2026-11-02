@@ -10,7 +10,7 @@ from __future__ import annotations
 from ..draw import B, Opening, glyph
 from ..params import SQRT2, inner_leg, outer_leg
 from .figures import STACK_MIN, beak_depth, jog
-from .letterframe import Frame, k_arms, least_white, letter_width
+from .letterframe import Frame, k_arms, least_white, letter_width, widening_like
 
 
 def low(char, wm, stems, width=None, openings=()):
@@ -225,7 +225,7 @@ def j(g):
     _dot(g, f, f.X(5))
 
 
-@low('k', 8, 1)
+@low('k', 8, 1, width=widening_like(8, 1, 2))
 def k(g):
     f = Frame(g, 8, 'asc')
     g.stroke(f.P(1, 0), f.P(1, 13))

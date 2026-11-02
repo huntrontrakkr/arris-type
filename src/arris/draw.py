@@ -1068,6 +1068,13 @@ def _opened(spec, p, ot, ob, width, nest=True):
     return g, overrides
 
 
+NEST = os.environ.get('ARRIS_NEST', '0') == '1'   # a white-keeping rule never puts a counter outside its lighter
+                                                  # anchor's (_Nesting). Off while it is proved on a test set:
+                                                  # ARRIS_NEST=1, with ARRIS_CACHE= (the cache keys on the code,
+                                                  # not this), draws with it
+NEST_TOL = 0.5        # font units: the white a rule leaves outside the lighter counters, over their length, it may
+
+
 def _white(rings):
     """The counters of a drawing's rings, as one shape."""
     from shapely.geometry import Polygon

@@ -18,7 +18,7 @@ from ..draw import B, REGISTRY, glyph
 from .cyrillic import mirror
 from .extra_latin import stamp
 from .figures import beak_depth
-from .letterframe import Frame, k_arms, letter_width
+from .letterframe import Frame, k_arms, letter_width, widening_like
 from .symkit import fit_inner
 
 HOOK_WHITE = 1.5   # modules of white between a hook and its stem, at every weight
@@ -144,7 +144,7 @@ def dhook(g):
     g.stroke((xs, f.Y(8)), B(x1, f.Y(8)), B(x1, f.Y(1)), (xs, f.Y(1)), closed=True)
 
 
-@glyph('uni0199', 'ƙ', letter_width(8, 1), kind='lower')
+@glyph('uni0199', 'ƙ', widening_like(8, 1, 2), kind='lower')
 def khook(g):
     f = Frame(g, 8, 'asc')
     _asc_hook(g, f, f.X(1))
