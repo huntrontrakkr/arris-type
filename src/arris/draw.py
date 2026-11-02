@@ -394,6 +394,7 @@ def _build(spec, p, ot, ob, overrides, width=None):
         # cell of its own parameters
         g.cell = ((g.W - p.fig_adv) / 2, (g.W + p.fig_adv) / 2)
     g.p = _evened(spec, p)
+    g.p_full = p if g.p is not p else None    # (letterframe.placing)
     _DEPTH[0] += 1
     try:
         spec.fn(g)

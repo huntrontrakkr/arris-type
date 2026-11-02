@@ -42,6 +42,46 @@ def _bar(g, x0, x1, y):
     g.stroke((x0, y), (x1, y))
 
 
+ARM = 3.0       # breaks: the least a bar reaches past the stem it crosses (t_bar)
+STUB = 3.0      # breaks: the least of the stem left standing above a bar near its top
+
+
+def t_bar(g, xl, xr, y, reach_l, reach_r, top=None, floor=None, free=(True, True)):
+    """A bar across a stem (its edges xl and xr; or across two, the outer
+    edges) centred at y, reaching reach_l and reach_r past it: a t's shape at
+    every weight. Toward Black the stroke grew and the bar's reach and the
+    stem above it did not, and an arm or a stub is drawn as a fill against
+    the stem (a break at 45 degrees in each inner corner) and a cut at its
+    end (a break at each outer corner): shorter than two breaks it is all
+    cut and fill, a point, and the bar, its arms and the stem's top ran
+    together into an arrowhead (ħ đ Ħ ҟ Ҟ Ғ Ŧ). So an arm reaches at least
+    ARM breaks past the stem, a fill, a flat and a cut (on a side that is free:
+    where the letter's own diagonal comes near, as the k's arm under ҟ's bar,
+    it keeps its reach), and below a stem's top at ``top`` at least STUB
+    breaks stand above the bar: the bar comes down for it, no lower than
+    ``floor`` (its underside, keeping the white above the letter under it);
+    where that leaves no room it thins, to STACK_MIN of a bar; and where even
+    that does not fit, the stem ends in it, a T, the bar on its top. Light
+    weights, where reach and stem stand clear of the cuts, are as drawn."""
+    p = g.p
+    rl = max(reach_l, ARM * p.c) if free[0] else reach_l
+    rr = max(reach_r, ARM * p.c) if free[1] else reach_r
+    t = g.sh
+    if top is not None:
+        hi = top - STUB * p.c                               # the bar's top no higher
+        lo = -1e9 if floor is None else floor               # its underside no lower
+        if y + t / 2 > hi:
+            if hi - t >= lo:
+                y = hi - t / 2
+            elif hi - lo >= STACK_MIN * g.sh:
+                t = hi - lo
+                y = lo + t / 2
+            else:
+                t = max(STACK_MIN * g.sh, min(g.sh, top - lo))
+                y = top - t / 2
+    g.stroke((xl - rl, y, t), (xr + rr, y))
+
+
 # --- Bars and slashes over existing letters ----------------------------------
 
 def _slashbar(g, x, y, e):
@@ -100,7 +140,7 @@ def Dcroat(g):
     p = g.p
     dx = 1.5 * p.m
     stamp(g, 'D', dx, width=g.W - dx)
-    _bar(g, 0, dx + p.sv + 2.5 * p.m, p.cap / 2)
+    t_bar(g, dx, dx + p.sv, p.cap / 2, dx, 2.5 * p.m)
 
 
 @glyph('Eth', 'Ð', width_of('D', 1.5), kind='cap')
@@ -113,28 +153,29 @@ def dcroat(g):
     p = g.p
     w = stamp(g, 'd', width=g.W - 1.5 * p.m)
     xs = w - p.sv / 2
-    _bar(g, xs - 2.5 * p.m, xs + 1.5 * p.m + p.sv / 2, (p.xh + p.asc) / 2 + p.m / 2)
+    t_bar(g, xs - p.sv / 2, xs + p.sv / 2, (p.xh + p.asc) / 2 + p.m / 2, 2.5 * p.m - p.sv / 2, 1.5 * p.m,
+          top=p.asc, floor=p.xh + p.m)
 
 
 @glyph('Hbar', 'Ħ', width_of('H', 2.0), kind='cap')
 def Hbar(g):
     p = g.p
     w = stamp(g, 'H', p.m, width=g.W - 2 * p.m)
-    _bar(g, 0, w + 2 * p.m, 0.75 * p.cap + g.sh / 4)
+    t_bar(g, p.m, p.m + w, 0.75 * p.cap + g.sh / 4, p.m, p.m, top=p.cap, floor=p.cap / 2 + g.sh / 2 + p.m)
 
 
 @glyph('hbar', 'ħ', width_of('h', 1.0), kind='lower')
 def hbar(g):
     p = g.p
     w = stamp(g, 'h', p.m, width=g.W - p.m)
-    _bar(g, 0, p.m + p.sv + 2 * p.m, (p.xh + p.asc) / 2 + p.m / 2)
+    t_bar(g, p.m, p.m + p.sv, (p.xh + p.asc) / 2 + p.m / 2, p.m, 2 * p.m, top=p.asc, floor=p.xh + p.m)
 
 
 @glyph('Tbar', 'Ŧ', width_of('T'), kind='cap')
 def Tbar(g):
     p = g.p
     w = stamp(g, 'T')
-    _bar(g, w / 2 - 2 * p.m, w / 2 + 2 * p.m, p.cap / 2)
+    t_bar(g, w / 2 - p.sv / 2, w / 2 + p.sv / 2, p.cap / 2, 2 * p.m - p.sv / 2, 2 * p.m - p.sv / 2)
 
 
 def _slot(g, w, x1):

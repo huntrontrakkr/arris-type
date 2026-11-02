@@ -46,6 +46,13 @@ def white_scale(p) -> float:
     return 1 + 0.4 * (1 - r)
 
 
+def placing(g):
+    """The parameters a drawing places its strokes by: g's own, or where its
+    diagonals are drawn thinner (draw.EVEN), the full set they were thinned
+    from."""
+    return getattr(g, 'p_full', None) or g.p
+
+
 def letter_width(wm: float, stems: float):
     """Body width for a master ``wm`` modules wide with ``stems`` stems across."""
     return lambda p: stems * p.sv + (wm - 2 * stems) * p.m * white_scale(p)
@@ -78,7 +85,10 @@ class Frame:
         self.g, self.p, self.wm = g, p, wm
         self.W = W = g.W
         sv, sh = p.sv, g.sh
-        self.k = p.sd / SQRT2          # half the across-width of a 45-degree stroke
+        # half the across-width of a 45-degree stroke: the full stroke's where a
+        # letter's diagonals are thinned (draw.EVEN), so they stay where they were,
+        # only lighter, and nothing the placement decides moves along the weight
+        self.k = placing(g).sd / SQRT2
         self.xa = [(0, 0.0), (1, sv / 2), (wm - 1, W - sv / 2), (wm, W)]
         if wm <= 2:
             self.xa = [(0, 0.0), (1, W / 2), (2, W)]
@@ -112,7 +122,7 @@ def k_arms(g, x_stem: float, W: float, top: float, branch: bool = False):
     branches from the arm, so the crotch between them stays open.
     Returns strokes as (points, start cap, end cap)."""
     p = g.p
-    k = p.sd / SQRT2
+    k = placing(g).sd / SQRT2                              # (the full stroke's: Frame.k)
     a_arm = W - top + p.c - k                               # arm: x - y = a_arm
     a_leg = W + p.c - k                                     # leg: x + y = a_leg
     xj = x_stem + p.sv * 0.999                             # (overlapping the stem by a hair)
