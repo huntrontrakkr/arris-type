@@ -57,6 +57,23 @@ before a commercial distribution if wanted.
 - Every glyph drawn from them follows (the accents, Ǆ ǅ ǆ Ǳ ǲ ǳ, Ẓ ẓ,
   к ќ Ќ Қ қ Ҝ ҝ Ҟ ҟ Ҡ ҡ, ₖ, ₭), and the letters drawn with the k's or K's
   own arms take the same share (ĸ ƙ Ƙ Ҡ Ҝ, the Bulgarian к): 39 glyphs.
+- A thinned letter places its diagonals by the full stroke
+  (`letterframe.placing`): only their weight changes, so nothing the
+  placement decides (the k's arm junction, the z's step) moves along the
+  weight. Placed by the thinner stroke they had moved, and a trial
+  variable font folded where they switched (ҟ by 12 to 15 units, z by 6).
+- Bars keep a t's shape (`extra_latin.t_bar`). An arm or a stub is drawn
+  as a fill against the stem and a cut at its end, a break each; shorter
+  than two breaks it is all fill and cut, and toward Black the bars of
+  ħ đ Ħ Đ Ð Ŧ ҟ Ҟ Ғ Ӻ ran with their stems into arrowheads. Now an arm
+  reaches at least three breaks past the stem and three breaks of stem
+  stand above a bar near its top: the bar comes down for them, then
+  thins to 0.7 of a bar, and where even that leaves no room the stem
+  ends in the bar, a T (ħ đ from 700, Ҟ Ħ at 900, ҟ on the heavy grade
+  at 800). Light weights are as drawn.
+- Қ Ҟ ҟ draw their K or k in its own body: on a grade, a room taken at
+  the graded stem left ҟ's k 3.75 units wider than the k, and its arm
+  left the stem (at 500 on the heavy grade).
 - Checked: every glyph drawn at four heavy places in both styles, the
   thinning watched: these 39 build a thinned letter and no other does.
   On them, topology, skeleton and nesting against 1.009's code: nothing
