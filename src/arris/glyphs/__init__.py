@@ -22,3 +22,4 @@ from . import arrows, operators, technical  # noqa: E402,F401  (arrows, operator
 from . import features  # noqa: E402,F401  (variants of everything above)
 from . import origin  # noqa: E402,F401  (ss20: the watch's pixel figures)
 from . import ligatures  # noqa: E402,F401  (the monospaced cut's programming ligatures)
+from . import alignment  # noqa: E402,F401  (the monospaced cut's signs that move to the letters beside them)

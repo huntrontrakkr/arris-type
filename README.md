@@ -42,10 +42,12 @@ Coverage, about 2,150 code points (details in `docs/coverage/`):
 
 Features: `tnum` (default) `pnum` `calt` (the watch's time colon between
 figures) `zero` `ss01` `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`
-`case` `locl` `ccmp` `mark` `mkmk` `kern`; in Mono, `calt` ligatures,
-`ss03` (no ligatures), `cv01`, `cv02`. And `ss20`, "Watch pixels": the
-figures as the watch drew them, one square per pixel of the 9×12 masters
-they grew from, and the time colon between them as the watch lights it.
+`case` `locl` `ccmp` `mark` `mkmk` `kern`; in Mono, `calt` ligatures and
+alignment (`- + *` drop beside lowercase, `:` rises beside capitals, `x` is
+`×` in `1920x1080` and `0xFF`), `ss03` (no ligatures), `cv01`, `cv02`. And
+`ss20`, "Watch pixels": the figures as the watch drew them, one square per
+pixel of the 9×12 masters they grew from, and the time colon between them
+as the watch lights it.
 
 ## Getting it
 
