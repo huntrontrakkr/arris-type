@@ -1224,10 +1224,11 @@ class _Nesting:
 
 
 # Arris Mono past Bold: a glyph whose closed counters would shut in the cell (too many strokes for its
-# ten modules at Black: Æ Œ æ œ Ǆ Ф ⅅ ℙ ⇔ ⌘ ...) keeps its Bold drawing, the letter unchanged, only no
-# heavier (docs/research/mono-cell.md). It shuts if its tightest closed counter falls under half the Bold's
-# and under a quarter of the stem, or it loses a counter and white with it; a form that drops strokes by
-# design at Black (₩ ₦ with one bar) gains white and is left alone.
+# ten modules at Black: Æ Œ æ œ Ǆ Ф ⅅ ℙ ↀ ⌘ ...) stops getting heavier at the weight where they start to:
+# the letter unchanged, drawn as at that weight from there to Black (docs/research/mono-cell.md). It shuts
+# where its tightest closed counter falls under half the Bold's and under a quarter of the stem, or it
+# loses a counter and white with it; a form that drops strokes by design at Black (₩ ₦ with one bar)
+# gains white and is left alone. The weight is found once a cut, so ExtraBold is never heavier than Black.
 MONO_HOLD = 700.0
 _MONO_HELD: dict = {}
 
@@ -1245,22 +1246,39 @@ def _counters(g):
     return len(holes), sum(h.area for h in holes), tight
 
 
+def _shuts(c, ref, sv) -> bool:
+    n_p, a_p, t_p = c
+    n_q, a_q, t_q = ref
+    return (t_p is not None and t_q is not None and t_p < 0.5 * t_q and t_p < 0.25 * sv) or (n_p < n_q and a_p < a_q)
+
+
 def _mono_held(name, p, ot, ob, width):
-    """The parameters to draw a Mono glyph at: its own, or Bold's where its counters would shut (MONO_HOLD)."""
+    """The parameters to draw a Mono glyph at: its own, or those of the weight where its counters start to
+    shut in the cell, past it (MONO_HOLD)."""
     if not p.mono:
         return p
     cut = _cut(p)
     if cut is None or cut[0] <= MONO_HOLD:
         return p
-    key = (name, p, ot, ob, width)
+    w, at = cut
+    key = (name, at(MONO_HOLD), ot, ob, width)
     if key not in _MONO_HELD:
-        q = cut[1](MONO_HOLD)
-        n_p, a_p, t_p = _counters(_draw(name, p, ot, ob, width))
-        n_q, a_q, t_q = _counters(_draw(name, q, ot, ob, width))
-        shut = (t_p is not None and t_q is not None and t_p < 0.5 * t_q and t_p < 0.25 * p.sv) or \
-            (n_p < n_q and a_p < a_q)
-        _MONO_HELD[key] = q if shut else p
-    return _MONO_HELD[key]
+        _MONO_HELD[key] = None                              # while it is found, a drawing that asks again (a rule's
+        ref = _counters(_draw(name, at(MONO_HOLD), ot, ob, width))   # reference at Black) is drawn as it is
+
+        def shut(w_):
+            q = at(w_)
+            return _shuts(_counters(_draw(name, q, ot, ob, width)), ref, q.sv)
+        held = None
+        if shut(900.0):
+            lo, hi = MONO_HOLD, 900.0
+            for _ in range(7):                              # to under 2 of weight
+                mid = (lo + hi) / 2
+                lo, hi = (lo, mid) if shut(mid) else (mid, hi)
+            held = lo
+        _MONO_HELD[key] = held
+    held = _MONO_HELD[key]
+    return p if held is None or w <= held else at(held)
 
 
 def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
