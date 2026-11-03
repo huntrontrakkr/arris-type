@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
-from itertools import product
+from itertools import pairwise, product
 from typing import NamedTuple
 
 from shapely.geometry.base import BaseGeometry
@@ -53,6 +53,7 @@ from .measure import LOCAL_TOL, Rings, errors, folds, predicted
 from .space import (
     CHECK,
     DEFAULT,
+    GAPS,
     GRID_AXES,
     MASTERS,
     MODEL,
@@ -89,6 +90,7 @@ class Choice(NamedTuple):
     kind: str           # 'sparse', 'grid', 'predicted grid', 'finer grid' or 'composite'
     lead: int           # how many masters lead (the rest predicted from them)
     axes: Sequence[Sequence[float]] | None      # its grid's values on each axis
+    edge: bool = False  # a point a master lacks stands on its edge (arris.variable._fill_gaps), not on a corner
 
 
 class Best(NamedTuple):
@@ -192,7 +194,7 @@ def _total(es: dict[Place, float]) -> float:
 
 
 def _candidates(n: str, variant: list[Drawn], how: str,
-                nodes: list[Place]) -> Iterator[tuple[str, int, list[Rings], list[Place]]]:
+                nodes: list[Place], edge: bool = False) -> Iterator[tuple[str, int, list[Rings], list[Place]]]:
     """(kind, how many masters lead, aligned outlines, the masters they
     are at): the whole grid aligned; then, for the font's masters and
     for BASE, the rest predicted from them, as aligned with the whole
@@ -206,7 +208,7 @@ def _candidates(n: str, variant: list[Drawn], how: str,
 
     def aligned(k: int) -> list[Rings]:
         return align(rings[:k], None if how == 'star' else [normal(m) for m in nodes[:k]],
-                     names=None if names is None else names[:k])
+                     names=None if names is None else names[:k], edge=edge)
     # the sparse layout first: where it holds everywhere (the dense
     # check: nothing past its masters, no crossing, DENSE_TOL), a glyph
     # carries 28 masters' variations, not a grid's 60 and more (the
@@ -289,26 +291,26 @@ def _choose(ctx: Context, n: str, up: list[Drawn], exact: Exact,
     first candidate's error."""
     best, first = None, None
     curved = _Curved(ctx, n)
-    for jogs in (True, False):
+    for jogs, edge in ((True, False), (True, True), (False, False), (False, True)):
         variant = up if jogs else [_drawn(ctx, n, m, False) for m in nodes]
         for how in ('named', 'tree', 'star'):
-            for kind, k, al, ns in _candidates(n, variant, how, nodes):
+            for kind, k, al, ns in _candidates(n, variant, how, nodes, edge):
                 # (the sparse layout also at the grid's other masters: a
                 # model over any of the grid's nodes is multilinear within
                 # its cells, so where it matches the drawings at every node
                 # it is as good as the grid everywhere between)
-                where = CHECK + [m for m in nodes if m not in ns]
+                where = CHECK + _GAPS + [m for m in nodes if m not in ns]
                 es = errors(al, exact, ns, where)
                 err = max(es.values())
                 if err <= LOCAL_TOL or best is None or err < best.error:
                     # (the italic's curved outlines read for a candidate that would be taken)
                     es = _merge(es, curved.folds(al, ns, kind, k, variant, nodes, where))
                     err = max(es.values())
-                log.debug('  %s %s %s %s %d: %.1f at %s', n, 'jogs' if jogs else 'no jogs', how, kind, k, err,
-                          max(es, key=es.__getitem__))
+                log.debug('  %s %s%s %s %s %d: %.1f at %s', n, 'jogs' if jogs else 'no jogs', ', on edges' if edge else '',
+                          how, kind, k, err, max(es, key=es.__getitem__))
                 first = err if first is None else first
                 if best is None or err < best.error:
-                    best = Best(err, al, variant, Choice(jogs, how, kind, k, GRID_AXES), ns)
+                    best = Best(err, al, variant, Choice(jogs, how, kind, k, GRID_AXES, edge), ns)
                 if best.error <= LOCAL_TOL:
                     break
             if best is not None and best.error <= LOCAL_TOL:
@@ -319,19 +321,19 @@ def _choose(ctx: Context, n: str, up: list[Drawn], exact: Exact,
 
 
 def _refine(ctx: Context, n: str, best: Best, exact: Exact, nodes: list[Place],
-            places: list[Place]) -> tuple[Best, dict[Place, float] | None]:
+            places: list[Place], partner: dict[Place, Place] | None = None) -> tuple[Best, dict[Place, float] | None]:
     """A finer grid, from the chosen way's alignment with every master
     drawn, a plane at a time while it helps: kept if it does better than
     the best candidate (not only better than the grid it started from: a
     predicted one may be best), or as well with the glyph nearer its
     drawings overall. With the errors over ``places`` as the grid stands."""
-    jogs, how = best.choice.jogs, best.choice.how
+    jogs, how, edge = best.choice.jogs, best.choice.how, best.choice.edge
     axes, ns, var = [list(a) for a in GRID_AXES], list(nodes), list(best.drawn)
     curved = _Curved(ctx, n)
 
     def realign(var: list[Drawn], ns: list[Place]) -> list[Rings]:
         return align([u.rings for u in var], None if how == 'star' else [normal(m) for m in ns],
-                     names=[u.edges for u in var] if how == 'named' else None)
+                     names=[u.edges for u in var] if how == 'named' else None, edge=edge)
 
     def measure(al_: list[Rings], ns_: list[Place], var_: list[Drawn]) -> dict[Place, float]:
         return _merge(errors(al_, exact, ns_, places), curved.folds(al_, ns_, 'finer grid', len(ns_), var_, ns_, places))
@@ -357,7 +359,11 @@ def _refine(ctx: Context, n: str, best: Best, exact: Exact, nodes: list[Place],
         for i in range(3):
             if spot[i] in axes[i]:
                 continue
-            ax2 = [sorted(a + [spot[i]]) if j == i else a for j, a in enumerate(axes)]
+            vals = [spot[i]]
+            other = (partner or {}).get(spot)
+            if other is not None and other[i] != spot[i] and other[i] not in axes[i]:
+                vals.append(other[i])                       # a jump's two planes together: one alone confines nothing
+            ax2 = [sorted(a + vals) if j == i else a for j, a in enumerate(axes)]
             have = set(ns)
             new: list[Place] = [(w, g, t) for w, g, t in product(*ax2) if (w, g, t) not in have]
             if len(ns) + len(new) > NODES_MAX:
@@ -377,7 +383,7 @@ def _refine(ctx: Context, n: str, best: Best, exact: Exact, nodes: list[Place],
         log.debug('  %s finer grid, tried %s: %.1f, axes %s', n, spot, max(errs.values()), axes)
     if errs is not None and start is not None and len(ns) > len(nodes) and (
             max(errs.values()) < best.error or (max(errs.values()) <= best.error and _total(errs) < start[1])):
-        best = Best(max(errs.values()), al, var, Choice(jogs, how, 'finer grid', len(ns), axes), ns)
+        best = Best(max(errs.values()), al, var, Choice(jogs, how, 'finer grid', len(ns), axes, edge), ns)
     return best, errs
 
 
@@ -482,6 +488,56 @@ def _narrowed(ctx: Context, n: str, planes: Sequence[Place]) -> list[Place]:
     return out
 
 
+_GAPS = [g for g in GAPS if g not in CHECK] if __import__('os').environ.get('ARRIS_GAPS_MEASURE') else []
+JUMP_AXES = (1.0, 1.0)      # units of grade, of watch: how close the two planes about a jump along them are brought
+
+
+def _axis_jumps(ctx: Context, n: str, nodes: Sequence[Place], up: Sequence[Drawn]) -> list[Place]:
+    """Where the drawing's structure (the rings' point counts) changes
+    between two neighbouring nodes of the grid along the grade or the watch
+    (the census reads the weight alone), and halfway between them, each
+    change narrowed by bisection to JUMP_AXES apart: the two places about
+    it. Between nodes the font interpolates straight across a change of
+    structure, the points one drawing has and the next lacks carried as
+    wedges that slide along as the axis moves (₿ at Black from grade -90 to
+    -10, 38 units off the outline); two planes about the change confine it
+    to a unit of the axis."""
+    st = {m: ','.join(str(len(r)) for r in u.rings) for m, u in zip(nodes, up)}
+    out: list[Place] = []
+
+    def at(m: Place) -> str:
+        if m not in st:
+            st[m] = _structure(ctx, n, m)
+        return st[m]
+
+    def moved(m: Place, ax: int, v: float) -> Place:
+        q = list(m)
+        q[ax] = round(v, 2)
+        return (q[0], q[1], q[2])
+    for ax in (1, 2):
+        vals = GRID_AXES[ax]
+        for m in nodes:
+            if m[ax] not in vals or vals.index(m[ax]) + 1 >= len(vals) or any(
+                    m[k] not in GRID_AXES[k] for k in range(3) if k != ax):
+                continue
+            ends = [m, moved(m, ax, (m[ax] + vals[vals.index(m[ax]) + 1]) / 2), moved(m, ax, vals[vals.index(m[ax]) + 1])]
+            try:
+                for lo, hi in pairwise(ends):
+                    s0 = at(lo)
+                    if s0 == at(hi):
+                        continue
+                    while hi[ax] - lo[ax] > JUMP_AXES[ax - 1]:
+                        mid = moved(lo, ax, (lo[ax] + hi[ax]) / 2)
+                        if at(mid) == s0:
+                            lo = mid
+                        else:
+                            hi = mid
+                    out += [lo, hi]
+            except Exception as e:  # noqa: BLE001  (a drawing that fails along the edge: no planes there)
+                log.debug('  %s jump along axis %d from %s: %s', n, ax, m, e)
+    return out
+
+
 def glyph(n: str) -> GlyphResult:
     """One glyph, start to end, in the Context ``use`` gave this process."""
     ctx = _CTX
@@ -507,14 +563,19 @@ def glyph(n: str) -> GlyphResult:
     best0, errs = best, None
     # the places the census found this glyph's drawing jumping at: the
     # refinement measures there too, and a plane there confines the jump
-    jumps = [q for q in _narrowed(ctx, n, ctx.planes.get(n, [])) if q not in CHECK and q not in REFINE]
-    places = CHECK + REFINE + jumps
+    jumps = [q for q in _narrowed(ctx, n, ctx.planes.get(n, [])) + (_axis_jumps(ctx, n, nodes, up) if __import__('os').environ.get('ARRIS_AXIS_JUMPS') else [])
+             if q not in CHECK and q not in REFINE]
+    places = CHECK + _GAPS + REFINE + jumps
     if jumps and best is not None and best.error <= LOCAL_TOL:
         at_jumps = max(errors(best.aligned, exact, best.nodes, jumps).values())
         if at_jumps > LOCAL_TOL:
             best = best._replace(error=at_jumps)
+    partner: dict[Place, Place] = {}
+    if __import__('os').environ.get('ARRIS_JUMP_PAIRS'):
+        for i in range(0, len(jumps) - 1, 2):
+            partner[jumps[i]], partner[jumps[i + 1]] = jumps[i + 1], jumps[i]
     if best is not None and best.error > LOCAL_TOL:
-        best, errs = _refine(ctx, n, best, exact, nodes, places)
+        best, errs = _refine(ctx, n, best, exact, nodes, places, partner)
     res = _finish(ctx, n, best, first, up)
     # a finer grid: the glyph without it too, what it gains (the error over
     # the check's and the refinement's places) and what it costs (bytes), so

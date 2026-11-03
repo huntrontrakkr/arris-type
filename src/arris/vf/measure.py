@@ -33,7 +33,7 @@ type Ring = list[tuple]                       # a contour's points: (x, y) or (x
 type Rings = list[Ring]                       # a glyph's outline
 
 LOCAL_TOL = 3.0     # font units: a mean outline difference a glyph's alignment is held to
-SPIKE = 20.0        # a point carried off the outline counts its distance over this (a spike has little area)
+SPIKE = float(__import__('os').environ.get('ARRIS_VF_SPIKE', '20'))        # a point carried off the outline counts its distance over this (a spike has little area)
 # Between the check's places: the interpolation looked at on a grid over the
 # whole design space (dense), against no drawing: a point carried outside the
 # box its masters span, or the outline crossing itself deeper than the

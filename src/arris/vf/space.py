@@ -82,6 +82,12 @@ REFINE: list[Place] = [(500, -50, 50), (300, -50, 0), (600, 50, 50), (750, -75, 
 # masters come from CHECK: these say whether it holds in between)
 VALID: list[Place] = [(850, 25, 25), (650, -25, 75), (300, 50, 50), (725, 60, 30), (500, -75, 25), (875, 90, 90),
                       (200, -50, 50), (575, 25, 0), (775, 0, 75), (450, 75, 100)]
+# off the masters at the heavy end, on the grade and the watch, where the
+# drawings change most between masters: where tools/vf_gaps.py and the
+# check's visible-gap report look (1.010: 543 glyphs a point over 12 units
+# off their drawings at one of these, ₿ 38 at Black, grade -50)
+GAPS: list[Place] = [(900, -50, 0), (900, -50, 100), (800, -50, 0), (800, 50, 0), (850, -25, 0), (900, -25, 0),
+                     (700, -50, 0), (700, 50, 100), (800, 50, 100), (900, -75, 50), (850, 50, 50), (750, -50, 50)]
 # a coarse grid over the whole design space, for the dense measure (dense)
 DENSE: list[Place] = [(w, g, t) for w in range(100, 901, 50) for g in (-100, -50, 0, 50, 100) for t in (0, 25, 50, 75, 100)]
 

@@ -889,7 +889,9 @@ def _cut(p):
         for _ in range(40):                                 # the weight whose stem p has
             mid = (lo + hi) / 2
             lo, hi = (mid, hi) if stem(mid) < base_sv else (lo, mid)
-        w = round((lo + hi) / 2, 3)
+        # (at most Black: a grade's stem a rounding over Black's ran the
+        # search to its end, and Black's lighter weights took in Black)
+        w = min(round((lo + hi) / 2, 3), 900.0)
 
         def make(watch):
             def at(w_):

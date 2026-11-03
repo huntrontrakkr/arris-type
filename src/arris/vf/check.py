@@ -17,12 +17,14 @@ from arris.geom import rings_to_shapely
 
 from .measure import Rings
 from .settings import Settings
-from .space import CHECK, VALID, Place, params
+from .space import CHECK, GAPS, VALID, Place, params
 
 log = logging.getLogger(__name__)
 
 TOL = 3.0       # font units: a mean outline difference under 0.3% of the em passes
 FAR = 60.0      # font units: a point carried farther than this off the outline is a spike
+VISIBLE = 10.0  # font units: a point this far off shows at display sizes (a wedge on one corner of a long
+                # outline passes TOL: ₿ at Black, grade -50, 38 units off with a mean of 1.4)
 
 type Result = tuple[float, Place, str, float]       # (mean difference, place, glyph, farthest point off)
 
@@ -85,7 +87,7 @@ def check(settings: Settings, names: Sequence[str], shown: Mapping[tuple[str, Pl
     """The font settings.font against the drawings at CHECK and VALID:
     the report logged (the worst glyphs, the spikes), every result written
     to settings.report for triage."""
-    places = CHECK + VALID
+    places = CHECK + VALID + [g for g in GAPS if g not in CHECK and g not in VALID]
     worst: list[Result] = []
     with settings.pool(len(places), _use, (settings.font, names, shown, settings.italic)) as pool:
         for res in pool.imap_unordered(_at, places):
@@ -101,5 +103,12 @@ def check(settings: Settings, names: Sequence[str], shown: Mapping[tuple[str, Pl
         log.info('  %-16s at %s: %.1f units', n, w, e)
     for e, w, n, far in spikes[:15]:
         log.info('  spike: %-16s at %s: %.0f units off', n, w, far)
+    seen = sorted({(far, n, w) for e, w, n, far in worst if far > VISIBLE}, reverse=True)
+    gaps: dict[str, tuple[float, Place]] = {}
+    for far, n, w in seen:
+        gaps.setdefault(n, (far, w))
+    log.info('visible gaps: %d glyphs with a point over %s units off their drawing somewhere', len(gaps), VISIBLE)
+    for n, (far, w) in list(gaps.items())[:25]:
+        log.info('  gap: %-16s at %s: %.0f units off', n, w, far)
     settings.report.write_text(json.dumps([[round(e, 2), list(w), n, round(far, 1)] for e, w, n, far in worst]))
     return worst

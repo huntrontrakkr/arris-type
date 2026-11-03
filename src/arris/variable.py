@@ -302,7 +302,7 @@ def _whole(arc, c):
     return list(arc) + [(2 * c - x, y) for x, y in reversed(arc[1:-1])]
 
 
-def _fill_gaps(cols, norms, locs, ends=None):
+def _fill_gaps(cols, norms, locs, ends=None, edge=False):
     """Fill each master's gaps (None in its column) with a duplicate of the
     real point on either side of the gap that the missing point is nearer
     to, judged by where it lies in the master nearest in the design space
@@ -314,7 +314,16 @@ def _fill_gaps(cols, norms, locs, ends=None):
     such slides add up off the outline where two axes meet (Δ's step at
     the heavy grade-watch corner, 440 units out). ``ends``: per master, the
     ends of an open path (the axis points of a half), which a gap at the
-    head or the tail collapses onto."""
+    head or the tail collapses onto.
+
+    ``edge``: a missing point stands instead on the edge between the two,
+    where the point lies (in that nearest master): a feature this master
+    lacks grows out of its edge there, where copied onto a corner a feature
+    away it crossed the white between the masters (₿'s bowl corner, a copy
+    of its foot's far corner at Black, 151 units off, a wedge that slid along
+    the grade). Better for some glyphs and worse for others (¥ 59 units off
+    to 14, ₿ 65 to 24; ǿ 37 to 64, the 1 29 to 52): the glyph stage tries
+    both (arris.vf.glyph)."""
     k = len(cols[0]) if cols else 0
     n = len(cols)
     real = [[q is not None for q in c] for c in cols]
@@ -323,6 +332,7 @@ def _fill_gaps(cols, norms, locs, ends=None):
         if ends is None and all(q is None for q in seq):
             raise ValueError('a master lost a whole contour')
         fill = list(seq)
+        along: dict[int, tuple[int, float]] = {}               # a stand-in on an edge: (the edge's first point, how far)
         for i in range(n):
             if seq[i] is not None:
                 continue
@@ -332,11 +342,35 @@ def _fill_gaps(cols, norms, locs, ends=None):
             if ends is None:
                 ip = next((i - t) % n for t in range(1, n + 1) if seq[(i - t) % n] is not None)
                 inx = next((i + t) % n for t in range(1, n + 1) if seq[(i + t) % n] is not None)
+                if edge and ip != inx:
+                    # on the edge between them, where the point lies (in
+                    # the master nearest that has it): a feature this
+                    # master lacks grows out of its edge there, not out of
+                    # a corner a feature away
+                    a, b = norms[mi](seq[ip]), norms[mi](seq[inx])
+                    d = (b[0] - a[0], b[1] - a[1])
+                    dd = d[0] * d[0] + d[1] * d[1]
+                    u = min(1.0, max(0.0, ((r[0] - a[0]) * d[0] + (r[1] - a[1]) * d[1]) / dd)) if dd > 1e-18 else 0.0
+                    along[i] = (ip, u)
+                    continue
                 cands = [seq[ip], seq[inx]]
             else:
                 cands = [next((seq[j] for j in range(i - 1, -1, -1) if seq[j] is not None), ends[mi][0]),
                          next((seq[j] for j in range(i + 1, n) if seq[j] is not None), ends[mi][1])]
             fill[i] = min(cands, key=lambda q: math.dist(norms[mi](q), r))
+        # the stand-ins on one edge in the ring's order along it (no zigzag)
+        last: dict[int, float] = {}
+        for t in range(1, n + 1):
+            i = (next((j for j in range(n) if seq[j] is not None), 0) + t) % n
+            if i not in along:
+                continue
+            ip, u = along[i]
+            u = max(u, last.get(ip, 0.0))
+            last[ip] = u
+            a = seq[ip]
+            b = seq[next((i + s_) % n for s_ in range(1, n + 1) if seq[(i + s_) % n] is not None)]
+            q = (a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u)
+            fill[i] = q + tuple((a if u < 0.5 else b)[2:])
         for c, q in zip(cols, fill):
             c[mi] = q
     if ends is None and locs:
@@ -492,7 +526,7 @@ def _mirror_align(masters, locs=None, turn=TURN):
     return out
 
 
-def align(masters: list[list[list[tuple]]], locs=None, turn=TURN, names=None):
+def align(masters: list[list[list[tuple]]], locs=None, turn=TURN, names=None, edge=False):
     """masters: per master, a list of rings (ink-left). Returns the same,
     made compatible (same contour order, same point counts, same order), or
     raises ValueError. A glyph symmetric in every master is aligned by its
@@ -507,16 +541,19 @@ def align(masters: list[list[list[tuple]]], locs=None, turn=TURN, names=None):
 
     names: per master, per ring, the name of each edge (geom.ink's tags):
     points are then paired by what made them (vertex_names) before where
-    they lie, and a glyph symmetric in every master is aligned whole."""
+    they lie, and a glyph symmetric in every master is aligned whole.
+
+    edge: a point a master lacks stands on its edge, not on a corner
+    (``_fill_gaps``)."""
     if names is not None:
         named = [[[(q[0], q[1], nm) for q, nm in zip(r, vertex_names(en))] for r, en in zip(m, mn)]
                  for m, mn in zip(masters, names)]
-        return [[[q[:2] for q in r] for r in m] for m in _align(named, locs, turn)]
+        return [[[q[:2] for q in r] for r in m] for m in _align(named, locs, turn, edge)]
     if any(masters):
         res = _mirror_align(masters, locs, turn)
         if res is not None:
             return res
-    return _align(masters, locs, turn)
+    return _align(masters, locs, turn, edge)
 
 
 def _tree(ref_i, k, locs):
@@ -561,7 +598,7 @@ def _guide(cols, pa, norm):
     return pts, [t.get(i, 0.0) for i in range(len(cols))], len(real) == len(cols), names
 
 
-def _align(masters, locs=None, turn=TURN):
+def _align(masters, locs=None, turn=TURN, edge=False):
     k = len(masters)
     if not any(masters):
         return masters                                      # an empty glyph (a blank Braille cell) varies trivially
@@ -608,7 +645,7 @@ def _align(masters, locs=None, turn=TURN):
                     col[mi] = ring[b]
                     new_cols.append(col)
             cols = new_cols
-        _fill_gaps(cols, norms, locs)
+        _fill_gaps(cols, norms, locs, edge=edge)
         for mi in range(k):
             out[mi][ci] = [c[mi] for c in cols]
     return out

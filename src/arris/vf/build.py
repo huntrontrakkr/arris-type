@@ -75,8 +75,9 @@ def gather(settings: Settings, ctx: Context, names: Sequence[str]) -> Outlines:
             if own:
                 out.own[n] = own
             c = r.choice
-            if c is not None and (c.jogs, c.how, c.kind) != (True, 'named', 'grid'):
-                out.chosen.append((n, 'jogs kept' if not c.jogs else '', c.how, c.kind, round(r.first, 1), round(r.error, 1)))
+            if c is not None and (c.jogs, c.how, c.kind, c.edge) != (True, 'named', 'grid', False):
+                out.chosen.append((n, ('jogs kept' if not c.jogs else '') + (' on edges' if c.edge else ''), c.how, c.kind,
+                                   round(r.first, 1), round(r.error, 1)))
             for i, m in enumerate(MASTERS):
                 out.upright[m][n] = r.upright[i]                    # (rings, advance)
                 out.aligned[m][n] = (rings[i], r.upright[i][1])
