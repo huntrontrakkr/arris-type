@@ -531,6 +531,82 @@ def double_plus(g):
     g.stroke((x0 + s0.W / 2, a), (x1 + s1.W / 2, a))
 
 
+@liga('+++')
+def triple_plus(g):
+    """`+++`: the three plus signs as themselves, their bars run through."""
+    p = g.p
+    a = axis(p)
+    s0, x0 = _stamp(g, 'plus', 0)
+    _stamp(g, 'plus', 1)
+    s2, x2 = _stamp(g, 'plus', 2)
+    g.stroke((x0 + s0.W / 2, a), (x2 + s2.W / 2, a))
+
+
+# --- Repeats: the copies drawn together ----------------------------------------
+# Fira Code draws a character repeated (`!!` `::` `//` `||` `<<` `&&` ...) as its
+# copies brought together, so the run reads as one operator. Here each copy is
+# the character as it is drawn alone, the run centred on its cells: the copies
+# half a cell apart (STEP), as Fira's are, but with WHITE at least between them
+# at Regular, square to their strokes (a wide % or & comes in only as far as
+# that; nested chevrons, whose arms are long and shallow, as far as a stroke
+# and a half square to the arms); never further apart than set alone. As Fira's,
+# the copies stand as far apart at every weight as at Regular, the white
+# thinning as the strokes grow, down to WHITE_MIN (where Bold's chevrons part a
+# little more).
+
+STEP = 0.5      # of a cell: how far apart a repeat's copies stand
+WHITE = 1.5     # strokes (the weight's stem, at least a module): the least white between them at Regular, square to
+                # their strokes (measured across instead, << nested into a ≪)
+WHITE_MIN = 0.75    # strokes: the least at any weight (each weight its own white instead, Light's << nested into a ≪
+                    # and Bold's stood apart as typed)
+
+
+def _close_step(p, ink, gap):
+    """How far apart (in x) two copies of ``ink`` stand for ``gap`` of white
+    between them, by bisection on the distance between the two."""
+    from shapely import affinity
+    x0, _, x1, _ = ink.bounds
+    lo, hi = 0.0, (x1 - x0) + gap
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        if ink.distance(affinity.translate(ink, mid, 0.0)) < gap:
+            lo = mid
+        else:
+            hi = mid
+    return hi
+
+
+def _together(g, name, n):
+    """n copies of ``name`` together (STEP, WHITE), centred on the n cells."""
+    from ..draw import _cut
+    p, W = g.p, g.W
+    sub = _sub(name, p)
+    ink = _ink_of(sub)
+    cut = _cut(p)
+    reg = cut[1](400) if cut is not None else p                 # the same cut at Regular
+    at_reg = _close_step(reg, _ink_of(_sub(name, reg)), WHITE * max(reg.sv, reg.m))
+    step = min(p.fig_adv, max(STEP * p.fig_adv, at_reg, _close_step(p, ink, WHITE_MIN * max(p.sv, p.m))))
+    x0, _, x1, _ = ink.bounds
+    mid = (x0 + x1) / 2                                     # the copy's ink centred, not its advance
+    for k in range(n):
+        g.add_glyph(sub, W / 2 - mid + (k - (n - 1) / 2) * step, 0.0)
+
+
+def _register_repeats():
+    for ch, n in (('!', 2), ('%', 2), ('&', 2), ('*', 2), ('*', 3), ('.', 2), ('.', 3), (':', 2), (':', 3),
+                  (';', 2), ('/', 2), ('/', 3), ('|', 2), ('|', 3), ('?', 2), ('<', 2), ('<', 3), ('>', 2),
+                  ('>', 3)):
+        name = _names(ch)[0]
+
+        def fn(g, name=name, n=n):
+            _together(g, name, n)
+        fn.__doc__ = f'`{ch * n}`: {n} copies of {name} together.'
+        liga(ch * n)(fn)
+
+
+_register_repeats()
+
+
 # --- `<$>`: the chevrons' arms run on to the dollar's S --------------------------
 
 def _dollar_wrap(g, left, right):
