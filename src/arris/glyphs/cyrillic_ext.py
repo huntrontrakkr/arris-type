@@ -882,7 +882,15 @@ def ghemidhook(g):
 def pemidhook(g):
     f = Frame(g, 11, 'lower')
     g.stroke(f.P(1, 0), f.P(1, 8), f.P(7, 8), f.P(7, 0))
-    g.stroke(f.P(7, 4.5), B(*f.P(10, 4.5)), B(*f.P(10, -2)), f.P(8.5, -2))
+    # the tail, shorter than its corner's chamfer, ends on it in a point;
+    # where that point lands a unit off the chamfer it folds over it (800 to
+    # 850 with the watch's strokes, a crossing the topology lock lightened
+    # the whole letter to undo). It shortens by a clear step instead (a
+    # smaller one left the corner's own chamfer a sliver at 850)
+    g.settle([[(f.P(7, 4.5), B(*f.P(10, 4.5)), B(*f.P(10, -2)), (f.X(8.5) + d, f.Y(-2)))] for d in PEMID_STEPS])
+
+
+PEMID_STEPS = (0, 12, 16, 20, 24)   # units the ҧ's tail shortens by to clear its corner's chamfer (settle)
 
 
 @glyph('uni04E1', 'ӡ', letter_width(8, 2), kind='lower')

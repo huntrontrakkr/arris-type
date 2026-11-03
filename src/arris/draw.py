@@ -305,7 +305,8 @@ class Glyph:
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished)
         rec = (rec or []) + self.extra_chamfers if record else []
         if record and getattr(self, 'square', False):
-            rec = rec + [('square',)]                   # italic.SQUARE: the italic k's edge breaks
+            # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)
+            rec = rec + [('square',) if self.square is True else ('square', self.square)]
         warp = getattr(self, 'warp', None)
         if warp is not None:
             if p.slant:
@@ -1378,6 +1379,18 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
             # than its Regular capital: there the rule still holds.)
             continue
         v = _squint_monotone(spec, sq, p, ot, ob, overrides, width)
+        if sq.form:
+            # a choice of form keeps the next lighter weight's where that is
+            # further toward the limit: the lighter weights are read here with
+            # this weight's own openings (the ¢'s slash, thinned more at 850
+            # than at 800), and the ¢ took stubs at 800, its stem through at
+            # 850 and stubs at 900
+            lighter = _lighter(p)
+            if lighter:
+                a0 = g.defaults[sq.free]
+                prev = _anchor(name, lighter[-1], ot, ob, width)[1].get(sq.free)
+                if prev is not None and (v is None or abs(prev - a0) > abs(v - a0)):
+                    v = prev
         if v is not None:
             overrides[sq.free] = v
             g = _build(spec, p, ot, ob, overrides, width)
@@ -1452,13 +1465,24 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
             k_here = getattr(g, 'lightened', 1.0)
             k_min = min(k_here, _anchor(name, lighter[-1], ot, ob, width)[0])
             if k_min < k_here - 1e-9:
-                trial = settled(k_min)
-                # taken unless it changes the topology for the worse: one
-                # the lock could not restore ($ at 875, its counters gone
-                # lightened or not) stays as wrong, and continuous
-                if _topology(trial) in (_topology_reference(spec, p), _topology(g)):
-                    g = trial
-                    g.lightened = k_min
+                # taken unless it changes the topology for the worse; then a
+                # little lighter still, a margin at a time to LOCK_MIN, for
+                # the lighter weight's share can land on the one stroke that
+                # rejoins two parts (the italic ₰ and ҧ under the watch's
+                # balance eased past Bold kept 0.83 at 800, none at 850 and
+                # 0.83 again at 875, a fifth of a stroke on and off between
+                # masters). One the lock could not restore ($ at 875, its
+                # counters gone lightened or not) stays as wrong, and
+                # continuous
+                ok = (_topology_reference(spec, p), _topology(g))
+                k_try = k_min
+                while k_try >= LOCK_MIN - 1e-9:
+                    trial = settled(k_try)
+                    if _topology(trial) in ok:
+                        g = trial
+                        g.lightened = k_try
+                        break
+                    k_try -= LOCK_MARGIN
     # Mono's outline lock: in the cell a crowded glyph can fold, cross or
     # pinch where its strokes meet, a fault the topology check names that
     # the lock above (parts and counters) does not see: the fractions at

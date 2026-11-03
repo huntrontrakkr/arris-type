@@ -14,7 +14,7 @@ Capitals with tonos stand it to the left, as the monotonic capitals do.
 """
 from __future__ import annotations
 
-from ..draw import B, REGISTRY, glyph
+from ..draw import NUDGE, B, REGISTRY, glyph
 from ..params import SQRT2
 from .cyrillic import mirror
 from .cyrillic_ext import room
@@ -100,9 +100,13 @@ def Upsilonacutehook(g):
 def pi_symbol(g):
     """ω under a bar that reaches past its sides."""
     f = Frame(g, 13, 'lower')
-    g.stroke((0, f.Y(8)), (f.W, f.Y(8)))
-    g.stroke(f.P(2, 8), B(*f.P(2, 1)), B(*f.P(11, 1)), f.P(11, 8))
-    g.stroke((f.W / 2, f.Y(1)), (f.W / 2, f.Y(5)))
+    # the fill where a side meets the bar's underside can lie on the line of
+    # its bottom corner's inner chamfer (the italic at 850 with the watch's
+    # strokes eased past Bold), which claims it and holds the corner
+    # straight at that weight alone: of the bar's settling steps, the one
+    # that leaves the most corners curved
+    g.settle([[((0, f.Y(8) + d), (f.W, f.Y(8) + d)), (f.P(2, 8), B(*f.P(2, 1)), B(*f.P(11, 1)), f.P(11, 8)),
+               ((f.W / 2, f.Y(1)), (f.W / 2, f.Y(5)))] for d in NUDGE], curves=True)
 
 
 def _draws(g, pts):

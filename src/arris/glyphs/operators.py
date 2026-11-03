@@ -1645,11 +1645,19 @@ def partialdiff(g):
     xl, xr = p.sv / 2, W - p.sv / 2
     yb, yt = g.sh / 2, p.cap - g.sh / 2
     ybt = 0.58 * p.cap - g.sh / 2
-    # the beak: the 2's, never nearer the bowl than a stem's white
-    d = min(beak_depth(p), yt - (ybt + g.sh + max(p.sv, 1.25 * p.m)))
+    d = beak_depth(p)
     g.stroke(B(xl, yb), B(xr, yb), B(xr, ybt), B(xl, ybt), closed=True)
-    # the right side runs on up from the bowl's straight side, so the two are one at every weight
-    g.stroke((xr, (yb + ybt) / 2), B(xr, yt), B(xl, yt), (xl, yt + g.sh / 2 - d))
+    # The right side runs on up from the bowl's straight side, so the two are one at every weight,
+    # and turns back over the bowl into the 2's beak while that leaves a stem's white above the
+    # bowl; from the weight where it cannot, the arm ends square at the left edge. Never a beak
+    # in between: cut shorter to keep the white (the arm's thickness counted twice, so from 350),
+    # a beak shorter than the corner it hangs from crossed that corner's chamfer, a step at 300, a
+    # tooth under the arm in the italic at 500, and from 600 its end rose over its own corner and
+    # the stroke doubled back up, a wedge over the cap.
+    if yt - ybt - d >= max(p.sv, 1.25 * p.m):
+        g.stroke((xr, (yb + ybt) / 2), B(xr, yt), B(xl, yt), (xl, yt + g.sh / 2 - d))
+    else:
+        g.stroke((xr, (yb + ybt) / 2), B(xr, yt), (0.0, yt))
 
 
 @glyph('emptyset', '∅', lambda p: 0.85 * p.cap + 0.5 * p.sv, kind='cap')

@@ -562,6 +562,7 @@ def hryvnia(g):
     for y in (yl, yu):
         g.stroke((-hang, y, t), (W + hang, y))
     mark_bars(g, -hang, W + hang, yl, yu)
+    g.square = 'bowl'       # a corner's side shrinks to a point and opens again: curved throughout (italic.SQUARE)
 
 
 def _cross_pair(p):
@@ -647,9 +648,20 @@ def manat(g):
     """An arch on two legs with a stem through its top up to the cap height."""
     f = Frame(g, 10)
     p, W = f.p, f.W
-    ya = f.Y(8)
+    # From Bold up the arch's top chamfers meet the stem a break or so under
+    # its own top corners, and the jog between (geom.JOG) closed at one
+    # weight and stayed at the next: in the italic the corners curved, held
+    # and curved again (800 to 850 on the heavy grade with the watch's
+    # strokes eased past Bold). The arch settles MANAT_DROP lower by
+    # ExtraBold, so the jog stays and the corners hold from where they first do.
+    from ..instances import STEMS
+    t = min(1.0, max(0.0, (p.sv - STEMS[700]) / (STEMS[800] - STEMS[700])))
+    ya = f.Y(8) - MANAT_DROP * t
     g.stroke(f.P(1, 0), B(f.X(1), ya), B(f.X(9), ya), f.P(9, 0))
     g.stroke((W / 2, f.Y(3.5)), (W / 2, p.cap))
+
+
+MANAT_DROP = 12.0   # units: how much lower ₼'s arch stands at ExtraBold and heavier
 
 
 @cur('uni20BE', '₾', letter_width(10, 2))

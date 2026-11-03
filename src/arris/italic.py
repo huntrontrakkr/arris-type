@@ -72,6 +72,8 @@ def _owners(a, b, record):
     an edge break whose ends it is."""
     out = []
     for idx, r in enumerate(record):
+        if r[0] == SQUARE:
+            continue
         if r[0] == 'chord':
             if ((math.dist(a, r[1]) < ON and math.dist(b, r[2]) < ON)
                     or (math.dist(a, r[2]) < ON and math.dist(b, r[1]) < ON)):
@@ -157,6 +159,7 @@ def _segments(rings_, record, p: Params):
     which claimed and curved it to a corner far off it, a lens cut out of
     the leg."""
     square = any(r and r[0] == SQUARE for r in record)
+    square_bowls = any(r and r[0] == SQUARE and r[1:] == ('bowl',) for r in record)
     claims = {}
     for ri, ring in enumerate(rings_):
         pts = [tuple(q) for q in ring]
@@ -201,11 +204,14 @@ def _segments(rings_, record, p: Params):
             corner = bool(turns) and not (len(turns) == 2 and (turns[0] > 0) != (turns[1] > 0))
             # an S-bend or a straight run is no corner: it cannot curve, and holds its pair straight
             smooth = corner and _joins_smoothly(vin, seg) and _joins_smoothly(vout, seg)
-            if square and own[0] == 'chord' and corner and not smooth:
+            if square and (own[0] == 'chord' or square_bowls) and corner and not smooth:
                 # an edge break against a 45-degree edge square to it stands where an axis edge
                 # between them shrank to nothing: curved as it was while that edge was there (the
                 # italic k's counter, its side a point at 665 on the heavy grade, curved again at 675).
-                # The k's alone (SQUARE in its record): everywhere it changed 511 italic glyphs
+                # The k's alone (SQUARE in its record): everywhere it changed 511 italic glyphs.
+                # ₴'s bowl corners as well (('square', 'bowl')): the right side between its top
+                # corner and the spine shrank to nothing from 700 and, the watch's strokes eased past
+                # Bold, came back nine units long at Black on the light grade
                 smooth = all(_joins_smoothly(v, seg) or _square(v, seg) for v in (vin, vout))
             out.append((ri, i, own, smooth, corner and turns[0] > 0, corner))
     return out
