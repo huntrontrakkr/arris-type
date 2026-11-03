@@ -305,7 +305,8 @@ class Glyph:
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished)
         rec = (rec or []) + self.extra_chamfers if record else []
         if record and getattr(self, 'square', False):
-            rec = rec + [('square',)]                   # italic.SQUARE: the italic k's edge breaks
+            # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)
+            rec = rec + [('square',) if self.square is True else ('square', self.square)]
         warp = getattr(self, 'warp', None)
         if warp is not None:
             if p.slant:
@@ -913,6 +914,22 @@ def _cut(p):
     return _CANON[p]
 
 
+def _at_watch(p, watch):
+    """p's weight and grade in its own cut at another watch balance, if p is
+    a font's own (_cut); else None."""
+    cut = _cut(p)
+    if cut is None:
+        return None
+    from .instances import params
+    q = params(cut[0], p.grad, watch=watch).with_(mono=p.mono)
+    if p.cursive:
+        q = q.with_(cursive=True)
+    if p.slant:
+        from .italic import italic
+        q = italic(q)
+    return q
+
+
 def _lighter(p):
     """The parameters of the lighter weights of p's own cut, from the
     Regular's up (every 100), if p is a font's own; else None (_cut)."""
@@ -1378,6 +1395,18 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
             # than its Regular capital: there the rule still holds.)
             continue
         v = _squint_monotone(spec, sq, p, ot, ob, overrides, width)
+        if sq.form:
+            # a choice of form keeps the next lighter weight's where that is
+            # further toward the limit: the lighter weights are read here with
+            # this weight's own openings (the ¢'s slash, thinned more at 850
+            # than at 800), and the ¢ took stubs at 800, its stem through at
+            # 850 and stubs at 900
+            lighter = _lighter(p)
+            if lighter:
+                a0 = g.defaults[sq.free]
+                prev = _anchor(name, lighter[-1], ot, ob, width)[1].get(sq.free)
+                if prev is not None and (v is None or abs(prev - a0) > abs(v - a0)):
+                    v = prev
         if v is not None:
             overrides[sq.free] = v
             g = _build(spec, p, ot, ob, overrides, width)
@@ -1455,10 +1484,29 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
                 trial = settled(k_min)
                 # taken unless it changes the topology for the worse: one
                 # the lock could not restore ($ at 875, its counters gone
-                # lightened or not) stays as wrong, and continuous
+                # lightened or not) stays as wrong, and continuous. (Not a
+                # little lighter still: past the lighter weight's share the
+                # lightening differed between the watch's masters and the
+                # places between them, which the variable font cannot carry,
+                # the italic @ twelve units off at Black on the half watch.)
                 if _topology(trial) in (_topology_reference(spec, p), _topology(g)):
                     g = trial
                     g.lightened = k_min
+    # Between the watch's ends the lightening is the blend of the ends'.
+    # The variable font draws the watch axis from its ends alone (a glyph's
+    # finer grid rarely adds a plane on it), so a lightening that came and
+    # went between them (the lock or the white rule engaging at WTCH 25 or
+    # 50 and not at 0 or 100, in some sixty glyphs) left the font's outline
+    # off the drawing there, and the italic @ lost its finer grid to it.
+    watch = 1.0 - p.optical
+    if 1e-6 < watch < 1.0 - 1e-6 and p.floor and g.strokes and not g.extra:
+        ends = [_at_watch(p, w_) for w_ in (0.0, 1.0)]
+        if None not in ends:
+            k0, k1 = (_anchor(name, q, ot, ob, width)[0] for q in ends)
+            k = k0 + (k1 - k0) * watch
+            if abs(k - getattr(g, 'lightened', 1.0)) > 1e-4:
+                g = settled(k)
+                g.lightened = k
     # Mono's outline lock: in the cell a crowded glyph can fold, cross or
     # pinch where its strokes meet, a fault the topology check names that
     # the lock above (parts and counters) does not see: the fractions at

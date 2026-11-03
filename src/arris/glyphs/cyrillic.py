@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from shapely import affinity
 
-from ..draw import AUTO_MIN, Opening, Squint, B, REGISTRY, draw, glyph
+from ..draw import AUTO_MIN, NUDGE, Opening, Squint, B, REGISTRY, draw, glyph
 from ..geom import rings_to_shapely
 from .caps import big
 from .figures import beak_depth, jog
@@ -276,9 +276,14 @@ def Yusbig(g):
     45 degrees, its point on an arch whose legs stand on the baseline, and a
     stem from the point down the middle."""
     f = Frame(g, 12)
-    g.stroke(f.P(1, 11), f.P(11, 11), f.P(6, 6), closed=True)
-    g.stroke(f.P(1, 0), B(*f.P(1, 6)), B(*f.P(11, 6)), f.P(11, 0))
-    g.stroke(f.P(6, 6), f.P(6, 0))
+    # the triangle's side can meet the arch's corner just where its chamfer
+    # ends (the italic small capital at 850 with the watch's strokes eased
+    # past Bold), a concave turn there that holds the corner straight at
+    # that weight alone: of the arch's settling steps (its point with it),
+    # the one that leaves the most corners curved
+    g.settle([[(f.P(1, 11), f.P(11, 11), (f.X(6), f.Y(6) + d), {'closed': True}),
+               (f.P(1, 0), B(f.X(1), f.Y(6) + d), B(f.X(11), f.Y(6) + d), f.P(11, 0)),
+               ((f.X(6), f.Y(6) + d), f.P(6, 0))] for d in NUDGE], curves=True)
 
 
 @ccap('uni042D', 'Э', 9, 2, squint=OPEN_BOWLS)

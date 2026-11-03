@@ -83,3 +83,19 @@ def test_pixel_colon_is_the_watch_colon():
     lit = {(r, c) for r in range(12) for c in range(2)
            if ink.contains(Point(x0 + (c + 0.5) * u, HERITAGE.cap - (r + 0.5) * u))}
     assert lit == {(r, c) for r in (3, 4, 8, 9) for c in (0, 1)}
+
+
+def test_watch_balance_eases_off_past_bold_only():
+    """The watch's stroke balance is whole up to 750, the watch (SemiBold)
+    among them, and eases off toward Black (instances.WATCH_TAPER), its
+    horizontals still thickening with the weight; Arris Watch's statics
+    take the same balance as the variable font at WTCH 100."""
+    from arris.instances import HERITAGE_OPTICS, WATCH_FLOOR, params, watch_share
+    assert all(watch_share(w) == 1.0 for w in range(100, 751, 50))
+    assert abs(watch_share(900) - WATCH_FLOOR) < 1e-9
+    shares = [watch_share(w) for w in range(750, 901, 25)]
+    assert shares == sorted(shares, reverse=True)
+    for w in (100, 400, 600, 750, 800, 850, 900):
+        assert params(w, optics=HERITAGE_OPTICS) == params(w, watch=1.0)
+    sh = [params(w, watch=1.0).sh for w in range(600, 901, 25)]
+    assert sh == sorted(sh)

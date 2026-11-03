@@ -126,11 +126,16 @@ def hook_y(g, f):
 
 def hook(g, f, x, y_from, reach=4.0):
     """A stem at x from y_from running on below the baseline and turning
-    back left on a bowl corner (Ђ's and Ŋ's hook)."""
-    from .italic_forms import tail_run
+    back left on a bowl corner (Ђ's and Ŋ's hook). Where the tail is shorter
+    than its corner needs for a flat to its end (italic_forms.run_floor),
+    the corner's chamfer is the smaller: the chamfer ate the tail of ԓ's
+    hook whole at Black with the watch's strokes, a wedge to a point."""
+    from .italic_forms import run_floor, tail_run
     p = g.p
     yh = hook_y(g, f)
-    g.stroke((x, y_from), B(x, yh), (x - tail_run(p, reach * p.m * white_scale(p)), yh))
+    run = tail_run(p, reach * p.m * white_scale(p))
+    leg = p.leg - max(0.0, run_floor(p) - run)
+    g.stroke((x, y_from), ('bowl', x, yh, max(leg, p.c), None), (x - run, yh))
     _down(g, p.desc)
 
 
@@ -878,11 +883,26 @@ def ghemidhook(g):
     g.stroke(f.P(1, 4.5), B(*f.P(7, 4.5)), B(*f.P(7, -2)), f.P(3.5, -2))
 
 
-@glyph('uni04A7', 'ҧ', letter_width(11, 3), kind='lower')
+@glyph('uni04A7', 'ҧ', lambda p: REGISTRY['uni043F'].width(p) + hook_reach(p), kind='lower')
 def pemidhook(g):
-    f = Frame(g, 11, 'lower')
-    g.stroke(f.P(1, 0), f.P(1, 8), f.P(7, 8), f.P(7, 0))
-    g.stroke(f.P(7, 4.5), B(*f.P(10, 4.5)), B(*f.P(10, -2)), f.P(8.5, -2))
+    """п with the hook from the middle of its right stem, drawn as the
+    capital's and the italic's are: the п in its own body and the hook
+    hook_reach beyond it, its white growing with the stroke. (In one frame
+    of eleven modules the hook's arm and tail did not grow: from Bold up its
+    corners' chamfers ate both and the hook was one wedge to a point.) The
+    tail runs as far as its corner needs, a module short of the п's stem;
+    where that is not far enough the corner's chamfer is the smaller, so the
+    tail keeps a flat to its end at every weight."""
+    from .italic_forms import run_floor
+    p = g.p
+    f = frame_in(g, 9, g.W - hook_reach(p), 'lower')
+    g.stroke(f.P(1, 0), f.P(1, 8), f.P(8, 8), f.P(8, 0))
+    xs = f.X(8)
+    xh = xs + hook_reach(p)
+    run = min(p.sv / 2 + room(p), max(1.5 * room(p), run_floor(p)))
+    leg = p.leg - max(0.0, run_floor(p) - run)
+    g.stroke((xs, f.Y(4.5)), B(xh, f.Y(4.5)), ('bowl', xh, f.Y(-2), leg, None), (xh - run, f.Y(-2)))
+    g.clip = (0, -p.desc, g.W, p.xh)
 
 
 @glyph('uni04E1', 'ӡ', letter_width(8, 2), kind='lower')

@@ -214,7 +214,28 @@ placed by rule can still land an edge a unit from a jog of the letter it
 crosses, so a bar is settled: drawn, read with the topology check
 (`arris.topology`), and stepped a few units off such a coincidence
 (`Glyph.settle`). The ŧ's bar, the ₽'s bar and foot and the ℘'s hook are
-drawn this way.
+drawn this way. Where the ŧ's slot will not hold the bar at its stack
+minimum with a module of white either side, the white gives way first,
+down to a break, then the bar, to half its own, and only then does the slot
+fill. A part that meets a neighbour's chamfer just where the outline's
+jog cleanup or the italic's curving decides differently from one weight
+to the next settles too, of its steps the one that leaves the most
+corners curved (ϖ's bar, Ѫ's arch), or stands where the decision holds
+one way at every weight (₼'s arch, a few units lower from Bold).
+
+**Ends that stay ends.** A tail, a hook or a beak shorter than the corner
+it turns on ends in that corner's chamfer, a point, and from Bold up the
+chamfer grows faster than the tail. So a tail runs at least as far as its
+corner needs for a flat to its end, and where the letter has no room for
+that the corner's chamfer is the smaller (ҧ's and ԓ's hooks, drawn as Ҧ's
+is: the hook stands a reach that grows with the stroke beyond the stem). A
+beak is the full one or none: ∂'s arm turns down into the 2's beak while
+that leaves a stem's white above the bowl, and ends square from the
+weight where it cannot; a beak cut shorter crossed its corner's chamfer
+(a tooth under the arm in the italic at 500, a wedge over the cap from
+600). The white between a tail and the bowl above it (ϱ ℊ ₰) closes whole
+from where it is narrower than the slits the outline fills, not partly and
+differently at each weight.
 The skeleton check (`arris.skeleton`) holds that no feature flickers along
 any axis, and the topology check that nothing on the way folds, spikes or
 pinches.
@@ -238,6 +259,12 @@ a sign made of diagonals alone (‹ « ^) is measured by its diagonal, not by
 a stem it has none of. Lightening and the counter thinning are monotone
 in the weight: a weight keeps at least what the next lighter named weight
 of its cut decided, so neither comes and goes along the weight axis.
+A choice of form keeps the lighter weight's too: once the ¢ or the $
+takes stubs for its stem, every heavier weight does. Between the watch
+axis's ends a glyph's lightening is the blend of what it takes at either
+end: the variable font draws that axis from its ends, so a lightening
+that came and went between them (some sixty glyphs, the italic @ among
+them) left the font's outline off the drawing there.
 
 **A floor under every stroke.** The lightest the font draws is the Thin's
 own thinnest stroke (its horizontal, 22 units). Nothing is drawn thinner,
@@ -265,6 +292,19 @@ shrink below a module, so they stay visible.
 wide across as a stem, horizontals as heavy as verticals. *Measured optics*
 (the default) follow well-made fonts (section 5). At the watch weight, the
 watch balance is the watch.
+
+Past Bold the watch balance eases off: from 750 it takes a falling share
+of the watch's ratios, three quarters of them at Black
+(`instances.WATCH_TAPER`). Whole, it makes every horizontal as thick as a
+stem, where the measured optics thin it to 0.85, and past Bold the drawings
+have no room for that: where bars stack against a bowl (э є ӭ ԙ ℡ ҕ ҙ) the
+white between them closed and the letter pooled into a blob at Black. Its
+horizontals still thicken with the weight, only more slowly. Eased to half,
+the ŧ cleared too, but some thirty drawings turned back toward the measured
+optics' own: a corner the watch's balance holds from Light up (the italic
+s's) curved again at 850, a feature lost and regained along the weight.
+The watch itself, SemiBold, and every weight up to 750 keep the balance
+whole, and Arris Watch takes the same balance as the variable font at WTCH 100.
 
 ## 5. Optical corrections
 
