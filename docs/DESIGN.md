@@ -259,11 +259,8 @@ a sign made of diagonals alone (‹ « ^) is measured by its diagonal, not by
 a stem it has none of. Lightening and the counter thinning are monotone
 in the weight: a weight keeps at least what the next lighter named weight
 of its cut decided, so neither comes and goes along the weight axis.
-Where the lighter weight's lightening would change a heavier weight's
-topology, the heavier one lightens a little further rather than not at
-all (the italic ₰ took 0.83 at 800, none at 850 and 0.83 again at 875). A
-choice of form keeps the lighter weight's too: once the ¢ or the $ takes
-stubs for its stem, every heavier weight does.
+A choice of form keeps the lighter weight's too: once the ¢ or the $
+takes stubs for its stem, every heavier weight does.
 
 **A floor under every stroke.** The lightest the font draws is the Thin's
 own thinnest stroke (its horizontal, 22 units). Nothing is drawn thinner,

@@ -727,8 +727,14 @@ def pfennig(g):
     g.clip = (0, -p.desc, f.W, p.asc)
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
     beak = max(f.Y(12) - beak_depth(p) + g.sh / 2, p.xh + max(p.m, 0.6 * p.sv))   # clear of the bowl
-    g.stroke((f.X(2), min(beak, f.Y(12) - 0.01)), B(*f.P(2, 12)), B(*f.P(7, 12)), B(*f.P(7, -2)), f.P(2, -2))
-    if not p.slant:     # the italic's curved bowl corner shuts the slit's mouth into a pinhole, which the lock opens evenly
+    # In the italic the bowl's curved corner reaches down to a tail that
+    # ends under it and shuts the slit's mouth into a pinhole at some weights
+    # and not others, which the topology lock lightened the sign to open, on
+    # and off along the weight (0.83 at 800, none at 850, 0.83 at 875 with
+    # the watch's strokes): there the tail ends a module short of the corner.
+    xe = f.X(3) if p.slant else f.X(2)
+    g.stroke((f.X(2), min(beak, f.Y(12) - 0.01)), B(*f.P(2, 12)), B(*f.P(7, 12)), B(*f.P(7, -2)), (xe, f.Y(-2)))
+    if not p.slant:
         close_slit(g, f.X(2), f.X(7), f.Y(-2) + g.sh / 2, f.Y(1) - g.sh / 2)
 
 

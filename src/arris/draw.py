@@ -1465,24 +1465,17 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
             k_here = getattr(g, 'lightened', 1.0)
             k_min = min(k_here, _anchor(name, lighter[-1], ot, ob, width)[0])
             if k_min < k_here - 1e-9:
-                # taken unless it changes the topology for the worse; then a
-                # little lighter still, a margin at a time to LOCK_MIN, for
-                # the lighter weight's share can land on the one stroke that
-                # rejoins two parts (the italic ₰ and ҧ under the watch's
-                # balance eased past Bold kept 0.83 at 800, none at 850 and
-                # 0.83 again at 875, a fifth of a stroke on and off between
-                # masters). One the lock could not restore ($ at 875, its
-                # counters gone lightened or not) stays as wrong, and
-                # continuous
-                ok = (_topology_reference(spec, p), _topology(g))
-                k_try = k_min
-                while k_try >= LOCK_MIN - 1e-9:
-                    trial = settled(k_try)
-                    if _topology(trial) in ok:
-                        g = trial
-                        g.lightened = k_try
-                        break
-                    k_try -= LOCK_MARGIN
+                trial = settled(k_min)
+                # taken unless it changes the topology for the worse: one
+                # the lock could not restore ($ at 875, its counters gone
+                # lightened or not) stays as wrong, and continuous. (Not a
+                # little lighter still: past the lighter weight's share the
+                # lightening differed between the watch's masters and the
+                # places between them, which the variable font cannot carry,
+                # the italic @ twelve units off at Black on the half watch.)
+                if _topology(trial) in (_topology_reference(spec, p), _topology(g)):
+                    g = trial
+                    g.lightened = k_min
     # Mono's outline lock: in the cell a crowded glyph can fold, cross or
     # pinch where its strokes meet, a fault the topology check names that
     # the lock above (parts and counters) does not see: the fractions at
