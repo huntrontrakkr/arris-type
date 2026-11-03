@@ -39,7 +39,8 @@ names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital')
                  and (mono or not _liga(n))]
 Path('build').mkdir(exist_ok=True)
 
-# Mono Italic: the cursive set (ss04), an alternate for every glyph that draws one of the italic's own letters
+# Mono Italic: drawn with its cursive set (f k y), and an alternate for every glyph that draws one of them,
+# with the slanted upright's letter instead (ss04)
 cursive = []
 if mono and ital and __name__ == '__main__':
     from arris.glyphs.italic_forms import cursive_fea, cursive_set, register_cursive, register_join
@@ -53,7 +54,7 @@ def one(w):
     p = params(w, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono)
     style = (MONO_NAMES if mono else NAMES)[w]
     if ital:
-        p = italic(p)
+        p = italic(p).with_(cursive=mono)
         style = 'Italic' if style == 'Regular' else f'{style} Italic'
     path = f"build/{family.replace(' ', '')}-{style.replace(' ', '')}.ttf"
     build(path, names, p, family=family, style=style, weight=w, fea=fea(mono=mono) + (cursive_fea(cursive) if cursive else ''))

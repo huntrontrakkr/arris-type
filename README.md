@@ -45,9 +45,11 @@ figures) `zero` `ss01` `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`
 `case` `locl` `ccmp` `mark` `mkmk` `kern`; in Mono, `calt` ligatures and
 alignment (`- + *` drop beside lowercase, `:` rises beside capitals, `x` is
 `×` in `1920x1080` and `0xFF`), `ss03` (no ligatures), `cv01`, `cv02`, and
-in Mono Italic `ss04`, "Cursive italic" (the italic's descending f and
-looped k, drawn into the cell) and, with it, `ss05`, "Underscore into the
-cursive f" (`is_fresh` as one line into the f; off unless turned on). And
+in Mono Italic the italic's descending f, looped k and the y that runs on
+into its descender, drawn into the cell, and an underscore that runs into
+the f's tail (`is_fresh` as one line), all by default; `ss04`, "Plain
+italic f k y", gives back the slanted upright's three, and `ss05`,
+"Underscore apart", the underscore as it is. And
 `ss20`, "Watch pixels": the figures as the watch drew them, one square per
 pixel of the 9×12 masters they grew from, and the time colon between them
 as the watch lights it.
