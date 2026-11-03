@@ -202,23 +202,38 @@ liga('->>')(lambda g: _arrow(g, double=True))
 liga('<<-')(lambda g: _arrow(g, right=False, left=True, double=True))
 
 
-def _wave(g, sign):
-    """`~>`, `~~>`, `<~`: the tilde's step (up at 45 degrees, along, down,
-    along) at the tilde's own period, leaving and rejoining the axis, into
-    the arrows' head."""
-    p, W = g.p, g.W
+def _wave_pts(p, x_from, x_to, end=None):
+    """The tilde's step (up at 45 degrees, along, down, along) at the
+    tilde's own period, as many whole periods as fit between x_from and
+    x_to, centred there, leaving and rejoining the axis; on along the axis
+    to x_from and to ``end`` (x_to if not given)."""
     a = axis(p)
     d = REGISTRY['asciitilde'].width(p) / 4                  # the tilde's step (punct.asciitilde)
-    tip, start = _tip(g, 1), edge(p)
-    run = tip - head_h(p) - start                            # the shaft's room behind the barbs
+    run = x_to - x_from
     n = max(1, int(run // (4 * d)))
-    x0 = start + (run - 4 * d * n) / 2
-    pts = [(start, a)] if x0 > start + 1 else []
+    x0 = x_from + (run - 4 * d * n) / 2
+    pts = [(x_from, a)] if x0 > x_from + 1 else []
     for i in range(n):
         x = x0 + 4 * d * i
         pts += [(x, a), (x + d / 2, a + d / 2), (x + 3 * d / 2, a + d / 2),
                 (x + 5 * d / 2, a - d / 2), (x + 7 * d / 2, a - d / 2)]
-    pts += [(x0 + 4 * d * n, a), (tip, a)]
+    return pts + [(x0 + 4 * d * n, a), (x_to if end is None else end, a)]
+
+
+def _wave(g, sign, both=False):
+    """`~>`, `~~>`, `<~`, `<~~`, `<~>`: the tilde's wave into the arrows'
+    head (or heads)."""
+    p, W = g.p, g.W
+    a = axis(p)
+    tip, start = _tip(g, 1), edge(p)
+    if both:
+        lt = W - tip
+        pts = _wave_pts(p, lt + head_h(p), tip - head_h(p), end=tip)
+        g.stroke((lt, a), *pts)
+        head(g, (tip, a), 1)
+        head(g, (lt, a), -1)
+        return
+    pts = _wave_pts(p, start, tip - head_h(p), end=tip)      # the shaft's room behind the barbs
     if sign < 0:
         pts = [(W - x, y) for x, y in pts]
     g.stroke(*pts)
@@ -226,7 +241,111 @@ def _wave(g, sign):
 
 
 liga('~>', '~~>')(lambda g: _wave(g, 1))
-liga('<~')(lambda g: _wave(g, -1))
+liga('<~', '<~~')(lambda g: _wave(g, -1))
+# `<~>`: both heads on the wave, as `<->` has both on its shaft (`<~` and `~>`
+# take the arrows' head; the < and > themselves, as Fira draws it, open at 2:1
+# too slowly for the wave: it could begin only far from their points)
+liga('<~>')(lambda g: _wave(g, 1, both=True))
+
+
+def _tilde_d(p):
+    return REGISTRY['asciitilde'].width(p) / 4               # the tilde's step (punct.asciitilde)
+
+
+@liga('~~')
+def double_tilde(g):
+    """`~~`: the two tildes as one stroke, the second's step begun where
+    the first's ends (at the foot of its step), one even wave of two steps
+    centred on the cells, its ends the tilde's own."""
+    p = g.p
+    a, d = axis(p), _tilde_d(p)
+    lo, hi = a - d / 2, a + d / 2
+    x = g.W / 2 - 4 * d
+    pts = []
+    for k in (0, 4):
+        pts += [(x + k * d, lo), (x + (k + 1) * d, hi), (x + (k + 2) * d, hi), (x + (k + 3) * d, lo)]
+    g.stroke(*pts, (x + 8 * d, lo), start='v', end='v')
+
+
+@liga('-~')
+def hyphen_tilde(g):
+    """`-~`: the hyphen along the axis, turning up into the tilde's first
+    stroke where that crosses the axis: one stroke into the wave."""
+    p = g.p
+    a, d = axis(p), _tilde_d(p)
+    lo, hi = a - d / 2, a + d / 2
+    x = _at(g, _sub('asciitilde', p), 1)
+    g.stroke((edge(p), a), (x + d / 2, a), (x + d, hi), (x + 2 * d, hi), (x + 3 * d, lo), (x + 4 * d, lo),
+             end='v')
+
+
+@liga('~-')
+def tilde_hyphen(g):
+    """`~-`: the tilde, its downstroke turning along the axis where it
+    crosses it and running on as the hyphen (`-~` turned about)."""
+    p, W = g.p, g.W
+    a, d = axis(p), _tilde_d(p)
+    lo, hi = a - d / 2, a + d / 2
+    x = _at(g, _sub('asciitilde', p), 0)
+    g.stroke((x, lo), (x + d, hi), (x + 2 * d, hi), (x + 5 * d / 2, a), (W - edge(p), a), start='v')
+
+
+@liga('~@')
+def tilde_at(g):
+    """`~@`: the tilde as itself, and from the foot of its step its wave's
+    next step, rising at the steep 2:1 into the @: it becomes the ring's
+    top-left corner, so one line runs from the wave over the top of the @,
+    and the @'s side hangs from it (punct.at's lead-in; as Fira Code's tilde
+    becomes its @'s outer stroke)."""
+    from ..draw import Glyph
+    p = g.p
+    a = axis(p)
+    t, at = _sub('asciitilde', p), _sub('at', p)
+    d = t.W / 4
+    x0, xa = _at(g, t, 0), _at(g, at, 1)
+    lo, hi = a - d / 2, a + d / 2
+    h = Glyph(p, 'at', W=at.W)
+    h.sh_auto = getattr(at, 'sh_auto', h.sh_auto)
+    h.lead = [(x0 + k * d - xa, y) for k, y in ((0, lo), (1, hi), (2, hi), (3, lo), (4, lo))]
+    REGISTRY['at'].fn(h)
+    if h.clip is not None:                                  # the @ keeps to its box: the box opened to the left
+        cx0, cy0, cx1, cy1 = h.clip                         # for the wave
+        h.clip = (min(cx0, x0 - xa - p.sv), min(cy0, lo - p.sv), cx1, cy1)
+    g.add_glyph(h, xa, 0.0)
+
+
+@liga('^=')
+def caret_equal(g):
+    """`^=`: the caret and the = as themselves, the caret's right arm run
+    on down at 45 degrees and the ='s top bar on to the left until they
+    meet."""
+    p = g.p
+    c, xc = _stamp(g, 'asciicircum', 0)
+    e, xe = _stamp(g, 'equal', 1)
+    k = p.sd / SQRT2
+    ya = p.cap + p.c - k                                     # the caret's point (punct.asciicircum)
+    xp = xc + c.W / 2
+    yb = axis(p) + bars_offset(g)                           # the top bar's centreline
+    xm = xp + (ya - yb)                                     # where the arm, run on, crosses it
+    y_in = p.cap - 2 * p.c                                  # from inside the arm (the caret is cut at the cap)
+    g.stroke((xp + (ya - y_in), y_in), (xm, yb), (xe + p.c, yb), start='flat', end='flat')
+
+
+def _slashes_meet(g, down):
+    """`/\\` (∧) and `\\/` (∨): one sign, as Arris's ∧ ∨ are drawn
+    (operators.gable: two 2:1 strokes meeting in a point), from the
+    baseline to the cap height across the two cells."""
+    from .letterframe import STEEP
+    from .operators import gable
+    p = g.p
+    w = p.ss / STEEP[1]                                     # a 2:1 stroke's width across (gable)
+    H = p.cap
+    xc = g.W / 2
+    gable(g, H / 2, 0, down=down, x0=xc - H / 2 - w / 2, x1=xc + H / 2 + w / 2)
+
+
+liga('/\\')(lambda g: _slashes_meet(g, False))
+liga('\\/')(lambda g: _slashes_meet(g, True))
 
 
 # --- Characters as themselves ------------------------------------------------------
@@ -455,6 +574,25 @@ def pipes_left(g):
     t = _triangle(g, 0, -1, _pipe_x(g, 1))
     x, a = _pipe_x(g, 2), axis(g.p)
     g.stroke((x, a - t), (x, a + t))
+
+
+@liga('|||>')
+def pipes3_right(g):
+    """The triangle, and the other pipes uprights as tall as its side."""
+    t = _triangle(g, 3, 1, _pipe_x(g, 2))
+    a = axis(g.p)
+    for i in (0, 1):
+        x = _pipe_x(g, i)
+        g.stroke((x, a - t), (x, a + t))
+
+
+@liga('<|||')
+def pipes3_left(g):
+    t = _triangle(g, 0, -1, _pipe_x(g, 1))
+    a = axis(g.p)
+    for i in (2, 3):
+        x = _pipe_x(g, i)
+        g.stroke((x, a - t), (x, a + t))
 
 
 # --- Tags: the chevron's arm runs on to the slash -----------------------------------

@@ -552,7 +552,21 @@ def at(g):
     g.stroke((xs8, yb), B(xa, yb, leg), B(xa, ya, leg), (xs8, ya), closed=True)
     # stem, then out along the bottom and round the outside, open at the foot
     g.stroke((xs8, ya), (xs8, yb), B(f.X(11), yb, p.m / 2), f.P(11, 7))
-    g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
+    lead = getattr(g, 'lead', None)
+    if lead is None:
+        g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
+        return
+    # a lead-in (the `~@` ligature: the tilde, in this frame, its last point
+    # where it rises): it climbs at the steep 2:1 from there to the ring's
+    # left side and on as the ring's top-left corner, so one line runs from
+    # it over the top; the left side hangs from that diagonal, down and
+    # along the foot as it does
+    x1, top = f.X(1), f.Y(11)
+    lx, ly = lead[-1]
+    yj = ly + 2 * (x1 - lx)
+    xt = x1 + (top - yj) / 2
+    g.stroke(f.P(11, 6), B(*f.P(11, 11)), (xt, top), (x1, yj), *reversed(lead), end='v')
+    g.stroke((x1, yj), B(*f.P(1, 1)), f.P(10, 1))
 
 
 SPOKE = math.atan2(1, 2)       # the asterisk's slanted spokes: the shallow 2:1
