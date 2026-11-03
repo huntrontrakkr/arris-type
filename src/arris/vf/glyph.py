@@ -514,7 +514,7 @@ def _axis_jumps(ctx: Context, n: str, nodes: Sequence[Place], up: Sequence[Drawn
         q = list(m)
         q[ax] = round(v, 2)
         return (q[0], q[1], q[2])
-    for ax in (1, 2):
+    for ax in [int(c) for c in __import__('os').environ.get('ARRIS_AXIS_JUMPS', '12') if c in '012']:
         vals = GRID_AXES[ax]
         for m in nodes:
             if m[ax] not in vals or vals.index(m[ax]) + 1 >= len(vals) or any(
@@ -526,7 +526,7 @@ def _axis_jumps(ctx: Context, n: str, nodes: Sequence[Place], up: Sequence[Drawn
                     s0 = at(lo)
                     if s0 == at(hi):
                         continue
-                    while hi[ax] - lo[ax] > JUMP_AXES[ax - 1]:
+                    while hi[ax] - lo[ax] > (JUMP if ax == 0 else JUMP_AXES[ax - 1]):
                         mid = moved(lo, ax, (lo[ax] + hi[ax]) / 2)
                         if at(mid) == s0:
                             lo = mid
