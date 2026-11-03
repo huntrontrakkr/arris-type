@@ -266,6 +266,19 @@ wide across as a stem, horizontals as heavy as verticals. *Measured optics*
 (the default) follow well-made fonts (section 5). At the watch weight, the
 watch balance is the watch.
 
+Past Bold the watch balance eases off: from 750 it takes a falling share
+of the watch's ratios, three quarters of them at Black
+(`instances.WATCH_TAPER`). Whole, it makes every horizontal as thick as a
+stem, where the measured optics thin it to 0.85, and past Bold the drawings
+have no room for that: where bars stack against a bowl (э є ӭ ԙ ℡ ҕ ҙ) the
+white between them closed and the letter pooled into a blob at Black. Its
+horizontals still thicken with the weight, only more slowly. Eased to half,
+the ŧ cleared too, but some thirty drawings turned back toward the measured
+optics' own: a corner the watch's balance holds from Light up (the italic
+s's) curved again at 850, a feature lost and regained along the weight.
+The watch itself, SemiBold, and every weight up to 750 keep the balance
+whole, and Arris Watch takes the same balance as the variable font at WTCH 100.
+
 ## 5. Optical corrections
 
 Corrections in Arris are measured, not eyeballed. The numbers come from

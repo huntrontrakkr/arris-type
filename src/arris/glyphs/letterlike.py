@@ -22,7 +22,7 @@ from types import SimpleNamespace
 from ..draw import B, REGISTRY, draw, glyph
 from ..params import SQRT2, outer_leg
 from .figures import beak_depth, jog
-from .letterframe import STEEP, Frame, heft, least_white, letter_width
+from .letterframe import STEEP, Frame, close_slit, heft, least_white, letter_width
 from .lower import HOOK_ROOM
 from .symkit import MIRROR, TURN, across, fit_inner, set_tight, sign, small_all, stamp_t, tight
 
@@ -320,6 +320,7 @@ def scriptg(g):
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
     top = min(-p.desc + beak_depth(p), -max(p.m, 0.6 * p.sv))     # white under the bowl
     g.stroke(f.P(7, 9), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), max(top, f.Y(-2) + 0.01)))
+    close_slit(g, f.X(1) + p.sv / 2, f.X(7), f.Y(-2) + g.sh / 2, f.Y(1) - g.sh / 2)
 
 
 def loop_w(p):

@@ -166,6 +166,9 @@ def _slot(g, w, x1):
     return top, foot, ink.bounds[2], rings, xs
 
 
+TBAR_MIN = 0.5    # the ŧ's bar, where its slot is shortest (Black with the watch's strokes), thins to this share of itself before it fills the slot
+
+
 @glyph('tbar', 'ŧ', width_of('t'), kind='lower')
 def tbar(g):
     # The bar lies in the slot between the t's crossbar and its hook, at
@@ -194,9 +197,23 @@ def tbar(g):
     # corners meet their neighbours mirrored, closing into a V: harmless.)
     stem_l = xs - p.c - p.sv
     leg = max([foot] + [q[1] for r in rings for q in r if abs(q[0] - stem_l) <= 1 and q[1] < p.xh / 2])
-    low, high = max(foot + p.m, leg + 1.5 * p.c), top - p.m
+    def low_at(w):
+        return max(foot + w, leg + 1.5 * p.c)
     bar = g.sh * g.held_share()                             # the bar stops gaining weight at EXTRA_HOLD
     floor = STACK_MIN * bar
+    w = p.m
+    if top - w - low_at(w) < floor:
+        # Short of room at the stack minimum (at Black with the watch's
+        # strokes, and the grade's): the white above and below gives way
+        # first, from a module to a break (narrower, the outline fills it as
+        # a slit), and then the bar, to TBAR_MIN of itself; only past that
+        # does it fill the slot. Each gives way by degrees as the slot
+        # narrows, so the bar thins once along the weight and never returns.
+        w1 = (top - foot - floor) / 2
+        w = w1 if foot + w1 >= leg + 1.5 * p.c else top - (leg + 1.5 * p.c) - floor
+        w = min(p.m, max(p.c, w))
+        floor = max(min(floor, top - w - low_at(w)), TBAR_MIN * bar)
+    low, high = low_at(w), top - w
     thick = min(bar, max(floor, high - low))
     if high - low >= thick:
         y = min(max(p.xh * 0.45, low + thick / 2), high - thick / 2)

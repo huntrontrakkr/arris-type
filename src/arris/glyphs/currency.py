@@ -24,7 +24,7 @@ from ..draw import B, NUDGE, REGISTRY, draw, glyph, white_features
 from ..params import SQRT2
 from .caps import big
 from .figures import STACK_MIN, beak_depth, heaviness, jog
-from .letterframe import STEEP, Frame, growing_width, letter_width
+from .letterframe import STEEP, Frame, close_slit, growing_width, letter_width
 from .symkit import _condensed, across, set_tight, sign, tight_width
 
 
@@ -716,6 +716,8 @@ def pfennig(g):
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
     beak = max(f.Y(12) - beak_depth(p) + g.sh / 2, p.xh + max(p.m, 0.6 * p.sv))   # clear of the bowl
     g.stroke((f.X(2), min(beak, f.Y(12) - 0.01)), B(*f.P(2, 12)), B(*f.P(7, 12)), B(*f.P(7, -2)), f.P(2, -2))
+    if not p.slant:     # the italic's curved bowl corner shuts the slit's mouth into a pinhole, which the lock opens evenly
+        close_slit(g, f.X(2), f.X(7), f.Y(-2) + g.sh / 2, f.Y(1) - g.sh / 2)
 
 
 @cur('uni20BB', '\u20bb', lambda p: REGISTRY['m'].width(p) + _loop_w(p), kind='lower')

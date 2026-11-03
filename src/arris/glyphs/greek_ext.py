@@ -21,7 +21,7 @@ from .cyrillic_ext import room
 from .cyrillic_locl import tall_ve
 from .figures import beak_depth
 from .greek import _tonos_width
-from .letterframe import Frame, letter_width
+from .letterframe import Frame, close_slit, letter_width
 
 ALIASES = {
     0x03D5: 'uni0444',      # phi symbol: the stroked phi
@@ -149,6 +149,7 @@ def rho_symbol(g):
     g.clip = (0, -p.desc, f.W, p.xh)
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
     g.stroke(f.P(1, 4), B(*f.P(1, -2)), f.P(6.5, -2))
+    close_slit(g, f.X(1), f.X(6.5), f.Y(-2) + g.sh / 2, f.Y(1) - g.sh / 2)
 
 
 # --- Lunate sigmas, reversed and dotted ---------------------------------------

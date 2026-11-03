@@ -5,6 +5,8 @@ Axes:
   GRAD  -100-100 grade: strokes up to a fifth thinner or thicker in the same
                  widths and spacing, for light-on-dark text (docs/DESIGN.md);
                  a positive grade fades out toward Black (GRAD_TAPER)
+  WTCH  0-100    the watch's stroke balance (docs/DESIGN.md); past Bold it
+                 eases off toward Black (WATCH_TAPER)
 
 Everything optical (stroke ratios by direction, edge breaks, overshoots) is
 derived here from the stem and the correction constants in ``OPTICS``, which
@@ -94,13 +96,44 @@ def grade_k(wght: float, grad: float) -> float:
     return 1 + grad * GRAD_SHARE
 
 
+# The watch's stroke balance eases off past Bold: from 750 it takes a falling
+# share of the watch's ratios, down to WATCH_FLOOR at Black. At its full share
+# every horizontal is as thick as a stem (the measured optics thin them to
+# 0.85 at Black) and every diagonal as wide across as one, and past Bold the
+# drawings have no room for that: where bars stack against a bowl (э є ӭ ԙ ℡
+# ҕ ҙ) the white between them closed into a blob at Black. Eased further, to
+# half, the ŧ cleared too, but the drawings turned back toward the measured
+# optics' own along the weight: a corner the watch's balance holds from Light
+# up (the italic s's) curved again at 850, in some thirty glyphs, a feature
+# lost and regained. Three quarters keeps the watch's character at Black;
+# the ŧ has a rule of its own. The watch itself, SemiBold, and every weight
+# up to 750 keep the full balance.
+WATCH_TAPER = (750.0, 900.0)
+WATCH_FLOOR = 0.75
+
+
+def watch_share(wght: float) -> float:
+    """The share of the watch's stroke balance a weight takes at WTCH 100."""
+    a, b = WATCH_TAPER
+    t = min(1.0, max(0.0, (wght - a) / (b - a)))
+    return 1.0 - (1.0 - WATCH_FLOOR) * t
+
+
 def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Params = Params(),
            watch: float = 0.0) -> Params:
     """Parameters for a weight, a grade, and a balance between the measured
-    optics (watch = 0) and the watch's own proportions (watch = 1)."""
-    if watch:
+    optics (watch = 0) and the watch's own proportions (watch = 1), eased
+    off past Bold (WATCH_TAPER). The watch's optics passed whole are watch = 1
+    (Arris Watch)."""
+    if optics == HERITAGE_OPTICS:
+        optics, watch = OPTICS, 1.0
+    optical = 1.0 - watch
+    share = watch * watch_share(wght)
+    if share >= 1.0:
+        optics = HERITAGE_OPTICS
+    elif share:
         a, b = optics, HERITAGE_OPTICS
-        mix = lambda x, y: x + (y - x) * watch
+        mix = lambda x, y: x + (y - x) * share
         optics = Optics(h_light=mix(a.h_light, b.h_light), h_heavy=mix(a.h_heavy, b.h_heavy),
                         d_light=mix(a.d_light, b.d_light), d_heavy=mix(a.d_heavy, b.d_heavy),
                         s_light=mix(a.s_light, b.s_light), s_heavy=mix(a.s_heavy, b.s_heavy),
@@ -109,7 +142,6 @@ def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Pa
     if grad:
         k = grade_k(wght, grad)
         p = p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, grade_k=k, grad=grad)
-    optical = 0.0 if optics == HERITAGE_OPTICS else 1.0 - watch
     return p.with_(floor=stroke_floor(base), optical=optical)
 
 

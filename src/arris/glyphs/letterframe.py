@@ -124,3 +124,18 @@ def k_arms(g, x_stem: float, W: float, top: float, branch: bool = False):
     xm = max((a_arm + a_leg) / 2, x_stem)
     return [([(top + a_arm, top), (x_stem, x_stem - a_arm)], 'h', 'flat'),
             ([(xm, a_leg - xm), (a_leg, 0)], 'flat', 'h')]
+
+
+def close_slit(g, x0: float, x1: float, bottom: float, top: float) -> None:
+    """Fill the white between two horizontals, x0 to x1, from ``bottom``
+    (the lower stroke's top edge) up to ``top`` (the upper one's bottom
+    edge), where it is narrower than the slits the outline fills
+    (geom.SLIT): whole, not as the outline's fill takes it, partly and
+    from weight to weight differently. Under ϱ ℊ ₰'s bowls the white
+    became a wedge at one weight, a slit at the next and closed at the
+    one after, along the heavy watch; filled whole from where it is that
+    narrow, it closes once and stays closed."""
+    from ..geom import SLIT
+    white = top - bottom
+    if 0 < white < 2 * SLIT * g.p.c:
+        g.stroke((x0, (top + bottom - 1) / 2, white + 1), (x1, (top + bottom - 1) / 2))
