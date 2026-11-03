@@ -914,6 +914,22 @@ def _cut(p):
     return _CANON[p]
 
 
+def _at_watch(p, watch):
+    """p's weight and grade in its own cut at another watch balance, if p is
+    a font's own (_cut); else None."""
+    cut = _cut(p)
+    if cut is None:
+        return None
+    from .instances import params
+    q = params(cut[0], p.grad, watch=watch).with_(mono=p.mono)
+    if p.cursive:
+        q = q.with_(cursive=True)
+    if p.slant:
+        from .italic import italic
+        q = italic(q)
+    return q
+
+
 def _lighter(p):
     """The parameters of the lighter weights of p's own cut, from the
     Regular's up (every 100), if p is a font's own; else None (_cut)."""
@@ -1476,6 +1492,21 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
                 if _topology(trial) in (_topology_reference(spec, p), _topology(g)):
                     g = trial
                     g.lightened = k_min
+    # Between the watch's ends the lightening is the blend of the ends'.
+    # The variable font draws the watch axis from its ends alone (a glyph's
+    # finer grid rarely adds a plane on it), so a lightening that came and
+    # went between them (the lock or the white rule engaging at WTCH 25 or
+    # 50 and not at 0 or 100, in some sixty glyphs) left the font's outline
+    # off the drawing there, and the italic @ lost its finer grid to it.
+    watch = 1.0 - p.optical
+    if 1e-6 < watch < 1.0 - 1e-6 and p.floor and g.strokes and not g.extra:
+        ends = [_at_watch(p, w_) for w_ in (0.0, 1.0)]
+        if None not in ends:
+            k0, k1 = (_anchor(name, q, ot, ob, width)[0] for q in ends)
+            k = k0 + (k1 - k0) * watch
+            if abs(k - getattr(g, 'lightened', 1.0)) > 1e-4:
+                g = settled(k)
+                g.lightened = k
     # Mono's outline lock: in the cell a crowded glyph can fold, cross or
     # pinch where its strokes meet, a fault the topology check names that
     # the lock above (parts and counters) does not see: the fractions at
