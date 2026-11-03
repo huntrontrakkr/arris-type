@@ -13,6 +13,10 @@ whichever interpolates best is kept:
   instead of each against its neighbours in the design space (the default;
   arris.variable): one master's points can pair better with the others'
   through the thin master than through a chain of neighbours;
+* a point a master lacks standing on its edge, where the point lies in
+  the nearest master that has it, rather than copied onto a corner
+  (arris.variable._fill_gaps): a corner a feature away carries the
+  point across the white between the masters, a wedge;
 * the masters drawn again without the jog closing (geom._close_jogs):
   cleaned of jogs, neighbouring weights can differ in structure where a
   step closes at one and not the next.
@@ -33,7 +37,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
-from itertools import pairwise, product
+from itertools import product
 from typing import NamedTuple
 
 from shapely.geometry.base import BaseGeometry
@@ -286,9 +290,14 @@ def _choose(ctx: Context, n: str, up: list[Drawn], exact: Exact,
     the best): the grid's masters aligned each against its neighbours,
     named edges first; the grid's masters past the font's (and past BASE)
     predicted from those, as the sparse layout would have them; the
-    masters aligned against the one with the most points; and each of
-    those again with the masters drawn without the jog closing. With the
-    first candidate's error."""
+    masters aligned against the one with the most points; each of those
+    again with a point a master lacks standing on its edge rather than on
+    a corner (variable._fill_gaps: better for ₿ ¥ m, worse for ǿ 1 f z,
+    so tried, not assumed); and all of it again with the masters drawn
+    without the jog closing. Measured at the check's places and the heavy
+    end's gap places (space.GAPS), by the mean difference or the farthest
+    point off, whichever is worse (measure.errors). With the first
+    candidate's error."""
     best, first = None, None
     curved = _Curved(ctx, n)
     for jogs, edge in ((True, False), (True, True), (False, False), (False, True)):
@@ -321,7 +330,7 @@ def _choose(ctx: Context, n: str, up: list[Drawn], exact: Exact,
 
 
 def _refine(ctx: Context, n: str, best: Best, exact: Exact, nodes: list[Place],
-            places: list[Place], partner: dict[Place, Place] | None = None) -> tuple[Best, dict[Place, float] | None]:
+            places: list[Place]) -> tuple[Best, dict[Place, float] | None]:
     """A finer grid, from the chosen way's alignment with every master
     drawn, a plane at a time while it helps: kept if it does better than
     the best candidate (not only better than the grid it started from: a
@@ -359,11 +368,7 @@ def _refine(ctx: Context, n: str, best: Best, exact: Exact, nodes: list[Place],
         for i in range(3):
             if spot[i] in axes[i]:
                 continue
-            vals = [spot[i]]
-            other = (partner or {}).get(spot)
-            if other is not None and other[i] != spot[i] and other[i] not in axes[i]:
-                vals.append(other[i])                       # a jump's two planes together: one alone confines nothing
-            ax2 = [sorted(a + vals) if j == i else a for j, a in enumerate(axes)]
+            ax2 = [sorted(a + [spot[i]]) if j == i else a for j, a in enumerate(axes)]
             have = set(ns)
             new: list[Place] = [(w, g, t) for w, g, t in product(*ax2) if (w, g, t) not in have]
             if len(ns) + len(new) > NODES_MAX:
@@ -488,54 +493,9 @@ def _narrowed(ctx: Context, n: str, planes: Sequence[Place]) -> list[Place]:
     return out
 
 
-_GAPS = [g for g in GAPS if g not in CHECK] if __import__('os').environ.get('ARRIS_GAPS_MEASURE') else []
-JUMP_AXES = (1.0, 1.0)      # units of grade, of watch: how close the two planes about a jump along them are brought
-
-
-def _axis_jumps(ctx: Context, n: str, nodes: Sequence[Place], up: Sequence[Drawn]) -> list[Place]:
-    """Where the drawing's structure (the rings' point counts) changes
-    between two neighbouring nodes of the grid along the grade or the watch
-    (the census reads the weight alone), and halfway between them, each
-    change narrowed by bisection to JUMP_AXES apart: the two places about
-    it. Between nodes the font interpolates straight across a change of
-    structure, the points one drawing has and the next lacks carried as
-    wedges that slide along as the axis moves (₿ at Black from grade -90 to
-    -10, 38 units off the outline); two planes about the change confine it
-    to a unit of the axis."""
-    st = {m: ','.join(str(len(r)) for r in u.rings) for m, u in zip(nodes, up)}
-    out: list[Place] = []
-
-    def at(m: Place) -> str:
-        if m not in st:
-            st[m] = _structure(ctx, n, m)
-        return st[m]
-
-    def moved(m: Place, ax: int, v: float) -> Place:
-        q = list(m)
-        q[ax] = round(v, 2)
-        return (q[0], q[1], q[2])
-    for ax in [int(c) for c in __import__('os').environ.get('ARRIS_AXIS_JUMPS', '12') if c in '012']:
-        vals = GRID_AXES[ax]
-        for m in nodes:
-            if m[ax] not in vals or vals.index(m[ax]) + 1 >= len(vals) or any(
-                    m[k] not in GRID_AXES[k] for k in range(3) if k != ax):
-                continue
-            ends = [m, moved(m, ax, (m[ax] + vals[vals.index(m[ax]) + 1]) / 2), moved(m, ax, vals[vals.index(m[ax]) + 1])]
-            try:
-                for lo, hi in pairwise(ends):
-                    s0 = at(lo)
-                    if s0 == at(hi):
-                        continue
-                    while hi[ax] - lo[ax] > (JUMP if ax == 0 else JUMP_AXES[ax - 1]):
-                        mid = moved(lo, ax, (lo[ax] + hi[ax]) / 2)
-                        if at(mid) == s0:
-                            lo = mid
-                        else:
-                            hi = mid
-                    out += [lo, hi]
-            except Exception as e:  # noqa: BLE001  (a drawing that fails along the edge: no planes there)
-                log.debug('  %s jump along axis %d from %s: %s', n, ax, m, e)
-    return out
+# the heavy end's gap places (space.GAPS) the candidates are measured at too:
+# where the drawings change most between masters and a wedge between them shows
+_GAPS = [g for g in GAPS if g not in CHECK]
 
 
 def glyph(n: str) -> GlyphResult:
@@ -563,19 +523,14 @@ def glyph(n: str) -> GlyphResult:
     best0, errs = best, None
     # the places the census found this glyph's drawing jumping at: the
     # refinement measures there too, and a plane there confines the jump
-    jumps = [q for q in _narrowed(ctx, n, ctx.planes.get(n, [])) + (_axis_jumps(ctx, n, nodes, up) if __import__('os').environ.get('ARRIS_AXIS_JUMPS') else [])
-             if q not in CHECK and q not in REFINE]
+    jumps = [q for q in _narrowed(ctx, n, ctx.planes.get(n, [])) if q not in CHECK and q not in REFINE]
     places = CHECK + _GAPS + REFINE + jumps
     if jumps and best is not None and best.error <= LOCAL_TOL:
         at_jumps = max(errors(best.aligned, exact, best.nodes, jumps).values())
         if at_jumps > LOCAL_TOL:
             best = best._replace(error=at_jumps)
-    partner: dict[Place, Place] = {}
-    if __import__('os').environ.get('ARRIS_JUMP_PAIRS'):
-        for i in range(0, len(jumps) - 1, 2):
-            partner[jumps[i]], partner[jumps[i + 1]] = jumps[i + 1], jumps[i]
     if best is not None and best.error > LOCAL_TOL:
-        best, errs = _refine(ctx, n, best, exact, nodes, places, partner)
+        best, errs = _refine(ctx, n, best, exact, nodes, places)
     res = _finish(ctx, n, best, first, up)
     # a finer grid: the glyph without it too, what it gains (the error over
     # the check's and the refinement's places) and what it costs (bytes), so
