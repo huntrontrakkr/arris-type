@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import math
 
+from ..instances import STEMS
 from ..params import SQRT2
 
 STEEP = (1 / math.sqrt(5), 2 / math.sqrt(5))
@@ -102,6 +103,9 @@ class Frame:
         return (self.X(x), self.Y(y))
 
 
+K_JOIN = 0.5             # at Black, the join's vertical stands this many stems from the stem's centre (beside it: 0.999)
+
+
 def k_arms(g, x_stem: float, W: float, top: float, branch: bool = False):
     """K's arm and leg for a stem at x_stem in a body W wide and ``top`` tall.
 
@@ -109,13 +113,19 @@ def k_arms(g, x_stem: float, W: float, top: float, branch: bool = False):
     they meet in a short vertical beside the stem, as the K master draws it;
     when heavier strokes would make that junction a lump (their outer edges
     no longer reach the vertical), the arm runs on into the stem and the leg
-    branches from the arm, so the crotch between them stays open.
+    branches from the arm, so the crotch between them stays open. Past
+    SemiBold the vertical slides into the stem (K_JOIN), so the joint is a
+    stem and a half wide at Black, not two, and its middle does not pool.
     Returns strokes as (points, start cap, end cap)."""
     p = g.p
     k = p.sd / SQRT2
     a_arm = W - top + p.c - k                               # arm: x - y = a_arm
     a_leg = W + p.c - k                                     # leg: x + y = a_leg
-    xj = x_stem + p.sv * 0.999                             # (overlapping the stem by a hair)
+    # the vertical stands beside the stem (overlapping it by a hair) to SemiBold, the watch's K; heavier,
+    # it slides into the stem, K_JOIN stems from its centre at Black, so the joint stays a stem and a half
+    # wide instead of two and its middle does not pool
+    t = min(1.0, max(0.0, (p.sv - STEMS[600]) / (STEMS[900] - STEMS[600])))
+    xj = x_stem + p.sv * (0.999 + (K_JOIN - 0.999) * t)
     if not branch and 2 * xj + p.sv > a_arm + a_leg + 2 * k + 1e-6:
         y_hi, y_lo = xj - a_arm, a_leg - xj
         mid = [(xj, y_hi), (xj, y_lo)] if y_hi > y_lo + 1e-9 else [(xj, y_hi)]
