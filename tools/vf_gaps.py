@@ -3,12 +3,14 @@ farthest a point of either outline is from the other (not the mean over the
 whole outline, which a wedge 40 units deep on one corner of a long outline
 passes: ₿ at Black, grade -50, a mean of 1.4 units).
 
-    uv run python tools/vf_gaps.py FONT.ttf [OUT.json] [--visible 10] [--procs 4] [--glyphs a,b]
+    uv run python tools/vf_gaps.py FONT.ttf [OUT.json] [--visible 10] [--procs 4] [--glyphs a,b] [--places held|w/g/x,...]
 
 Each glyph is instantiated at places off the build's masters, most of them
 at the heavy end and on the grade and the watch, where the drawings change
 most between masters (arris.vf.space.GAPS), and compared with the engine's
-drawing there as the build's check compares (arris.vf.check.compare). Run it
+drawing there as the build's check compares (arris.vf.check.compare);
+``--places held``: places no build measures at or puts a master on (HELD),
+to judge a change to the build by what it was not tuned to. Run it
 against the engine the font was built from (a font of a release against that
 release's code): a drawing changed since reads as a gap. Prints how many
 glyphs have a point more than --visible units off somewhere, the worst of
@@ -28,6 +30,11 @@ from arris.font import place
 from arris.geom import rings_to_shapely
 from arris.vf.check import compare, outline
 from arris.vf.space import GAPS, params
+
+# off every master, check, refinement, validation and gap place the build
+# uses, at the heavy end, on the grade and the watch
+HELD = [(900, -35, 0), (900, -60, 25), (875, -15, 0), (850, -60, 0), (850, 35, 25), (825, -40, 75), (800, -35, 0),
+        (800, 30, 25), (775, 65, 0), (750, -30, 25), (725, 40, 75), (875, -85, 100)]
 
 
 def _at(job):
@@ -65,10 +72,12 @@ def main(argv: list[str]) -> int:
     visible = float(opt('--visible', '10'))
     procs = int(opt('--procs', '4'))
     names = set(opt('--glyphs', '').split(',')) - {''}
+    where = opt('--places', '')
+    places = HELD if where == 'held' else [tuple(float(v) for v in q.split('/')) for q in where.split(',')] if where else GAPS
     font, out = args[0], (args[1] if len(args) > 1 else None)
     italic = 'Italic' in font
     with Pool(procs) as pool:
-        rows = [r for part in pool.imap_unordered(_at, [(loc, font, italic, names) for loc in GAPS]) for r in part]
+        rows = [r for part in pool.imap_unordered(_at, [(loc, font, italic, names) for loc in places]) for r in part]
     if out:
         with open(out, 'w') as f:
             json.dump(rows, f)
@@ -78,7 +87,7 @@ def main(argv: list[str]) -> int:
     worst = sorted(((max(v), n) for n, v in per.items()), reverse=True)
     failed = sorted(n for n, v in per.items() if any(far < 0 for far, _, _ in v))
     over = [x for x in worst if x[0][0] > visible]
-    print(f'{len(per)} glyphs at {len(GAPS)} places: {len(over)} with a point over {visible:g} units off '
+    print(f'{len(per)} glyphs at {len(places)} places: {len(over)} with a point over {visible:g} units off '
           f'somewhere, {sum(1 for x in worst if x[0][0] > 3 * visible)} over {3 * visible:g}; '
           f'{len(failed)} that would not draw')
     for (far, mean, loc), n in over[:40]:
