@@ -275,7 +275,10 @@ def _sampi(g, f, xl, xr, top, foot):
     run = xr - x_end
     y1 = top - g.sh / 2 - wv - v / 2
     for y in (y1, y1 - v - wv):
-        g.stroke((xr, y), (x_end, y - run / 2))
+        # the lower one stops where its middle meets the foot line: run on
+        # through it, the clip would cut its end to a spike at the shallow slope
+        xe = max(x_end, xr - 2 * (y - foot))
+        g.stroke((xr, y), (xe, y - (xr - xe) / 2))
 
 
 @gcap('uni03E0', 'Ϡ', 9, 2)

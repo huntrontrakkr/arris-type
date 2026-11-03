@@ -236,6 +236,23 @@ weight where it cannot; a beak cut shorter crossed its corner's chamfer
 600). The white between a tail and the bowl above it (ϱ ℊ ₰) closes whole
 from where it is narrower than the slits the outline fills, not partly and
 differently at each weight.
+
+**Tips the weight makes.** A diagonal's end cut square to an axis keeps a
+stub of that axis between the cut and the edge it meets (a comma's tail,
+the 1's flag, ø's slash, the arms across ₺ and ₮, ℊ's and Ҧ's tails). The
+weight eats the stub, and the stub's right angle takes a chord no longer
+than itself, so from Bold such an end came to a point. Once the stub is
+under half the chamfer it is part of the end, and the end is cut as a
+diagonal's capped end is, square to the diagonal, the cut growing from the
+stub's own size there to the full chord as the stub goes, so it does not
+jump along the weight. A clip can leave a hair of an edge between a tip's
+two corners, which hides the tip from the rule: an edge under a fiftieth
+of the chamfer between two convex turns is no edge (Ø's slash ended in a
+point at Regular behind 0.04 units of one). Neither touches a white corner
+or a bowl's corner, which the italic curves round. And a stroke the clip
+would cut at a grazing angle stops before it: Ϡ's and ϡ's lower stroke at
+Black stops where its middle meets the foot, half its end showing, rather
+than run through to a spike.
 The skeleton check (`arris.skeleton`) holds that no feature flickers along
 any axis, and the topology check that nothing on the way folds, spikes or
 pinches.

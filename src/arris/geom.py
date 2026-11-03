@@ -309,6 +309,82 @@ def _on_butt(a, b, butt, corner=None) -> bool:
 BUTT_TOL = 1e-6
 
 
+DUP = 0.02      # of the chamfer: an edge this short between two convex turns is a hair at an ink tip, its ends one
+                # point, before the corner rule reads the corners (where a clip cut a stroke's end a hair from its cap's
+                # corner, the 0.04 units left between hid the tip from the rule, the polish took the hair away after it,
+                # and Ø's slash ended in a point); a short edge at a white corner is the corner's own and stays, and
+                # one beside a bowl's chamfer, which the italic curves round, too
+
+
+def _on_bowl(a, b, rec) -> bool:
+    """Whether the edge a-b lies on one of a recorded bowl's chamfer lines:
+    a corner the italic curves round, where a tip is no tip."""
+    for r in rec or ():
+        if r[0] == 'bowl':
+            for q, d in r[1:]:
+                dd = _len(d) or 1.0
+                if all(abs(_cross(_sub(pt, q), d)) / dd < 0.5 for pt in (a, b)):
+                    return True
+    return False
+
+
+STUB = 0.5      # of the chamfer: a diagonal's end cut square to an axis this short of the edge it meets is a tip (below)
+
+
+def _stub_tips(pts, c, butt=(), rec=None):
+    """A diagonal's end, cut square to an axis a stub short of the axis edge
+    it meets (a tail, a flag, a slash's end, where the weight has eaten the
+    cut's height): left alone the stub's right angle takes a chord no longer
+    than the stub, and as the weight grows the end goes to a point. Once the
+    stub is under STUB of the chamfer it is part of the end, and the end one
+    acute tip where the diagonal and that edge meet, cut as the capped end of
+    a diagonal is: a chord square to the diagonal, from the stub's own size
+    at STUB (where the right angle's chord was just that) to the full chord
+    as the stub goes, so nothing jumps along the weight. Only where the
+    chord reaches past the stub, so the cut stays inside the ink the stroke
+    drew, and not beside a bowl's chamfer. Returns the ring and {tip: chord
+    leg along the diagonal}."""
+    legs = {}
+    changed = True
+    while changed and len(pts) > 4:
+        changed = False
+        n = len(pts)
+        for i in range(n):
+            p0, s0, s1, p1 = pts[i - 1], pts[i], pts[(i + 1) % n], pts[(i + 2) % n]
+            e0, es, e1 = _sub(s0, p0), _sub(s1, s0), _sub(p1, s1)
+            stub = _len(es)
+            if not 1e-6 < stub < STUB * c or _dir_class(_unit(es)) != 'axis':
+                continue
+            if _cross(e0, es) <= 0 or _cross(es, e1) <= 0:
+                continue                                    # an ink tip: both turns convex
+            u0, us, u1 = _unit(e0), _unit(es), _unit(e1)
+            t0 = math.degrees(math.atan2(_cross(u0, us), _dot(u0, us)))
+            t1 = math.degrees(math.atan2(_cross(us, u1), _dot(us, u1)))
+            if not ((abs(t0 - 45) < 1.0 and abs(t1 - 90) < 1e-3 and _dir_class(u1) == 'axis')
+                    or (abs(t0 - 90) < 1e-3 and abs(t1 - 45) < 1.0 and _dir_class(u0) == 'axis')):
+                continue                                    # a diagonal, the stub, an edge square to the stub
+            if butt and any(_on_butt(a, b, butt) for a, b in ((p0, s0), (s0, s1), (s1, p1))):
+                continue
+            if _on_bowl(p0, s0, rec) or _on_bowl(s1, p1, rec):
+                continue                                    # a bowl's corner, which the italic curves round
+            tip = _add(p0, _mul(e0, _cross(_sub(s1, p0), e1) / _cross(e0, e1)))   # the two lines' meeting
+            diag_in = abs(t0 - 45) < 1.0
+            diag_len, axis_len = (_len(_sub(tip, p0)), _len(_sub(p1, tip)))[::1 if diag_in else -1]
+            want = math.sqrt(2) * (STUB * c + (c - STUB * c) * (1 - stub / (STUB * c)))
+            bb = min(want, 0.5 * diag_len, 0.5 * axis_len / math.sqrt(2))
+            if bb < stub * math.sqrt(2) + 1e-6:
+                continue                                    # the cut would not reach past the stub
+            if i + 1 < n:
+                pts[i:i + 2] = [tip]
+            else:
+                del pts[i]
+                pts[0] = tip
+            legs[tip] = bb
+            changed = True
+            break
+    return pts, legs
+
+
 def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
     """The corner rule on one ring (ink on the left of travel), as the watch's
     pixel rule behaves:
@@ -320,8 +396,14 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
       diagonal's capped end) or concave (a crotch): a chord square to the
       diagonal, reaching c*sqrt2 along it and 2c along the axis edge;
     * a convex corner where a 2:1 edge meets a cap: a chord of leg c;
+    * a diagonal's end a stub short of the axis edge it meets: one tip, cut
+      as a diagonal's capped end (``_stub_tips``);
     * anything else (135-degree turns, the bends of gables): left alone;
     * a corner on a butt line (``butt``, see ``ink``): left square.
+
+    An edge shorter than DUP of the chamfer between two convex turns is a
+    hair at a tip, not an edge: its ends are one point before the rule reads
+    the corners.
     """
     pts = [tuple(p) for p in coords[:-1]]
     # drop duplicate and collinear points
@@ -331,10 +413,13 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
         for i in range(len(pts)):
             a, b, q = pts[i - 1], pts[i], pts[(i + 1) % len(pts)]
             e1, e2 = _sub(b, a), _sub(q, b)
-            if _len(e1) < 1e-6 or (abs(_cross(e1, e2)) < 1e-6 * max(_len(e1), 1) * max(_len(e2), 1) and _dot(e1, e2) > 0):
+            hair = (_len(e1) < DUP * c and _cross(_sub(a, pts[i - 2]), e1) > 0 and _cross(e1, e2) > 0
+                    and not _on_bowl(pts[i - 2], a, rec) and not _on_bowl(b, q, rec))
+            if _len(e1) < 1e-6 or hair or (abs(_cross(e1, e2)) < 1e-6 * max(_len(e1), 1) * max(_len(e2), 1) and _dot(e1, e2) > 0):
                 del pts[i]
                 changed = True
                 break
+    pts, legs = _stub_tips(pts, c, butt, rec)
     n = len(pts)
     kinds = []
     for i in range(n):
@@ -351,6 +436,8 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
             kind = 'steep'
         if butt and (_on_butt(a, b, butt, b) or _on_butt(b, q, butt, b)):
             kind = None                                     # ink cut square where it meets a butt line
+        if b in legs:
+            kind = 'acute'                                  # a stub's tip (_stub_tips)
         kinds.append(kind)
     out = []
     for i in range(n):
@@ -367,8 +454,8 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
             if rec is not None and k == 'right':
                 rec.append(('chord', out[-2], out[-1]))
         elif k == 'acute':
-            leg = c * math.sqrt(2)
-            if _dir_class(u_in) == 'diag':
+            leg = legs.get(b, c * math.sqrt(2))
+            if _dir_class(u_in) != 'axis':
                 bb = min(leg, room_in, room_out / math.sqrt(2))
                 out += [_sub(b, _mul(u_in, bb)), _add(b, _mul(u_out, bb * math.sqrt(2)))]
             else:
