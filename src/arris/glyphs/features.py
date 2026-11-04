@@ -276,7 +276,8 @@ feature case {{
     from .ligatures import alternates_fea
     if mono:
         from .ligatures import fea as ligature_fea
-        text += ligature_fea()
+        from .sequences import fea as sequence_fea
+        text += ligature_fea() + sequence_fea()     # the fixed ligatures first: runs take what they leave
     text += alternates_fea(mono)        # after the ligatures: ss03 replaces what calt made
     if mono:
         from .alignment import fea as alignment_fea

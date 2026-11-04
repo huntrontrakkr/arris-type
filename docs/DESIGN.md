@@ -642,42 +642,110 @@ characters becomes N - 1 empty spacers and one glyph a cell wide that
 draws back across all N cells (the scheme Fira Code made standard). The
 substitution is contextual (`calt`, on by default; editors can turn it
 off), longest sequences first, and it never forms when an operator
-character touches the sequence on either side, so `<=<`, `>>=`, `//=`,
-`||=` and `---->` stay as their characters while `|->`, `!==` and `...`,
-which are ligatures themselves, still form.
+character touches the sequence on either side, so `<=<`, `>>=`, `//=` and
+`||=` stay as their characters while `|->`, `!==` and `...`, which are
+ligatures themselves, still form. A few look past that as Fira Code's do:
+`#!` forms before the slash of `#!/bin/sh`, `www` before a dot but not in
+`wwww`, `[|` not in `[|]`, `#_` not before another underscore
+(`ligatures.GUARDS`).
 
-A ligature keeps every character where it stands and as it is drawn
-alone, so an N-character ligature is N cells wide and set as the
-characters would be: the < of `</span>` is the < of `<span>`, the bars of
-`==` are the bars of =. A join only runs a character's own strokes on, in
-their own direction, until they meet the next one (`tools/ligature_pairs.py`
-proves each against its characters on the cell grid):
+Arris Mono sets every ligature Fira Code sets by default. Fira Code's are
+good because each is one gesture, not characters pushed together; Arris's
+make the same gestures in its own strokes. A ligature keeps every
+character where it stands and as it is drawn alone, so an N-character
+ligature is N cells wide and set as the characters would be: the < of
+`</span>` is the < of `<span>`, the bars of `==` are the bars of =. A join
+only runs a character's own strokes on, in their own direction, until they
+meet the next one (`tools/ligature_pairs.py` proves each against its
+characters on the cell grid):
 
 * **Tags and pipes**: in `</` `/>` `</>` the chevron's arm runs on along
   its 2:1 until it meets the slash, square to it (a 2:1 arm is
-  perpendicular to the 2:1 slash); `|>` `<|` `<|>` `||>` `<||` are simple
-  triangles, the chevron's arms run back to the pipe's place and closed
-  there by an upright as tall as they reach (the plain chevron's point and
-  angle); in `<>` the two chevrons' arms meet.
+  perpendicular to the 2:1 slash); `|>` `<|` `<|>` `||>` `<||` `|||>`
+  `<|||` are simple triangles, the chevron's arms run back to the pipe's
+  place and closed there by an upright as tall as they reach (the plain
+  chevron's point and angle), the other pipes uprights as tall; in `<>` the
+  two chevrons' arms meet.
 * **`<$>`** (`<$` `$>`): the chevron's arm runs on until it lands on the
   dollar S's bar, which gives up its beak there; one stroke turns through
   both points, the dollar's stem crossing it.
-* **`#[` `#(` `#{`**: # and the bracket each in its cell, the bars of #
-  running on at their full weight to the bracket's spine; # centres on the
-  brace's point, so the point sits between its bars. In `#_` the left
-  stem of # runs down into the underscore.
+* **`#` and its neighbours**: in `#[` `#(` `#{` `]#` the bars of # run on at
+  their full weight to the bracket's spine (# centres on the brace's point,
+  so the point sits between its bars); in `#_` the left stem of # runs down
+  into the underscore, and in `#_(` on under the paren and up it, one
+  stroke from the # to the top of the (; in `#?` the top bar of # runs on
+  into the ?'s bowl. `#=` sets the bars of = level with the bars of #, `#:`
+  the colon's dots on them, brought in; `#!` brings the ! in (# stays at
+  the start of the line). Fira Code slants the : and ! to its slanted #;
+  Arris's # stands upright, so they keep their own drawing.
+* **Brackets and a pipe**: in `[|` `|]` `{|` `|}` the bracket's arms run on
+  to just short of the pipe, the white of `:=`: one sign, the pipe still
+  its own (closed, `[|` and `|]` would both be a rectangle).
+* **The tilde**: `~~` is one stroke of two steps; in `-~` the hyphen turns
+  up into the tilde's first stroke where it crosses the axis, in `~-` the
+  tilde's downstroke turns along it; `~>` `~~>` `<~` `<~~` `<~>` run the
+  tilde's wave into the arrows' heads; in `~@` the tilde's rise becomes the
+  @'s ring, nothing hanging below the join.
 * **Equality**: `==` `===` run the bars of = through, at ='s own white;
   `!=` `/=` `!==` `=/=` strike them; `:=` `=:` `::=` raise the colon onto
-  the bars.
+  the bars; in `^=` the caret's arm runs down onto the top bar.
+* **`/\` `\/`**: the two slashes meet in a point.
 
 Where a sequence becomes a new sign, it is drawn across its cells: the
 arrows (`->` `-->` `<-` `<->` `=>` `==>` `<=>` `|->` `<-|` `|=>` `->>`
-`<<-` `~>` `~~>` `<~` `<!--`), one 45-degree head 0.88 of the cap height
-whose point stays sharp, the shaft ending inside it, a double shaft's bars
-ending on its arms; and `<=` `>=`, a full-size ≤ and ≥ on the 2:1 chevron.
-`--` stays two dashes, each run out to fill its cell; `++` runs the plus
-signs' bars through. Sequences that would only be drawn closer together
-(`||` `::` `..` `!!` `//` `>>` `/*` `<*>`) are left as their characters.
+`<<-` `<!--`), one 45-degree head 0.88 of the cap height whose point stays
+sharp, the shaft ending inside it, a double shaft's bars ending on its
+arms; and `<=` `>=`, a full-size ≤ and ≥ on the 2:1 chevron. `--` stays
+two dashes, each run out to fill its cell; `++` `+++` run the plus signs'
+bars through.
+
+**Characters together.** What Fira Code draws only closer is set the same
+way: `!!` `%%` `&&` `**` `***` `..` `...` `::` `:::` `;;` `//` `///` `||`
+`|||` `??` `<<` `<<<` `>>` `>>>`, and `/*` `*/` `*>` `<*` `<*>` `<+` `+>`
+`<+>` `?.` `.?` `?=` `!!.` `..<` `..=` `www`. Each character is itself,
+the run centred on its cells, each next one half a cell on (as Fira's), or
+as far as leaves a stroke and a half of white between them at Regular
+(square to their strokes), whichever is further, and never further than
+typed. The places are Regular's at every weight, the white thinning as
+the strokes grow, never under three quarters of a stroke
+(`ligatures.STEP`, `WHITE`, `WHITE_MIN`, `_run`).
+
+**Runs of any length** (`glyphs/sequences.py`): a run of hyphens, equal
+signs, underscores or number signs is set as pieces, one to a cell, each
+drawing its cell's share of the run's lines; a line runs a quarter module
+past its cell into the next piece and meets it flush (the corner rule
+leaves the cut square: `Glyph.butt`), so a run is one line however long:
+`---` `---->` `<====>` `|---|` `####` `____`. Its caps are the ligatures'
+own: the arrowhead of `->`, the double head of `->>` (`<<--` `==>>`), the
+pipe and the slash as themselves (`|==|` `/==` `==//`), `||` `>>` `//` as
+their repeats set them, the chevron as a tail with its point on the line
+(`>->` `<=<`); inside a run, a pipe across it (`--|--` `_|_`), a head on
+it (`-->--`), the struck bars of `=/=` (`=/==`), the `!` and `:` of `=!=`
+`=:=` with `:=`'s white either side. The fixed ligatures are matched
+first, and a run takes what is longer or what they leave. It forms with
+three hyphens, four equal signs, two underscores or number signs when it
+has no cap (`--` `==` `===` are ligatures of their own), two with one cap,
+one between two caps (`|-|` `>=>`), and not when a cap starts a longer
+run of its own character (`-->>>`, `<<<--`) or when it is one character
+and one cap (`x>-1`, `|-`). In Mono Italic the last of a run of
+underscores runs into the cursive f as a single underscore does (`__f`).
+
+**Optional sets**, off by default as in Fira Code, under Fira Code's own
+tags (Arris has its own characters, so Fira's character variants are not
+taken; cv19, cv23 and cv24, a level bar on ≤ ≥ and `/=` as ≠, are how
+Arris draws those already):
+
+| Tag | Sets |
+|---|---|
+| `ss07` | `=~` `!~` as ≈ ≉, the tildes' flats sharing the two cells |
+| `ss08` | `==` `===` `!=` `!==` gapped: each = its own, `!=` `!==` struck through the middle |
+| `ss09` | `>>=` `<<=` `\|\|=` `\|=` into the bars of =, with the runs' tail, double head and pipes |
+| `ss10` | `Fl` `Tl` `fi` `fj` `fl` `ft`: the f's bar (the F's and T's top) run on into the next letter |
+| `cv20` | `<=` as ⇐ |
+| `cv21` `cv22` | `=<` as ≤ |
+| `cv25` `cv26` `cv32` | `.-` `:-` `.=`: the dot raised to the axis (the colon's to the bars), the line run back to it |
+| `cv27` | `[]` as a box, the arms run on until they meet |
+| `cv28` | `{.` `.}` with the dot raised to the brace's point |
 
 **Alignment** (`calt` too, after the ligatures, after Fira Code's;
 `glyphs/alignment.py`): in Mono the hyphen, plus and asterisk sit on the

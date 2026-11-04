@@ -5,8 +5,7 @@ sequence of N characters becomes N - 1 empty spacers (LIG) and one glyph
 one cell wide that draws back across the N cells (the scheme Fira Code
 made standard). The substitution is contextual (`calt`, on by default and
 easy to turn off in editors), longest sequences first, with guards so a
-ligature never forms inside a longer run of the same characters (`--->`,
-`<=<`, `====`).
+ligature never forms inside a longer run of operators (`<=<`, `>>=`).
 
 A ligature keeps every character where it stands and as it is drawn
 alone: the < of `</span>` is the < of `<span>`, the bars of `==` are the
@@ -17,9 +16,11 @@ bracket's spine), so an N-character ligature is N cells wide and set as
 the characters would be. Where a sequence becomes a new sign, it is drawn
 across its cells: the arrows (one 45-degree head, 0.88 of the cap height,
 its point kept sharp, the shaft ending inside it), the struck bars of !=,
-the larger <= and >=, the raised colon of :=. Sequences that would only
-be drawn closer together (`||` `::` `//` `>>`) are left as their
-characters (``docs/DESIGN.md``, section 8).
+the larger <= and >=, the raised colon of :=. What Fira Code only draws
+closer (`||` `::` `//` `>>` `/*` `<*>` `www`) is set as its characters
+brought together, each as itself (``_run``). Runs of any length (`---->`)
+are ``sequences``; Fira Code's optional sets are here too, under its tags
+(OPTIONAL). ``docs/DESIGN.md``, section 8.
 """
 from __future__ import annotations
 
@@ -29,9 +30,11 @@ from .punct import axis, dot
 
 LIGATURES: list[tuple[str, tuple[str, ...]]] = []   # (glyph name, component glyph names), longest first at build
 COMPONENTS: dict[str, tuple[str, ...]] = {}         # glyph name -> component glyph names
+GUARDS: dict[str, tuple[str, str]] = {}             # glyph name -> (characters before, after) that keep it from forming
 
 HEAD = 0.44          # an arrowhead's half-height, of the cap height (Fira Code's: 0.88 of it in all)
 DOUBLE = 0.6         # a double head's second chevron: this share of the head behind the first, plus its stroke
+OPERATORS = '-<>=!|:.+*/~&?^%#$\\'
 LE_HALF = 0.42       # the chevron of <= and >=: half its height, of the cap height
 
 
@@ -45,9 +48,11 @@ def _body(n):
     return lambda p: n * p.fig_adv - (p.fig_adv - p.fig_w)
 
 
-def liga(*seqs):
+def liga(*seqs, before=None, after=None):
     """Register a drawing for one or more character sequences of the same
-    length (`!=` and `/=` share the struck double bar)."""
+    length (`!=` and `/=` share the struck double bar). ``before`` and
+    ``after``: the characters that keep it from forming when they touch it
+    (the operators, OPERATORS, unless given)."""
     def deco(fn):
         for seq in seqs:
             names = _names(seq)
@@ -55,6 +60,8 @@ def liga(*seqs):
             if len(name) > 31:                  # legacy limit: the AGL's code-point form
                 name = 'uni' + ''.join(f'{ord(ch):04X}' for ch in seq) + '.liga'
             COMPONENTS[name] = names
+            if before is not None or after is not None:
+                GUARDS[name] = (OPERATORS if before is None else before, OPERATORS if after is None else after)
             glyph(name, None, _body(len(seq)), kind=('liga', len(seq)))(fn)
             LIGATURES.append((name, names))
         return fn
@@ -699,35 +706,63 @@ WHITE_MIN = 0.75    # strokes: the least at any weight (each weight its own whit
                     # and Bold's stood apart as typed)
 
 
-def _close_step(p, ink, gap):
-    """How far apart (in x) two copies of ``ink`` stand for ``gap`` of white
-    between them, by bisection on the distance between the two."""
+def _close_pair(a, b, gap):
+    """How far apart (in x, ink centre to ink centre) ``a`` and then ``b``
+    stand for ``gap`` of white between them, by bisection on the distance."""
     from shapely import affinity
-    x0, _, x1, _ = ink.bounds
-    lo, hi = 0.0, (x1 - x0) + gap
+    ca = (a.bounds[0] + a.bounds[2]) / 2
+    cb = (b.bounds[0] + b.bounds[2]) / 2
+    lo, hi = 0.0, (a.bounds[2] - a.bounds[0] + b.bounds[2] - b.bounds[0]) / 2 + gap
     for _ in range(40):
         mid = (lo + hi) / 2
-        if ink.distance(affinity.translate(ink, mid, 0.0)) < gap:
+        if a.distance(affinity.translate(b, ca + mid - cb, 0.0)) < gap:
             lo = mid
         else:
             hi = mid
     return hi
 
 
-def _together(g, name, n):
-    """n copies of ``name`` together (STEP, WHITE), centred on the n cells."""
+def _run(g, names, dys=None):
+    """The characters ``names`` together, as a repeat's copies are (STEP,
+    WHITE, WHITE_MIN), each as itself (moved up or down by ``dys``), the
+    run centred on its cells: each next character as far from the last
+    (ink centre to ink centre) as half a cell, or as WHITE between them at
+    Regular, or as WHITE_MIN here, whichever is furthest; never further than
+    set alone."""
     from ..draw import _cut
     p, W = g.p, g.W
-    sub = _sub(name, p)
-    ink = _ink_of(sub)
+    dys = dys or [0.0] * len(names)
     cut = _cut(p)
     reg = cut[1](400) if cut is not None else p                 # the same cut at Regular
-    at_reg = _close_step(reg, _ink_of(_sub(name, reg)), WHITE * max(reg.sv, reg.m))
-    step = min(p.fig_adv, max(STEP * p.fig_adv, at_reg, _close_step(p, ink, WHITE_MIN * max(p.sv, p.m))))
-    x0, _, x1, _ = ink.bounds
-    mid = (x0 + x1) / 2                                     # the copy's ink centred, not its advance
-    for k in range(n):
-        g.add_glyph(sub, W / 2 - mid + (k - (n - 1) / 2) * step, 0.0)
+
+    def inks(q):
+        out = []
+        for name, dy in zip(names, dys):
+            sub = _sub(name, q)
+            out.append((sub, _ink_of(sub, 0.0, dy * (q.cap / p.cap))))
+        return out
+    here, there = inks(p), inks(reg)
+    mids = [(i.bounds[0] + i.bounds[2]) / 2 for _, i in here]
+    xs = [0.0]                                                  # ink centres, the first at 0
+    for k in range(1, len(names)):
+        a, b = here[k - 1][1], here[k][1]
+        alone = p.fig_adv
+        step = max(STEP * p.fig_adv, _close_pair(there[k - 1][1], there[k][1], WHITE * max(reg.sv, reg.m)),
+                   _close_pair(a, b, WHITE_MIN * max(p.sv, p.m)))
+        xs.append(xs[-1] + min(alone, step))
+    lo = min(x + i.bounds[0] - m for x, (_, i), m in zip(xs, here, mids))
+    hi = max(x + i.bounds[2] - m for x, (_, i), m in zip(xs, here, mids))
+    shift = W / 2 - (lo + hi) / 2
+    out = []
+    for x, (sub, _), m, dy in zip(xs, here, mids, dys):
+        g.add_glyph(sub, shift + x - m, dy)
+        out.append((sub, shift + x - m))
+    return out
+
+
+def _together(g, name, n):
+    """n copies of ``name`` together (STEP, WHITE), centred on the n cells."""
+    _run(g, [name] * n)
 
 
 def _register_repeats():
@@ -743,6 +778,23 @@ def _register_repeats():
 
 
 _register_repeats()
+
+
+# Characters brought together the same way, as Fira Code brings them: comments
+# (`/*` `*/`), the applicative and plus operators (`<*>` `<+>`, their halves),
+# Kotlin's and Swift's (`?.` `.?` `?=` `!!.`), ranges (`..<` `..=`), and `www`.
+def _register_runs():
+    for seq in ('/*', '*/', '*>', '<*', '<*>', '<+', '+>', '<+>', '?.', '.?', '?=', '!!.', '..<', '..=', 'www'):
+        names = list(_names(seq))
+
+        def fn(g, names=names):
+            _run(g, names)
+        fn.__doc__ = f'`{seq}`: its characters together.'
+        guard = {'before': 'w', 'after': 'w'} if seq == 'www' else {}   # `www.` yes, `wwww` no
+        liga(seq, **guard)(fn)
+
+
+_register_runs()
 
 
 # --- `<$>`: the chevrons' arms run on to the dollar's S --------------------------
@@ -806,35 +858,43 @@ def _hash(p):
     return hs, bars, stems
 
 
-def _hash_join(g, bracket):
+def _hash_join(g, bracket, after=False):
     """`#{` `#[` `#(`: # and the bracket each as itself in its cell, the
     bars of # running on at their full weight until they meet the
     bracket's spine. The brace's small beak sits between the bars: # moves
-    to centre on it (its bars meet the spine above and below the beak)."""
+    to centre on it (its bars meet the spine above and below the beak).
+    ``after``: the bracket first and # after it (`]#`), the bars run back
+    to the spine."""
     p = g.p
     hs, bars, stems = _hash(p)
-    br, xb = _stamp(g, bracket, 1)
+    br, xb = _stamp(g, bracket, 0 if after else 1)
     ib = _ink_of(br, xb)
-    xh = _at(g, hs, 0)
+    xh = _at(g, hs, 1 if after else 0)
     dy = 0.0
     if bracket == 'braceleft':
         top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
         dy = (top + bot) / 2 - (bars[0][0] + bars[-1][0]) / 2
     g.add_glyph(hs, xh, dy)
-    right = xh + hs.W
+    tuck = 0.5 * min(p.sv, g.sh)
     for y, th in bars:
         y += dy
-        hits = [r for r in _runs(ib, y=y) if r[0] > right - 1]
-        if hits:
-            g.stroke((xh + stems[-1][1] - p.sv / 2, y, th), (hits[0][0] + 0.5 * min(p.sv, g.sh), y))
+        if after:
+            hits = [r for r in _runs(ib, y=y) if r[1] < xh + 1]
+            if hits:
+                g.stroke((xh + stems[0][0] + p.sv / 2, y, th), (hits[-1][1] - tuck, y))
+        else:
+            hits = [r for r in _runs(ib, y=y) if r[0] > xh + hs.W - 1]
+            if hits:
+                g.stroke((xh + stems[-1][1] - p.sv / 2, y, th), (hits[0][0] + tuck, y))
 
 
 liga('#{')(lambda g: _hash_join(g, 'braceleft'))
 liga('#[')(lambda g: _hash_join(g, 'bracketleft'))
 liga('#(')(lambda g: _hash_join(g, 'parenleft'))
+liga(']#')(lambda g: _hash_join(g, 'bracketright', after=True))
 
 
-@liga('#_')
+@liga('#_', after=OPERATORS + '_')                  # `#__` is a run of underscores
 def hash_underscore(g):
     """`#_`: the left stem of `#` runs down at its full weight into the
     underscore, which runs back under it; the corner they make takes the
@@ -848,6 +908,162 @@ def hash_underscore(g):
     xc, w = xh + (x0 + x1) / 2, x1 - x0
     yu, t = (iu.bounds[1] + iu.bounds[3]) / 2, iu.bounds[3] - iu.bounds[1]
     g.stroke((xc, bars[0][0], w), (xc, yu, t), (iu.bounds[0] + p.sv, yu))
+
+
+@liga('#_(', after=OPERATORS + '_(')
+def hash_underscore_paren(g):
+    """`#_(`: one stroke from the # to the top of the (: the left stem
+    of # runs down into the underscore, the underscore runs on under the
+    paren until it meets the paren's lower diagonal run on down to it, and
+    the paren goes on as itself, up its spine to its top. The turns take
+    the corner rule."""
+    p = g.p
+    _, bars, stems = _hash(p)
+    _, xh = _stamp(g, 'numbersign', 0)
+    us = _sub('underscore', p)
+    iu = _ink_of(us, _at(g, us, 1))
+    pr = _sub('parenleft', p)
+    xp = _at(g, pr, 2)
+    x0, x1 = stems[0]
+    xc, w = xh + (x0 + x1) / 2, x1 - x0
+    yu, t = (iu.bounds[1] + iu.bounds[3]) / 2, iu.bounds[3] - iu.bounds[1]
+    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m       # punct._paren
+    xs = xp + p.sv / 2
+    reach = pr.W - p.sv / 2
+    xj = xs + (bot + reach - yu)                            # the paren's lower diagonal, down to the underscore's line
+    g.stroke((xc, bars[0][0], w), (xc, yu, t), (xj, yu), (xs, bot + reach), (xs, top - reach),
+             (xs + reach, top), end='h')
+    g.clip = (-10 * p.cap, -10 * p.cap, 10 * p.cap, top)
+
+
+# --- `#` with the next character -------------------------------------------------
+# Fira Code slants the : ! of `#:` `#!` to its slanted #, and runs the #'s top
+# bar into the ? of `#?`. Arris's # stands upright, so the : and ! keep their
+# own drawing; what carries over is where they stand and how they meet: the
+# character after # brought in toward it (# stays where it stands, at the start
+# of `#!/bin/sh`), as far as a repeat's copies come together (WHITE at
+# Regular, the same place at every weight, never less than WHITE_MIN), the
+# colon's dots on the bars of #, the bars of = level with them, the top bar
+# of # run on into the ?.
+
+def _bring(g, build):
+    """x of the second of two characters, brought in toward the first:
+    ``build(p)`` gives (the first's ink where it stands, the second's ink
+    at x = 0, the second's x where it stands)."""
+    from shapely import affinity
+
+    from ..draw import _cut
+    p = g.p
+
+    def least(q, gap):
+        a, b, alone = build(q)
+        if a.distance(affinity.translate(b, alone, 0.0)) <= gap:
+            return alone
+        lo, hi = a.bounds[2] - b.bounds[2], alone
+        for _ in range(40):
+            mid = (lo + hi) / 2
+            if a.distance(affinity.translate(b, mid, 0.0)) < gap:
+                lo = mid
+            else:
+                hi = mid
+        return hi
+    cut = _cut(p)
+    reg = cut[1](400) if cut is not None else p
+    alone = build(p)[2]
+    return min(alone, max(least(reg, WHITE * max(reg.sv, reg.m)), least(p, WHITE_MIN * max(p.sv, p.m))))
+
+
+def _hash_then(g, name):
+    """# as itself in cell 0, ``name`` as itself brought in toward it."""
+    def build(q):
+        hs, sub = _sub('numbersign', q), _sub(name, q)
+        return _ink_of(hs, _at(g, hs, 0)), _ink_of(sub), _at(g, sub, 1)
+    _stamp(g, 'numbersign', 0)
+    g.add_glyph(_sub(name, g.p), _bring(g, build), 0.0)
+
+
+liga('#!', after=OPERATORS.replace('/', ''))(lambda g: _hash_then(g, 'exclam'))     # `#!/bin/sh`
+
+
+@liga('#:')
+def hash_colon(g):
+    """`#:`: the colon's dots centred on the bars of #, brought in."""
+    from shapely.geometry import box
+    from shapely.ops import unary_union
+
+    from .punct import dot as dot_
+
+    def build(q):
+        hs = _sub('numbersign', q)
+        _, bars, _ = _hash(q)
+        s = q.dot()
+        dots = unary_union([box(-s / 2, y - s / 2, s / 2, y + s / 2) for y, _ in bars])
+        return _ink_of(hs, _at(g, hs, 0)), dots, cell(g, 1)[1]
+    _stamp(g, 'numbersign', 0)
+    x = _bring(g, build)
+    s = g.p.dot()
+    for y, _ in _hash(g.p)[1]:
+        dot_(g, x, y - s / 2)
+
+
+@liga('#=')
+def hash_equal(g):
+    """`#=`: the bars of = level with the bars of #, at their weight, run
+    on from just past # (the white of `:=`) to the ='s own margin."""
+    p = g.p
+    _, bars, _ = _hash(p)
+    hs, xh = _stamp(g, 'numbersign', 0)
+    right = _ink_of(hs, xh).bounds[2]
+    eq = _sub('equal', p)
+    x1 = _at(g, eq, 1) + eq.W
+    for y, th in bars:
+        g.stroke((right + _gap(p), y, th), (x1, y))
+
+
+@liga('#?')
+def hash_question(g):
+    """`#?`: the top bar of # runs on at its weight into the ?, which
+    leaves it upright into its bowl: one stroke from # into the ?."""
+    from ..draw import Glyph
+    p = g.p
+    _, bars, stems = _hash(p)
+    _, xh = _stamp(g, 'numbersign', 0)
+    q = _sub('question', p)
+    xq = _at(g, q, 1)
+    h = Glyph(p, 'question', W=q.W)
+    h.sh_auto = getattr(q, 'sh_auto', h.sh_auto)
+    y, th = bars[-1]
+    h.lead = [(xh + stems[-1][1] - p.sv / 2 - xq, y, th)]
+    REGISTRY['question'].fn(h)
+    g.add_glyph(h, xq, 0.0)
+
+
+# --- Brackets closed by a pipe ----------------------------------------------------
+
+def _closed(g, bracket, ib, ip):
+    """`[|` `|]` `{|` `|}`: the bracket (or brace) of cell ib and the pipe
+    of cell ip each as themselves, the bracket's arms run on at their own
+    weight to just short of the pipe (the white of `:=`), as Fira Code
+    runs them: one sign, the pipe still standing on its own (closed into a
+    box, `[|` and `|]` would both read as a rectangle)."""
+    p = g.p
+    br, xb = _stamp(g, bracket, ib)
+    xp = _bar_at(g, ip)
+    ink = _ink_of(br, xb)
+    x0, _, x1, _ = ink.bounds
+    right = xp > x1
+    x = x1 - p.c - 0.25 * p.sv if right else x0 + p.c + 0.25 * p.sv     # the arm, clear of its end's chamfers
+    end = xp - p.sv / 2 - _gap(p) if right else xp + p.sv / 2 + _gap(p)
+    rs = _runs(ink, x=x)
+    for lo, hi in (rs[0], rs[-1]):
+        g.stroke((x, (lo + hi) / 2, hi - lo), (end, (lo + hi) / 2))
+
+
+_BR = OPERATORS + '[]{}'                # not in `[|]` `{||}`, as Fira Code's
+liga('[|', before=_BR, after=_BR)(lambda g: _closed(g, 'bracketleft', 0, 1))
+liga('|]', before=_BR, after=_BR)(lambda g: _closed(g, 'bracketright', 1, 0))
+liga('{|', before=_BR, after=_BR)(lambda g: _closed(g, 'braceleft', 0, 1))
+liga('|}', before=_BR, after=_BR)(lambda g: _closed(g, 'braceright', 1, 0))
 
 
 # --- Alternates: plain comparisons (ss03) and character variants -----------
@@ -884,6 +1100,182 @@ def zero_cv02(g):
     g.p = p0
 
 
+def _cls(chars):
+    """A class of the characters' glyphs (None for none: no guard)."""
+    return '[' + ' '.join(sorted(set(_names(chars)))) + ']' if chars else None
+
+
+def _chain(name, comps, pre='@LIGA_OPS', post='@LIGA_OPS'):
+    """The rules that set ``comps`` as N - 1 LIG and the glyph ``name``,
+    unless one of ``pre`` or ``post`` touches them."""
+    n = len(comps)
+    rest = ' '.join(comps[1:])
+    lines = ([f"ignore sub {pre} {comps[0]}' {rest};"] if pre else []) + \
+        ([f"ignore sub {comps[0]}' {rest} {post};"] if post else []) + \
+        [f"sub {' '.join(['LIG'] * (n - 1))} {comps[-1]}' by {name};"]
+    for k in range(n - 2, -1, -1):
+        lig = ' '.join(['LIG'] * k)
+        lines.append(f"sub {lig + ' ' if lig else ''}{comps[k]}' {' '.join(comps[k + 1:])} by LIG;")
+    return lines
+
+
+# --- Fira Code's optional sets, under Fira's own tags ---------------------------
+# Off by default, as in Fira Code, and drawn as the default ligatures are. Fira's
+# cv19 and cv23 (`<=` `>=` with a level bar) and cv24 (`/=` as ≠) are how Arris
+# draws those by default; its character variants are not taken (Arris has its own
+# characters).
+
+OPTIONAL: dict[str, tuple[str, list[str]]] = {}     # tag -> (label, feature-code lines)
+
+
+def _optional(tag, label, *lines):
+    OPTIONAL.setdefault(tag, (label, []))[1].extend(lines)
+
+
+def _alt(seq, suffix, fn, tag=None, label=None, **guard):
+    """A glyph for ``seq`` (NAMES.suffix, across its cells), set by ``tag``
+    where the calt rules would set a ligature (the same guards)."""
+    names = _names(seq)
+    name = '_'.join(names) + '.' + suffix
+    glyph(name, None, _body(len(names)), kind=('liga', len(names)))(fn)
+    if tag:
+        pre, post = (_cls(guard.get('before', OPERATORS)), _cls(guard.get('after', OPERATORS)))
+        if not guard:
+            pre = post = '@LIGA_OPS'
+        _optional(tag, label, f'lookup {name.replace(".", "_")} {{',
+                  *(f'    {r}' for r in _chain(name, list(names), pre, post)), f'}} {name.replace(".", "_")};')
+    return name
+
+
+def _approx(g, struck):
+    """`=~` `!~` (ss07): ≈ across the cells, its tildes' flats sharing the
+    width as ≈'s do; ≉ struck as ≠ is."""
+    from .operators import Tilde, _neg_half, negate, stack
+    m = (g.p.fig_w - _sub('equal', g.p).W) / 2
+    stack(g, [Tilde(x0=m, x1=g.W - m), Tilde(x0=m, x1=g.W - m)])
+    if struck:
+        negate(g, half=_neg_half(g))
+
+
+_alt('=~', 'ss07', lambda g: _approx(g, False), 'ss07', 'Regex matches as ≈ ≉')
+_alt('!~', 'ss07', lambda g: _approx(g, True), 'ss07', 'Regex matches as ≈ ≉')
+
+
+def _gapped(g, n, struck):
+    """ss08: the equals of `==` `===` as themselves (each its own); `!=` and
+    `!==` struck through the middle, as ≠ is."""
+    _run(g, ['equal'] * n)
+    if struck:
+        off = bars_offset(g)
+        _strike(g, [axis(g.p) - off, axis(g.p) + off])
+
+
+for _seq, _n, _s in (('==', 2, False), ('===', 3, False), ('!=', 2, True), ('!==', 3, True)):
+    _g = _alt(_seq, 'ss08', lambda g, n=_n, s=_s: _gapped(g, n, s))
+    _optional('ss08', 'Equality gapped', f'sub {_g.replace(".ss08", ".liga")} by {_g};')
+
+
+def _ss09():
+    """`>>=` `<<=` `||=` `|=` (ss09): the runs' own pieces (``sequences``), a
+    tail, a double head, the pipes, each into the bars of =."""
+    out = ['lookup ss09_runs {']
+    for seq, cap in ((('greater', 'greater'), 'tail2'), (('less', 'less'), 'head2'), (('bar', 'bar'), 'bar2'),
+                     (('bar',), 'bar')):
+        piece = f'equal.seq.s.{cap}'
+        c = ' '.join(seq)
+        out += [f"    ignore sub @LIGA_OPS {seq[0]}' {' '.join(seq[1:] + ('equal',))};",
+                f"    ignore sub {seq[0]}' {' '.join(seq[1:] + ('equal',))} @LIGA_OPS;"]
+        if len(seq) == 2:
+            out += [f"    sub {seq[0]}' {seq[1]} equal by LIG;", f"    sub LIG {seq[1]}' equal by {piece};"]
+        else:
+            out += [f"    sub {c}' equal by {piece};"]
+        out += [f"    sub {piece} equal' by equal.seq.e;"]
+    out.append('} ss09_runs;')
+    _optional('ss09', 'Shifts and pipes into =', *out)
+
+
+_ss09()
+
+
+def _bar_on(g, a, b, y):
+    """ss10: ``a`` and ``b`` as themselves, a's bar nearest the height y
+    run on at its own weight until it meets b (the f's into the i's flag,
+    the t's bar, the l's stem; the F's and T's top into the l)."""
+    p = g.p
+    sa, xa = _stamp(g, a, 0)
+    sb, xb = _stamp(g, b, 1)
+    ia, ib = _ink_of(sa, xa), _ink_of(sb, xb)
+    end = max(r[1] for r in _runs(ia, y=y))
+    x = end - p.c - 0.25 * p.sv                                 # the bar, clear of its end's chamfers
+    lo, hi = min(_runs(ia, x=x), key=lambda r: abs((r[0] + r[1]) / 2 - y))
+    yc = (lo + hi) / 2
+    hits = [r for r in _runs(ib, y=yc) if r[0] > end - 1]
+    if hits:
+        g.stroke((x, yc, hi - lo), (hits[0][0] + 0.5 * min(p.sv, g.sh), yc))
+
+
+for _seq in ('Fl', 'Tl', 'fi', 'fj', 'fl', 'ft'):
+    _a, _b = _names(_seq)
+    _alt(_seq, 'ss10', lambda g, a=_a, b=_b: _bar_on(g, a, b, (g.p.cap if a.isupper() else g.p.xh) - g.sh / 2),
+         'ss10', 'Text ligatures (Fl Tl fi fj fl ft)', before='', after='')
+_alt('<=', 'cv20', lambda g: _arrow(g, bars=2, right=False, left=True))
+_optional('cv20', '<= as an arrow', 'sub less_equal.liga by less_equal.cv20;')
+for _t in ('cv21', 'cv22'):     # Fira's slanted and level ≤; Arris has the one
+    _alt('=<', _t, lambda g: _compare(g, False), _t, '=< as ≤')
+
+
+def _dot_then(g, after, colon=False):
+    """`.-` `:-` `.=` (cv25 cv26 cv32): the period raised to the axis (the
+    colon's dots to the bars of =, as `:=` raises them), the hyphen's line
+    (or the bars of =) run back to just short of it, as `:=`'s are."""
+    p = g.p
+    if colon:
+        _, right = _raised(g, 0)
+    else:
+        s = p.dot()
+        x = cell(g, 0)[1]
+        dot(g, x, axis(p) - s / 2)
+        right = x + s / 2
+    if after == 'hyphen':
+        g.stroke((right + _gap(p), axis(p)), (g.W - edge(p), axis(p)))
+    else:
+        _bars(g, 2, x0=right + _gap(p))
+
+
+_alt('.-', 'cv25', lambda g: _dot_then(g, 'hyphen'), 'cv25', '.- joined')
+_alt(':-', 'cv26', lambda g: _dot_then(g, 'hyphen', colon=True), 'cv26', ':- joined')
+_alt('.=', 'cv32', lambda g: _dot_then(g, 'equal'), 'cv32', '.= joined')
+
+
+@lambda fn: _alt('[]', 'cv27', fn, 'cv27', '[] as a box', before=OPERATORS + '[]', after=OPERATORS + '[]')
+def _box(g):
+    """`[]` (cv27): the brackets as themselves, their arms run on until they
+    meet: a box."""
+    p = g.p
+    b0, x0 = _stamp(g, 'bracketleft', 0)
+    b1, x1 = _stamp(g, 'bracketright', 1)
+    i0, i1 = _ink_of(b0, x0), _ink_of(b1, x1)
+    x = i0.bounds[2] - p.c - 0.25 * p.sv
+    xe = i1.bounds[0] + p.c + 0.25 * p.sv
+    rs = _runs(i0, x=x)
+    for lo, hi in (rs[0], rs[-1]):
+        g.stroke((x, (lo + hi) / 2, hi - lo), (xe, (lo + hi) / 2))
+
+
+def _brace_dot(g, right):
+    """`{.` `.}` (cv28): the brace as itself, the period raised to its
+    point, where it stands."""
+    p = g.p
+    _stamp(g, 'braceright' if right else 'braceleft', 1 if right else 0)
+    s = p.dot()
+    mid = (p.cap + 0.5 * p.m - p.desc + 0.5 * p.m) / 2      # punct._brace
+    dot(g, cell(g, 0 if right else 1)[1], mid - s / 2)
+
+
+_alt('{.', 'cv28', lambda g: _brace_dot(g, False), 'cv28', '{. .} with a raised dot')
+_alt('.}', 'cv28', lambda g: _brace_dot(g, True), 'cv28', '{. .} with a raised dot')
+
+
 def alternates_fea(mono: bool) -> str:
     def cv(tag, label, sub):
         return (f'feature {tag} {{\n    cvParameters {{\n        FeatUILabelNameID {{ name "{label}"; }};\n'
@@ -893,35 +1285,33 @@ def alternates_fea(mono: bool) -> str:
     if mono:
         subs = '\n'.join(f'    sub {n}.liga by {n}.ss03;' for n in PLAIN)
         out.append(f'feature ss03 {{\n    featureNames {{ name "Plain comparisons"; }};\n{subs}\n}} ss03;')
+        for tag in sorted(OPTIONAL):
+            label, lines = OPTIONAL[tag]
+            body = '\n'.join(f'    {ln}' for ln in lines)
+            if tag.startswith('ss'):
+                out.append(f'feature {tag} {{\n    featureNames {{ name "{label}"; }};\n{body}\n}} {tag};')
+            else:
+                out.append(f'feature {tag} {{\n    cvParameters {{\n        FeatUILabelNameID {{ name "{label}"; }};\n'
+                           f'    }};\n{body}\n}} {tag};')
     return '\n'.join(out) + '\n'
 
 
 # --- Feature code ---------------------------------------------------------
 
-OPERATORS = '-<>=!|:.+*/~&?^%#$\\'
 
 
 def fea() -> str:
     """calt lookups, longest sequences first: each component but the last
     becomes LIG, the last the ligature. A ligature never forms when an
-    operator character touches it on either side: longer operators that are
-    ligatures are matched first, and the rest (`<=<`, `>>=`, `//=`, `---->`)
-    stay as their characters."""
-    ops = ' '.join(sorted(set(_names(OPERATORS))))
-    out = [f'@LIGA_OPS = [{ops}];']
+    operator character touches it on either side (or those its GUARDS
+    name): longer operators that are ligatures are matched first, and the
+    rest (`<=<`, `>>=`, `//=`) stay as their characters, or make a run of
+    any length (``sequences``)."""
+    out = [f'@LIGA_OPS = {_cls(OPERATORS)};']
     for name, comps in sorted(LIGATURES, key=lambda t: -len(t[1])):
-        n = len(comps)
         tag = name.replace('.', '_')
-        rest = ' '.join(comps[1:])
-        lines = [f'lookup {tag} {{',
-                 f"    ignore sub @LIGA_OPS {comps[0]}' {rest};",
-                 f"    ignore sub {comps[0]}' {rest} @LIGA_OPS;",
-                 f"    sub {' '.join(['LIG'] * (n - 1))} {comps[-1]}' by {name};"]
-        for k in range(n - 2, -1, -1):
-            pre = ' '.join(['LIG'] * k)
-            after = ' '.join(comps[k + 1:])
-            lines.append(f"    sub {pre + ' ' if pre else ''}{comps[k]}' {after} by LIG;")
-        lines.append(f'}} {tag};')
-        out.append('\n'.join(lines))
+        guard = () if name not in GUARDS else tuple(_cls(c) for c in GUARDS[name])
+        body = '\n'.join(f'    {r}' for r in _chain(name, comps, *guard))
+        out.append(f'lookup {tag} {{\n{body}\n}} {tag};')
     body = '\n'.join(out[1:])
     return f'{out[0]}\nfeature calt {{\n{body}\n}} calt;\n'

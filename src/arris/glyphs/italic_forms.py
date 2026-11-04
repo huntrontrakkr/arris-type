@@ -156,9 +156,9 @@ def cursive_fea(names) -> str:
     out = f'feature ss04 {{\n    featureNames {{ name "Plain italic f k y"; }};\n{subs}\n}} ss04;\n'
     into = ' '.join(_joined(names))
     if into:
-        out += (f"feature calt {{\n    sub {JOIN}' [{into}] by {JOINED};\n}} calt;\n"
+        out += (f"feature calt {{\n    sub {JOIN}' [{into}] by {JOINED};\n    sub {RUN_END}' [{into}] by {RUN_JOINED};\n}} calt;\n"
                 f'feature {JOIN_TAG} {{\n    featureNames {{ name "Underscore apart"; }};\n'
-                f'    sub {JOINED} by {JOIN};\n}} {JOIN_TAG};\n')
+                f'    sub {JOINED} by {JOIN};\n    sub {RUN_JOINED} by {RUN_END};\n}} {JOIN_TAG};\n')
     return out
 
 
@@ -174,6 +174,8 @@ def cursive_fea(names) -> str:
 JOIN = 'underscore'
 JOIN_TAG = 'ss05'
 JOINED = f'{JOIN}.join'
+RUN_END = f'{JOIN}.seq.e'                          # the last of a run of underscores (sequences: `__f`)
+RUN_JOINED = f'{JOIN}.seq.join'                    # it, run on into the f
 
 
 def _joined(names):
@@ -187,7 +189,9 @@ def _joined(names):
     return out
 
 
-def _join_underscore(g):
+def _join_underscore(g, run=False):
+    """``run``: the last of a run of underscores (``sequences``), its line
+    coming in from the cell's left edge, flush with the piece before it."""
     from ..draw import draw
     from ..geom import rings_to_shapely
     from .ligatures import _runs
@@ -205,8 +209,13 @@ def _join_underscore(g):
     if all(runs):
         end = df + max(min(r[0] for r in rs) for rs in runs) + p.c + 0.25 * p.m
     g.p = us.p                                      # the underscore's own (Mono fits it to the cell: symkit)
-    g.clip = (du + x0, y0 - p.cap, end, y1 + p.cap)
-    g.stroke((du + x0, (y0 + y1) / 2, y1 - y0), (end, (y0 + y1) / 2))
+    start = du + x0
+    if run:
+        from .sequences import OV
+        start = -(p.fig_adv - p.fig_w) / 2 - OV * p.m
+        g.butt = (('x', start),)
+    g.clip = (start, y0 - p.cap, end, y1 + p.cap)
+    g.stroke((start, (y0 + y1) / 2, y1 - y0), (end, (y0 + y1) / 2))
 
 
 def register_join(names):
@@ -215,7 +224,8 @@ def register_join(names):
         return []
     if JOINED not in REGISTRY:
         glyph(JOINED, None, 'fig_w', kind=('liga', 1))(_join_underscore)
-    return [JOINED]
+        glyph(RUN_JOINED, None, 'fig_w', kind=('liga', 1))(lambda g: _join_underscore(g, run=True))
+    return [JOINED, RUN_JOINED]
 
 
 def _one_counter(g):

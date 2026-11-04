@@ -94,7 +94,11 @@ def question(g):
     d = beak_depth(p)
     # The 2's bowl, its right side turning back into a short stem at the centre.
     xs = f.X(4)
-    g.stroke((f.X(1), p.cap - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6)), (xs, f.Y(6)),
+    # a lead-in (the `#?` ligature: the top bar of #, in this frame, as (x, y,
+    # thickness)): the bar runs on to the bowl's left side, which rises from it
+    lead = getattr(g, 'lead', None)
+    start = [(f.X(1), p.cap - d)] if lead is None else [*lead, (f.X(1), lead[-1][1])]
+    g.stroke(*start, B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6)), (xs, f.Y(6)),
              (xs, p.dot() + dot_gap(p)))
     dot(g, xs, 0)
 
