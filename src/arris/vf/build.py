@@ -48,8 +48,9 @@ def setup_logging(debug: bool = False) -> None:
 
 def glyph_names(settings: Settings) -> list[str]:
     """The font's glyphs, the figures first: every registered glyph but the
-    italic's own forms and the ligatures (or the trial's few)."""
-    names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital')
+    italic's own forms, the ligatures and the Mono's code alternates (ss06),
+    or the trial's few."""
+    names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith(('.ital', '.ss06'))
                     and not (isinstance(REGISTRY[n].kind, tuple) and REGISTRY[n].kind[0] == 'liga')]
     if settings.only:
         names = [n for n in names if n in settings.only]
