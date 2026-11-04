@@ -9,8 +9,8 @@ by hand). From the engine's drawings, upright, at any weight:
 * mono_white: the white a Mono cell keeps beside its letter (1 - ink / cell)
 
 tools/optics_report.py prints them for every weight; tests/test_audit.py holds
-the ones with a rule (overshoot that grows with the weight, points cut near
-their line) and the one waiting on a decision (the Mono's white, #24).
+the ones with a rule (overshoot that grows with the weight, flat sides on
+their lines) and the one waiting on a decision (the Mono's white, #24).
 """
 from __future__ import annotations
 

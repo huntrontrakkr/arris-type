@@ -338,22 +338,10 @@ def _vee(f):
     return ya
 
 
-def _point_cut(g, f):
-    """The v's and w's points cut flat where a bowl's overshoot may reach
-    (OPTICAL's over_max of the x-height), as V and W are cut on the baseline:
-    drawn with 2:1 arms, steeper than the 45 degrees _vee is reckoned for,
-    their outer points otherwise sank with the stroke, from 10 units below
-    the baseline at Thin to 73 at Black. The watch's own drawing (no optics)
-    is cut on the line."""
-    from ..draw import OPTICAL
-    x0, _, x1, y1 = g.clip
-    g.clip = (x0, -OPTICAL['over_max'] * f.p.xh * f.p.optical, x1, y1)
-
 
 @low('v', 8, 2)
 def v(g):
     f = Frame(g, 8, 'lower')
-    _point_cut(g, f)
     p, W = f.p, f.W
     xl, xr = f.X(1), f.X(7)
     ya = _vee(f)
@@ -366,7 +354,6 @@ def v(g):
 @low('w', 14, 3)
 def w(g):
     f = Frame(g, 14, 'lower')
-    _point_cut(g, f)
     p, W = f.p, f.W
     xl, xm, xr = f.X(1), W / 2, f.X(13)
     q1, q3 = (xl + xm) / 2, (xm + xr) / 2
