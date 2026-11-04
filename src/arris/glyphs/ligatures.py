@@ -293,10 +293,10 @@ def tilde_hyphen(g):
 @liga('~@')
 def tilde_at(g):
     """`~@`: the tilde as itself, and from the foot of its step its wave's
-    next step, rising at the steep 2:1 into the @: it becomes the ring's
-    top-left corner, so one line runs from the wave over the top of the @,
-    and the @'s side hangs from it (punct.at's lead-in; as Fira Code's tilde
-    becomes its @'s outer stroke)."""
+    next step, rising at the steep 2:1 into the @: it becomes the ring, one
+    line from the wave over the top of the @ and down into its a, with
+    nothing hanging below where it comes in (punct.at's lead-in; as Fira
+    Code's tilde becomes its @'s outer stroke)."""
     from ..draw import Glyph
     p = g.p
     a = axis(p)
