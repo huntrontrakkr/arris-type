@@ -474,7 +474,25 @@ OPTICAL = {
     # under a blur calibrated on a circle to a 1.5% overshoot), at most this
     # share of the zone height
     'over_max': 0.015,
+    # and at least this share, Thin to Black: the measure gives a heavier bowl
+    # less (its flat top is wider beside its corners), from 0.9% of the
+    # x-height at Thin to 0.15% at Black, where the eye wants more, the bowl
+    # carrying more ink across its line (arristype issue #26). Only a side
+    # that overshoots at all (a bowl's) is held to it.
+    'over_floor': (0.0085, 0.013),
 }
+
+
+def _over_floor(p, H):
+    """The least overshoot of a bowl's side at p's weight: OPTICAL's floor,
+    Thin's share rising evenly with the stem to Black's (the ungraded stem,
+    so a grade leaves it)."""
+    from .instances import stem
+    lo, hi = stem(100), stem(900)
+    sv = p.ungraded().sv if p.grade_k != 1.0 else p.sv
+    u = min(max((sv - lo) / (hi - lo), 0.0), 1.0)
+    a, b = OPTICAL['over_floor']
+    return (a + (b - a) * u) * H
 
 
 def _bowl_side(rings, y_line, inward, p):
@@ -524,6 +542,8 @@ def _optical(g, spec, p):
         top = 0.0
     if ys0 and not _bowl_side(rings0, min(ys0), +1, p):
         bot = 0.0
+    fl = _over_floor(p, H)
+    top, bot = (max(top, fl) if top else 0.0), (max(bot, fl) if bot else 0.0)
     ot, ob = min(top, cap_) * p.optical, min(bot, cap_) * p.optical
     # a side where the clip cuts ink (A's flat apex, v's foot: strokes run on
     # past the line and are cut on it) is a cut, and a cut stays on its line;
