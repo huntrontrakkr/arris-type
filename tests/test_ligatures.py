@@ -115,6 +115,19 @@ def test_a_run_is_one_line_however_long(kind, lines, w):
     assert len(getattr(ink, 'geoms', [ink])) == lines
 
 
+@pytest.mark.parametrize('name, pieces', [('w_w_w.liga', 1), ('ampersand_ampersand.liga', 1),
+                                          ('question_question.liga', 3), ('numbersign_question.liga', 2)])
+@pytest.mark.parametrize('w, it', [(300, False), (700, False), (400, True)])
+def test_the_joins_are_one_shape(name, pieces, w, it):
+    """Fira Code's joins (one contour in its font) are joined here too: the
+    w's of `www`, the &'s of `&&`, the ?'s of `??` and `#?` (their dots apart)."""
+    p = params(w).with_(mono=True)
+    if it:
+        p = italic(p).with_(cursive=True)
+    ink = rings_to_shapely(place(name, p)[0])
+    assert len(getattr(ink, 'geoms', [ink])) == pieces
+
+
 @pytest.mark.parametrize('w, it', [(300, False), (700, False), (400, True)])
 def test_the_ligatures_and_run_pieces_are_clean(w, it):
     p = params(w).with_(mono=True)

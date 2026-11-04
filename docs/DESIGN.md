@@ -674,7 +674,8 @@ characters on the cell grid):
   so the point sits between its bars); in `#_` the left stem of # runs down
   into the underscore, and in `#_(` on under the paren and up it, one
   stroke from the # to the top of the (; in `#?` the top bar of # runs on
-  into the ?'s bowl. `#=` sets the bars of = level with the bars of #, `#:`
+  into the ?'s bowl, and in `??` the second ?'s beak leaves the first one's
+  side the same way. `#=` sets the bars of = level with the bars of #, `#:`
   the colon's dots on them, brought in; `#!` brings the ! in (# stays at
   the start of the line). Fira Code slants the : and ! to its slanted #;
   Arris's # stands upright, so they keep their own drawing.
@@ -690,6 +691,12 @@ characters on the cell grid):
   `!=` `/=` `!==` `=/=` strike them; `:=` `=:` `::=` raise the colon onto
   the bars; in `^=` the caret's arm runs down onto the top bar.
 * **`/\` `\/`**: the two slashes meet in a point.
+* **`www`** is one zigzag, each next w begun on the last one's right
+  upright, which they share; the shared uprights stand full height, each
+  w's short middle between, so the three still read as three. **`&&`**
+  stands on one line: the first one's floor runs on under its leg into the
+  second's. (These and `#?` are the sequences Fira Code joins into one
+  shape rather than sets closer.)
 
 Where a sequence becomes a new sign, it is drawn across its cells: the
 arrows (`->` `-->` `<-` `<->` `=>` `==>` `<=>` `|->` `<-|` `|=>` `->>`
@@ -700,9 +707,10 @@ two dashes, each run out to fill its cell; `++` `+++` run the plus signs'
 bars through.
 
 **Characters together.** What Fira Code draws only closer is set the same
-way: `!!` `%%` `&&` `**` `***` `..` `...` `::` `:::` `;;` `//` `///` `||`
-`|||` `??` `<<` `<<<` `>>` `>>>`, and `/*` `*/` `*>` `<*` `<*>` `<+` `+>`
-`<+>` `?.` `.?` `?=` `!!.` `..<` `..=` `www`. Each character is itself,
+way: `!!` `%%` `**` `***` `..` `...` `::` `:::` `;;` `//` `///` `||`
+`|||` `<<` `<<<` `>>` `>>>`, and `/*` `*/` `*>` `<*` `<*>` `<+` `+>`
+`<+>` `?.` `.?` `?=` `!!.` `..<` `..=` (Fira Code sets these as its
+characters closer, separate shapes, as here). Each character is itself,
 the run centred on its cells, each next one half a cell on (as Fira's), or
 as far as leaves a stroke and a half of white between them at Regular
 (square to their strokes), whichever is further, and never further than

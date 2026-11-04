@@ -17,8 +17,9 @@ the characters would be. Where a sequence becomes a new sign, it is drawn
 across its cells: the arrows (one 45-degree head, 0.88 of the cap height,
 its point kept sharp, the shaft ending inside it), the struck bars of !=,
 the larger <= and >=, the raised colon of :=. What Fira Code only draws
-closer (`||` `::` `//` `>>` `/*` `<*>` `www`) is set as its characters
-brought together, each as itself (``_run``). Runs of any length (`---->`)
+closer (`||` `::` `//` `>>` `/*` `<*>`) is set as its characters brought
+together, each as itself (``_run``); what it joins into one shape (`www`
+`&&` `??` `#?`) is joined. Runs of any length (`---->`)
 are ``sequences``; Fira Code's optional sets are here too, under its tags
 (OPTIONAL). ``docs/DESIGN.md``, section 8.
 """
@@ -722,13 +723,13 @@ def _close_pair(a, b, gap):
     return hi
 
 
-def _run(g, names, dys=None):
+def _run(g, names, dys=None, draw=True):
     """The characters ``names`` together, as a repeat's copies are (STEP,
     WHITE, WHITE_MIN), each as itself (moved up or down by ``dys``), the
     run centred on its cells: each next character as far from the last
     (ink centre to ink centre) as half a cell, or as WHITE between them at
     Regular, or as WHITE_MIN here, whichever is furthest; never further than
-    set alone."""
+    set alone. Returns each one's (glyph, x); ``draw`` False only places them."""
     from ..draw import _cut
     p, W = g.p, g.W
     dys = dys or [0.0] * len(names)
@@ -755,7 +756,8 @@ def _run(g, names, dys=None):
     shift = W / 2 - (lo + hi) / 2
     out = []
     for x, (sub, _), m, dy in zip(xs, here, mids, dys):
-        g.add_glyph(sub, shift + x - m, dy)
+        if draw:
+            g.add_glyph(sub, shift + x - m, dy)
         out.append((sub, shift + x - m))
     return out
 
@@ -766,9 +768,8 @@ def _together(g, name, n):
 
 
 def _register_repeats():
-    for ch, n in (('!', 2), ('%', 2), ('&', 2), ('*', 2), ('*', 3), ('.', 2), ('.', 3), (':', 2), (':', 3),
-                  (';', 2), ('/', 2), ('/', 3), ('|', 2), ('|', 3), ('?', 2), ('<', 2), ('<', 3), ('>', 2),
-                  ('>', 3)):
+    for ch, n in (('!', 2), ('%', 2), ('*', 2), ('*', 3), ('.', 2), ('.', 3), (':', 2), (':', 3),
+                  (';', 2), ('/', 2), ('/', 3), ('|', 2), ('|', 3), ('<', 2), ('<', 3), ('>', 2), ('>', 3)):
         name = _names(ch)[0]
 
         def fn(g, name=name, n=n):
@@ -782,19 +783,80 @@ _register_repeats()
 
 # Characters brought together the same way, as Fira Code brings them: comments
 # (`/*` `*/`), the applicative and plus operators (`<*>` `<+>`, their halves),
-# Kotlin's and Swift's (`?.` `.?` `?=` `!!.`), ranges (`..<` `..=`), and `www`.
+# Kotlin's and Swift's (`?.` `.?` `?=` `!!.`), ranges (`..<` `..=`).
 def _register_runs():
-    for seq in ('/*', '*/', '*>', '<*', '<*>', '<+', '+>', '<+>', '?.', '.?', '?=', '!!.', '..<', '..=', 'www'):
+    for seq in ('/*', '*/', '*>', '<*', '<*>', '<+', '+>', '<+>', '?.', '.?', '?=', '!!.', '..<', '..='):
         names = list(_names(seq))
 
         def fn(g, names=names):
             _run(g, names)
         fn.__doc__ = f'`{seq}`: its characters together.'
-        guard = {'before': 'w', 'after': 'w'} if seq == 'www' else {}   # `www.` yes, `wwww` no
-        liga(seq, **guard)(fn)
+        liga(seq)(fn)
 
 
 _register_runs()
+
+
+# Three Fira Code joins, not only brings together (each is one shape in Fira's
+# font): `www`, `??`, `&&`. In Arris's strokes:
+
+@liga('www', before='w', after='w')                 # `www.` yes, `wwww` no
+def www(g):
+    """`www`: the three w's as one zigzag, each next w begun on the last
+    one's right upright, which they share: the shared uprights full height
+    as a w's own sides are, each w's short middle upright between, so the
+    three still read as three. The w's own drawing (lower.w), centred on
+    the cells."""
+    from ..draw import Glyph
+    from .letterframe import Frame
+    from .lower import _vee
+    p = g.p
+    ws = _sub('w', p)
+    f = Frame(Glyph(p, 'w', W=ws.W), 14, 'lower')
+    xl, xm, xr = f.X(1), ws.W / 2, f.X(13)
+    q1, q3 = (xl + xm) / 2, (xm + xr) / 2
+    ya = _vee(f)
+    yt = min(ya + 2 * (q1 - xl), p.xh)                      # the w's 2:1
+    step = xr - xl
+    o = g.W / 2 - (xl + 1.5 * step)
+    pts = [(o + xl, p.xh), (o + xl, yt)]
+    for k in range(3):
+        b = o + k * step
+        pts += [(b + q1, ya), (b + xm, yt), (b + q3, ya), (b + xr, yt)]
+        g.stroke((b + xm, yt), (b + xm, f.Y(6)))           # the w's middle
+    g.stroke(*pts, (o + xl + 3 * step, p.xh))
+    for k in (1, 2):
+        g.stroke((o + xl + k * step, yt), (o + xl + k * step, p.xh))
+
+
+@liga('??')
+def question_question(g):
+    """`??`: the two ? where the repeats rule sets them, the second's beak
+    leaving from the first one's right side, as the ? of `#?` leaves the
+    bar of #: one stroke from the first ? into the second."""
+    from ..draw import Glyph
+    from .figures import beak_depth
+    from .letterframe import Frame
+    p = g.p
+    (q1, x1), (q2, x2) = _run(g, ['question', 'question'], draw=False)
+    g.add_glyph(q1, x1, 0.0)
+    side = x1 + Frame(Glyph(p, 'question', W=q1.W), 9, 'cap').X(8)
+    g.add_glyph(_led(g, 'question', q2, [(side - x2, p.cap - beak_depth(p))]), x2, 0.0)
+
+
+@liga('&&')
+def ampersand_ampersand(g):
+    """`&&`: the two & where the repeats rule sets them, standing on one
+    line: the foot of the first (its bowl's floor, under its leg) runs on
+    at its weight into the floor of the second."""
+    p = g.p
+    (a1, x1), (a2, x2) = _run(g, ['ampersand', 'ampersand'], draw=True)
+    i1, i2 = _ink_of(a1, x1), _ink_of(a2, x2)
+    lo, hi = _runs(i2, x=(i2.bounds[0] + i2.bounds[2]) / 2)[0]       # the floor, across the second's middle
+    y = (lo + hi) / 2
+    start = max(r[1] for r in _runs(i1, y=y)) - p.c - 0.25 * p.sv
+    end = min(r[0] for r in _runs(i2, y=y)) + p.c + 0.25 * p.sv
+    g.stroke((start, y, hi - lo), (end, y))
 
 
 # --- `<$>`: the chevrons' arms run on to the dollar's S --------------------------
@@ -973,6 +1035,21 @@ def _bring(g, build):
     return min(alone, max(least(reg, WHITE * max(reg.sv, reg.m)), least(p, WHITE_MIN * max(p.sv, p.m))))
 
 
+def _led(g, name, sub, lead):
+    """``name`` drawn as ``sub`` is, its stroke led in from ``lead`` (points
+    in its own frame, left of it: punct.question, punct.at), its clip
+    widened to take the lead in."""
+    from ..draw import Glyph
+    h = Glyph(g.p, name, W=sub.W)
+    h.sh_auto = getattr(sub, 'sh_auto', h.sh_auto)
+    h.lead = lead
+    REGISTRY[name].fn(h)
+    if h.clip is not None:
+        x0, y0, x1, y1 = h.clip
+        h.clip = (min(x0, min(q[0] for q in lead) - g.p.sv), y0, x1, y1)
+    return h
+
+
 def _hash_then(g, name):
     """# as itself in cell 0, ``name`` as itself brought in toward it."""
     def build(q):
@@ -1024,18 +1101,13 @@ def hash_equal(g):
 def hash_question(g):
     """`#?`: the top bar of # runs on at its weight into the ?, which
     leaves it upright into its bowl: one stroke from # into the ?."""
-    from ..draw import Glyph
     p = g.p
     _, bars, stems = _hash(p)
     _, xh = _stamp(g, 'numbersign', 0)
     q = _sub('question', p)
     xq = _at(g, q, 1)
-    h = Glyph(p, 'question', W=q.W)
-    h.sh_auto = getattr(q, 'sh_auto', h.sh_auto)
     y, th = bars[-1]
-    h.lead = [(xh + stems[-1][1] - p.sv / 2 - xq, y, th)]
-    REGISTRY['question'].fn(h)
-    g.add_glyph(h, xq, 0.0)
+    g.add_glyph(_led(g, 'question', q, [(xh + stems[-1][1] - p.sv / 2 - xq, y, th)]), xq, 0.0)
 
 
 # --- Brackets closed by a pipe ----------------------------------------------------
