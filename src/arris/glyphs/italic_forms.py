@@ -14,10 +14,11 @@ These drawings give it a hand as well, from moves the upright already makes:
   diagonal with the 2's notch, the e whose bar is a diagonal and which
   leaves on an upstroke.
 
-The monospaced italic keeps the upright forms: a cell has no room for a
-tail. Its ``ss04`` ("Cursive italic") offers two of them anyway, the f and
-the k (``MONO_CURSIVE``), drawn narrower until they fit the cell; ``ss05``,
-with it, runs an underscore into the f's tail (``JOIN``).
+The monospaced italic keeps the upright forms but for three, the f, the k
+and the y (``MONO_CURSIVE``), cursive by default and drawn narrower until
+they fit the cell, an underscore running on into the f's tail (``JOIN``);
+``ss04`` ("Plain italic f k y") gives back the slanted upright's three, and
+``ss05`` ("Underscore apart") the underscore as it is.
 """
 from __future__ import annotations
 
@@ -32,9 +33,10 @@ FLAG = 1.5       # modules an entry flag reaches left of its stem (and down)
 BRANCH = 3       # modules below the arch where an italic shoulder leaves its stem
 
 
-# Mono's cursive set (ss04): the owner's two, the descending f and the looped k (2026-11-02; the whole
-# italic set in the cell was too much). Every other letter keeps the slanted upright's form.
-MONO_CURSIVE = ('f', 'k')
+# Mono's cursive set: the owner's three, the descending f, the looped k (2026-11-02; the whole italic
+# set in the cell was too much) and the y that runs on into its descender (2026-11-03), the default in
+# Mono Italic since 2026-11-03 (ss04 the plain ones). Every other letter keeps the slanted upright's form.
+MONO_CURSIVE = ('f', 'k', 'y')
 CELL_GAP = 0.25   # modules: Mono's cursive set keeps its ink this far inside the cell, so neighbours' tails never touch
 
 
@@ -81,10 +83,11 @@ def ital(name, wm, stems, width=None, openings=()):
     return deco
 
 
-# --- Mono's cursive set (ss04) -------------------------------------------------
-# In Arris Mono Italic every glyph that draws one of ss04's letters (the letter,
-# and what is built on it: ḟ ķ ǩ ﬁ ...) has an alternate, NAME.ss04, the same
-# glyph drawn with the cursive form; ss04 swaps them in.
+# --- Mono's cursive set, and ss04 -----------------------------------------------
+# Arris Mono Italic is drawn with the cursive set on (Params.cursive): every glyph
+# that draws one of its letters (the letter, and what is built on it: ḟ ķ ǩ ý ﬁ
+# ...) is the cursive form, and has an alternate, NAME.ss04, the same glyph drawn
+# with the slanted upright's form; ss04 swaps them in.
 
 CURSIVE: list = []      # MONO_CURSIVE, as registered
 
@@ -129,7 +132,8 @@ def _draws_cursive(name):
 
 
 def register_cursive(names):
-    """NAME.ss04 for each name: the glyph drawn with Mono's cursive set."""
+    """NAME.ss04 for each name: the glyph drawn with the slanted upright's
+    letters, the cursive set off."""
     out = []
     for n in names:
         alt = f'{n}.ss04'
@@ -138,26 +142,30 @@ def register_cursive(names):
 
             def fn(g, n=n):
                 from ..draw import draw
-                g.add_glyph(draw(n, g.p.with_(cursive=True), g.ot, g.ob, width=g.W))
+                g.add_glyph(draw(n, g.p.with_(cursive=False), g.ot, g.ob, width=g.W))
             glyph(alt, None, spec.width, kind=spec.kind)(fn)
         out.append(alt)
     return out
 
 
 def cursive_fea(names) -> str:
+    """ss04, the plain letters; then the underscore's join into the f, on
+    by default (calt, after ss04's swaps: a plain f takes no join); then
+    ss05, which undoes the join."""
     subs = '\n'.join(f'    sub {n} by {n}.ss04;' for n in names)
-    out = f'feature ss04 {{\n    featureNames {{ name "Cursive italic"; }};\n{subs}\n}} ss04;\n'
-    into = ' '.join(f'{n}.ss04' for n in _joined(names))
-    if into:                                                # after ss04's swaps: the join sees the cursive f
-        out += (f'feature {JOIN_TAG} {{\n    featureNames {{ name "Underscore into the cursive f"; }};\n'
-                f"    sub {JOIN}' [{into}] by {JOIN}.{JOIN_TAG};\n}} {JOIN_TAG};\n")
+    out = f'feature ss04 {{\n    featureNames {{ name "Plain italic f k y"; }};\n{subs}\n}} ss04;\n'
+    into = ' '.join(_joined(names))
+    if into:
+        out += (f"feature calt {{\n    sub {JOIN}' [{into}] by {JOINED};\n    sub {RUN_END}' [{into}] by {RUN_JOINED};\n}} calt;\n"
+                f'feature {JOIN_TAG} {{\n    featureNames {{ name "Underscore apart"; }};\n'
+                f'    sub {JOINED} by {JOIN};\n    sub {RUN_JOINED} by {RUN_END};\n}} {JOIN_TAG};\n')
     return out
 
 
-# --- The underscore into the f (ss05, with ss04; the owner's, 2026-11-02) ----------------------------------
+# --- The underscore into the f (the owner's, 2026-11-02; on by default, ss05 off, 2026-11-03) ----------
 # The descending f ends in a tail on the underscore's line, a cell's margin short of an underscore before
-# it. With ss05 on as well as ss04 (its own switch, off by default: ss04 alone is the letters, nothing
-# else), that underscore (JOIN.ss05) runs on into the tail, so `is_fresh` reads as one line into the f.
+# it. That underscore (JOINED) runs on into the tail, so `is_fresh` reads as one line into the f; ss05
+# keeps it apart, and a plain f (ss04) takes no join.
 # It is the underscore as it stands in its cell, its bar run on at its own height and weight past the
 # cell's edge until it is under the tail: a one-cell piece that draws past its cell, as a ligature does
 # ('liga' kind, so the cell does not cut it). The tail keeps its own end above the bar: where the f's
@@ -165,6 +173,9 @@ def cursive_fea(names) -> str:
 
 JOIN = 'underscore'
 JOIN_TAG = 'ss05'
+JOINED = f'{JOIN}.join'
+RUN_END = f'{JOIN}.seq.e'                          # the last of a run of underscores (sequences: `__f`)
+RUN_JOINED = f'{JOIN}.seq.join'                    # it, run on into the f
 
 
 def _joined(names):
@@ -178,13 +189,15 @@ def _joined(names):
     return out
 
 
-def _join_underscore(g):
+def _join_underscore(g, run=False):
+    """``run``: the last of a run of underscores (``sequences``), its line
+    coming in from the cell's left edge, flush with the piece before it."""
     from ..draw import draw
     from ..geom import rings_to_shapely
     from .ligatures import _runs
     p = g.p
     us = draw(JOIN, p)
-    f = draw('f.ss04', p)
+    f = draw('f', p.with_(cursive=True))
     du = (p.fig_w - us.W) / 2                       # each where it stands in its cell, in this glyph's frame
     df = p.fig_adv + (p.fig_w - f.W) / 2            # (whose x = 0 is its body's left: a 'liga' piece's)
     x0, y0, x1, y1 = rings_to_shapely(us.rings()).bounds
@@ -196,18 +209,23 @@ def _join_underscore(g):
     if all(runs):
         end = df + max(min(r[0] for r in rs) for rs in runs) + p.c + 0.25 * p.m
     g.p = us.p                                      # the underscore's own (Mono fits it to the cell: symkit)
-    g.clip = (du + x0, y0 - p.cap, end, y1 + p.cap)
-    g.stroke((du + x0, (y0 + y1) / 2, y1 - y0), (end, (y0 + y1) / 2))
+    start = du + x0
+    if run:
+        from .sequences import OV
+        start = -(p.fig_adv - p.fig_w) / 2 - OV * p.m
+        g.butt = (('x', start),)
+    g.clip = (start, y0 - p.cap, end, y1 + p.cap)
+    g.stroke((start, (y0 + y1) / 2, y1 - y0), (end, (y0 + y1) / 2))
 
 
 def register_join(names):
-    """JOIN.ss05, if the cursive set has a letter for it to run into."""
+    """JOINED, if the cursive set has a letter for it to run into."""
     if not _joined(names):
         return []
-    alt = f'{JOIN}.{JOIN_TAG}'
-    if alt not in REGISTRY:
-        glyph(alt, None, 'fig_w', kind=('liga', 1))(_join_underscore)
-    return [alt]
+    if JOINED not in REGISTRY:
+        glyph(JOINED, None, 'fig_w', kind=('liga', 1))(_join_underscore)
+        glyph(RUN_JOINED, None, 'fig_w', kind=('liga', 1))(lambda g: _join_underscore(g, run=True))
+    return [JOINED, RUN_JOINED]
 
 
 def _one_counter(g):

@@ -94,7 +94,11 @@ def question(g):
     d = beak_depth(p)
     # The 2's bowl, its right side turning back into a short stem at the centre.
     xs = f.X(4)
-    g.stroke((f.X(1), p.cap - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6)), (xs, f.Y(6)),
+    # a lead-in (the `#?` ligature: the top bar of #, in this frame, as (x, y,
+    # thickness)): the bar runs on to the bowl's left side, which rises from it
+    lead = getattr(g, 'lead', None)
+    start = [(f.X(1), p.cap - d)] if lead is None else [*lead, (f.X(1), lead[-1][1])]
+    g.stroke(*start, B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6)), (xs, f.Y(6)),
              (xs, p.dot() + dot_gap(p)))
     dot(g, xs, 0)
 
@@ -552,7 +556,19 @@ def at(g):
     g.stroke((xs8, yb), B(xa, yb, leg), B(xa, ya, leg), (xs8, ya), closed=True)
     # stem, then out along the bottom and round the outside, open at the foot
     g.stroke((xs8, ya), (xs8, yb), B(f.X(11), yb, p.m / 2), f.P(11, 7))
-    g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
+    lead = getattr(g, 'lead', None)
+    if lead is None:
+        g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
+        return
+    # a lead-in (the `~@` ligature: the tilde, in this frame, its last point
+    # where it rises): it climbs at the steep 2:1 from there to the ring's
+    # top and on over it, so the ring is one line from the lead-in over the
+    # top and down the right into the a's stem; the ring's left side and its
+    # foot, which would hang from where the lead-in meets it, are not drawn
+    top = f.Y(11)
+    lx, ly = lead[-1]
+    xt = lx + (top - ly) / 2
+    g.stroke(f.P(11, 6), B(*f.P(11, 11)), (xt, top), *reversed(lead), end='v')
 
 
 SPOKE = math.atan2(1, 2)       # the asterisk's slanted spokes: the shallow 2:1
