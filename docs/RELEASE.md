@@ -42,6 +42,33 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.011
+
+- Arris Mono sets every ligature Fira Code sets by default, 105 in all,
+  each one gesture in Arris's own strokes: a character keeps its place and
+  its drawing, and its strokes run on until they meet the next (`[|` `]#`
+  `#_(` `#?` `~@` `^=` `</>` …). `www`, `??` and `&&` are joined, as Fira
+  joins them; what Fira only sets closer (`!! :: // || << >> /* */ <*> ?.
+  ..<` …) is brought together, in the same places at every weight.
+- Runs of any length: hyphens, equal signs, underscores and number signs
+  are set as one piece to a cell, meeting flush, with the ligatures' own
+  heads, tails, pipes and slashes as caps (`---->` `<====>` `|---|` `>=>`
+  `<<--` `--|--` `=!==` `####` `____` `_|_`).
+- Fira Code's optional sets under its own tags, off by default: `ss07`
+  (`=~` `!~` as ≈ ≉), `ss08` (gapped `==` `===` `!=` `!==`), `ss09` (`>>=`
+  `<<=` `||=` `|=` as arrows), `ss10` (`Fl Tl fi fj fl ft`), `cv20` (`<=`
+  as ⇐), `cv21` and `cv22` (`=<` as ⩽ and as ≤), `cv25` `cv26` `cv32`
+  (`.-` `:-` `.=`), `cv27` (`[]` as a box), `cv28` (`{.` `.}`).
+- Mono Italic now draws its cursive f, k and y by default (1.010's ss04
+  was the f and k, off by default), the underscore running into the f, also
+  from the end of a run of underscores (`__f`). `ss04`, "Plain italic f k
+  y", gives back the slanted upright's letters; `ss05`, "Underscore apart",
+  the underscore as it is.
+- The watch's stroke balance eases off past Bold, to three quarters of
+  the watch's at Black (`instances.WATCH_TAPER`); SemiBold and everything
+  to 750 are unchanged. ŧ ҧ ∂ ϱ ℊ ₰ ϖ Ѫ ₼ ₴ ¢ $ hold steadier along the
+  weight.
+
 ## 1.010
 
 - Arris Mono in Fira Code's six weights, each with its italic: Light,
