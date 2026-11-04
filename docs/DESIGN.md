@@ -750,7 +750,8 @@ Arris draws those already):
 | `ss09` | `>>=` `<<=` `\|\|=` `\|=` into the bars of =, with the runs' tail, double head and pipes |
 | `ss10` | `Fl` `Tl` `fi` `fj` `fl` `ft`: the f's bar (the F's and T's top) run on into the next letter |
 | `cv20` | `<=` as ⇐ |
-| `cv21` `cv22` | `=<` as ≤ |
+| `cv21` | `=<` as ⩽, the bar parallel to the chevron's lower arm, the equal sign's white square to it |
+| `cv22` | `=<` as ≤, the bar level (as `<=` is) |
 | `cv25` `cv26` `cv32` | `.-` `:-` `.=`: the dot raised to the axis (the colon's to the bars), the line run back to it |
 | `cv27` | `[]` as a box, the arms run on until they meet |
 | `cv28` | `{.` `.}` with the dot raised to the brace's point |

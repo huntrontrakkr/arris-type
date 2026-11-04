@@ -463,28 +463,35 @@ liga('!=', '/=', '=/=')(lambda g: _strike(g, _bars(g, 2, struck=True)))
 liga('!==')(lambda g: _strike(g, _bars(g, 3, struck=True)))
 
 
-def _compare(g, mirror):
+def _compare(g, mirror, slant=False):
     """`<=` and `>=`: ≤ and ≥ at full size across the two cells: the <
     chevron's 2:1 at LE_HALF of the cap height, the equal sign's white, and
-    a bar as long as the chevron is wide; the pair centred on the axis."""
+    a bar as long as the chevron is wide; the pair centred on the axis.
+    ``slant``: the bar instead parallel to the chevron's lower arm, the
+    equal sign's white square to it, cut upright as the arm is (⩽, Fira
+    Code's cv21)."""
     import math
-    from .punct import SLOPE, eq_white
+
     from ..draw import _thickness
+    from .punct import SLOPE, eq_white
     p, W = g.p, g.W
     t = _thickness(p, g.sh)((2, 1))
     kv = t / (2 * math.cos(SLOPE))
     x_tip = t / (2 * math.sin(SLOPE))
     h = LE_HALF * p.cap
     white = eq_white(g)
-    a = axis(p) + (white + g.sh) / 2
+    d = (t + white) / math.cos(SLOPE)                          # the slanted bar below the arm, in y
+    a = axis(p) + (d / 2 if slant else (white + g.sh) / 2)
     x0 = (W - 2 * h - x_tip) / 2 + x_tip                       # the point, the whole sign centred
     x1 = x0 + 2 * h
-    pts = [(x1, a + h), (x0, a), (x1, a - h)]
-    if mirror:
-        pts = [(W - x, y) for x, y in pts]
-    g.stroke(*pts, start='v', end='v')
+    T = (lambda x: W - x) if mirror else (lambda x: x)
+    g.stroke((T(x1), a + h), (T(x0), a), (T(x1), a - h), start='v', end='v')
+    if slant:
+        xs = x0 - x_tip
+        g.stroke((T(xs), a - d - (xs - x0) / 2), (T(x1), a - d - h), start='v', end='v')
+        return
     yb = a - h - kv - white - g.sh / 2
-    g.stroke((x0 - x_tip, yb), (x1, yb)) if not mirror else g.stroke((W - x1, yb), (W - x0 + x_tip, yb))
+    g.stroke((T(x0 - x_tip), yb), (T(x1), yb)) if not mirror else g.stroke((T(x1), yb), (T(x0 - x_tip), yb))
 
 
 liga('<=')(lambda g: _compare(g, False))
@@ -1194,8 +1201,9 @@ def _chain(name, comps, pre='@LIGA_OPS', post='@LIGA_OPS'):
 # --- Fira Code's optional sets, under Fira's own tags ---------------------------
 # Off by default, as in Fira Code, and drawn as the default ligatures are. Fira's
 # cv19 and cv23 (`<=` `>=` with a level bar) and cv24 (`/=` as ≠) are how Arris
-# draws those by default; its character variants are not taken (Arris has its own
-# characters).
+# draws those by default; cv21 and cv22 are `=<` as ⩽ (the bar slanted) and as ≤
+# (level), as Fira's are. Its character variants are not taken (Arris has its
+# own characters).
 
 OPTIONAL: dict[str, tuple[str, list[str]]] = {}     # tag -> (label, feature-code lines)
 
@@ -1292,8 +1300,8 @@ for _seq in ('Fl', 'Tl', 'fi', 'fj', 'fl', 'ft'):
          'ss10', 'Text ligatures (Fl Tl fi fj fl ft)', before='', after='')
 _alt('<=', 'cv20', lambda g: _arrow(g, bars=2, right=False, left=True))
 _optional('cv20', '<= as an arrow', 'sub less_equal.liga by less_equal.cv20;')
-for _t in ('cv21', 'cv22'):     # Fira's slanted and level ≤; Arris has the one
-    _alt('=<', _t, lambda g: _compare(g, False), _t, '=< as ≤')
+_alt('=<', 'cv21', lambda g: _compare(g, False, slant=True), 'cv21', '=< as ≤, its bar slanted')
+_alt('=<', 'cv22', lambda g: _compare(g, False), 'cv22', '=< as ≤, its bar level')
 
 
 def _dot_then(g, after, colon=False):

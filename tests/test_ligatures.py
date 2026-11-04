@@ -87,6 +87,7 @@ def test_a_run_is_pieces_start_middle_end(font):
     ('ss10', 'fi', ['LIG', 'f_i.ss10']),
     ('cv20', '<=', ['LIG', 'less_equal.cv20']),
     ('cv21', '=<', ['LIG', 'equal_less.cv21']),
+    ('cv22', '=<', ['LIG', 'equal_less.cv22']),
     ('cv27', '[]', ['LIG', 'bracketleft_bracketright.cv27']),
     ('cv28', '{.', ['LIG', 'braceleft_period.cv28']),
     ('cv32', '.=', ['LIG', 'period_equal.cv32']),
