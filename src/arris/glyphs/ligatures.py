@@ -1170,6 +1170,43 @@ def a_cv01(g):
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
 
 
+# ss06, the code alternates (Mono only; arristype issue #25): letters told
+# apart at text sizes in a terminal, where the default's even feet ask the
+# reader to know l from i and 1 by their tops alone, and rn from m.
+@glyph('l.ss06', None, lambda p: REGISTRY['l'].width(p), kind='lower')
+def l_ss06(g):
+    """The l with a tail, as the proportional Arris draws it (the 1's flag
+    at the top, the t's foot at the bottom), in the Mono's cell: its stem
+    where the Mono's t stands, its tail running out to where the t's does."""
+    from .letterframe import Frame
+    f = Frame(g, 9, 'asc')
+    u = g.W / 9
+    x = 3.5 * u
+    g.stroke((x - 3 * u, f.Y(12)), (x, f.Y(12)), B(x, f.Y(1)), (8.5 * u, f.Y(1)))
+
+
+@glyph('r.ss06', None, lambda p: REGISTRY['r'].width(p), kind='lower')
+def r_ss06(g):
+    """The r whose arm turns down at its end: the default's flat arm reads
+    long, a cantilever with a void under it, and beside an n the pair reads
+    as an m; the arm's drop closes that void (its shape, not its reach, as
+    Fira Code's r is drawn). Otherwise the Mono's r: its stem two and a half
+    modules in, on a foot."""
+    from .letterframe import Frame
+    f = Frame(g, 8, 'lower')
+    p = g.p
+    u = g.W / 9
+    xs = f.X(1) + 2.5 * u
+    g.stroke((xs, 0), (xs, p.xh))
+    k = p.sd / 2 ** 0.5
+    y8, y6 = f.Y(8), f.Y(6)
+    x6 = xs + p.sv / 2 + k - p.c
+    # the drop: a module and a fifth below the arm's lower edge at every weight
+    # (on the grid, a heavy arm's own thickness took the whole of it)
+    g.stroke((x6, y6), (x6 + (y8 - y6), y8), B(*f.P(8, 8)), (f.X(8), p.xh - g.sh - 1.2 * p.m), start='h')
+    g.stroke((xs - 2.5 * u, f.Y(1)), (xs + 2.5 * u, f.Y(1)))
+
+
 @glyph('zero.cv02', None, 'fig_w', kind='fig')
 def zero_cv02(g):
     """The plain zero, without the monospaced cut's dot."""
@@ -1356,6 +1393,9 @@ _alt('{.', 'cv28', lambda g: _brace_dot(g, False), 'cv28', '{. .} with a raised 
 _alt('.}', 'cv28', lambda g: _brace_dot(g, True), 'cv28', '{. .} with a raised dot')
 
 
+SS06 = ('l', 'r')     # the code alternates' letters (their .ss06 glyphs, the Mono's only)
+
+
 def alternates_fea(mono: bool) -> str:
     def cv(tag, label, sub):
         return (f'feature {tag} {{\n    cvParameters {{\n        FeatUILabelNameID {{ name "{label}"; }};\n'
@@ -1365,6 +1405,8 @@ def alternates_fea(mono: bool) -> str:
     if mono:
         subs = '\n'.join(f'    sub {n}.liga by {n}.ss03;' for n in PLAIN)
         out.append(f'feature ss03 {{\n    featureNames {{ name "Plain comparisons"; }};\n{subs}\n}} ss03;')
+        out.append('feature ss06 {\n    featureNames { name "Code alternates: tailed l, r with a dropped arm"; };\n'
+                   + '\n'.join(f'    sub {n} by {n}.ss06;' for n in SS06) + '\n} ss06;')
         for tag in sorted(OPTIONAL):
             label, lines = OPTIONAL[tag]
             body = '\n'.join(f'    {ln}' for ln in lines)

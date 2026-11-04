@@ -36,7 +36,7 @@ def _liga(n):
 
 # italic drawings replace their uprights (arris.italic); ligatures are the monospaced cut's
 names = FIGS + [n for n in REGISTRY if n not in FIGS and not n.endswith('.ital') and not n.endswith('.ss04')
-                 and (mono or not _liga(n))]
+                 and (mono or not _liga(n)) and (mono or not n.endswith('.ss06'))]
 Path('build').mkdir(exist_ok=True)
 
 # Mono Italic: drawn with its cursive set (f k y), and an alternate for every glyph that draws one of them,

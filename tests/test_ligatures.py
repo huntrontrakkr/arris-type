@@ -91,10 +91,34 @@ def test_a_run_is_pieces_start_middle_end(font):
     ('cv27', '[]', ['LIG', 'bracketleft_bracketright.cv27']),
     ('cv28', '{.', ['LIG', 'braceleft_period.cv28']),
     ('cv32', '.=', ['LIG', 'period_equal.cv32']),
+    ('ss06', 'l', ['l.ss06']), ('ss06', 'r', ['r.ss06']),
 ])
 def test_the_optional_sets_are_off_until_asked(font, feat, text, want):
     assert shape(font, text, **{feat: True}) == want
     assert shape(font, text) != want
+
+
+def test_the_code_alternates_are_the_monos():
+    """ss06 (the tailed l, the r with a dropped arm) is the Mono's alone:
+    the proportional l has its tail already."""
+    from arris.glyphs.features import fea
+    assert 'feature ss06' in fea(mono=True)
+    assert 'feature ss06' not in fea(mono=False)
+
+
+@pytest.mark.parametrize('w', [300, 700])
+def test_the_tailed_l_and_the_dropped_arm(w):
+    """l.ss06 runs a tail out along the baseline where the default stands on
+    a centred foot; r.ss06's arm turns down at its end, under the default's."""
+    p = params(w).with_(mono=True)
+
+    def ink(n):
+        return rings_to_shapely(place(n, p)[0])
+    from shapely.geometry import box
+    foot = box(-1e3, 0, 1e4, p.sh * 1.5)
+    assert ink('l.ss06').intersection(foot).bounds[2] > ink('l').intersection(foot).bounds[2] + 0.5 * p.m
+    right = box(0.85 * p.fig_adv, p.xh / 2, 1e4, p.xh + 50)      # the arm's end, clear of the shoulder
+    assert ink('r.ss06').intersection(right).bounds[1] < ink('r').intersection(right).bounds[1] - 0.5 * p.m
 
 
 def _line(names, p):
