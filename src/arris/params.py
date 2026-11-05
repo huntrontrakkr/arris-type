@@ -45,7 +45,7 @@ class Params:
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
     mono: bool = False         # monospaced: every glyph on one cell (MONO_CELL), whatever the weight
     narrow: bool = False       # Arris Mono Narrow: the Mono's cell, its letters in MONO_NARROW modules
-    wide_w: float = 0.0        # Mono Narrow: Arris Mono's body at this weight, a wide letter's (draw.body_width)
+    wide: float = 1.0          # Mono Narrow: Arris Mono's body at this weight over the narrow one, a wide letter's (draw.body_width)
     cursive: bool = False      # Mono's italic with ss04's cursive letters (italic_forms.MONO_CURSIVE)
     plain: bool = False        # the italic drawn with the upright's letters, slanted (Mono's, in a sign set from letters)
     grade_k: float = 1.0       # grade: strokes scaled by this, widths and spacing untouched
@@ -71,7 +71,7 @@ class Params:
             lo, hi = MONO_BODY
             p = replace(p, fig_adv=MONO_CELL * p.m, fig_w=min(max(p.fig_w, lo * p.m), hi * p.m))
         if p.mono and p.narrow and not (self.mono and self.narrow):   # turning narrow: the narrow body,
-            p = replace(p, wide_w=p.fig_w, fig_w=MONO_NARROW * p.m)       # the Mono's for the wide letters
+            p = replace(p, wide=p.fig_w / (MONO_NARROW * p.m), fig_w=MONO_NARROW * p.m)   # the Mono's for the wide letters
         if p.floor and min(before.values()) < p.floor:
             p = replace(p, raw=tuple(before[f] for f in strokes),
                         **{f: max(before[f], p.floor) for f in strokes})

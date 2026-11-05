@@ -52,9 +52,13 @@ before a commercial distribution if wanted.
   leaves a tenth at Regular and a twentieth at Bold; Fira Code a quarter).
   The letters wide by nature (m w M W, æ œ, Ж Ш Ю, ω and the rest drawn 11
   modules wide or more at the Regular) are drawn as wide as Arris Mono
-  draws them, so their counters stay open. Every ligature, run and optional
-  set of Arris Mono is in it (`uv run python tools/build_fonts.py all mono
-  narrow`, with `italic` for the italics; `params.MONO_NARROW`).
+  draws them, so their counters stay open. The arch letters n h r u are a
+  little wider than the body, 8.4 modules, so the shoulder keeps Arris
+  Mono's notch where it leaves the stem and the r its arm; what is made
+  from them (ñ ŕ ĥ ü ǖ ɲ, the Bulgarian п и й, their italics) goes with
+  them. Every ligature, run and optional set of Arris Mono is in it
+  (`uv run python tools/build_fonts.py all mono narrow`, with `italic` for
+  the italics; `params.MONO_NARROW`, `draw.ARCH_MODULES`).
 - Arris Mono, Arris, Arris Watch and the variable fonts are unchanged.
 
 ## 1.011

@@ -83,7 +83,7 @@ def Nhookleft(g):
     g.clip = (0, -p.desc, g.W, H)
 
 
-@glyph('uni0272', 'ɲ', lambda p: REGISTRY['n'].width(p) + _hook_room(p), kind='lower')
+@glyph('uni0272', 'ɲ', lambda p: REGISTRY['n'].width(p) + _hook_room(p), kind='lower', base='n')
 def nhookleft(g):
     _fit_mono(g, 'n')
     p = g.p

@@ -13,7 +13,7 @@ The subscript schwa is the small e turned half round.
 """
 from __future__ import annotations
 
-from ..draw import REGISTRY, draw, glyph
+from ..draw import REGISTRY, body_width, draw, glyph
 from .features import MORE, small
 from .symkit import TURN, add_t, small_all
 
@@ -42,8 +42,10 @@ def sub_dy(p):
 def _small_width(base, letter):
     def width(p):
         ps = small_all(p)
-        if letter and p.mono:                               # a small letter fills a small cell
-            return ps.fig_w
+        if letter and p.mono:
+            # a small letter fills a small cell: its letter's body there (in
+            # Mono Narrow the m's and the n's are wider than the cell's body)
+            return body_width(REGISTRY[base], ps)
         return REGISTRY[base].width(ps)
     return width
 
