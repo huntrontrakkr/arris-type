@@ -20,6 +20,7 @@ Specimen, and the fonts to download: **[arristype.com](https://arristype.com)**.
 | **Arris** | Proportional letters, tabular figures. Measured optics. Nine weights. |
 | **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem). |
 | **Arris Italic**, **Arris Mono Italic** | Slanted ten degrees, every chamfer a curve, every point the upright keeps sharp kept sharp; a single-storey a and a descending f. Nine weights; Mono Italic in Mono's six. |
+| **Arris Mono Narrow** | Arris Mono with narrower letters in the same cell: about a fifth of every cell white at every weight, for code and terminals where Arris Mono reads dense. Same six weights, each with its italic, every ligature and set. |
 | **Arris Mono** | Fira Code's six weights: Light, Regular, Retina (450), Medium, SemiBold and Bold. Every glyph on one 10-module cell, the same in all six (a Bold word keeps a Regular line's grid): slabbed I, footed i l r, dotted zero, and every programming ligature Fira Code sets by default (`->` `=>` `!=` `===` `<=` `:=` `|>` `</>` `<$>` `#{` `~@` `/*` …), each one gesture in Arris's strokes, plus runs of any length (`---->` `<====>` `|---|` `####`) and Fira Code's optional sets under its tags. |
 | **Arris[GRAD,WTCH,wght]**, **Arris-Italic[GRAD,WTCH,wght]** | Variable: weight 100–900, grade −100–100, watch proportions 0–100; linked as one family on the `ital` axis. |
 
@@ -81,6 +82,7 @@ uv sync
 uv run python tools/build_fonts.py              # Arris, all weights
 uv run python tools/build_fonts.py all watch    # Arris Watch
 uv run python tools/build_fonts.py all mono     # Arris Mono
+uv run python tools/build_fonts.py all mono narrow   # Arris Mono Narrow
 uv run python tools/build_fonts.py all italic   # Arris Italic (add mono for Arris Mono Italic)
 uv run python -m arris.vf                       # the variable font, with its interpolation check
 uv run python -m arris.vf italic                # the italic variable font

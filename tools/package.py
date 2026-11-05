@@ -4,7 +4,7 @@
 
 Layout inside the zip:
     Arris-<version>/
-      static/        every static TTF (Arris, Arris Watch, Arris Mono, their italics)
+      static/        every static TTF (Arris, Arris Watch, Arris Mono, Arris Mono Narrow, their italics)
       variable/      Arris[GRAD,WTCH,wght].ttf, Arris-Italic[GRAD,WTCH,wght].ttf
       web/           WOFF2 of all of the above
       OFL.txt  AUTHORS.txt  README.md

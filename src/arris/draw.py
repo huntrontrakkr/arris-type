@@ -410,12 +410,35 @@ def _moved(r, dx, dy):
 LETTER_KINDS = ('cap', 'lower')
 
 
+_WIDE: dict = {}
+WIDE_MODULES = 11.0   # Mono Narrow: a letter this many modules wide or more at the Regular is wide by nature
+
+
+def _wide(spec) -> bool:
+    """Whether a letter is wide by nature: its own width at the Regular
+    (proportional, ungraded) is WIDE_MODULES or more (m 11.1, M 11.8, W and w
+    13.3; T at 10.3 and the rest are not). Decided once, at the Regular, so
+    a letter is wide at every weight or at none."""
+    if spec.name not in _WIDE:
+        from .instances import params as _params
+        ref = _params(400)
+        try:
+            _WIDE[spec.name] = spec.width(ref) >= WIDE_MODULES * ref.m
+        except Exception:
+            _WIDE[spec.name] = False
+    return _WIDE[spec.name]
+
+
 def body_width(spec, p, width=None):
     """A glyph's body: its own width, or in the monospaced cut, every
     letter fills the figures' body."""
     if width is not None:
         return width
     if p.mono and spec.kind in LETTER_KINDS:
+        if p.narrow and _wide(spec):
+            # Mono Narrow: a letter wider by nature (m w M W) is drawn as wide
+            # as Arris Mono draws it at this weight, so its counters stay open
+            return p.wide_w
         return p.fig_w
     return spec.width(p)
 

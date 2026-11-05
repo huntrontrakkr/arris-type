@@ -20,7 +20,7 @@ run() { tag=$1; shift; "$@" > $L/$tag.log 2>&1; echo "rc=$?" >> $L/$tag.log; }
 stamp start
 # drawings kept from other versions of the engine go (src/arris/font.py's cache)
 uv run python -c "from arris.font import prune_cache; print('cache: dropped', prune_cache(), 'old drawings')" >> $L/time.log 2>&1
-for fam in "" "watch" "mono" "italic" "mono italic"; do
+for fam in "" "watch" "mono" "italic" "mono italic" "mono narrow" "mono narrow italic"; do
     tag=$(echo "arris $fam" | tr ' ' '_' | sed 's/_$//')
     run "$tag" uv run python tools/build_fonts.py all $fam &
 done
@@ -39,7 +39,8 @@ FB="uvx --quiet --from fontbakery fontbakery check-universal -l WARN"
 { echo "== fontbakery static"; timeout 1800 $FB build/Arris-Regular.ttf build/Arris-Italic.ttf build/Arris-Black.ttf build/Arris-BlackItalic.ttf 2>&1 | grep -E "ERROR:|FAIL:"; } > $L/post_static.log 2>&1 &
 # (both at once: the italic's checks look for its roman)
 { echo "== fontbakery vf"; timeout 3600 $FB "build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf" 2>&1 | grep -E "ERROR:|FAIL:" || echo "  (no summary: timed out?)"; } > $L/post_vf.log 2>&1 &
-{ echo "== fontbakery mono"; timeout 1800 $FB build/ArrisMono-Light.ttf build/ArrisMono-Regular.ttf build/ArrisMono-Bold.ttf 2>&1 | grep -E "ERROR:|FAIL:"; } > $L/post_mono.log 2>&1 &
+{ echo "== fontbakery mono"; timeout 1800 $FB build/ArrisMono-Light.ttf build/ArrisMono-Regular.ttf build/ArrisMono-Bold.ttf 2>&1 | grep -E "ERROR:|FAIL:"
+  echo "== fontbakery mono narrow"; timeout 1800 $FB build/ArrisMonoNarrow-Light.ttf build/ArrisMonoNarrow-Regular.ttf build/ArrisMonoNarrow-Bold.ttf 2>&1 | grep -E "ERROR:|FAIL:"; } > $L/post_mono.log 2>&1 &
 # the variable fonts everywhere between their masters (on the GPU if there is one)
 { echo "== vf spikes"; timeout 1800 uv run --group gpu python tools/vf_spikes.py 2>&1 | grep -v "Warning\|return lib"; } > $L/post_spikes.log 2>&1 &
 wait

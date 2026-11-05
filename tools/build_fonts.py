@@ -1,8 +1,9 @@
-"""Build static TTFs: tools/build_fonts.py [weights] [watch] [mono] [italic]
+"""Build static TTFs: tools/build_fonts.py [weights] [watch] [mono] [narrow] [italic]
 
 weights: comma-separated (default all nine); 'watch' builds the watch-
 proportions family (Arris Watch) instead of the measured optics; 'mono' the
-monospaced cut; 'italic' the italics (arris.italic).
+monospaced cut; 'narrow' with it, Arris Mono Narrow (the Mono's cell, its
+letters narrower); 'italic' the italics (arris.italic).
 
 Each weight is built in a process of its own (ARRIS_BUILD_WORKERS at a
 time, default every weight at once): a weight draws every glyph through
@@ -24,11 +25,12 @@ from arris.italic import italic
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 watch = 'watch' in sys.argv[2:]
 mono = 'mono' in sys.argv[2:]
+narrow = mono and 'narrow' in sys.argv[2:]
 # 'all': every weight; Mono's are Fira Code's six, Light to Bold with Retina (MONO_WEIGHTS)
 weights = [int(w) for w in sys.argv[1].split(',')] if len(sys.argv) > 1 and sys.argv[1] != 'all' else \
     (list(MONO_WEIGHTS) if mono else list(STEMS))
 ital = 'italic' in sys.argv[2:]
-family = 'Arris' + (' Mono' if mono else '') + (' Watch' if watch else '')
+family = 'Arris' + (' Mono' if mono else '') + (' Narrow' if narrow else '') + (' Watch' if watch else '')
 def _liga(n):
     k = REGISTRY[n].kind
     return isinstance(k, tuple) and k[0] == 'liga'
@@ -44,14 +46,14 @@ Path('build').mkdir(exist_ok=True)
 cursive = []
 if mono and ital and __name__ == '__main__':
     from arris.glyphs.italic_forms import cursive_fea, cursive_set, register_cursive, register_join
-    cursive = cursive_set(names, italic(params(400, optics=OPTICS).with_(mono=True)),
+    cursive = cursive_set(names, italic(params(400, optics=OPTICS).with_(mono=True, narrow=narrow)),
                           workers=int(os.environ.get('ARRIS_CURSIVE_WORKERS', os.cpu_count() or 4)))
     names = names + register_cursive(cursive) + register_join(cursive)
     print('cursive set:', len(cursive), 'glyphs', flush=True)
 
 
 def one(w):
-    p = params(w, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono)
+    p = params(w, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono, narrow=narrow)
     style = (MONO_NAMES if mono else NAMES)[w]
     if ital:
         p = italic(p).with_(cursive=mono)
