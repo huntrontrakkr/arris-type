@@ -30,11 +30,11 @@ def _stamped(name, latin, kind='lower'):
     """An alternate that is a Latin letter's own drawing, and its italic
     drawing too where it has one (looked up when drawn: ŭ is composed
     after this module)."""
-    glyph(name, None, lambda p, n=latin: REGISTRY[n].width(p), kind=kind)(
+    glyph(name, None, lambda p, n=latin: REGISTRY[n].width(p), kind=kind, base=latin)(
         lambda g, n=latin: REGISTRY[n].fn(g))
     if f'{latin}.ital' in REGISTRY:
         spec = REGISTRY[f'{latin}.ital']
-        glyph(f'{name}.ital', None, spec.width, kind=kind)(spec.fn)
+        glyph(f'{name}.ital', None, spec.width, kind=kind, base=f'{latin}.ital')(spec.fn)
 
 
 def _italic_as(name, default):

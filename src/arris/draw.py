@@ -13,7 +13,7 @@ from typing import Callable
 
 from . import cache
 from .geom import Node, Stroke, Thickness, ink
-from .params import Params
+from .params import MONO_NARROW, Params
 
 REGISTRY: dict[str, 'Spec'] = {}
 
@@ -85,9 +85,11 @@ class Spec:
     solid: bool = False                # has a solid part by design (the pilcrow's bowl)
     cell: bool = False                 # a terminal cell's drawing: stays upright in the italic (font.place)
     squint: tuple = ()                 # Squint rules
+    base: str | None = None            # the letter it is made from (ñ's n, the Bulgarian п's n): its body in Mono Narrow
 
 
-def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False, cell=False, squint=()):
+def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False, cell=False, squint=(),
+          base: str | None = None):
     def deco(fn):
         w = width if callable(width) else (lambda p, w=width: getattr(p, w))
         f = fn
@@ -96,7 +98,7 @@ def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=Fal
             from .glyphs.symkit import mono_fitted
             f, w = mono_fitted(name, fn, w, kind)
         REGISTRY[name] = Spec(name, ord(char) if char else None, f, w, kind, tuple(openings), solid, cell,
-                              tuple(squint))
+                              tuple(squint), base)
         return fn
     return deco
 
@@ -410,12 +412,57 @@ def _moved(r, dx, dy):
 LETTER_KINDS = ('cap', 'lower')
 
 
+_WIDE: dict = {}
+WIDE_MODULES = 11.0   # Mono Narrow: a letter this many modules wide or more at the Regular is wide by nature
+# Mono Narrow's arch letters, a little wider than its body: in 7.8 modules the
+# shoulder's 45-degree diagonal and the arch's corner left the n, h and r
+# almost no flat top, and at Bold the diagonal ran out of room and its notch
+# (the 1's flag, turned) all but closed; at 8.4 the shoulder keeps Arris
+# Mono's notch and the r its arm. The u, an n turned, goes with them.
+ARCH = ('n', 'h', 'r', 'u')
+ARCH_MODULES = 8.4
+
+
+def _root(spec):
+    """The letter a glyph is made from, followed back (ǖ to ü to u), its
+    italic drawing (n.ital) its upright's name."""
+    seen = set()
+    while spec.base and spec.base in REGISTRY and spec.name not in seen:
+        seen.add(spec.name)
+        spec = REGISTRY[spec.base]
+    return spec.name.removesuffix('.ital')
+
+
+def _wide(spec) -> bool:
+    """Whether a letter is wide by nature: its own width at the Regular
+    (proportional, ungraded) is WIDE_MODULES or more (m 11.1, M 11.8, W and w
+    13.3; T at 10.3 and the rest are not). Decided once, at the Regular, so
+    a letter is wide at every weight or at none."""
+    if spec.name not in _WIDE:
+        from .instances import params as _params
+        ref = _params(400)
+        try:
+            _WIDE[spec.name] = spec.width(ref) >= WIDE_MODULES * ref.m
+        except Exception:
+            _WIDE[spec.name] = False
+    return _WIDE[spec.name]
+
+
 def body_width(spec, p, width=None):
     """A glyph's body: its own width, or in the monospaced cut, every
-    letter fills the figures' body."""
+    letter fills the figures' body. Mono Narrow's wide and arch letters are
+    measured from its body, so a set drawn smaller (the small figures'
+    parameters scale fig_w) draws them smaller with it."""
     if width is not None:
         return width
     if p.mono and spec.kind in LETTER_KINDS:
+        if p.narrow and _wide(spec):
+            # Mono Narrow: a letter wider by nature (m w M W) is drawn as wide
+            # as Arris Mono draws it at this weight, so its counters stay open
+            return p.wide * p.fig_w
+        if p.narrow and _root(spec) in ARCH:
+            # Mono Narrow's arch letters, and what is made from them
+            return ARCH_MODULES / MONO_NARROW * p.fig_w
         return p.fig_w
     return spec.width(p)
 

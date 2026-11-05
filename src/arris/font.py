@@ -30,6 +30,20 @@ class Metrics:
     win_desc: int = 390
 
 
+# Arris Mono Narrow's Windows ascent: its narrower bowls overshoot a little
+# more (the O 9 units past the caps at Bold, Arris Mono's 2), and the stack
+# of marks fitted over the O (marks.line_top) rides up with it: Ỗ reaches
+# 1187 at Bold, past the family's 1180. The narrow family's box is 10 units
+# taller, the same at every weight; its marks are fitted as Arris Mono's
+NARROW_WIN_ASC = 1190
+
+
+def win_ascent(p: Params) -> int:
+    """The Windows ascent of p's family: Metrics' for every family but
+    Arris Mono Narrow's."""
+    return NARROW_WIN_ASC if p.mono and p.narrow else Metrics.win_asc
+
+
 def glyph_contours(name: str, p: Params, tune=None):
     """Integer contours for a glyph, TrueType orientation (outer clockwise)."""
     t = (tune or {}).get(name, {})
@@ -423,7 +437,7 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     """Write a font of ``names`` at p. ``components`` (name -> [(component,
     dx, dy)]): glyphs carried as TrueType composites (their rings in
     ``placed`` still give their anchors and kerning)."""
-    m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh))
+    m = metrics or Metrics(cap=round(p.cap), xh=round(p.xh), win_asc=win_ascent(p))
     order = ['.notdef', 'space'] + list(names)
     fb = FontBuilder(UPM, isTTF=True)
     fb.setupGlyphOrder(order)

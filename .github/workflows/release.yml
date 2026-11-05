@@ -58,6 +58,8 @@ jobs:
           - { name: mono, args: 'mono' }
           - { name: italic, args: 'italic' }
           - { name: mono-italic, args: 'mono italic' }
+          - { name: mono-narrow, args: 'mono narrow' }
+          - { name: mono-narrow-italic, args: 'mono narrow italic' }
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -176,6 +178,7 @@ jobs:
           - { name: italic, artifacts: 'fonts-static-italic', files: 'build/Arris-Italic.ttf build/Arris-BlackItalic.ttf',
               skip: '-x opentype/STAT/ital_axis', pair: '' }
           - { name: mono, artifacts: 'fonts-static-mono', files: 'build/ArrisMono-Light.ttf build/ArrisMono-Regular.ttf build/ArrisMono-Bold.ttf', skip: '', pair: '' }
+          - { name: mono narrow, artifacts: 'fonts-static-mono-narrow', files: 'build/ArrisMonoNarrow-Light.ttf build/ArrisMonoNarrow-Regular.ttf build/ArrisMonoNarrow-Bold.ttf', skip: '', pair: '' }
           - { name: variable upright, artifacts: 'fonts-variable-*', files: '"build/Arris[GRAD,WTCH,wght].ttf"', skip: '',
               pair: '"build/Arris[GRAD,WTCH,wght].ttf" "build/Arris-Italic[GRAD,WTCH,wght].ttf"' }
           - { name: variable italic, artifacts: 'fonts-variable-italic', files: '"build/Arris-Italic[GRAD,WTCH,wght].ttf"',

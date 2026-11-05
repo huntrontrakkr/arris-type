@@ -493,7 +493,7 @@ def _register(name, ch, bname, base, marks):
         the composite is its base and marks, stamped in the base's body."""
         sp = REGISTRY.get(f'{bname}.ital') if p.slant else None
         return (sp or REGISTRY[bname]).width(p)
-    glyph(name, ch, width, kind=spec.kind)(fn)
+    glyph(name, ch, width, kind=spec.kind, base=bname)(fn)
 
 
 def _into_cell(g):

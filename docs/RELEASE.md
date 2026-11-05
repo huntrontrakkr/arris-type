@@ -42,6 +42,32 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.012
+
+- Arris Mono Narrow, a new family beside Arris Mono, in the same six
+  weights, each with its italic. The same 600-unit cell, so columns and
+  line lengths are the same as Arris Mono's, and the same strokes; its
+  letters and figures are drawn in a body of 7.8 modules instead of 9 to
+  9.5, so about a fifth of every cell is white at every weight (Arris Mono
+  leaves a tenth at Regular and a twentieth at Bold; Fira Code a quarter),
+  and two lowercase letters side by side keep twice Arris Mono's white
+  between them. No two letters or figures come near touching at any
+  weight, upright or italic: two-thirds of a module apart at the closest.
+  The letters wide by nature (m w M W, æ œ, Ж Ш Ю, ω and the rest drawn 11
+  modules wide or more at the Regular) are drawn as wide as Arris Mono
+  draws them, so their counters stay open. The arch letters n h r u are a
+  little wider than the body, 8.4 modules, so the shoulder keeps Arris
+  Mono's notch where it leaves the stem and the r its arm; what is made
+  from them (ñ ŕ ĥ ü ǖ ɲ, the Bulgarian п и й, their italics) goes with
+  them. Each weight from Regular up is drawn 50 lighter than its name
+  (the Regular at 350, the Bold at 650; the Light as it is), so in a
+  terminal, light on dark, its Regular puts as much ink in a cell as Fira
+  Code's Regular; the weight classes are its names'. Every ligature, run
+  and optional set of Arris Mono is in it (`uv run python
+  tools/build_fonts.py all mono narrow`, with `italic` for the italics;
+  `params.MONO_NARROW`, `draw.ARCH_MODULES`, `instances.narrow_weight`).
+- Arris Mono, Arris, Arris Watch and the variable fonts are unchanged.
+
 ## 1.011
 
 - Arris Mono sets every ligature Fira Code sets by default, 105 in all,

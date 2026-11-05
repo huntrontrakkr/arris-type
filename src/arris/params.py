@@ -20,6 +20,12 @@ SQRT2 = math.sqrt(2)
 # as at the Regular) and nine and a half (half a module, at Bold and up).
 MONO_CELL = 10.0
 MONO_BODY = (9.0, 9.5)
+# Arris Mono Narrow: the same cell, its letters and figures in a body of
+# this many modules at every weight, so a fifth of the cell or more is white
+# (Arris Mono's leaves a tenth at Regular, a twentieth at Bold; Fira Code a
+# quarter); a letter wider by nature (m w M W) keeps its own width, up to
+# Arris Mono's widest body, so its counters stay open (draw.body_width)
+MONO_NARROW = 7.8
 
 
 @dataclass(frozen=True)
@@ -38,6 +44,8 @@ class Params:
     fig_w: float = 540.0       # tabular figure body (9 modules)
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
     mono: bool = False         # monospaced: every glyph on one cell (MONO_CELL), whatever the weight
+    narrow: bool = False       # Arris Mono Narrow: the Mono's cell, its letters in MONO_NARROW modules
+    wide: float = 1.0          # Mono Narrow: Arris Mono's body at this weight over the narrow one, a wide letter's (draw.body_width)
     cursive: bool = False      # Mono's italic with ss04's cursive letters (italic_forms.MONO_CURSIVE)
     plain: bool = False        # the italic drawn with the upright's letters, slanted (Mono's, in a sign set from letters)
     grade_k: float = 1.0       # grade: strokes scaled by this, widths and spacing untouched
@@ -62,6 +70,8 @@ class Params:
         if kw.get('mono') and not self.mono:                # turning monospaced: Mono's one cell (MONO_CELL)
             lo, hi = MONO_BODY
             p = replace(p, fig_adv=MONO_CELL * p.m, fig_w=min(max(p.fig_w, lo * p.m), hi * p.m))
+        if p.mono and p.narrow and not (self.mono and self.narrow):   # turning narrow: the narrow body,
+            p = replace(p, wide=p.fig_w / (MONO_NARROW * p.m), fig_w=MONO_NARROW * p.m)   # the Mono's for the wide letters
         if p.floor and min(before.values()) < p.floor:
             p = replace(p, raw=tuple(before[f] for f in strokes),
                         **{f: max(before[f], p.floor) for f in strokes})
@@ -83,7 +93,7 @@ class Params:
         return s
 
     def scaled(self, k: float) -> 'Params':
-        keep = ('mono', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw')
+        keep = ('mono', 'narrow', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw')
         out = Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})
         return replace(out, raw=tuple(v * k for v in self.raw) if self.raw else None)
 
