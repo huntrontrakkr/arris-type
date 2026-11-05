@@ -19,7 +19,7 @@ from pathlib import Path
 from arris.draw import REGISTRY
 from arris.font import build
 from arris.glyphs.features import fea
-from arris.instances import HERITAGE_OPTICS, MONO_NAMES, MONO_WEIGHTS, NAMES, OPTICS, STEMS, params
+from arris.instances import HERITAGE_OPTICS, MONO_NAMES, MONO_WEIGHTS, NAMES, OPTICS, STEMS, narrow_weight, params
 from arris.italic import italic
 
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -46,14 +46,17 @@ Path('build').mkdir(exist_ok=True)
 cursive = []
 if mono and ital and __name__ == '__main__':
     from arris.glyphs.italic_forms import cursive_fea, cursive_set, register_cursive, register_join
-    cursive = cursive_set(names, italic(params(400, optics=OPTICS).with_(mono=True, narrow=narrow)),
+    cursive = cursive_set(names, italic(params(narrow_weight(400) if narrow else 400, optics=OPTICS)
+                                        .with_(mono=True, narrow=narrow)),
                           workers=int(os.environ.get('ARRIS_CURSIVE_WORKERS', os.cpu_count() or 4)))
     names = names + register_cursive(cursive) + register_join(cursive)
     print('cursive set:', len(cursive), 'glyphs', flush=True)
 
 
 def one(w):
-    p = params(w, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono, narrow=narrow)
+    # Mono Narrow: each weight drawn at narrow_weight (from Regular up, a little lighter than its name)
+    dw = narrow_weight(w) if narrow else w
+    p = params(dw, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono, narrow=narrow)
     style = (MONO_NAMES if mono else NAMES)[w]
     if ital:
         p = italic(p).with_(cursive=mono)

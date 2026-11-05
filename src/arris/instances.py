@@ -27,6 +27,16 @@ from .params import SQRT2, Params
 # engine still draws Mono at any weight; the build makes these.
 MONO_NAMES = {300: 'Light', 400: 'Regular', 450: 'Retina', 500: 'Medium', 600: 'SemiBold', 700: 'Bold'}
 MONO_WEIGHTS = tuple(MONO_NAMES)
+# Arris Mono Narrow draws each weight from Regular up this much lighter than its name says: in a
+# terminal, light on dark, its Regular then puts as much ink in a cell as Fira Code's Regular (0.33 of
+# the x-height band against Fira's 0.32; drawn at 400, 0.37). Its Light keeps its own weight: at 14 px
+# a lighter m's middle stem and the periods already go grey (the owner, 2026-11-05).
+NARROW_LIGHTER = 50
+
+
+def narrow_weight(wght: float) -> float:
+    """The weight Arris Mono Narrow draws a weight at (NARROW_LIGHTER)."""
+    return wght if wght <= MONO_WEIGHTS[0] else max(MONO_WEIGHTS[0], wght - NARROW_LIGHTER)
 STEMS = {100: 24, 200: 44, 300: 66, 400: 90, 500: 105, 600: 120, 700: 140, 800: 158, 900: 175}
 NAMES = {100: 'Thin', 200: 'ExtraLight', 300: 'Light', 400: 'Regular', 500: 'Medium',
          600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black'}
