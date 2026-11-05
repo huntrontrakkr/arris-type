@@ -307,9 +307,17 @@ def _on_butt(a, b, butt, corner=None) -> bool:
 
 
 BUTT_TOL = 1e-6
+# How much of its chord a join is filled with, by kind (1 is the watch's
+# pixel rule): a concave corner made where two strokes meet (a crotch, a T),
+# not a stroke's own bend (a counter's corner keeps its whole chord).
+CONCAVE_FILL = {'right': 0.5, 'acute': 0.35}
 
 
-def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
+def _key(q):
+    return (round(q[0], 3), round(q[1], 3))
+
+
+def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), drawn=None):
     """The corner rule on one ring (ink on the left of travel), as the watch's
     pixel rule behaves:
 
@@ -336,7 +344,7 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
                 changed = True
                 break
     n = len(pts)
-    kinds = []
+    kinds, turns = [], []
     for i in range(n):
         a, b, q = pts[i - 1], pts[i], pts[(i + 1) % n]
         u1, u2 = _unit(_sub(b, a)), _unit(_sub(q, b))
@@ -352,22 +360,27 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
         if butt and (_on_butt(a, b, butt, b) or _on_butt(b, q, butt, b)):
             kind = None                                     # ink cut square where it meets a butt line
         kinds.append(kind)
+        turns.append(turn * convex_sign)
     out = []
     for i in range(n):
         a, b, q = pts[i - 1], pts[i], pts[(i + 1) % n]
         e_in, e_out = _sub(b, a), _sub(q, b)
         u_in, u_out = _unit(e_in), _unit(e_out)
         k = kinds[i]
+        # a join (a concave corner none of the strokes drew: their union made it)
+        # takes its share of the chord; a stroke's own bend, the whole
+        join = turns[i] < 0 and drawn is not None and _key(b) not in drawn
+        fill = CONCAVE_FILL.get(k, 1.0) if join else 1.0
         # How much of each adjacent edge this corner may use.
         room_in = _len(e_in) * (0.5 if kinds[i - 1] else 1.0)
         room_out = _len(e_out) * (0.5 if kinds[(i + 1) % n] else 1.0)
         if k in ('right', 'steep'):
-            r = min(c, room_in, room_out)
+            r = min(c * fill, room_in, room_out)
             out += [_sub(b, _mul(u_in, r)), _add(b, _mul(u_out, r))]
             if rec is not None and k == 'right':
                 rec.append(('chord', out[-2], out[-1]))
         elif k == 'acute':
-            leg = c * math.sqrt(2)
+            leg = c * math.sqrt(2) * fill
             if _dir_class(u_in) == 'diag':
                 bb = min(leg, room_in, room_out / math.sqrt(2))
                 out += [_sub(b, _mul(u_in, bb)), _add(b, _mul(u_out, bb * math.sqrt(2)))]
@@ -419,6 +432,10 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     polys += list(extra)
     if not polys:
         return []
+    # every corner the strokes drew themselves: a corner of the union not
+    # among them is where two strokes meet
+    drawn = {_key(q) for P in polys for part in getattr(P, 'geoms', [P]) if isinstance(part, Polygon)
+             for r in [part.exterior, *part.interiors] for q in r.coords}
     u = shapely.union_all(polys)
     if clip is not None:
         u = u.intersection(clip)
@@ -446,11 +463,11 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
                 if r is poly.exterior or Polygon(r).area >= min_hole:
                     rings.append(pts)
             continue
-        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
+        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, drawn), POLISH * c, moved), JOG * c, moved))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
+            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, drawn), POLISH * c, moved), JOG * c, moved))
     if rec is not None and moved:
         _follow(rec, moved)
     if tags is not None:
