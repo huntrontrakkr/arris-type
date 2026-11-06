@@ -4,7 +4,11 @@ media controls and the watch's own pictographs.
 * **Keys** (⌘ ⌥ ⌃ ⎋ ⌫ ⌦ ⏏, with ⇧ and ⇪ among the arrows) share the
   cap height and the arrows' heads.
 * **Bracket pieces** (⎛-⎮, ⌠ ⌡) run from the line's descent to its ascent,
-  so they join when stacked line on line.
+  so they join when stacked line on line: exactly to them and cut square
+  there, as a terminal cell's lines are (``terminal``), the next line's
+  piece continuing the stem with no notch; only their free ends (a
+  paren's turn, a brace's point, an integral's hooks) are cut as Arris
+  cuts. Upright in the italic.
 * **Media controls** (⏩-⏺) are solid shapes, the same height, centred on
   the axis: triangles whose sides run at 2:1 (as wide as they are tall,
   near an equilateral's proportions), a square, an octagon, bars; their
@@ -43,8 +47,25 @@ def piece(name, char, width):
     line on line (spacing by ink would shift a piece with a point or a
     hook off it). Upright in the italic, as a terminal cell is (curved like
     the italic, never slanted): each line's glyphs slant about their own
-    baseline, so slanted pieces would step sideways at every join."""
-    return glyph(name, char, _mono(width), kind='fig', cell=True)
+    baseline, so slanted pieces would step sideways at every join.
+
+    It joins the pieces above and below it as a terminal cell joins its
+    rows: its stem runs exactly to the line's ascent and descent and is cut
+    square there (the clip and ``Glyph.butt``). Run a break past them and
+    cut there by the corner rule, the stems' ends were chamfers that the
+    next piece was to cover: drawn glyph by glyph, each smoothed on its own,
+    the two chamfers left a notch at every join, wider with the weight, and
+    with any more room between lines than the font's own the pieces stood
+    apart, each end chamfered."""
+    def wrap(fn):
+        def drawn(g):
+            fn(g)
+            asc, desc = line_top(g.p)
+            g.clip = (-g.W, desc, 2 * g.W, asc)
+            g.butt = tuple(g.butt) + (('y', asc), ('y', desc))
+        drawn.__name__, drawn.__module__ = getattr(fn, '__name__', 'piece'), fn.__module__
+        return glyph(name, char, _mono(width), kind='fig', cell=True)(drawn)
+    return wrap
 
 
 def lighten(g):
@@ -55,12 +76,11 @@ def lighten(g):
 
 
 def line_top(p):
-    """The line's ascent and descent (font.Metrics), in this drawing's units,
-    and an edge break past them: bracket pieces span them so they join line
-    on line, the corner rule's cuts falling in the overlap."""
+    """The line's ascent and descent (font.Metrics), in this drawing's units:
+    bracket pieces run exactly to them, as terminal cells do (piece)."""
     from ..font import Metrics
     m = Metrics()
-    return m.asc * p.m / 60.0 + p.c, m.desc * p.m / 60.0 - p.c
+    return m.asc * p.m / 60.0, m.desc * p.m / 60.0
 
 
 # --- Diameter, house, keys ---------------------------------------------------------
@@ -499,7 +519,6 @@ def _paren_piece(g, part, mirror):
         g.stroke(T(xs, asc), T(xs, bot + reach_), T(xs + reach_, bot), start='h', end='h')
     else:
         g.stroke(T(xs, desc), T(xs, asc))
-    g.clip = None
 
 
 def _bracket_piece(g, part, mirror):
