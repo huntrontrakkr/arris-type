@@ -272,9 +272,11 @@ def _even_bend(rings_, segs, curved, p: Params):
     return moved
 
 
-def _plan(rings_, p: Params, record):
+def _plan(rings_, p: Params, record, names=None, lock=None):
     """({(ring, index): turn_left} for the segments that curve, {(ring,
-    index): moved point}) for a drawing (see curve_rings)."""
+    index): moved point}) for a drawing (see curve_rings). ``names``: each
+    ring's edge names (geom.ink's tags); ``lock``: {edge name: curves}, the
+    decisions a heavy weight keeps from Bold (held)."""
     segs = _segments(rings_, record, p)
     edges: dict = {}
     for s in segs:
@@ -289,10 +291,62 @@ def _plan(rings_, p: Params, record):
             held.add(own)
     curved = {(ri, i): left for ri, i, own, smooth, left, _ in segs
               if (own[0] == 'bowl' and own not in held) or (own[0] != 'bowl' and smooth)}
+    if lock and names:
+        _keep(rings_, names, lock, curved)
     return curved, _even_bend(rings_, segs, curved, p)
 
 
-def curve_rings(rings_, p: Params, record):
+def _named(names):
+    """{edge name: (ring, index)} for the names that occur once."""
+    seen, out = set(), {}
+    for ri, ring in enumerate(names):
+        for i, nm in enumerate(ring):
+            if nm in seen:
+                out.pop(nm, None)
+            else:
+                seen.add(nm)
+                out[nm] = (ri, i)
+    return out
+
+
+def decisions(rings_, p: Params, record, names):
+    """{edge name: curves} for every chamfer the italic finds in a drawing:
+    what a heavier weight of its cut keeps (held)."""
+    record, _ = split_warp(record)
+    segs = _segments(rings_, record, p)
+    curved, _ = _plan(rings_, p, record)
+    at = {v: k for k, v in _named(names).items()}
+    return {at[(ri, i)]: (ri, i) in curved for ri, i, *_ in segs if (ri, i) in at}
+
+
+def _keep(rings_, names, lock, curved):
+    """The held decisions applied: a named edge Bold curved curves (if it is
+    still a 45-degree corner here, its turn read from its neighbours), one
+    Bold kept straight stays straight; the rest as this weight finds them."""
+    for nm, (ri, i) in _named(names).items():
+        if nm not in lock:
+            continue
+        if not lock[nm]:
+            curved.pop((ri, i), None)
+            continue
+        if (ri, i) in curved:
+            continue
+        pts = _ring_pts(rings_[ri])
+        n = len(pts)
+        a, b = pts[i], pts[(i + 1) % n]
+        seg = (b[0] - a[0], b[1] - a[1])
+        if not _diag(seg):
+            continue
+        vin = (a[0] - pts[i - 1][0], a[1] - pts[i - 1][1])
+        vout = (pts[(i + 2) % n][0] - b[0], pts[(i + 2) % n][1] - b[1])
+        t1, t2 = _cross(vin, seg), _cross(seg, vout)
+        tol = 1e-6 * math.hypot(*seg)
+        if abs(t1) <= tol or abs(t2) <= tol or (t1 > 0) != (t2 > 0):
+            continue                                        # no corner here to curve: it stays as it is
+        curved[(ri, i)] = t1 > 0
+
+
+def curve_rings(rings_, p: Params, record, names=None, lock=None):
     """Rings of points -> contours of (x, y, on_curve), in the upright frame,
     with their corners made curves.
 
@@ -308,7 +362,7 @@ def curve_rings(rings_, p: Params, record):
     it straightened the bowl at the weights where the bar or spine reached
     it (the italic e from 400, the s from 250 to 450, the j's hook), and
     curved at the others. Edge breaks curve on their own."""
-    curved, moved = _plan(rings_, p, record)
+    curved, moved = _plan(rings_, p, record, names, lock)
     out = []
     for ri, ring in enumerate(rings_):
         pts = _ring_pts(ring)
@@ -342,13 +396,71 @@ def warped(contours, warp):
     return [[(x, warp(y), on) for x, y, on in c] for c in contours]
 
 
-def outline(rings, record, p: Params):
+def outline(rings, record, p: Params, names=None, lock=None):
     """The italic outline: contours of (x, y, on), sheared, ink on the left
     (as the upright rings). Chamfers are found and curved on the exact
     drawing; the optical corrections (a warp in the record) then move the
-    curved outline, and the shear comes last."""
+    curved outline, and the shear comes last. ``names`` and ``lock``: the
+    curves held from Bold (held)."""
     record, warp = split_warp(record)
-    return [shear(c, p) for c in warped(curve_rings(rings, p, record), warp)]
+    return [shear(c, p) for c in warped(curve_rings(rings, p, record, names, lock), warp)]
+
+
+# --- Curves held from Bold ---------------------------------------------------------
+#
+# Each corner's curve is decided on the drawing at its own weight, and the
+# tests are yes or no on exact geometry (a chamfer within ON of its record,
+# an edge square to its neighbours): at the heavy weights, where the clean-up
+# moves edges a fraction of a unit and short edges come and go, a corner
+# curved at one weight and not the next. The lighter weights are as drawn:
+# from HOLD_FROM up a heavy weight keeps, corner by corner (each edge by its
+# name, geom.ink's tags, the same at every weight), what the weights about
+# Bold decide (HOLD_AT, the most of them), and decides for itself only the
+# corners Bold does not have.
+
+HOLD_FROM = 700.0
+HOLD_AT = (650.0, 675.0, 700.0, 725.0, 750.0)
+_HELD: dict = {}
+
+
+def held_scripts(name):
+    """Whether a glyph's italic curves are held from Bold: its character a
+    Latin letter (the first set the rule is tried on)."""
+    import unicodedata
+
+    from .draw import REGISTRY
+    base = name.split('.')[0]
+    spec = REGISTRY.get(base) or REGISTRY.get(name)
+    cp = getattr(spec, 'unicode', None)
+    if not cp:
+        return False
+    try:
+        return unicodedata.name(chr(cp)).startswith('LATIN')
+    except ValueError:
+        return False
+
+
+def hold(name, p: Params, decide):
+    """{edge name: curves} a glyph at p keeps from Bold, or None (lighter
+    than HOLD_FROM, not a font's own cut, not a held script). ``decide(q)``
+    gives the decisions at q, a weight of p's cut."""
+    if not p.slant or not held_scripts(name):
+        return None
+    from .draw import _cut
+    cut = _cut(p)
+    if cut is None or cut[0] < HOLD_FROM - 1e-9:
+        return None
+    at = cut[1]
+    key = (name, at(HOLD_FROM))
+    if key not in _HELD:
+        votes: dict = {}
+        for a in HOLD_AT:
+            for nm, c in decide(at(a)).items():
+                votes.setdefault(nm, []).append(c)
+        mid = decide(at(HOLD_FROM))
+        _HELD[key] = {nm: (sum(v) * 2 > len(v)) if sum(v) * 2 != len(v) else mid.get(nm, v[0])
+                      for nm, v in votes.items() if len(v) * 2 > len(HOLD_AT)}
+    return _HELD[key]
 
 
 def tt_contours(outline_):

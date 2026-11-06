@@ -81,12 +81,19 @@ def place(name: str, p: Params, tune=None):
     upright drawing, then curved and sheared (``arris.italic``)."""
     if p.slant:
         from . import italic
-        rings, record, adv = _place(name, p, tune, record=True)
+        names: list = []
+        rings, record, adv = _place(name, p, tune, record=True, tags=names)
+
+        def decide(q):
+            nq: list = []
+            rq, recq, _ = _place(name, q, tune, record=True, tags=nq)
+            return italic.decisions(rq, q, recq, nq)
+        lock = None if REGISTRY[name].cell else italic.hold(name, p, decide)
         if REGISTRY[name].cell:
             # a terminal cell's drawing joins the cells above and below it:
             # curved like the italic, never slanted (see _place)
             p = p.with_(slant=0.0)
-        return italic.outline(rings, record, p), adv
+        return italic.outline(rings, record, p, names, lock), adv
     rings, _, adv = _place(name, p, tune)
     return rings, adv
 
