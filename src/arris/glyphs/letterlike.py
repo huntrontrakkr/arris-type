@@ -420,8 +420,9 @@ def hslash(g):
     dx = 1.5 * p.m
     stamp(g, 'h', dx, width=g.W - dx)
     x, y = dx + p.sv / 2, (p.xh + p.asc) / 2 + p.m / 2
+    from ..draw import held_c
     e = 1.5 * p.m + g.held((0, 1)) / 2                    # its reach stops growing with its weight (Glyph.held)
-    g.stroke((x - e, y - e, g.held((1, 1))), (x + e, y + e), start='v', end='v')
+    g.lay((x - e, y - e, g.held((1, 1))), (x + e, y + e), c=held_c(p), start='v', end='v')
 
 
 def _rx(p):

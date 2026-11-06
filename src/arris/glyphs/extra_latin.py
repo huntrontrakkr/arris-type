@@ -39,22 +39,24 @@ def plus_width(*names, gap=0.0):
 
 
 def _bar(g, x0, x1, y):
-    """A bar added across a letter: it stops gaining weight at EXTRA_HOLD
-    (Glyph.held), and settles a few units off where its edge would land on
-    one of the letter's (Glyph.settle)."""
+    """A bar added across a letter: it keeps the Regular's weight (Glyph.held),
+    is laid over the letter (Glyph.lay), and settles a few units off where
+    its edge would land on one of the letter's (Glyph.settle)."""
     t = g.held()
-    g.settle([[((x0, y + d, t), (x1, y + d))] for d in NUDGE])
+    g.settle([[((x0, y + d, t), (x1, y + d))] for d in NUDGE], lay=True)
 
 
 # --- Bars and slashes over existing letters ----------------------------------
 
 def _slashbar(g, x, y, e):
     """A short 45-degree stroke through a stem (the Polish l's stroke); it
-    stops gaining weight at EXTRA_HOLD (Glyph.held), and its reach ``e``
-    (the callers': the stem's half and a module and a half, from the held
-    stem) stops growing with it, so it does not run down into the foot."""
+    keeps the Regular's weight (Glyph.held), laid over the letter, and its
+    reach ``e`` (the callers': the stem's half and a module and a half, from
+    the held stem) stops growing with it, so it does not run down into the
+    foot."""
     t = g.held((1, 1))
-    g.settle([[((x - e, y - e + d, t), (x + e, y + e + d), {'start': 'v', 'end': 'v'})] for d in NUDGE], curves=True)
+    g.settle([[((x - e, y - e + d, t), (x + e, y + e + d), {'start': 'v', 'end': 'v'})] for d in NUDGE],
+             curves=True, lay=True)
 
 
 @glyph('Lslash', 'Ł', width_of('L', 1.5), kind='cap')
@@ -82,7 +84,9 @@ def _oslash(g, name, top):
     # at heavy weights the slash thins so the two halves of the counter stay open
     a = w / 2 - top / 2                                     # x - y = a
     lo, hi = -0.75 * p.m, top + 0.75 * p.m
-    g.stroke((lo + a, lo, p.sd * g.held_share((1, 1)) * g.free('slash', 1.0)), (hi + a, hi), start='h', end='h')
+    from ..draw import held_c
+    g.lay((lo + a, lo, p.sd * g.held_share((1, 1)) * g.free('slash', 1.0)), (hi + a, hi), c=held_c(p),
+          start='h', end='h')
     g.clip = (-p.m, lo, w + p.m, hi)
 
 
@@ -199,7 +203,7 @@ def tbar(g):
     leg = max([foot] + [q[1] for r in rings for q in r if abs(q[0] - stem_l) <= 1 and q[1] < p.xh / 2])
     def low_at(w):
         return max(foot + w, leg + 1.5 * p.c)
-    bar = g.sh * g.held_share()                             # the bar stops gaining weight at EXTRA_HOLD
+    bar = g.sh * g.held_share()                             # the bar keeps the Regular's weight (Glyph.held)
     floor = STACK_MIN * bar
     w = p.m
     if top - w - low_at(w) < floor:
@@ -224,7 +228,7 @@ def tbar(g):
             if t_ >= floor and (y_, t_) not in seen:
                 seen.add((y_, t_))
                 cands.append([((0, y_, t_), (x1, y_, t_))])
-        g.settle(cands)
+        g.settle(cands, lay=True)
         return
     # no white to keep: right of the stem the bar fills the slot whole, a
     # break over, so no sliver is left, and runs on past the right edge, a
@@ -243,7 +247,7 @@ def tbar(g):
                 seen.add(yn)
                 cands.append([((0, yn, tn), (xc, yn, tn)), ((xc, y, thick), (x1, y, thick))])
     cands.append([((0, y, thick), (x1, y, thick))])
-    g.settle(cands)
+    g.settle(cands, lay=True)
 
 
 
@@ -361,8 +365,8 @@ def eth(g):
     """An o whose right side rises and bends back over it at 45 degrees,
     crossed level partway up (the barred d's bar). The bar keeps to the
     crossbar rule: it runs past the diagonal by ETH_RUN modules at the
-    least, keeps a module of white above the bowl, and stops gaining weight
-    at EXTRA_HOLD (Glyph.held). Drawn 3.2 modules long at the bowl's
+    least, keeps a module of white above the bowl, and keeps the Regular's
+    weight (Glyph.held), laid over the letter. Drawn 3.2 modules long at the bowl's
     shoulder, it was shorter than the diagonal is wide along it from 800
     (at Black 192 units against 208) and sank into it: the ð read as ∂."""
     from ..draw import _thickness
@@ -375,11 +379,12 @@ def eth(g):
     y_bend = p.xh - g.sh / 2
     reach = p.asc - y_bend
     g.stroke((xr, p.xh / 2), (xr, y_bend), (xr - reach, p.asc), end='h')
+    from ..draw import held_c
     t = g.held()
     yb = max(p.xh + 0.45 * (p.asc - p.xh), p.xh + p.m + t / 2)
     xc = xr - (yb - y_bend)                                  # the diagonal's centre at the bar
     half = max(1.6 * p.m, _thickness(p, g.sh)((-1.0, 1.0)) * SQRT2 / 2 + ETH_RUN * p.m)
-    g.stroke((xc - half, yb, t), (xc + half, yb))
+    g.lay((xc - half, yb, t), (xc + half, yb), c=held_c(p))
     g.clip = (0, 0, g.W, p.asc)
 
 

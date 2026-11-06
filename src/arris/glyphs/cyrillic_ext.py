@@ -140,12 +140,13 @@ def hook(g, f, x, y_from, reach=4.0):
 
 
 def cross_bar(g, x0, x1, y):
-    """A bar added across a letter's stem: it stops gaining weight at
-    EXTRA_HOLD (Glyph.held), and settles a few units off where its edge
-    would land on one of the letter's (Glyph.settle)."""
+    """A bar added across a letter's stem: it keeps the Regular's weight
+    (Glyph.held), is laid over the letter (Glyph.lay), and settles a few
+    units off where its edge would land on one of the letter's
+    (Glyph.settle)."""
     from ..draw import NUDGE
     t = g.held()
-    g.settle([[((x0, y + d, t), (x1, y + d))] for d in NUDGE])
+    g.settle([[((x0, y + d, t), (x1, y + d))] for d in NUDGE], lay=True)
 
 
 def beak_free(g):
@@ -378,11 +379,40 @@ def Pedesc(g):
 
 @ccap('uni049E', 'Ҟ', 9, 1, width=plus_room('K'))
 def Kastroke(g):
-    """K with Ħ's bar through the top of its stem."""
+    """K with Ħ's bar through the top of its stem, laid over it at the
+    Regular's thickness (draw.lay_bar). Its right half sits in the V between
+    the stem and the upper arm, which the K's own growth closes from below
+    (at Black the arm's root reaches the bar), so the bar rises with the
+    weight as far as it must to keep BAR_WHITE beside it at both ends
+    (draw.bar_white): from about 600, to the top of the stem at Black (the
+    owner, 2026-11-06)."""
+    from ..draw import BAR_WHITE, Glyph, _thickness, bar_white
     p = g.p
     dx = room(p)
     stamp(g, 'K', dx, width=g.W - dx)
-    cross_bar(g, 0, dx + p.sv + room(p), 0.75 * p.cap + g.sh / 4)
+    x1 = dx + p.sv + room(p)
+    t = g.held()
+    y0 = 0.75 * p.cap + g.sh / 4
+
+    def white(y):
+        h = Glyph(p, g.name, W=g.W)
+        stamp(h, 'K', dx, width=g.W - dx)
+        h.clip = g.clip
+        h.lay((0.0, y, t), (x1, y), c=p.c)
+        return bar_white(h)
+    y = y0
+    least = BAR_WHITE * p.m
+    if white(y0) < least:
+        lo, hi = y0, p.cap - t / 2
+        for _ in range(14):
+            mid = (lo + hi) / 2
+            lo, hi = (lo, mid) if white(mid) >= least else (mid, hi)
+        y = hi
+    # settled a few units up where its end lands a hairline off the arm (Mono's italic at 550 on the
+    # heavy grade), never down into the white it rose for
+    run = (_thickness(p, g.sh)((1.0, 0.0)) - t) / 2
+    g.settle([[((-run, y_, t), (x1, y_))] for y_ in sorted({min(y + d, p.cap - t / 2) for d in (0, 2, 4, 8, 12)})],
+             lay=True)
 
 
 @ccap('uni04B4', 'Ҵ', 13, 3)

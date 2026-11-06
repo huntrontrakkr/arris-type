@@ -301,48 +301,30 @@ def _g_room(p):
     return p.desc + extra - tail
 
 
-def _gstroke_white(q, t):
-    """The white above and below ǥ's bar t thick, centred in the room under
-    the bowl, at the weight q."""
-    return (_g_room(q) - t) / 2
-
-
-def _gstroke_t(p):
-    """ǥ's bar: the weight's own horizontal up to where the white above and
-    below it in the room under the bowl falls to half a module (about 375),
-    and that weight's from there on (draw.frozen)."""
-    from ..draw import frozen
-    return frozen(p, _gstroke_white)
-
-
 def _gstroke_run(p):
     """How far ǥ's bar runs out past its stem on each side: a module and a
-    half, and half of what the bar is thinner than the stem, so a bar that
-    has stopped gaining weight still reads as a bar (gstroke)."""
-    return 1.5 * p.m + max(0.0, p.sv - _gstroke_t(p)) / 2
+    half, and half of what the bar is thinner than the stem, so a bar held
+    at the Regular's weight still reads as a bar (gstroke)."""
+    from ..draw import bar_held
+    return 1.5 * p.m + max(0.0, p.sv - bar_held(p)) / 2
 
 
 @glyph('uni01E5', 'ǥ', lambda p: REGISTRY['g'].width(p) + _gstroke_run(p), kind='lower')
 def gstroke(g):
-    """g with a bar across its descender's stem. The descender holds little
-    room under the bowl (122 units to the hook at Regular, 146 at Black, the
-    g's hook deepening as it must: lower.hook), and a bar a stroke thick
-    pressed against the bowl and merged into the hook from 600. As the
-    owner asked (2026-11-06): the bar is centred in that room and keeps the
-    weight's thickness up to where the white around it starts to close
-    (half a module each side, about 375), frozen there to Black, and runs
-    out further the thinner it is than the stem (_gstroke_run). It is laid
-    over the finished g (Glyph.lay), its ends broken as at the weight it
-    froze at: nothing fills in where it crosses the stem as the g grows on
-    (the owner, 2026-11-06)."""
-    from ..draw import freeze
+    """g with a bar across its descender's stem, centred in the room under
+    the bowl (122 units to the hook at Regular, 146 at Black, the g's hook
+    deepening as it must: lower.hook). Like every added stroke it keeps the
+    Regular's thickness at the heavier weights, laid over the finished g
+    (draw.lay_bar), and runs out further the thinner it is than the stem
+    (_gstroke_run): nothing fills in where it crosses the stem as the g
+    grows on (the owner, 2026-11-06)."""
+    from ..draw import lay_bar
     p = g.p
     run = _gstroke_run(p)
     w = stamp(g, 'g', width=g.W - run)
     xs = w - p.sv / 2
-    t = _gstroke_t(p)
     y = -_g_room(p) / 2
-    g.lay((xs - run - p.sv / 2, y, t), (xs + run + p.sv / 2, y), c=freeze(p, _gstroke_white).c)
+    lay_bar(g, lambda t, own: ((xs - run - p.sv / 2, y), (xs + run + p.sv / 2, y)))
     g.clip = None
 
 

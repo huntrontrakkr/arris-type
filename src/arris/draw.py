@@ -110,11 +110,22 @@ def B(x, y, leg=None, w=None):
 
 
 NUDGE = (0, -2, 2, -4, 4, -8, 8, -12, 12)   # units: the steps a settling stroke tries off a coincidence with the drawing it meets (Glyph.settle)
-# The strokes added to a letter (the bar of Đ Ħ ŧ, the slash of Ø Ł, a bar across a stem) stop gaining
-# weight here: past it they keep this weight while the letter goes on getting heavier, so the white beside
-# them stays open and they read at every weight (docs/research/mono-cell.md §3). 600 is the weight whose
-# stem is the watch's own two modules (120 units).
-EXTRA_HOLD = 600.0
+# The strokes added to a letter or sign (the bar of Đ Ħ ŧ, the slash of Ø Ł, a bar across a stem: its
+# decorations) keep the Regular's weight: past it they stay as they are at Regular while the letter goes on
+# getting heavier, so the white beside them stays open and they read at every weight, one rule for every
+# one of them (the owner, 2026-11-06: "We need to be consistent about the bar. If it's added, keep the
+# weight at 400"; 1.007 to 1.013 held them from 600, docs/research/mono-cell.md §3). In Arris Mono
+# Narrow, its own Regular, drawn at narrow_weight(400) (hold_weight).
+EXTRA_HOLD = 400.0
+
+
+def hold_weight(p) -> float:
+    """The weight of p's cut whose added strokes every heavier weight keeps
+    (EXTRA_HOLD): the cut's Regular, as drawn."""
+    if p.narrow:
+        from .instances import narrow_weight
+        return narrow_weight(EXTRA_HOLD)
+    return EXTRA_HOLD
 
 
 @dataclass
@@ -143,7 +154,7 @@ class Glyph:
     def held(self, direction=(1.0, 0.0)) -> float:
         """The thickness of a stroke added to the letter, running in
         ``direction``: the glyph's own (its horizontals as it thins them) up
-        to EXTRA_HOLD, and from there on that weight's, in the same cut
+        to the Regular (hold_weight), and from there on the Regular's, in the same cut
         (grade, watch, Mono and slant kept). Never heavier than the glyph's
         own. A set derived from a font's (small capitals, small figures) keeps
         its own."""
@@ -155,9 +166,9 @@ class Glyph:
         itself."""
         p = self.p
         cut = _cut(p)
-        if cut is None or cut[0] <= EXTRA_HOLD:
+        if cut is None or cut[0] <= hold_weight(p):
             return 1.0
-        q = cut[1](EXTRA_HOLD)
+        q = cut[1](hold_weight(p))
         k = self.sh / max(p.sh, 1e-9)                       # the glyph's own thinning of its horizontals, kept
         own = _thickness(p, self.sh)(direction)
         return min(1.0, _thickness(q, max(q.sh * k, q.floor))(direction) / max(own, 1e-9))
@@ -241,8 +252,8 @@ class Glyph:
         """A stroke laid over the finished letter (``geom.ink``'s overlay):
         finished alone, its ends broken on the chamfer leg ``c``, and joined
         to the letter as it stands, so no corner rule fills in where it
-        meets it. For a stroke frozen at a weight (``frozen``): with the
-        frozen weight's ``c`` it is the same stroke from there to Black."""
+        meets it. For an added stroke held at the Regular (lay_bar): with
+        the Regular's ``c`` it is the same stroke from there to Black."""
         n = len(self.strokes)
         self.stroke(*pts, start=start, end=end)
         self.overlay.append((self.strokes.pop(n), c))
@@ -251,26 +262,33 @@ class Glyph:
     def rings(self):
         return self.outline(record=False)[0]
 
-    def settle(self, cands, curves: bool = False) -> bool:
+    def settle(self, cands, curves: bool = False, lay: bool = False) -> bool:
         """Draw the first of the candidate stroke sets (each a list of
         ``stroke`` argument tuples) whose outline the topology check
         (``arris.topology``) finds clean, in the italic too. A bar placed by
         rule can still land an edge a unit from a jog of the letter it
         crosses (the ŧ's at 900: a hairline fold where the crossbar's
         underside met the bar's top), and a step of a few units (NUDGE)
-        clears it. None clean: the first stands, for the check to name."""
+        clears it. None clean: the first stands, for the check to name.
+        ``lay``: the strokes are added ones, laid over the letter (Glyph.lay)
+        with their ends broken as at the Regular (held_c)."""
         from . import italic as IT
         from .topology import faults
         p = self.p
-        n = len(self.strokes)
+        n, m = len(self.strokes), len(self.overlay)
         def put(st):                                        # (point, ...) or (point, ..., {stroke's keywords})
-            if st and isinstance(st[-1], dict):
-                self.stroke(*st[:-1], **st[-1])
+            kw = st[-1] if st and isinstance(st[-1], dict) else {}
+            pts = st[:-1] if kw else st
+            if lay:
+                self.lay(*pts, c=held_c(p), **kw)
             else:
-                self.stroke(*st)
+                self.stroke(*pts, **kw)
+        def clear():
+            del self.strokes[n:]
+            del self.overlay[m:]
         best = None
         for j, strokes in enumerate(cands):
-            del self.strokes[n:]
+            clear()
             for st in strokes:
                 put(st)
             rings, rec = self.outline(record=bool(p.slant))
@@ -290,11 +308,11 @@ class Glyph:
             if best is None or k > best[0]:
                 best = (k, j)
         if best is not None:
-            del self.strokes[n:]
+            clear()
             for st in cands[best[1]]:
                 put(st)
             return True
-        del self.strokes[n:]
+        clear()
         for st in cands[0]:
             put(st)
         return False
@@ -1000,39 +1018,25 @@ def _at_watch(p, watch):
     return q
 
 
-def frozen(p, white_at, least=None, direction=(1.0, 0.0)) -> float:
-    """The thickness of a stroke added to a letter (a bar across its stem),
-    running in ``direction``: the weight's own, up to the weight of p's cut
-    where the white beside it, ``white_at(q, t)`` (q that weight's
-    parameters, t the stroke's thickness there), would fall under
-    ``least(q)`` (half a module), and that weight's from there on. Frozen
-    where it starts to merge, the stroke keeps the weight it had where it
-    last read, to Black (the owner, 2026-11-06). The weight's own where the
-    white keeps at every weight, or where p is not a font's own (_cut)."""
-    q = freeze(p, white_at, least, direction)
-    return min(_thickness(p, p.sh)(direction), _thickness(q, q.sh)(direction))
+# A stroke added across a letter or sign (a bar, a slash: lay_bar) keeps the Regular's thickness at every
+# heavier weight (EXTRA_HOLD), laid over the letter so nothing fills in round it, and runs out further the
+# thinner it is than the letter's own (the owner, 2026-11-06: "the thickening doesn't glop on it at all";
+# "if the thickness is a problem, just lengthen it"; "if it's added, keep the weight at 400").
+BAR_WHITE = 0.5     # modules: the side of the square of white a bar placed by its white keeps on its edge (bar_white)
 
 
-# A bar laid across a letter (Ѣ ѣ Ҟ ҟ Ӿ ӿ: lay_bar) reads while white half a module square still sits on
-# every stretch of its edge that shows, between it and the rest of the letter: it keeps the weight's
-# thickness (to EXTRA_HOLD) up to the weight where that white would close, and that weight's from there
-# to Black, laid over the letter so nothing fills in round it, and longer the thinner it is than the
-# letter's own (the owner, 2026-11-06: "look at the weight where it starts to merge in and then freeze
-# it there"; "the thickening doesn't glop on it at all after it's frozen").
-BAR_WHITE = 0.5     # modules: the side of the square of white a laid bar keeps on its edge
-_BAR_AT: dict = {}
-
-
-def _held_at(q):
-    """q, or its cut's EXTRA_HOLD weight past it (Glyph.held)."""
+def held_at(q):
+    """q, or its cut's Regular past it (hold_weight): the parameters an
+    added stroke is drawn with."""
     cut = _cut(q)
-    return cut[1](EXTRA_HOLD) if cut is not None and cut[0] > EXTRA_HOLD else q
+    return cut[1](hold_weight(q)) if cut is not None and cut[0] > hold_weight(q) else q
 
 
-def _bar_held(q) -> float:
-    """A bar's own thickness at q: the weight's horizontal, held from EXTRA_HOLD."""
-    q = _held_at(q)
-    return _thickness(q, q.sh)((1.0, 0.0))
+def bar_held(q, direction=(1.0, 0.0)) -> float:
+    """An added stroke's thickness at q, running in ``direction``: the
+    weight's own, held from the Regular (held_at)."""
+    h = held_at(q)
+    return min(_thickness(q, q.sh)(direction), _thickness(h, h.sh)(direction))
 
 
 def bar_white(g) -> float:
@@ -1088,82 +1092,24 @@ def bar_white(g) -> float:
     return best
 
 
-def _bar_weight(g):
-    """The parameters of the weight whose bar g's weight draws: g's own up
-    to the heaviest weight of its cut where the bar, its own thickness
-    there, still keeps BAR_WHITE (bar_white), that weight's past it. Found
-    once a cut, on the drawing itself."""
+def held_c(p) -> float:
+    """The chamfer leg an added stroke's ends are broken on: the Regular's
+    past it (held_at), so the stroke is the same from there to Black."""
+    return min(p.c, held_at(p).c)
+
+
+def lay_bar(g, ends, direction=(1.0, 0.0), start='flat', end='flat'):
+    """A stroke added across the letter (a bar, a slash), laid over it
+    (Glyph.lay), the Regular's thickness at every heavier weight
+    (Glyph.held), its ends broken as at the Regular. ``ends(t, own)``: its
+    two end points at thickness t, the letter's own thickness ``own`` at
+    this weight (a drawing runs it further the thinner it is than that)."""
     p = g.p
-    cut = _cut(p)
-    if cut is None:
-        return p
-    w, at = cut
-    key = (g.name, at(400.0))
-    if key not in _BAR_AT:
-        spec = REGISTRY[g.name]
-
-        def reads(w_):
-            q = at(w_)
-            depth = _DEPTH[0]
-            _DEPTH[0] = 0                                   # drawn as itself (Mono: in its own cell)
-            try:
-                h = _build(spec, q, 0.0, 0.0, {'bar_t': _bar_held(q)})
-            finally:
-                _DEPTH[0] = depth
-            return bar_white(h) >= BAR_WHITE * q.m - 1e-6
-        if reads(900.0):
-            _BAR_AT[key] = 900.0
-        elif not reads(100.0):
-            _BAR_AT[key] = 100.0
-        else:
-            lo, hi = 100.0, 900.0
-            for _ in range(12):                             # to a fifth of a weight unit
-                mid = (lo + hi) / 2
-                lo, hi = (mid, hi) if reads(mid) else (lo, mid)
-            _BAR_AT[key] = lo
-    return at(min(w, _BAR_AT[key]))
-
-
-def lay_bar(g, ends):
-    """A level bar laid across the letter (Glyph.lay), frozen where its
-    white would close (_bar_weight). ``ends(t, own)``: the bar's two end
-    points at thickness t, the thickness ``own`` it would have unfrozen
-    (a drawing runs the bar further the thinner it is than that)."""
-    p = g.p
-    own = _bar_held(p)
-    t = g.overrides.get('bar_t')
-    if t is not None:
-        q = p
-    else:
-        q = _bar_weight(g)
-        t = min(own, _bar_held(q))
+    own = _thickness(p, g.sh)(direction)
+    t = g.held(direction)
     a, b = ends(t, own)
-    g.lay((a[0], a[1], t), b, c=min(p.c, _held_at(q).c))   # its ends broken as at the weight whose thickness it has
+    g.lay((a[0], a[1], t), b, c=held_c(p), start=start, end=end)
     return t
-
-
-def freeze(p, white_at, least=None, direction=(1.0, 0.0)):
-    """The parameters of the weight a stroke freezes at (``frozen``): p's
-    own while its white keeps. Its chamfer leg (``.c``) is the leg the
-    stroke keeps with its thickness (``Glyph.lay``)."""
-    least = least or (lambda q: q.m / 2)
-    if white_at(p, _thickness(p, p.sh)(direction)) >= least(p):
-        return p
-    cut = _cut(p)
-    if cut is None:
-        return p
-    w, at = cut
-
-    def ok(w_):
-        q = at(w_)
-        return white_at(q, _thickness(q, q.sh)(direction)) >= least(q)
-    lo, hi = 100.0, w
-    if not ok(lo):
-        return at(lo)
-    for _ in range(24):                                     # the heaviest weight whose stroke still reads
-        mid = (lo + hi) / 2
-        lo, hi = (mid, hi) if ok(mid) else (lo, mid)
-    return at(lo)
 
 
 def _lighter(p):

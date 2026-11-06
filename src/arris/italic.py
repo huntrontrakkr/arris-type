@@ -184,6 +184,7 @@ def _segments(rings_, record, p: Params):
     square_bowls = any(r and r[0] == SQUARE and r[1:] == ('bowl',) for r in record)
     hid = _hidden(record)
     claims = {}
+    pieces = {}                                             # (ring, index): the whole chamfer an overlay cut it from
     for ri, ring in enumerate(rings_):
         pts = [tuple(q) for q in ring]
         n = len(pts)
@@ -192,7 +193,9 @@ def _segments(rings_, record, p: Params):
             if not _diag((b[0] - a[0], b[1] - a[1])):
                 continue
             if hid:
-                a, b = _ends(a, b, None, None, hid)[:2]
+                a, b, _, _, ha, hb = _ends(a, b, None, None, hid)
+                if ha or hb:
+                    pieces[(ri, i)] = (a, b)
             for own, k, along in _owners(a, b, record):
                 key = (own, k)
                 if own[0] == 'chord' or key not in claims or abs(along) < abs(claims[key][0]):
@@ -211,6 +214,16 @@ def _segments(rings_, record, p: Params):
                 if along < 0 or not _through_ink(q, near, rings_, p.c / 2):
                     continue
         owner.setdefault((ri, i), own)
+    # an overlay across a chamfer's middle leaves two pieces of it showing (Ø's slash over the O's
+    # corners): each is the chamfer's, curved as the whole and cut where the overlay crosses it (_cover)
+    for key, whole in pieces.items():
+        if key in owner:
+            continue
+        for other, own in list(owner.items()):
+            w2 = pieces.get(other)
+            if w2 is not None and all(math.dist(u, v) < HID_AT for u, v in zip(whole, w2)):
+                owner[key] = own
+                break
     out = []
     for ri, ring in enumerate(rings_):
         pts = [tuple(q) for q in ring]
@@ -276,22 +289,25 @@ def _even_bend(rings_, segs, curved, p: Params, hid=()):
             pairs.setdefault(own, []).append((ri, i))
     out = {}
     for own, edges in pairs.items():
-        if len(edges) != 2:
-            continue
-        legs, ends = [], []
+        whole: dict = {}                                    # the pieces of one chamfer (an overlay across it) are one edge
         for ri, i in edges:
             e = _edge(rings_[ri], i, hid)
-            ends.append(e)
-            legs.append(abs(e[1][0] - e[0][0]))
+            key = (round(e[0][0], 3), round(e[0][1], 3), round(e[1][0], 3), round(e[1][1], 3))
+            whole.setdefault(key, (e, []))[1].append((ri, i))
+        if len(whole) != 2:
+            continue
+        (e1, k1), (e2, k2) = whole.values()
+        legs = [abs(e1[1][0] - e1[0][0]), abs(e2[1][0] - e2[0][0])]
         (lo, _), (li, j) = sorted(zip(legs, range(2)), reverse=True)
-        ri, i = edges[j]
+        e, keys = (e1, k1) if j == 0 else (e2, k2)
         target = max(p.c, 2 * li - lo)
         if li - target < 0.5:
             continue
-        _, _, vin, vout, _, _ = ends[j]
+        _, _, vin, vout, _, _ = e
         if not (_axis(vin) and _axis(vout)):
             continue
-        out[(ri, i)] = target / li
+        for key in keys:
+            out[key] = target / li
     return out
 
 
@@ -306,27 +322,45 @@ def _edge(ring, i, hid=()):
 
 
 def _roots01(c0, c1, c2):
-    """The roots of c0 + c1 t + c2 t^2 in [0, 1], ascending."""
-    if abs(c2) < 1e-12:
-        return [] if abs(c1) < 1e-12 else [t for t in (-c0 / c1,) if -1e-9 <= t <= 1 + 1e-9]
+    """The roots of c0 + c1 t + c2 t^2 in [0, 1], ascending. Solved in the
+    stable form: a 45-degree overlay across a 45-degree chamfer leaves c2 a
+    rounding error, and the textbook formula lost the real root to it (Ø's
+    slash over the O's corner, in Mono's italic)."""
+    scale = abs(c0) + abs(c1) + abs(c2)
+    if scale == 0.0:
+        return []
+    if abs(c2) <= 1e-9 * scale:
+        return [] if abs(c1) <= 1e-12 * scale else [t for t in (-c0 / c1,) if -1e-9 <= t <= 1 + 1e-9]
     disc = c1 * c1 - 4 * c2 * c0
     if disc < 0:
         return []
-    r = math.sqrt(disc)
-    return sorted(t for t in ((-c1 - r) / (2 * c2), (-c1 + r) / (2 * c2)) if -1e-9 <= t <= 1 + 1e-9)
+    q = -0.5 * (c1 + math.copysign(math.sqrt(disc), c1))
+    ts = [q / c2] + ([c0 / q] if q != 0.0 else [])
+    return sorted(t for t in ts if -1e-9 <= t <= 1 + 1e-9)
 
 
 def _cover(rings_, curved, bend, hid):
     """({(ring, index): moved point}, {(ring, index): control}) for the
     curved chamfers an even bend shortens (bend: their k) or an overlay
-    covers at one end. The curve is the letter's own, on its full chamfer
+    covers in part. The curve is the letter's own, on its full chamfer
     (shortened by k), with the control point at the corner it cut; where an
-    overlay covers an end, the part it leaves showing: the same curve cut
-    where it passes under the overlay's edge (the ring's point there moves
-    along that edge to meet it), its control the cut curve's own, so the
-    showing part lies exactly on the whole. An even bend that would bring a
-    covered end out from under the overlay stops with that end on its edge."""
-    moved, controls = {}, {}
+    overlay covers part of it, the parts it leaves showing: the same curve
+    cut where it passes under the overlay's edge (the ring's point there
+    moves along that edge to meet it), its control the cut curve's own, so
+    the showing part lies exactly on the whole. An even bend stops short of
+    taking a covered end out from under the overlay, or a showing end in
+    under it, and every piece of one chamfer bends alike (Mono's light ø,
+    the slash over its counter's corners, kept each half's end in the open)."""
+    def side(q, at, d):
+        return _cross(d, (q[0] - at[0], q[1] - at[1]))
+
+    def k_on(C, end, at, d):
+        den = side((C[0] + (end[0] - C[0]), C[1] + (end[1] - C[1])), C, d)
+        return side(at, C, d) / den if abs(den) > 1e-12 else 1.0
+
+    def bent(C, end, k):
+        return (C[0] + (end[0] - C[0]) * k, C[1] + (end[1] - C[1]) * k)
+    items, group_k = [], {}
     for (ri, i), left in curved.items():
         pts = _ring_pts(rings_[ri])
         n = len(pts)
@@ -337,24 +371,24 @@ def _cover(rings_, curved, bend, hid):
             continue
         k = 1.0 if k is None else k
         C = _corner(A, B, left)
-
-        def side(q, at, d):
-            return _cross(d, (q[0] - at[0], q[1] - at[1]))
         # the overlay's edges the covered ends pass under: through the ring's point, along its next (or last) edge
         lines = []
         if hb:
-            lines.append((b, (pts[(i + 2) % n][0] - b[0], pts[(i + 2) % n][1] - b[1]), B))
+            lines.append((b, (pts[(i + 2) % n][0] - b[0], pts[(i + 2) % n][1] - b[1]), B, A))
         if ha:
-            lines.append((a, (a[0] - pts[i - 1][0], a[1] - pts[i - 1][1]), A))
-        for at, d, full in lines:
-            # the end must stay on the covered side of the overlay's edge: k no smaller than puts it on it
-            den = side((C[0] + (full[0] - C[0]), C[1] + (full[1] - C[1])), C, d)
-            if abs(den) > 1e-12:
-                k_on = side(at, C, d) / den
-                if side(full, at, d) * side((C[0] + (full[0] - C[0]) * k, C[1] + (full[1] - C[1]) * k), at, d) <= 0:
-                    k = max(k, min(1.0, k_on))
-        A1 = (C[0] + (A[0] - C[0]) * k, C[1] + (A[1] - C[1]) * k)
-        B1 = (C[0] + (B[0] - C[0]) * k, C[1] + (B[1] - C[1]) * k)
+            lines.append((a, (a[0] - pts[i - 1][0], a[1] - pts[i - 1][1]), A, B))
+        for at, d, covered, showing in lines:
+            if side(covered, at, d) * side(bent(C, covered, k), at, d) <= 0:
+                k = max(k, min(1.0, k_on(C, covered, at, d)))
+            if len(lines) == 1 and side(showing, at, d) * side(bent(C, showing, k), at, d) <= 0:
+                k = max(k, min(1.0, k_on(C, showing, at, d)))
+        key = (round(A[0], 3), round(A[1], 3), round(B[0], 3), round(B[1], 3))
+        group_k[key] = max(group_k.get(key, 0.0), k)
+        items.append((ri, i, n, A, B, C, lines, ha, hb, key))
+    moved, controls = {}, {}
+    for ri, i, n, A, B, C, lines, ha, hb, key in items:
+        k = group_k[key]
+        A1, B1 = bent(C, A, k), bent(C, B, k)
         al = A1
         be = (2 * (C[0] - A1[0]), 2 * (C[1] - A1[1]))
         ga = (A1[0] - 2 * C[0] + B1[0], A1[1] - 2 * C[1] + B1[1])

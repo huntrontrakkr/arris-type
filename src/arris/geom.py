@@ -519,11 +519,15 @@ def _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs):
 
 def _hidden_ends(rings, over):
     """Record entries for the 45-degree edges of the finished ink that the
-    overlay ``over`` covers at one end: ('hid', where the edge now ends,
-    where it ended, the direction of the edge that went on from there,
-    'end' or 'start'). The italic curves such a chamfer as the letter's own
-    and keeps the part the overlay leaves showing (``italic._ends``): the
-    ǥ's hook, its bend under the bar, curved as the g's."""
+    overlay ``over`` covers in part: ('hid', where a piece of the edge now
+    ends, where the edge ended, the direction of the edge that went on from
+    there, 'end' or 'start'). The italic curves such a chamfer as the
+    letter's own and keeps the parts the overlay leaves showing
+    (``italic._ends``, ``_cover``): the ǥ's hook, its bend under the bar,
+    curved as the g's; the O's corners under Ø's slash, curved as the O's.
+    One treatment however the overlay lies on the edge (over one end, across
+    its middle, an end just out from under it), so nothing flips as the
+    weight moves the edge under the overlay (Ø's italic at 451)."""
     from shapely.geometry import LineString, Point
     out = []
     for r in rings:
@@ -533,30 +537,28 @@ def _hidden_ends(rings, over):
             d = _sub(b, a)
             if _len(d) < 1e-6 or abs(abs(d[0]) - abs(d[1])) > 1e-4 * _len(d):
                 continue
+            nxt, prev = tuple(r[(i + 2) % n][:2]), tuple(r[i - 1][:2])
             a_in, b_in = over.contains(Point(a)), over.contains(Point(b))
-            if a_in == b_in:
+            cut = LineString([a, b]).intersection(over.boundary)
+            pts = [(q.x, q.y) for q in getattr(cut, 'geoms', [cut]) if q.geom_type == 'Point']
+            if not a_in and not b_in and len(pts) >= 2:
+                # across its middle: a piece shows either side, one hidden at its end, the other at
+                # its start (an end within a sliver of the overlay leaves a piece the join's polish takes)
+                out.append(('hid', min(pts, key=lambda q: math.dist(q, a)), b, _sub(nxt, b), 'end'))
+                out.append(('hid', min(pts, key=lambda q: math.dist(q, b)), a, _sub(a, prev), 'start'))
+            elif b_in and not a_in and pts:
+                out.append(('hid', min(pts, key=lambda q: math.dist(q, a)), b, _sub(nxt, b), 'end'))
+            elif a_in and not b_in and pts:
+                out.append(('hid', min(pts, key=lambda q: math.dist(q, b)), a, _sub(a, prev), 'start'))
+            elif not a_in and not b_in:
                 # an end on the overlay's edge, or a sliver off it (the join's polish takes the sliver
                 # and moves the end onto the edge): covered as it comes out from under it, the edge
                 # that went on from it is the letter's (ǥ's hook at 648 in the italic)
-                if not a_in:
-                    da, db = over.distance(Point(a)), over.distance(Point(b))
-                    if db <= JOIN_SLIVER < da:
-                        nxt = tuple(r[(i + 2) % n][:2])
-                        out.append(('hid', b, b, _sub(nxt, b), 'end'))
-                    elif da <= JOIN_SLIVER < db:
-                        prev = tuple(r[i - 1][:2])
-                        out.append(('hid', a, a, _sub(a, prev), 'start'))
-                continue
-            cut = LineString([a, b]).intersection(over.boundary)
-            pts = [(q.x, q.y) for q in getattr(cut, 'geoms', [cut]) if q.geom_type == 'Point']
-            if not pts:
-                continue
-            if b_in:
-                nxt = tuple(r[(i + 2) % n][:2])
-                out.append(('hid', min(pts, key=lambda q: math.dist(q, a)), b, _sub(nxt, b), 'end'))
-            else:
-                prev = tuple(r[i - 1][:2])
-                out.append(('hid', min(pts, key=lambda q: math.dist(q, b)), a, _sub(a, prev), 'start'))
+                da, db = over.distance(Point(a)), over.distance(Point(b))
+                if db <= JOIN_SLIVER < da:
+                    out.append(('hid', b, b, _sub(nxt, b), 'end'))
+                elif da <= JOIN_SLIVER < db:
+                    out.append(('hid', a, a, _sub(a, prev), 'start'))
     return out
 
 
@@ -626,7 +628,7 @@ JOG = 1.0           # a step between parallel edges shorter than this share of t
 STRAY = 3.0         # degrees: a vertex bending less than this between two long edges goes (_close_jogs)
 POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
 SLIT = 0.35         # white narrower than twice this share of the chamfer leg, and long, is a slit
-JOIN_SLIVER = 1.0   # font units: an edge shorter than this, where an overlay joins the letter, is a point (_lay_over)
+JOIN_SLIVER = 1.5   # font units: an edge shorter than this, where an overlay joins the letter, is a point (_lay_over); over the topology check's TINY with the italic's shear to spare
 
 
 def _fill_slits(u, eps):
