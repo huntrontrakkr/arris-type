@@ -8,7 +8,7 @@ zone masters). Font instances use 60 units per module, so the cap height is
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, replace, field
 
 SQRT2 = math.sqrt(2)
 
@@ -49,6 +49,8 @@ class Params:
     cursive: bool = False      # Mono's italic with ss04's cursive letters (italic_forms.MONO_CURSIVE)
     plain: bool = False        # the italic drawn with the upright's letters, slanted (Mono's, in a sign set from letters)
     grade_k: float = 1.0       # grade: strokes scaled by this, widths and spacing untouched
+    light: float = 1.0         # strokes lightened by this (draw._lightened): the weight's own are these over it
+    unlit: 'Params | None' = field(default=None, compare=False, repr=False)   # the parameters lightened (draw._lightened)
     grad: float = 0.0          # the grade itself (GRAD), for the lighter weights of the same cut (draw._lighter)
     slant: float = 0.0         # italic: tan of the slant (outlines are sheared when built)
     floor: float = 0.0         # no stroke drawn thinner (instances.stroke_floor); 0 for the heritage
@@ -62,6 +64,7 @@ class Params:
         inside a ring, a grade) is clamped as it is made, so the geometry
         that places strokes and the strokes themselves agree."""
         strokes = ('sv', 'sh', 'sd', 'ss')
+        kw.setdefault('unlit', None)                      # a set derived from lightened parameters is not their weight's
         if 'cap' in kw and 'view_cap' not in kw:          # a set drawn at another size is still read at the font's
             kw['view_cap'] = self.view_cap or self.cap
         before = dict(zip(strokes, self.raw)) if self.raw else {f: getattr(self, f) for f in strokes}
@@ -93,7 +96,7 @@ class Params:
         return s
 
     def scaled(self, k: float) -> 'Params':
-        keep = ('mono', 'narrow', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw')
+        keep = ('mono', 'narrow', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw', 'light', 'unlit')
         out = Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})
         return replace(out, raw=tuple(v * k for v in self.raw) if self.raw else None)
 

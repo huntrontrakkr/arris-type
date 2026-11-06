@@ -165,10 +165,9 @@ class Glyph:
         (1 up to EXTRA_HOLD), for a drawing that sets a stroke's thickness
         itself."""
         p = self.p
-        cut = _cut(p)
-        if cut is None or cut[0] <= hold_weight(p):
+        q = held_at(p)
+        if q is p:
             return 1.0
-        q = cut[1](hold_weight(p))
         k = self.sh / max(p.sh, 1e-9)                       # the glyph's own thinning of its horizontals, kept
         own = _thickness(p, self.sh)(direction)
         return min(1.0, _thickness(q, max(q.sh * k, q.floor))(direction) / max(own, 1e-9))
@@ -780,7 +779,20 @@ def _white_reference(spec, p):
 
 
 def _lightened(p: Params, k: float) -> Params:
-    return p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k)
+    """p with its strokes lightened by k, remembering it (Params.light), so
+    an added stroke still keeps its weight's Regular (held_at)."""
+    return p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, light=p.light * k,
+                   unlit=_unlightened(p))
+
+
+def _unlightened(p: Params) -> Params:
+    """p as its weight draws it, before any lightening (Params.light): the
+    very parameters lightened, kept with them (rebuilt by dividing the
+    strokes back, they missed their cut by a rounding at some weights, and
+    an added stroke went unheld there: ∄'s slash 70 units, 115 at 778)."""
+    if p.light == 1.0:
+        return p
+    return p.unlit if p.unlit is not None else p
 
 
 LOCK_MIN = 0.75     # the most the topology lock lightens a drawing's strokes
@@ -1027,7 +1039,16 @@ BAR_WHITE = 0.5     # modules: the side of the square of white a bar placed by i
 
 def held_at(q):
     """q, or its cut's Regular past it (hold_weight): the parameters an
-    added stroke is drawn with."""
+    added stroke is drawn with. A drawing lightened as a whole (a sign the
+    white rule or the topology lock lightens: _lightened) holds its weight's
+    Regular, lightened alike: unheld, the strike of ⇎'s italic ran from 89
+    units to 116 between 600 and 601, where the rule began to lighten it."""
+    if q.light != 1.0:
+        if q.unlit is None:                                 # a set derived from lightened parameters: its own
+            return q
+        base = q.unlit
+        h = held_at(base)
+        return q if h is base else _lightened(h, q.light)
     cut = _cut(q)
     return cut[1](hold_weight(q)) if cut is not None and cut[0] > hold_weight(q) else q
 
