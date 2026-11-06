@@ -264,13 +264,15 @@ def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
 
 def _extent(c, g):
     """(bottom, top) of a component's ink drawn at 0: measured, so the
-    white between stacked parts is exactly the stack's."""
+    white between stacked parts is exactly the stack's. A stroke laid over
+    the component (``Glyph.lay``: ≨'s slash) is its ink as much as any."""
     from ..draw import Glyph, _thickness
     from ..geom import stroke_polygon
     tmp = Glyph(g.p, W=g.W, sh_k=g.sh_k, sh_auto=g.sh_auto)
     _draw(c, tmp, 0.0)
     th = _thickness(tmp.p, tmp.sh)
-    polys = [stroke_polygon(s, th, tmp.p.c) for s in tmp.strokes] + list(tmp.extra)
+    polys = ([stroke_polygon(s, th, tmp.p.c) for s in tmp.strokes] + list(tmp.extra)
+             + [stroke_polygon(s, th, oc) for s, oc in tmp.overlay])
     return min(q.bounds[1] for q in polys), max(q.bounds[3] for q in polys)
 
 
@@ -646,24 +648,29 @@ def greateroverequal(g):
 
 
 def _bar_with_stroke(g):
-    """A bar crossed by a short 2:1 stroke: the 'not equal' under a relation."""
+    """A bar crossed by a short 2:1 stroke: the 'not equal' under a relation.
+    The stroke is added, so drawn as at the Regular past it (held_at): its
+    thickness, and how far it reaches past the bar's edges."""
     def fn(g, yc):
-        from ..draw import held_c
+        from ..draw import held_at, held_c
         g.stroke((0, yc), (g.W, yc))
-        h = g.sh / 2 + max(1.75 * g.p.m, 1.0 * g.p.sv)
+        q = held_at(g.p)
+        h = g.sh / 2 + max(1.75 * q.m, 1.0 * q.sv)
         g.lay((g.W / 2 - h / 2, yc - h, g.held((1.0, 2.0))), (g.W / 2 + h / 2, yc + h), c=held_c(g.p),
               start='h', end='h')
     return Shape(lambda g: g.sh, fn)
 
 
+# (the chevron stands the stack's white above the slash's top, measured as
+# every stack is: the slash is part of the bar's ink)
 @op(u(0x2268), '≨')
 def lessnotequal(g):
-    stack(g, [Chevron(), _bar_with_stroke(g)], gap=lambda g: eq_gap(g) + max(1.75 * g.p.m, 1.0 * g.p.sv) - g.sh / 2)
+    stack(g, [Chevron(), _bar_with_stroke(g)])
 
 
 @op(u(0x2269), '≩')
 def greaternotequal(g):
-    stack(g, [Chevron(right=True), _bar_with_stroke(g)], gap=lambda g: eq_gap(g) + max(1.75 * g.p.m, 1.0 * g.p.sv) - g.sh / 2)
+    stack(g, [Chevron(right=True), _bar_with_stroke(g)])
 
 
 def _guil_step(p):
@@ -809,14 +816,17 @@ def _set(g, fn, below=None, neg=False, bars=2, right=False):
     if below is None:
         fn(g, axis(g.p), box_r(g, g.W))
     else:
-        # over a bar: the sign shrinks so the pair is as tall as <=
+        # over a bar: the sign shrinks so that over a plain bar the pair is as
+        # tall as <=, and stands the equal sign's white above the bar's ink,
+        # measured as stacks are (a slash across the bar is its ink: ⊊ ⊋),
+        # the pair centred on the axis
         H = le_height(g)
-        hb = below.height(g)
-        r = (H - hb - eq_gap(g) - g.sh) / 2
+        r = (H - below.height(g) - eq_gap(g) - g.sh) / 2
         r = min(r, box_r(g, g.W))
-        top = axis(g.p) + (2 * r + g.sh + eq_gap(g) + hb) / 2
+        b0, b1 = _extent(below, g)
+        top = axis(g.p) + (2 * r + g.sh + eq_gap(g) + b1 - b0) / 2
         fn(g, top - g.sh / 2 - r, r)
-        below.draw(g, top - 2 * r - g.sh - eq_gap(g) - hb / 2)
+        below.draw(g, top - 2 * r - g.sh - eq_gap(g) - b1)
     if neg:
         # (the element signs: crossing their bays where each keeps a pocket
         # half a stem wide, between the stem and the stroke)

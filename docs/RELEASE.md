@@ -67,6 +67,13 @@ before a commercial distribution if wanted.
   ǥ's hook bend is the g's curve under the bar at every weight (it had
   stayed straight and snapped round at 648), and Ø's O keeps four round
   corners under the slash. The variable italic does the same.
+- ≨ ≩ ⊊ ⊋: a stacked sign measures a stroke laid over one of its parts
+  as that part's ink, so the chevron or the set sign stands the equal
+  sign's white above the slash's top. ≨ ≩ have ≤'s chevron (1.013 had
+  counted the slash twice and shrunk the chevron by it); ⊊ ⊋ had left
+  only 15 to 60 units between the slash and the ⊂, and keep ⊆'s white
+  now. The slash reaches past the bar as at the Regular, so the signs
+  are no taller than 1.013's.
 - Italic R: its leg stands back so the bowl keeps its round to Black.
 - The cedilla keeps its hook to Black (Ç ç Ş ş Ţ ţ and the rest): the
   notch under the letter is a white gap and two corner breaks wide.
