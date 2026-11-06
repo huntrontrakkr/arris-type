@@ -36,11 +36,57 @@ variable fonts' masters or interpolation change.
 
 ## Licence and metadata
 
-SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
-(`AUTHORS.txt`); no Reserved Font Name. Every font carries the copyright
+The fonts and the glyph drawings (`src/arris/glyphs/`): SIL Open Font
+License 1.1 (`OFL.txt`); the engine, tools, tests and documentation: MIT
+(`LICENSE`). Copyright The Arris Project Authors (`AUTHORS.txt`); no
+Reserved Font Name. Every font carries the copyright
 (name 0), the licence and its URL (13, 14), embedding installable (fsType
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
+
+## 1.014
+
+- Every stroke added to a letter or sign keeps the Regular's weight and
+  is laid over it. A bar, a slash, a stroke through a letter (the bars of
+  Đ đ Ħ ħ Ŧ ŧ Ғ ғ Ұ ұ Ӻ ӻ Ѣ ѣ Ҟ ҟ Ӿ ӿ ǥ ð ℏ, the slashes of Ł ł Ø ø Ǿ ǿ,
+  the bars and strokes of € ¥ $ ¢ £ ₦ ₩ ₳ ₸ ₱ ₽ ₣ ₭ ₤ ₴ ₵ ₲ ₡ ₿ ₫ ⃀ ₺ ₮ ₥,
+  the negations ≠ ≢ ≁ ≄ ≇ ≉ ≮ ≯ ≰ ≱ ≨ ≩ ⊄ ⊅ ⊈ ⊉ ∉ ∌ ⊬ ⊭ ∤ ∦ ∄, the struck
+  arrows ↚ ↛ ↮ ⇍ ⇎ ⇏) is as thick at every heavier weight as at the
+  Regular (1.007 to 1.013 held them from 600, and many not at all), and
+  is finished on its own and joined to the finished letter: no corner
+  rule runs over the junction, so nothing fills in round it as the
+  letter grows, and the letter under it is the letter (the g in ǥ is
+  the g). At Black the bars read as bars: Ѣ's clear of its bowl, Ӿ's and
+  ӿ's past their diagonals, € ¥ ₦ ₩ ₴'s pairs apart, ≢ ≇'s bars beside
+  the slash. Ҟ's bar sits in the V between stem and arm, which the K's
+  own growth closes from below: it rises with the weight to stay in the
+  open, to the top of the stem at Black. The squint rule no longer thins
+  a pair of bars under the Regular's.
+- In the italic, a letter's corner an added stroke covers in part is
+  curved as the letter's own and cut where the stroke passes over it:
+  ǥ's hook bend is the g's curve under the bar at every weight (it had
+  stayed straight and snapped round at 648), and Ø's O keeps four round
+  corners under the slash. The variable italic does the same.
+- Italic R: its leg stands back so the bowl keeps its round to Black.
+- The cedilla keeps its hook to Black (Ç ç Ş ş Ţ ţ and the rest): the
+  notch under the letter is a white gap and two corner breaks wide.
+- ð keeps its bar to Black, clear of the bowl.
+- Arris Mono Narrow is recognised as its own cut by every rule that reads
+  the cut. Its ligatures had spaced each heavy weight as its own Regular
+  and spread to a cell a character from SemiBold (<<< 119 units wider at
+  Bold, ..= 92, ::: 83); they space as Arris Mono's do now. Its added
+  strokes hold, and its white rules compare with its lighter weights.
+- A sign the white rule or the topology lock lightens keeps its added
+  strokes' hold (⇎'s strike had jumped from 89 units to 116 at 601).
+- Variable fonts: the switches between the two forms of $ and ¢
+  compile under `rlig`, not `rvrn` (run before every other feature,
+  and mishandled by some Adobe apps). `tools/vf_switch_check.py` shapes
+  every switched glyph one unit either side of every threshold.
+- Release checks: OTS on every font, a gate; fontTools'
+  `varLib.interpolatable`, shaperglot and Fontspector as reports.
+- Licences: the code (engine, tools, tests, documentation) is MIT; the
+  fonts and the glyph drawings stay OFL. skia-pathops, never imported,
+  is no longer a dependency.
 
 ## 1.013
 
