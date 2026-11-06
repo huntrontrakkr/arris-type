@@ -138,6 +138,7 @@ class Glyph:
     zones: list = field(default_factory=list)   # (x0, y0, x1, y1) boxes whose white the Squint rule watches
     cell: tuple[float, float] | None = None     # Mono: the cell (x0, x1) no ink may pass (see _build)
     extra_src: list = field(default_factory=list)   # (ink in extra, stamped glyph, its rings, affine map): names its edges
+    overlay: list = field(default_factory=list)     # (stroke, chamfer leg): laid over the finished ink (lay, geom.ink)
 
     def held(self, direction=(1.0, 0.0)) -> float:
         """The thickness of a stroke added to the letter, running in
@@ -236,6 +237,17 @@ class Glyph:
         self.strokes.append(Stroke(tuple(nodes), closed, start, end))
         return self
 
+    def lay(self, *pts, c: float, start='flat', end='flat'):
+        """A stroke laid over the finished letter (``geom.ink``'s overlay):
+        finished alone, its ends broken on the chamfer leg ``c``, and joined
+        to the letter as it stands, so no corner rule fills in where it
+        meets it. For a stroke frozen at a weight (``frozen``): with the
+        frozen weight's ``c`` it is the same stroke from there to Black."""
+        n = len(self.strokes)
+        self.stroke(*pts, start=start, end=end)
+        self.overlay.append((self.strokes.pop(n), c))
+        return self
+
     def rings(self):
         return self.outline(record=False)[0]
 
@@ -304,7 +316,8 @@ class Glyph:
         finished = [e for e in self.extra if any(src[0] is e and tuple(src[3][:4]) == (1.0, 0.0, 0.0, 1.0)
                                                  and src[1].p == p for src in self.extra_src)]
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
-                    tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished)
+                    tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished,
+                    overlay=self.overlay)
         rec = (rec or []) + self.extra_chamfers if record else []
         if record and getattr(self, 'square', False):
             # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)
@@ -389,6 +402,9 @@ def _warped(r, f):
     direction is carried by moving a point a unit along it)."""
     if r[0] in ('warp', 'square'):
         return r
+    if r[0] == 'hid':
+        (x, y), (fx, fy), (dx, dy) = r[1], r[2], r[3]
+        return ('hid', (x, f(y)), (fx, f(fy)), (dx, f(fy + dy) - f(fy)), r[4])
     if r[0] == 'bowl':
         return ('bowl',) + tuple(((q[0], f(q[1])), (d[0], f(q[1] + d[1]) - f(q[1]))) for q, d in r[1:])
     if r[0] == 'line':
@@ -406,6 +422,8 @@ def _moved(r, dx, dy):
         return ('warp', Shifted(f, dy)) if dy else r
     if r[0] == 'bowl':
         return ('bowl',) + tuple(((q[0] + dx, q[1] + dy), d) for q, d in r[1:])
+    if r[0] == 'hid':
+        return ('hid', (r[1][0] + dx, r[1][1] + dy), (r[2][0] + dx, r[2][1] + dy), r[3], r[4])
     return ('chord', (r[1][0] + dx, r[1][1] + dy), (r[2][0] + dx, r[2][1] + dy))
 
 
@@ -579,7 +597,8 @@ def _optical(g, spec, p):
         import shapely
         from .geom import stroke_polygon
         th = _thickness(g.p, g.sh)
-        raw = shapely.union_all([stroke_polygon(st, th, g.p.c) for st in g.strokes] + list(g.extra))
+        raw = shapely.union_all([stroke_polygon(st, th, g.p.c) for st in g.strokes] + list(g.extra)
+                                + [stroke_polygon(st, th, c) for st, c in g.overlay])
         _, ry0, _, ry1 = raw.bounds
         if ry1 > g.clip[3] + 1.0:
             ot = 0.0
@@ -986,13 +1005,20 @@ def frozen(p, white_at, least=None, direction=(1.0, 0.0)) -> float:
     where it starts to merge, the stroke keeps the weight it had where it
     last read, to Black (the owner, 2026-11-06). The weight's own where the
     white keeps at every weight, or where p is not a font's own (_cut)."""
+    q = freeze(p, white_at, least, direction)
+    return min(_thickness(p, p.sh)(direction), _thickness(q, q.sh)(direction))
+
+
+def freeze(p, white_at, least=None, direction=(1.0, 0.0)):
+    """The parameters of the weight a stroke freezes at (``frozen``): p's
+    own while its white keeps. Its chamfer leg (``.c``) is the leg the
+    stroke keeps with its thickness (``Glyph.lay``)."""
     least = least or (lambda q: q.m / 2)
-    own = _thickness(p, p.sh)(direction)
-    if white_at(p, own) >= least(p):
-        return own
+    if white_at(p, _thickness(p, p.sh)(direction)) >= least(p):
+        return p
     cut = _cut(p)
     if cut is None:
-        return own
+        return p
     w, at = cut
 
     def ok(w_):
@@ -1000,13 +1026,11 @@ def frozen(p, white_at, least=None, direction=(1.0, 0.0)) -> float:
         return white_at(q, _thickness(q, q.sh)(direction)) >= least(q)
     lo, hi = 100.0, w
     if not ok(lo):
-        q = at(lo)
-        return _thickness(q, q.sh)(direction)
+        return at(lo)
     for _ in range(24):                                     # the heaviest weight whose stroke still reads
         mid = (lo + hi) / 2
         lo, hi = (mid, hi) if ok(mid) else (lo, mid)
-    q = at(lo)
-    return min(own, _thickness(q, q.sh)(direction))
+    return at(lo)
 
 
 def _lighter(p):

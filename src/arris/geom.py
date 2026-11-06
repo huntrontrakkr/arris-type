@@ -387,7 +387,7 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
 
 
 def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=(),
-        tags: list | None = None, extra_edges=(), finished=()):
+        tags: list | None = None, extra_edges=(), finished=(), overlay=()):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
 
@@ -408,7 +408,14 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     stroke's side along a segment, a cap, a stamped glyph's own edge
     (``extra_edges``), the clip box), or a corner-rule chord between two
     named edges. The same edge in another master has the same name: the
-    variable font matches masters' points by these (``variable``)."""
+    variable font matches masters' points by these (``variable``).
+
+    ``overlay``: strokes laid over the finished ink, (stroke, c) each. Each
+    is finished alone, its ends broken on its own chamfer leg ``c``, and
+    joined to the finished ink as it is: no corner rule runs over the
+    junction, so the corners where it meets the letter stay as they meet
+    (a bar frozen at the weight where its white would close, ``draw.frozen``:
+    nothing fills in round it as the letter grows on)."""
     segs = [] if tags is not None else None
     polys = []
     for i, st in enumerate(strokes):
@@ -417,9 +424,9 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
         if e:
             segs.extend((a, b, ('s', i) + t) for a, b, t in e)
     polys += list(extra)
-    if not polys:
+    if not polys and not overlay:
         return []
-    u = shapely.union_all(polys)
+    u = shapely.union_all(polys) if polys else MultiPolygon()
     if clip is not None:
         u = u.intersection(clip)
     u = shapely.make_valid(u)
@@ -451,6 +458,8 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
             rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
+    if overlay:
+        rings = _lay_over(rings, overlay, thick, clip, rec, butt, moved, min_hole, segs)
     if rec is not None and moved:
         _follow(rec, moved)
     if tags is not None:
@@ -460,6 +469,98 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
             segs.extend((b[k], b[k + 1], ('clip', k)) for k in range(len(b) - 1))
         tags.extend(_name_edges(r, segs) for r in rings)
     return rings
+
+
+def _lay_over(rings, overlay, thick, clip, rec, butt, moved, min_hole, segs):
+    """``ink``'s overlay: each stroke finished alone on its own chamfer leg
+    (cut at the clip first, as any stroke is), then the finished ink and the
+    finished overlays joined. Rings as ``ink`` returns them."""
+    pieces = []
+    for i, (st, c_ov) in enumerate(overlay):
+        e = [] if segs is not None else None
+        poly = stroke_polygon(st, thick, c_ov, rec, edges=e)
+        if e:
+            segs.extend((a, b, ('o', i) + t) for a, b, t in e)
+        if clip is not None:
+            poly = poly.intersection(clip)
+        poly = shapely.make_valid(poly)
+        for q in getattr(poly, 'geoms', [poly]):
+            if not isinstance(q, Polygon) or q.area <= 1e-9:
+                continue
+            q = orient(q, sign=1.0)
+            out = _close_jogs(_polish(_ring_rule(list(q.exterior.coords), c_ov, +1, rec, butt),
+                                      POLISH * c_ov, moved), JOG * c_ov, moved)
+            holes = [_close_jogs(_polish(_ring_rule(list(h.coords), c_ov, +1, rec, butt), POLISH * c_ov, moved),
+                                 JOG * c_ov, moved) for h in q.interiors]
+            pieces.append(Polygon(out, holes))
+    if not pieces:
+        return rings
+    if rec is not None:
+        rec.extend(_hidden_ends(rings, shapely.union_all(pieces)))
+    u = shapely.make_valid(shapely.union_all([rings_to_shapely(rings)] + pieces))
+    given = {(round(q[0], 6), round(q[1], 6)) for r in rings for q in r}
+    given |= {(round(q[0], 6), round(q[1], 6)) for pc in pieces for r in [pc.exterior] + list(pc.interiors)
+              for q in r.coords}
+    out = []
+    for poly in getattr(u, 'geoms', [u]):
+        if not isinstance(poly, Polygon) or poly.area <= 1e-9:
+            continue
+        poly = orient(poly, sign=1.0)
+        out.append(_straight(list(poly.exterior.coords)[:-1], given))
+        out += [_straight(list(h.coords)[:-1], given) for h in poly.interiors if Polygon(h).area >= min_hole]
+    return out
+
+
+def _hidden_ends(rings, over):
+    """Record entries for the 45-degree edges of the finished ink that the
+    overlay ``over`` covers at one end: ('hid', where the edge now ends,
+    where it ended, the direction of the edge that went on from there,
+    'end' or 'start'). The italic curves such a chamfer as the letter's own
+    and keeps the part the overlay leaves showing (``italic._ends``): the
+    ǥ's hook, its bend under the bar, curved as the g's."""
+    from shapely.geometry import LineString, Point
+    out = []
+    for r in rings:
+        n = len(r)
+        for i in range(n):
+            a, b = tuple(r[i][:2]), tuple(r[(i + 1) % n][:2])
+            d = _sub(b, a)
+            if _len(d) < 1e-6 or abs(abs(d[0]) - abs(d[1])) > 1e-4 * _len(d):
+                continue
+            a_in, b_in = over.contains(Point(a)), over.contains(Point(b))
+            if a_in == b_in:
+                continue
+            cut = LineString([a, b]).intersection(over.boundary)
+            pts = [(q.x, q.y) for q in getattr(cut, 'geoms', [cut]) if q.geom_type == 'Point']
+            if not pts:
+                continue
+            if b_in:
+                nxt = tuple(r[(i + 2) % n][:2])
+                out.append(('hid', min(pts, key=lambda q: math.dist(q, a)), b, _sub(nxt, b), 'end'))
+            else:
+                prev = tuple(r[i - 1][:2])
+                out.append(('hid', min(pts, key=lambda q: math.dist(q, b)), a, _sub(a, prev), 'start'))
+    return out
+
+
+def _straight(ring, given):
+    """A ring without the points the join made on a straight edge (where an
+    edge of one piece ran on along an edge of the other): a point of the
+    pieces themselves (``given``) stays, as they were finished."""
+    pts = list(ring)
+    changed = True
+    while changed and len(pts) > 3:
+        changed = False
+        for i in range(len(pts)):
+            a, b, q = pts[i - 1], pts[i], pts[(i + 1) % len(pts)]
+            if (round(b[0], 6), round(b[1], 6)) in given:
+                continue
+            u, v = _sub(b, a), _sub(q, b)
+            if _len(u) < 1e-9 or _len(v) < 1e-9 or (abs(_cross(u, v)) <= 1e-9 * _len(u) * _len(v) and _dot(u, v) > 0):
+                del pts[i]
+                changed = True
+                break
+    return pts
 
 
 def _name_edges(ring, segs, tol=1e-3):

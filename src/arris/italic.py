@@ -72,7 +72,7 @@ def _owners(a, b, record):
     an edge break whose ends it is."""
     out = []
     for idx, r in enumerate(record):
-        if r[0] == SQUARE:
+        if r[0] in (SQUARE, HID):
             continue
         if r[0] == 'chord':
             if ((math.dist(a, r[1]) < ON and math.dist(b, r[2]) < ON)
@@ -98,6 +98,27 @@ def _joins_smoothly(v, seg) -> bool:
 
 
 SQUARE = 'square'   # a record entry: the glyph's edge breaks against a square diagonal curve (_segments)
+HID = 'hid'         # a record entry: a 45-degree edge an overlay covers at one end (geom._hidden_ends)
+HID_AT = 1e-3       # font units: how near a ring's point must lie to where a hidden edge now ends
+
+
+def _hidden(record):
+    return [r for r in record if r and r[0] == HID]
+
+
+def _ends(a, b, vin, vout, hid):
+    """(a, b, vin, vout, a hidden, b hidden) for the ring's edge a-b: where
+    it ends in the letter itself when an overlay (``geom.ink``'s overlay, a
+    bar laid over the letter) covers one of its ends, and the edge that went
+    on from there; as given otherwise. The chamfer is curved as the letter's
+    own, and the overlay keeps covering what it covered (_cover)."""
+    ha = hb = False
+    for _, at, full, d, which in hid:
+        if which == 'end' and math.dist(b, at) < HID_AT:
+            b, vout, hb = tuple(full), tuple(d), True
+        elif which == 'start' and math.dist(a, at) < HID_AT:
+            a, vin, ha = tuple(full), tuple(d), True
+    return a, b, vin, vout, ha, hb
 
 
 def _square(v, seg) -> bool:
@@ -160,6 +181,7 @@ def _segments(rings_, record, p: Params):
     the leg."""
     square = any(r and r[0] == SQUARE for r in record)
     square_bowls = any(r and r[0] == SQUARE and r[1:] == ('bowl',) for r in record)
+    hid = _hidden(record)
     claims = {}
     for ri, ring in enumerate(rings_):
         pts = [tuple(q) for q in ring]
@@ -168,6 +190,8 @@ def _segments(rings_, record, p: Params):
             a, b = pts[i], pts[(i + 1) % n]
             if not _diag((b[0] - a[0], b[1] - a[1])):
                 continue
+            if hid:
+                a, b = _ends(a, b, None, None, hid)[:2]
             for own, k, along in _owners(a, b, record):
                 key = (own, k)
                 if own[0] == 'chord' or key not in claims or abs(along) < abs(claims[key][0]):
@@ -199,6 +223,8 @@ def _segments(rings_, record, p: Params):
             prev, nxt = pts[i - 1], pts[(i + 2) % n]
             vin = (a[0] - prev[0], a[1] - prev[1])
             vout = (nxt[0] - b[0], nxt[1] - b[1])
+            if hid:
+                vin, vout = _ends(a, b, vin, vout, hid)[2:4]
             t1, t2 = _cross(vin, seg), _cross(seg, vout)
             turns = [t for t in (t1, t2) if abs(t) > 1e-6 * math.hypot(*seg)]
             corner = bool(turns) and not (len(turns) == 2 and (turns[0] > 0) != (turns[1] > 0))
@@ -224,9 +250,11 @@ def _ring_pts(ring):
     return pts
 
 
-def _even_bend(rings_, segs, curved, p: Params):
-    """{(ring, index): moved point} that keeps a curved bowl corner's stroke
-    as heavy round the bend as along its chamfer.
+def _even_bend(rings_, segs, curved, p: Params, hid=()):
+    """{(ring, index): k} for the inner chamfers whose legs shrink to k of
+    their own, toward the corner they cut (_cover moves the ends): that
+    keeps a curved bowl corner's stroke as heavy round the bend as along
+    its chamfer.
 
     The corner's two edges are 45-degree chamfers with legs Lo (outer) and Li
     (inner), each made a quadratic curve whose control point is the corner
@@ -245,36 +273,116 @@ def _even_bend(rings_, segs, curved, p: Params):
     for ri, i, own, *_ in segs:
         if own[0] == 'bowl' and (ri, i) in curved:
             pairs.setdefault(own, []).append((ri, i))
-    moved = {}
+    out = {}
     for own, edges in pairs.items():
         if len(edges) != 2:
             continue
-        legs = []
+        legs, ends = [], []
         for ri, i in edges:
-            pts = _ring_pts(rings_[ri])
-            a, b = pts[i], pts[(i + 1) % len(pts)]
-            legs.append(abs(b[0] - a[0]))
-        (lo, _), (li, (ri, i)) = sorted(zip(legs, edges), reverse=True)
+            e = _edge(rings_[ri], i, hid)
+            ends.append(e)
+            legs.append(abs(e[1][0] - e[0][0]))
+        (lo, _), (li, j) = sorted(zip(legs, range(2)), reverse=True)
+        ri, i = edges[j]
         target = max(p.c, 2 * li - lo)
         if li - target < 0.5:
             continue
+        _, _, vin, vout, _, _ = ends[j]
+        if not (_axis(vin) and _axis(vout)):
+            continue
+        out[(ri, i)] = target / li
+    return out
+
+
+def _edge(ring, i, hid=()):
+    """_ends of the ring's edge from its point i."""
+    pts = _ring_pts(ring)
+    n = len(pts)
+    a, b = pts[i], pts[(i + 1) % n]
+    vin = (a[0] - pts[i - 1][0], a[1] - pts[i - 1][1])
+    vout = (pts[(i + 2) % n][0] - b[0], pts[(i + 2) % n][1] - b[1])
+    return _ends(a, b, vin, vout, hid) if hid else (a, b, vin, vout, False, False)
+
+
+def _roots01(c0, c1, c2):
+    """The roots of c0 + c1 t + c2 t^2 in [0, 1], ascending."""
+    if abs(c2) < 1e-12:
+        return [] if abs(c1) < 1e-12 else [t for t in (-c0 / c1,) if -1e-9 <= t <= 1 + 1e-9]
+    disc = c1 * c1 - 4 * c2 * c0
+    if disc < 0:
+        return []
+    r = math.sqrt(disc)
+    return sorted(t for t in ((-c1 - r) / (2 * c2), (-c1 + r) / (2 * c2)) if -1e-9 <= t <= 1 + 1e-9)
+
+
+def _cover(rings_, curved, bend, hid):
+    """({(ring, index): moved point}, {(ring, index): control}) for the
+    curved chamfers an even bend shortens (bend: their k) or an overlay
+    covers at one end. The curve is the letter's own, on its full chamfer
+    (shortened by k), with the control point at the corner it cut; where an
+    overlay covers an end, the part it leaves showing: the same curve cut
+    where it passes under the overlay's edge (the ring's point there moves
+    along that edge to meet it), its control the cut curve's own, so the
+    showing part lies exactly on the whole. An even bend that would bring a
+    covered end out from under the overlay stops with that end on its edge."""
+    moved, controls = {}, {}
+    for (ri, i), left in curved.items():
         pts = _ring_pts(rings_[ri])
         n = len(pts)
         a, b = pts[i], pts[(i + 1) % n]
-        vin = (a[0] - pts[i - 1][0], a[1] - pts[i - 1][1])
-        vout = (pts[(i + 2) % n][0] - b[0], pts[(i + 2) % n][1] - b[1])
-        if not (_axis(vin) and _axis(vout)):
+        A, B, _, _, ha, hb = _edge(rings_[ri], i, hid)
+        k = bend.get((ri, i))
+        if k is None and not (ha or hb):
             continue
-        q = _corner(a, b, curved[(ri, i)])
-        k = target / li
-        moved[(ri, i)] = (q[0] + (a[0] - q[0]) * k, q[1] + (a[1] - q[1]) * k)
-        moved[(ri, (i + 1) % n)] = (q[0] + (b[0] - q[0]) * k, q[1] + (b[1] - q[1]) * k)
-    return moved
+        k = 1.0 if k is None else k
+        C = _corner(A, B, left)
+
+        def side(q, at, d):
+            return _cross(d, (q[0] - at[0], q[1] - at[1]))
+        # the overlay's edges the covered ends pass under: through the ring's point, along its next (or last) edge
+        lines = []
+        if hb:
+            lines.append((b, (pts[(i + 2) % n][0] - b[0], pts[(i + 2) % n][1] - b[1]), B))
+        if ha:
+            lines.append((a, (a[0] - pts[i - 1][0], a[1] - pts[i - 1][1]), A))
+        for at, d, full in lines:
+            # the end must stay on the covered side of the overlay's edge: k no smaller than puts it on it
+            den = side((C[0] + (full[0] - C[0]), C[1] + (full[1] - C[1])), C, d)
+            if abs(den) > 1e-12:
+                k_on = side(at, C, d) / den
+                if side(full, at, d) * side((C[0] + (full[0] - C[0]) * k, C[1] + (full[1] - C[1]) * k), at, d) <= 0:
+                    k = max(k, min(1.0, k_on))
+        A1 = (C[0] + (A[0] - C[0]) * k, C[1] + (A[1] - C[1]) * k)
+        B1 = (C[0] + (B[0] - C[0]) * k, C[1] + (B[1] - C[1]) * k)
+        al = A1
+        be = (2 * (C[0] - A1[0]), 2 * (C[1] - A1[1]))
+        ga = (A1[0] - 2 * C[0] + B1[0], A1[1] - 2 * C[1] + B1[1])
+        t0, t1 = 0.0, 1.0
+        if hb:
+            at, d = lines[0][0], lines[0][1]
+            rr = _roots01(_cross(d, (al[0] - at[0], al[1] - at[1])), _cross(d, be), _cross(d, ga))
+            t1 = min(rr) if rr else 1.0
+        if ha:
+            at, d = lines[-1][0], lines[-1][1]
+            rr = _roots01(_cross(d, (al[0] - at[0], al[1] - at[1])), _cross(d, be), _cross(d, ga))
+            t0 = max(rr) if rr else 0.0
+        t0, t1 = max(0.0, min(1.0, t0)), max(0.0, min(1.0, t1))
+
+        def Q(t):
+            return ((1 - t) ** 2 * A1[0] + 2 * t * (1 - t) * C[0] + t * t * B1[0],
+                    (1 - t) ** 2 * A1[1] + 2 * t * (1 - t) * C[1] + t * t * B1[1])
+        moved[(ri, i)] = Q(t0)
+        moved[(ri, (i + 1) % n)] = Q(t1)
+        if ha or hb:
+            w0, w1, w2 = (1 - t0) * (1 - t1), (1 - t0) * t1 + t0 * (1 - t1), t0 * t1
+            controls[(ri, i)] = (w0 * A1[0] + w1 * C[0] + w2 * B1[0], w0 * A1[1] + w1 * C[1] + w2 * B1[1])
+    return moved, controls
 
 
-def _plan(rings_, p: Params, record):
+def _plan_full(rings_, p: Params, record):
     """({(ring, index): turn_left} for the segments that curve, {(ring,
-    index): moved point}) for a drawing (see curve_rings)."""
+    index): moved point}, {(ring, index): control point} where it is not
+    the corner the segment cut) for a drawing (see curve_rings)."""
     segs = _segments(rings_, record, p)
     edges: dict = {}
     for s in segs:
@@ -289,7 +397,15 @@ def _plan(rings_, p: Params, record):
             held.add(own)
     curved = {(ri, i): left for ri, i, own, smooth, left, _ in segs
               if (own[0] == 'bowl' and own not in held) or (own[0] != 'bowl' and smooth)}
-    return curved, _even_bend(rings_, segs, curved, p)
+    hid = _hidden(record)
+    moved, controls = _cover(rings_, curved, _even_bend(rings_, segs, curved, p, hid), hid)
+    return curved, moved, controls
+
+
+def _plan(rings_, p: Params, record):
+    """({(ring, index): turn_left} for the segments that curve, {(ring,
+    index): moved point}) for a drawing (see curve_rings)."""
+    return _plan_full(rings_, p, record)[:2]
 
 
 def curve_rings(rings_, p: Params, record):
@@ -308,7 +424,7 @@ def curve_rings(rings_, p: Params, record):
     it straightened the bowl at the weights where the bar or spine reached
     it (the italic e from 400, the s from 250 to 450, the j's hook), and
     curved at the others. Edge breaks curve on their own."""
-    curved, moved = _plan(rings_, p, record)
+    curved, moved, controls = _plan_full(rings_, p, record)
     out = []
     for ri, ring in enumerate(rings_):
         pts = _ring_pts(ring)
@@ -319,7 +435,7 @@ def curve_rings(rings_, p: Params, record):
             m = moved.get((ri, i), a)
             c.append((m[0], m[1], True))
             if (ri, i) in curved:
-                q = _corner(a, b, curved[(ri, i)])
+                q = controls.get((ri, i)) or _corner(a, b, curved[(ri, i)])
                 c.append((q[0], q[1], False))
         out.append(c)
     return out
@@ -426,12 +542,12 @@ def _chamfer_map(rings_, record, p: Params):
     """({(a, b): control} for every chamfer segment a-b a drawing curves,
     {a: moved a} for the ends an even bend slides), keyed by the drawing's
     own points."""
-    curved, moved = _plan(rings_, p, record)
+    curved, moved, given = _plan_full(rings_, p, record)
     controls, ends = {}, {}
     for (ri, i), left in curved.items():
         pts = _ring_pts(rings_[ri])
         a, b = pts[i], pts[(i + 1) % len(pts)]
-        controls[(_key(a), _key(b))] = _corner(a, b, left)
+        controls[(_key(a), _key(b))] = given.get((ri, i)) or _corner(a, b, left)
     for (ri, i), m in moved.items():
         ends[_key(_ring_pts(rings_[ri])[i])] = m
     return controls, ends
