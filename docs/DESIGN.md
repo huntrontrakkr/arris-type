@@ -871,6 +871,27 @@ area has a note in `docs/coverage/`, listing what was drawn and why:
   symbol whose ink would run out of its cell (‰ ™ ∭ @ …) is condensed, or
   drawn smaller, to fit (`symkit.mono_fitted`); the em dash just spans
   the cell.
+* **The Mono cell, both ways** (1.015): nothing in Arris Mono is cut by
+  its cell. A letter whose ink would pass the 600-unit cell (a horn, the
+  apostrophe of ď ľ ť Ľ, an ogonek, Ø's slash, a tone mark beside a
+  circumflex, a tonos) is moved as little as brings its ink a quarter
+  module inside (`draw.CELL_GAP`), and if it is wider than that leaves room
+  for, drawn narrower until it is not, then centred (`draw._cell_fit`):
+  the letter gives up width, not the mark, down to its floor (0.6 of its
+  body, and never so narrow that a counter between two stems closes:
+  `draw.cell_floor`); past it the mark gives way (ď's apostrophe at Bold).
+  A sign keeps a unit inside. A letter that fits is not clipped at all:
+  the cell's clip cuts raw ink, before the corner rule breaks a stroke's
+  tips, and cut the tonos of Ά Έ Ό flat. Up and down the cell is the line
+  box (975 above, 250 below), a terminal's cell: a stack of marks fits
+  under it (`marks.line_top`), its gaps closing up first (to `TIGHTEST`)
+  and then its marks lightening and shrinking (to `LIGHTEST`), where it
+  will stand after the base's optical correction lifts it; the owner's
+  choice (2026-11-06) was the line over the accents' size. Only Ǻ at the
+  heaviest weights stands a little over (29 units at Bold). The inferiors
+  stand as low as keeps the small p's descender inside the line
+  (`features.inferior_dy`), together. `tools/mono_cell_check.py` gates the
+  release on it.
 * **Cells** (`terminal.md`): box drawing, blocks, shades and Braille fill
   a Mono cell from descender to ascender in every family, meet the cell
   edge square (`Glyph.butt`), and stay upright in the italic so that rows

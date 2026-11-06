@@ -264,15 +264,18 @@ BESIDE: set = set()
 CEDILLA_AS_COMMA = set('KkLlNnRrGgTt')
 
 STACK_GAP = 0.6     # white between stacked marks, of the marks' gap
+TIGHTEST = 0.5      # the furthest a stack's gaps close up to stay inside the line (or the cell), before its marks shrink
 LIGHTEST = 0.5      # the furthest a stack of marks lightens and shrinks to stay inside the line
 
 
 def line_top(p):
-    """The top of the line: the font's Windows ascent (``font.Metrics``),
-    above which a renderer may clip."""
+    """The top of the line, above which a renderer may clip: the font's
+    Windows ascent (``font.Metrics``); in Mono, its line box (the typo and
+    hhea ascent), which is a terminal's cell (the owner, 2026-11-06: the
+    line stays, the accents give way)."""
     from ..font import Metrics
     m = Metrics()
-    return (m.win_asc - 2) * p.cap / m.cap
+    return ((m.asc if p.mono else m.win_asc) - 2) * p.cap / m.cap
 
 
 def accent_params(p, k):
@@ -328,8 +331,9 @@ def _nearest_clear(scratch, n0, draw_at, others, sg, reach):
     return hi
 
 
-def stack_above(p, marks, x, top, case, W, room=None, avoid=None):
-    """Where the marks above a base go: ([(mark, x, y)], the stack's top).
+def stack_above(p, marks, x, top, case, W, room=None, avoid=None, tight=1.0):
+    """Where the marks above a base go: ([(mark, x, y)], the stack's top,
+    how much wider than ``room`` the stack is).
 
     The first stands a gap above the base's highest ink; each next one a
     stack gap above the ink of those before it (measured, so a dieresis
@@ -340,12 +344,13 @@ def stack_above(p, marks, x, top, case, W, room=None, avoid=None):
     that their strokes would fuse. ``avoid`` (finished, raw ink): what the
     stack keeps a stack gap from, moving left if it must (a horn).
     ``room`` (x0, x1): the whole stack shifts sideways, if it must, to stay
-    inside it (a monospaced cell)."""
+    inside it (a monospaced cell). ``tight``: the gaps, the first and the
+    stack's, closed up to this share of themselves (draw_above)."""
     from ..draw import Glyph
     scratch = Glyph(p, W=W)
     places = []
-    y = top + gap(p)
-    sg = STACK_GAP * gap(p)
+    y = top + tight * gap(p)
+    sg = tight * STACK_GAP * gap(p)
     reach = 4 * size(p, case) + 2 * p.sv
     prev = None
     for m in marks:
@@ -365,7 +370,7 @@ def stack_above(p, marks, x, top, case, W, room=None, avoid=None):
         y = mark_ink(scratch).bounds[3] + sg
         prev = m
     if not places:
-        return places, top
+        return places, top, 0.0
     if avoid is not None:
         t = _nearest_clear(scratch, 0, lambda t: [ABOVE[m](scratch, xm - t, ym, case) for m, xm, ym in places],
                            avoid, sg, reach)
@@ -373,11 +378,13 @@ def stack_above(p, marks, x, top, case, W, room=None, avoid=None):
         del scratch.strokes[:]
         for m, xm, ym in places:
             ABOVE[m](scratch, xm, ym, case)
+    over = 0.0
     if room is not None:
         x0, _, x1, _ = mark_ink(scratch).bounds
         shift = min(0.0, room[1] - x1) or max(0.0, room[0] - x0)
         places = [(m, xm + shift, ym) for m, xm, ym in places]
-    return places, mark_ink(scratch).bounds[3]
+        over = max(0.0, (x1 - x0) - (room[1] - room[0]))
+    return places, mark_ink(scratch).bounds[3], over
 
 
 def clear_below(base_ink, p, fn, x, case, W):
@@ -439,34 +446,12 @@ def _register(name, ch, bname, base, marks):
     case = 'uc' if base.isupper() else 'lc'
 
     def fn(g, bname=bname, marks=marks, base=base, case=case):
-        from ..draw import Glyph, draw
         # The base, finished (openings solved, clipped and cut), then the marks.
-        p = g.p
-        # a monospaced cell gives the marks that stand beside or under the
-        # base (a horn, d's and l's apostrophe, a dot under y's tail) the room
-        # they need inside the cell: the base is drawn narrower by as much as
-        # they would run out of it, its strokes as they are (ogoneks and
-        # slashes keep to half the margin by their own drawing)
-        room = 0.0
-        if p.mono and any(m in ATTACHED or m in BELOW or (m == '\u030c' and base in 'dlLt') for m in marks):
-            import shapely
-            edge = (g.W + p.fig_adv) / 2                    # the cell's right edge, from the body's origin
-            for _ in range(4):
-                trial = Glyph(p, W=g.W)
-                compose(trial, room)
-                parts = list(trial.extra) + ([mark_ink(trial)] if trial.strokes else [])
-                over = shapely.union_all(parts).bounds[2] - edge
-                if over < 0.5:
-                    break
-                room += over
-            # never so narrow that the base's counter closes (d at Black):
-            # past that the mark may reach into the cell's margin
-            from .letterframe import least_white
-            room = max(0.0, min(room, g.W - 2 * p.sv - least_white(p)))
+        # (in the monospaced cell a mark that would run out of it, a horn,
+        # d's and l's apostrophe, an ogonek, a tone mark beside the
+        # circumflex, is given room by the cell's own fit: draw._cell_fit)
         g.extra, g.clip = [], None
-        compose(g, room)
-        if room:
-            _into_cell(g)
+        compose(g, 0.0)
 
     def compose(g, room, bname=bname, marks=marks, base=base, case=case):
         from ..draw import draw
@@ -508,10 +493,16 @@ def _register(name, ch, bname, base, marks):
                 BELOW[m](g, clear_below(g.extra[0], p, BELOW[m], x, case, g.W), 0, case)
         if not above:
             return
-        cell = (-(p.fig_adv - g.W) / 2, g.W + (p.fig_adv - g.W) / 2) if p.mono else None
+        # (in the monospaced cell, the stack keeps the cell's margin: draw.CELL_GAP)
+        from ..draw import CELL_GAP
+        cell = (-(p.fig_adv - g.W) / 2 + CELL_GAP * p.m, g.W + (p.fig_adv - g.W) / 2 - CELL_GAP * p.m) if p.mono else None
         # marks joined to the base (a horn) are kept clear of
         avoid = (mark_ink(g), raw_ink(g)) if g.strokes and any(m in ATTACHED for m in marks) else None
-        draw_above(g, above, x, top, case, cell, avoid)
+        # the base's optical correction lifts what stands above its top (its
+        # overshoot: more in Mono Narrow's narrower bowls) after the marks are
+        # placed; the stack keeps under the line where it will stand
+        lift = (warp(top + 1.0) - (top + 1.0)) if warp is not None else 0.0
+        draw_above(g, above, x, top, case, cell, avoid, lift)
 
     def width(p, bname=bname):
         """The base's body in every cut (its italic drawing's in the italic):
@@ -540,26 +531,45 @@ def _into_cell(g):
         shift(g, dx, 0.0)
 
 
-def draw_above(g, above, x, top, case, cell=None, avoid=None):
+def _squeeze(s):
+    """(the gaps' share, the marks' scale) at s in [0, 1]: the gaps close up
+    first (to TIGHTEST), then the marks lighten and shrink (to LIGHTEST),
+    so the stack changes continuously as s grows."""
+    if s <= 0.5:
+        return 1.0 - (1.0 - TIGHTEST) * 2 * s, 1.0
+    return TIGHTEST, 1.0 - (1.0 - LIGHTEST) * (2 * s - 1)
+
+
+def draw_above(g, above, x, top, case, cell=None, avoid=None, lift=0.0):
     """Draw marks above into g, stacked (``stack_above``) over ink reaching
-    ``top``. A stack that would rise past the line's top lightens and
-    shrinks, as heavy faces draw their accents, as far as it must (never
-    past LIGHTEST)."""
+    ``top``. A stack that would rise past the line's top (line_top), or be
+    wider than its cell, closes up its gaps and then lightens and shrinks,
+    as heavy faces draw their accents, as far as it must (never past
+    TIGHTEST and LIGHTEST)."""
     from ..draw import Glyph
     p = g.p
-    k, q = 1.0, p
-    places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
-    if hi > line_top(p):
-        lo, k = LIGHTEST, 1.0
-        for _ in range(16):
-            mid = (lo + k) / 2
-            if stack_above(accent_params(p, mid), above, x, top, case, g.W, cell, avoid)[1] <= line_top(p):
-                lo = mid
+
+    def fits(st):
+        return st[1] + lift <= line_top(p) and st[2] <= 0.5
+
+    def at(s):
+        t, k = _squeeze(s)
+        return stack_above(accent_params(p, k), above, x, top, case, g.W, cell, avoid, tight=t)
+    s = 0.0
+    st = at(0.0)
+    if not fits(st):
+        lo, hi = 0.0, 1.0
+        for _ in range(18):
+            mid = (lo + hi) / 2
+            if fits(at(mid)):
+                hi = mid
             else:
-                k = mid
-        k = lo
-        q = accent_params(p, k)
-        places, hi = stack_above(q, above, x, top, case, g.W, cell, avoid)
+                lo = mid
+        s = hi
+        st = at(s)
+    places = st[0]
+    k = _squeeze(s)[1]
+    q = accent_params(p, k)
     target = g if k == 1.0 else Glyph(q, W=g.W)
     for m, xm, ym in places:
         ABOVE[m](target, xm, ym, case)
@@ -589,8 +599,40 @@ def _caron_apostrophe(g, base):
     # in the monospaced cell the apostrophe is drawn lighter toward Black (as
     # a stack of marks lightens), so a d keeps its counter beside it
     p = accent_params(p0, 1 - 0.5 * heaviness(p0)) if p0.mono else p0
+    tight = 1.0
+    if p0.mono:
+        # the letter narrows to make room in the cell (draw._cell_fit) down to
+        # its floor (draw.cell_floor); where even that leaves too little, the
+        # apostrophe gives way as a stack of marks does (_squeeze): its gap
+        # closes up, then it lightens and shrinks (ď at Bold). Measured as
+        # drawn, against the letter as it stands at its floor
+        from ..draw import CELL_GAP, REGISTRY, body_width, cell_floor
+        spec = REGISTRY.get(g.name)
+        W0 = body_width(spec, p0) if spec is not None else g.W
+        at_floor = g.W - cell_floor(W0, p0)                 # how far the stem moves in at the floor
+        room = ink.bounds[0] + p0.fig_adv - 2 * CELL_GAP * p0.m
+        stem0 = ink.intersection(box(-1e4, p.xh + g.sh, 1e4, (p.cap if base.isupper() else p.asc) + 1))
+        right0 = (stem0.bounds[2] if not stem0.is_empty else p.sv) - at_floor
+
+        def reach_right(s_):
+            t, k = _squeeze(s_)
+            q = accent_params(p, k)
+            top_ = q.cap if base.isupper() else q.asc
+            scratch = Glyph(q, W=g.W)
+            _comma(scratch, None, right0 + t * max(q.m, 0.6 * q.sv) + 0.75 * q.sv + q.sd / SQRT2, top_, stub=1.5 * q.sv)
+            return mark_ink(scratch).bounds[2]
+        if reach_right(0.0) > room:
+            lo_, hi_ = 0.0, 1.0
+            for _ in range(18):
+                mid = (lo_ + hi_) / 2
+                if reach_right(mid) <= room:
+                    hi_ = mid
+                else:
+                    lo_ = mid
+            tight, k = _squeeze(hi_)
+            p = accent_params(p, k)
     top = p.cap if base.isupper() else p.asc
-    gap = max(p.m, 0.6 * p.sv)
+    gap = tight * max(p.m, 0.6 * p.sv)
     # the stem: the base's ink above the x-height and its bars
     stem = ink.intersection(box(-1e4, p.xh + g.sh, 1e4, top + 1))
     right = stem.bounds[2] if not stem.is_empty else p.sv

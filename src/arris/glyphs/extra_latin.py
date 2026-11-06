@@ -78,7 +78,9 @@ def lslash(g):
 
 def _oslash(g, name, top):
     p = g.p
-    w = stamp(g, name)
+    # (in Mono the O in the body the glyph is given: the cell's fit narrows
+    # it so the slash's ends, a module past it, stay inside the cell)
+    w = stamp(g, name, width=g.W if p.mono else None)
     k = p.sd / SQRT2
     # along the main diagonal, square to the lower-left and upper-right chamfers;
     # at heavy weights the slash thins so the two halves of the counter stay open

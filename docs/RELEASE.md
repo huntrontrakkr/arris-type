@@ -44,6 +44,35 @@ Reserved Font Name. Every font carries the copyright
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.015
+
+- Arris Mono's cell, both ways: nothing is cut by it any more. Mono drew
+  each letter's body into the 600-unit cell and cut whatever ran past
+  the cell's edge, so a mark beside or under a letter was sliced flat
+  there: the horns of Ơ Ư and the Vietnamese letters made from them, the
+  apostrophe of ď ľ, the ogoneks of ą ę ų Ą Ę, Ø ø's slash, the tone
+  marks beside a circumflex (ấ ế ố), the tonos of Ά Έ Ή Ί Ό Ύ Ώ, ŀ's
+  dot, ҏ ҽ ƙ ǅ ǆ ĳ ỵ (84 characters in all, in some weight of Mono or
+  Mono Narrow). Now a letter that would run out of its cell is moved, and
+  if it must be drawn narrower, until its ink stands a quarter of a
+  module inside; past the narrowest that keeps its counter open, the
+  mark gives way (ď's apostrophe at Bold). A sign keeps a unit inside.
+  The cell's clip had also cut stroke tips flat where they met its edge
+  before the corner rule broke them (the tonos, ¢ ¥ ₫'s arms and bars):
+  a glyph that fits is no longer clipped.
+- Up and down, Mono's cell is its line box (975 above the baseline, 250
+  below), which a terminal's cell is: the stacks of accents over
+  capitals (Ǻ Ỗ Ẵ Ǜ Å Ȭ Ấ and the rest) and over ĥ ĺ ǩ ḟ stood up to 200
+  units above it and were cut there. The owner's choice: the line stays
+  and the accents give way. A stack closes up its gaps first, to half,
+  and then its marks lighten and shrink, as far as it needs to stand
+  under the line (it had fitted under the Windows box, 1180). Only Ǻ's
+  ring and acute stand a little over at the heaviest weights (29 units
+  at Bold). The inferiors (₀–₉ ₊ ₋ ₌ ₍ ₎ ₐ–ₜ) stand 22 units higher in
+  Mono, together, so ₚ's descender stays inside the line.
+- `tools/mono_cell_check.py`: every Mono static font is checked as it is
+  built; a glyph cut by its cell or past the line box fails the release.
+
 ## 1.014
 
 - Every stroke added to a letter or sign keeps the Regular's weight and
