@@ -944,8 +944,12 @@ _CANON: dict = {}
 def _cut(p):
     """(p's weight, the parameters of p's cut at any weight) if p is a
     font's own (a weight, grade and watch balance of a cut:
-    instances.params, Mono or not, italic or not); else None (a set
-    derived from one: small capitals, small figures)."""
+    instances.params, Mono, Mono Narrow or neither, italic or not); else
+    None (a set derived from one: small capitals, small figures). Mono
+    Narrow's weight is the one it is drawn at (instances.narrow_weight).
+    Until 1.014 Narrow was not found here, so no rule that reads the cut
+    held for it: its ligatures spaced at Bold as at their own Regular and
+    spread a cell a character, its added strokes never stopped gaining."""
     if p not in _CANON:
         from .instances import params, stem
         out = None
@@ -959,7 +963,7 @@ def _cut(p):
 
         def make(watch):
             def at(w_):
-                q = params(w_, grad, watch=watch).with_(mono=p.mono)
+                q = params(w_, grad, watch=watch).with_(mono=p.mono, narrow=p.narrow)
                 if p.cursive:
                     q = q.with_(cursive=True)
                 if p.slant:
