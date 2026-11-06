@@ -14,6 +14,7 @@ from __future__ import annotations
 import math
 
 from ..draw import B, Squint, glyph
+from ..geom import ease
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
 from .letterframe import STEEP, Frame, growing_width, least_white, letter_width, white_scale
@@ -534,21 +535,28 @@ def at(g):
     f = Frame(g, 12, 'cap')
     p = g.p
     xs = [f.X(1), f.X(4.5), f.X(8), f.X(11)]
-    if min(b - a for a, b in zip(xs, xs[1:])) - p.sv < least_white(p) - 0.5:
-        step = (xs[3] - xs[0]) / 3
-        xs = [xs[0] + i * step for i in range(4)]
+    # the four uprights ease toward even spacing as their white nears the
+    # least, standing evenly where it would drop under it (Continuity: they
+    # moved there whole at one weight)
+    t = ease(min(b - a for a, b in zip(xs, xs[1:])) - p.sv, least_white(p) - 0.5, least_white(p) + 0.5 * p.m)
+    step = (xs[3] - xs[0]) / 3
+    xs = [x + t * (xs[0] + i * step - x) for i, x in enumerate(xs)]
     xa, xs8 = xs[1], xs[2]
     # inner a: bowl and stem, kept a stroke's white inside the ring; four
-    # bars stack up the height (the ring's, the a's), and where their white
-    # would drop under three quarters of a bar they thin, as tight stacks
-    # do, and stand evenly
+    # bars stack up the height (the ring's, the a's), and as their white
+    # nears three quarters of a bar they thin, as tight stacks do, and ease
+    # toward standing evenly, wholly where it would drop under it (the inner
+    # a jumped a stroke at 500, the @ flickering there in the variable font)
     yb = max(f.Y(3), f.Y(1) + g.sh + max(p.m, 0.5 * p.sv))
     ys = [f.Y(1), yb, f.Y(7.5), f.Y(11)]
-    if min(b - a for a, b in zip(ys, ys[1:])) - g.sh < 0.75 * g.sh:
+    t = ease(min(b - a for a, b in zip(ys, ys[1:])) - g.sh, 0.75 * g.sh, g.sh)
+    if t > 0:
+        k0 = g.sh_k
         g.stack(4, p.cap, 0.75)
+        g.sh_k = k0 + t * (g.sh_k - k0)
         f = Frame(g, 12, 'cap')
         step = (f.Y(11) - f.Y(1)) / 3
-        ys = [f.Y(1) + i * step for i in range(4)]
+        ys = [y + t * (f.Y(1) + i * step - y) for i, y in enumerate(ys)]
     yb, ya = ys[1], ys[2]
     # the bowl's corners as large as its counter allows: a full leg on a
     # counter under a stroke and a half across leaves it a diamond

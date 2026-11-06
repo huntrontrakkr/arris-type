@@ -227,6 +227,35 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
             (p0, d0), (pn, dn) = lines[0], lines[-1]
             verts.insert(0, _cap_point(pts[0], d0, p0, stroke.start))
             verts.append(_cap_point(pts[-1], dn, pn, stroke.end))
+        # Continuity: a segment shorter than an edge break between two that
+        # turn (a flat between two chamfers, all but used up) is offset in
+        # proportion to its length. Offset in full, a flat of 0.03 units cut
+        # its corner as one of a break would, and the same corner with no
+        # flat came to a point: ∭'s hooks jumped 12 units between 272 and
+        # 273. Its two outline corners move toward where its neighbours'
+        # offsets meet, wholly at no length, not at all from a break up.
+        nv = len(verts)
+        for j in (range(nseg) if closed else range(1, nseg - 1)):
+            L = _len(_sub(pts[(j + 1) % m], pts[j]))
+            if L >= c or L <= 0:
+                continue
+            (pa, da), (pb, db) = lines[j - 1], lines[(j + 1) % nseg]
+            turn = math.degrees(math.acos(max(-1.0, min(1.0, _dot(da, db)))))
+            k = (1.0 - ease(L, c, 0.0)) * ease(turn, 30.0, 10.0)
+            q = _meet(pa, da, pb, db) if k > 0 else None
+            if q is None:
+                continue
+            a_, b_ = j % nv, (j + 1) % nv
+            verts[a_] = _add(verts[a_], _mul(_sub(q, verts[a_]), k))
+            verts[b_] = _add(verts[b_], _mul(_sub(q, verts[b_]), k))
+            # on the inside of the turn the short segment's offset folds back
+            # on itself (its two corners crossed): there it is no edge, and
+            # its corners are the neighbours' meeting point, where an edge
+            # folding back has none of its own length left. (Left folded, the
+            # outline was not simple and the stroke's bowls were shrunk until
+            # it was, cutting the corner by their 2% margin.)
+            if _dot(_sub(verts[b_], verts[a_]), segs[j][1]) < 0:
+                verts[a_] = verts[b_] = q
         return verts, lines
 
     left, llines = side(+1)
@@ -516,15 +545,50 @@ SLIT = 0.35         # white narrower than twice this share of the chamfer leg, a
 # next, and a variable font animating its weight flickered there
 # (tools/continuity_scan.py).
 RAMP = 0.4
+SNAP = 1.0     # units: a feature eased in so far that less than this of it is left closes whole (no edge
+               # that short: the italic read a 0.2-unit edge as a corner of its own and curved ∭ 49 units off)
 
 
-def _ease(x, full, none):
-    """How far a clean-up acts on a feature measuring ``x``: 1 at ``full``
-    or beyond it, 0 at ``none`` or beyond it, in proportion between (either
-    may be the larger)."""
+def ease(x, full, none):
+    """How far a rule acts on what measures ``x``: 1 at ``full`` or beyond
+    it, 0 at ``none`` or beyond it, in proportion between (either may be
+    the larger). Continuity: a rule that would switch at a limit eases in
+    over a span ending there instead, and the drawing changes as smoothly
+    as the measure (a clean-up here; a drawing's own choice, as the @'s
+    even spacing, in the glyphs)."""
     if none == full:
         return 1.0 if x == full else 0.0
     return min(max((none - x) / (none - full), 0.0), 1.0)
+
+
+_ease = ease
+
+
+def _folds(chain) -> bool:
+    """Whether an open polyline crosses itself (a stretch of a ring
+    around a move: _unfolded)."""
+    from shapely.geometry import LineString
+    pts = [q for i, q in enumerate(chain) if i == 0 or _len(_sub(q, chain[i - 1])) > 1e-9]
+    return len(pts) > 3 and not LineString(pts).is_simple
+
+
+def _unfolded(make, chain_of):
+    """The largest share f (at most 1) of a move for which the stretch of
+    the ring around it does not fold: ``make(f)`` the moved points,
+    ``chain_of(moved)`` the stretch. A partial clean-up that would fold the
+    outline (the ŧ's bar at 900, a step half closed across its neighbour)
+    goes as far as it can without; found by halving, so it follows the
+    geometry continuously."""
+    if not _folds(chain_of(make(1.0))):
+        return 1.0
+    lo, hi = 0.0, 1.0
+    for _ in range(12):
+        mid = (lo + hi) / 2
+        if _folds(chain_of(make(mid))):
+            hi = mid
+        else:
+            lo = mid
+    return lo
 
 
 def _fill_slits(u, eps):
@@ -656,15 +720,29 @@ def _close_jogs(pts, eps, moved):
         if b_in + b_out <= 1e-9:
             skip.add((a, b))
             continue
-        a2 = _add(a, _mul(step, b_in))                                 # the step's ends move toward each other
-        b2 = _sub(b, _mul(step, b_out))
-        d_in = _unit(_add(_mul(u_in, 1 - b_in), _mul(u_out, b_in)))     # each edge turns onto the other's line as it moves
-        d_out = _unit(_add(_mul(u_out, 1 - b_out), _mul(u_in, b_out)))
-        prev2 = _line_meet(pp, _sub(prev, pp), a2, d_in) if b_in > 0 else prev
-        nxt2 = _line_meet(nn, _sub(nxt, nn), b2, d_out) if b_out > 0 else nxt
-        if prev2 is None or nxt2 is None:
+        if (1 - b_in - b_out) * L < SNAP:                               # under a unit left: closed (SNAP)
+            scale = 1.0 / (b_in + b_out)
+            b_in, b_out = b_in * scale, b_out * scale
+
+        def moved_pts(f, b_in=b_in, b_out=b_out):
+            bi, bo = b_in * f, b_out * f
+            a2 = _add(a, _mul(step, bi))                               # the step's ends move toward each other
+            b2 = _sub(b, _mul(step, bo))
+            d_in = _unit(_add(_mul(u_in, 1 - bi), _mul(u_out, bi)))     # each edge turns onto the other's line as it moves
+            d_out = _unit(_add(_mul(u_out, 1 - bo), _mul(u_in, bo)))
+            prev2 = _line_meet(pp, _sub(prev, pp), a2, d_in) if bi > 0 else prev
+            nxt2 = _line_meet(nn, _sub(nxt, nn), b2, d_out) if bo > 0 else nxt
+            return prev2, a2, b2, nxt2
+        if any(q is None for q in moved_pts(1.0)):
             skip.add((a, b))
             continue
+        f = 1.0 if b_in + b_out >= 1 - 1e-9 else _unfolded(
+            moved_pts, lambda m4: [pts[(i - 4) % n], pp] + list(m4) + [nn, pts[(i + 4) % n]])
+        b_in, b_out = b_in * f, b_out * f
+        if b_in + b_out <= 1e-9:
+            skip.add((a, b))
+            continue
+        prev2, a2, b2, nxt2 = moved_pts(1.0, b_in, b_out)
         moved[prev], moved[nxt] = prev2, nxt2
         pts[h], pts[k] = prev2, nxt2
         if b_in + b_out >= 1 - 1e-9:                                   # closed: the step's two vertices go
@@ -782,12 +860,18 @@ def _polish(pts, eps, moved):
             skip.add((a, b))
             continue
         target = _add(_mul(jog, 1 - mix), _mul(q, mix)) if mix > 0 else jog
-        if s >= 1 - 1e-9:
+        if s >= 1 - 1e-9 or (1 - s) * L < SNAP:
             moved[a] = moved[b] = target
             pts[i] = target
             del pts[j]
         else:
-            a2, b2 = _add(a, _mul(_sub(target, a), s)), _add(b, _mul(_sub(target, b), s))
+            def moved_pts(f, s=s, target=target):
+                return _add(a, _mul(_sub(target, a), s * f)), _add(b, _mul(_sub(target, b), s * f))
+            f = _unfolded(moved_pts, lambda m2: [pts[(i - 2) % n], prev] + list(m2) + [nxt, pts[(i + 3) % n]])
+            if f <= 0:
+                skip.add((a, b))
+                continue
+            a2, b2 = moved_pts(f)
             moved[a], moved[b] = a2, b2
             pts[i], pts[j] = a2, b2
             skip.add((a2, b2))

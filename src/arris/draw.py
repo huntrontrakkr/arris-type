@@ -476,8 +476,11 @@ def _cell_kind(spec) -> bool:
         not (isinstance(spec.kind, tuple) and spec.kind[0] == 'liga')
 
 
-def _build(spec, p, ot, ob, overrides, width=None):
-    g = Glyph(p, spec.name, ot=ot, ob=ob, W=body_width(spec, p, width), overrides=dict(overrides))
+def _build(spec, p, ot, ob, overrides, width=None, body=None):
+    """``body``: the body to draw in where it is not p's own (a drawing
+    lightened keeps the body of the weight it is drawn at: _draw)."""
+    g = Glyph(p, spec.name, ot=ot, ob=ob, W=body if body is not None else body_width(spec, p, width),
+              overrides=dict(overrides))
     g.width_arg = width                     # (a body the caller set: a composite's base is drawn in it)
     g.sh_auto = overrides.get('sh_auto', 1.0)
     g.defaults['sh_auto'] = 1.0
@@ -940,7 +943,7 @@ def _cut(p):
 
         def make(watch):
             def at(w_):
-                q = params(w_, grad, watch=watch).with_(mono=p.mono)
+                q = params(w_, grad, watch=watch).with_(mono=p.mono, narrow=p.narrow)
                 if p.cursive:
                     q = q.with_(cursive=True)
                 if p.slant:
@@ -1363,6 +1366,12 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
     if p.slant and not p.plain and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
         spec = REGISTRY[f'{name}.ital']
     g, overrides = _opened(spec, p, ot, ob, width)
+    # lightened, a drawing keeps the body of its weight: its strokes thin
+    # inside it, and the white between its parts grows. (Drawn in the body
+    # of its lightened strokes, a symbol narrowed by a tenth as it lightened,
+    # and its white shrank instead; switched on at one weight, the
+    # lightening snapped its width by up to 150 units: ⇎ ∭ ⏱ ⁗.)
+    body = g.W
     nesting = _Nesting.at(name, g, p, ot, ob, width)
     auto = _auto_counters(spec)
     if any(op.hold for op in spec.openings):
@@ -1458,22 +1467,22 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
             overrides[sq.free] = v
             g = _build(spec, p, ot, ob, overrides, width)
     # (the heritage drawing is never lightened; composites rely on their parts' own rules)
-    if _is_symbol(spec) and p.floor and g.strokes and not g.extra:
+    if _is_symbol(spec) and p.floor and g.strokes and not g.extra and p.sv > _regular_sv(p):
         want = _white_reference(spec, p)
         if want and white_features(g.rings(), p, g) < want:
             a, b = 1.0, LIGHTEN_MIN
-            lo = _build(spec, _lightened(p, b), ot, ob, overrides, width)
+            lo = _build(spec, _lightened(p, b), ot, ob, overrides, width, body)
             if white_features(lo.rings(), _lightened(p, b), lo) >= want:
                 for _ in range(16):
                     mid = (a + b) / 2
-                    trial = _build(spec, _lightened(p, mid), ot, ob, overrides, width)
+                    trial = _build(spec, _lightened(p, mid), ot, ob, overrides, width, body)
                     if white_features(trial.rings(), _lightened(p, mid), trial) >= want:
                         b = mid
                     else:
                         a = mid
             if nesting is not None:
-                b = nesting.clamp(lambda v: _build(spec, _lightened(p, v), ot, ob, overrides, width), 1.0, b)
-            g = _build(spec, _lightened(p, b), ot, ob, overrides, width)
+                b = nesting.clamp(lambda v: _build(spec, _lightened(p, v), ot, ob, overrides, width, body), 1.0, b)
+            g = _build(spec, _lightened(p, b), ot, ob, overrides, width, body)
             g.lightened = b
     # the optical corrections move the settled drawing (openings, counters
     # and the squint are solved on the exact one)
@@ -1481,7 +1490,7 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
 
     def settled(k):
         """The drawing with its strokes lightened by k, optics applied."""
-        h = g if k == 1.0 else _build(spec, _lightened(p, k), ot, ob, overrides, width)
+        h = g if k == 1.0 else _build(spec, _lightened(p, k), ot, ob, overrides, width, body)
         if optical:
             _optical(h, spec, p)
         return h
@@ -1573,6 +1582,25 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
                 g = h
                 g.lightened = k0 * k
                 break
+    # Continuity (the owner, 2026-11-05): each correction above is decided
+    # at this weight alone, by a yes-or-no test, a gate or a search, and a
+    # test that flipped switched it whole from one weight to the next (the
+    # @'s counter thinning at 490, the white rule at 272 in ⇎, the lock's
+    # 0.02 steps). A font's own weight takes its lightening and its counter
+    # thinning from the grid instead (_on_grid): solved at every GRID units
+    # of weight, held from the Regular up to grow only, and interpolated
+    # between, as a variable font interpolates between its masters.
+    if not _RAW[0]:
+        target = _on_grid(name, p, ot, ob, width)
+        if target is not None:
+            k_t, s_t = target
+            if abs(k_t - getattr(g, 'lightened', 1.0)) > 1e-6 or abs(s_t - g.sh_auto) > 1e-6:
+                ov = {**overrides, 'sh_auto': s_t}
+                h = _build(spec, _lightened(p, k_t) if k_t != 1.0 else p, ot, ob, ov, width, body)
+                if optical:
+                    _optical(h, spec, p)
+                h.lightened = k_t
+                g = h
     return g
 
 
@@ -1597,6 +1625,71 @@ def _flawed(g, p: Params) -> bool:
 
 
 _ANCHOR: dict = {}
+GRID = 50         # units of weight between the weights a correction is solved at (Continuity, _on_grid)
+_RAW = [False]    # drawing a grid weight's own correction: no grid of its own
+_GRID: dict = {}
+
+
+def _grid_raw(name, p, ot, ob, width) -> tuple:
+    """(lightening, counter thinning) as a weight's own tests decide them
+    at p (the drawing with no grid: _on_grid). Remembered as _anchor's are."""
+    key = (name, p, ot, ob, width)
+    if key not in _GRID:
+        import json
+        con = cache.db()
+        k = cache.key('grid', key) if con is not None else None
+        row = con.execute('SELECT e, v FROM anchor WHERE k = ?', (k,)).fetchone() if con is not None else None
+        if row is not None and cache.valid(row[0]):
+            light, sh = json.loads(row[1])
+        else:
+            was = _RAW[0]
+            _RAW[0] = True
+            try:
+                with cache.using() as mods:
+                    g = draw(name, p, ot, ob, width)
+            finally:
+                _RAW[0] = was
+            light, sh = getattr(g, 'lightened', 1.0), g.sh_auto
+            if con is not None:
+                con.execute('INSERT OR REPLACE INTO anchor VALUES (?, ?, ?)', (k, cache.stamp(mods), json.dumps([light, sh])))
+        _GRID[key] = (light, sh)
+    return _GRID[key]
+
+
+def _on_grid(name, p, ot, ob, width) -> tuple | None:
+    """(lightening, counter thinning) for p, a weight of a font's own cut:
+    each as solved at the weights of the cut every GRID units, from the
+    Regular up held to the least so far (a heavier weight lightens and
+    thins at least as much as a lighter one), and interpolated between the
+    two around p's weight: continuous in the weight whatever the tests do
+    between. At the Regular and lighter nothing is lightened (the rules
+    that lighten are for heavier weights) and the thinning is interpolated
+    as solved. None for a set derived from a weight (small figures and
+    capitals, the letters inside a ring): those are drawn as solved."""
+    cut = _cut(p)
+    if cut is None:
+        return None
+    w, at = cut
+    w = min(max(w, 100.0), 900.0)
+    grid = list(range(100, 901, GRID))
+    lo = max(a for a in grid if a <= w + 1e-9)
+    hi = min(a for a in grid if a >= w - 1e-9)
+
+    def held(a):
+        k, s = _grid_raw(name, at(a), ot, ob, width)
+        if a <= 400:
+            return 1.0, s
+        for b in grid:                                   # the least from the Regular up to a
+            if 400 <= b < a:
+                kb, sb = _grid_raw(name, at(b), ot, ob, width)
+                k, s = min(k, kb), min(s, sb)
+        return k, s
+    k_lo, s_lo = held(lo)
+    if hi == lo:
+        return k_lo, s_lo
+    k_hi, s_hi = held(hi)
+    t = (w - lo) / (hi - lo)
+    return k_lo + t * (k_hi - k_lo), s_lo + t * (s_hi - s_lo)
 
 
 def _anchor(name, p, ot, ob, width) -> tuple:
@@ -1605,7 +1698,7 @@ def _anchor(name, p, ot, ob, width) -> tuple:
     in this process and in the drawing cache (arris.cache), so the processes
     that build the weights side by side each draw a glyph's lighter weights
     once between them, not each for itself."""
-    key = (name, p, ot, ob, width)
+    key = (name, p, ot, ob, width, _RAW[0])
     if key not in _ANCHOR:
         import json
         con = cache.db()

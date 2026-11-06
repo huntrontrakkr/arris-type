@@ -47,17 +47,20 @@ def test_drawings_are_kept_and_dropped_with_their_code(tmp_path, monkeypatch):
     monkeypatch.setenv('ARRIS_CACHE', str(tmp_path / 'draw.sqlite'))
     monkeypatch.setattr(cache, '_DB', None)
     monkeypatch.setattr('arris.font._MEM', {})
+    monkeypatch.setattr('arris.draw._GRID', {})       # the grid's corrections, kept beside the drawings
     p = params(400, 0, watch=0)
     first = _place('A', p)
     con = sqlite3.connect(tmp_path / 'draw.sqlite')
     rows = con.execute('SELECT e FROM draw').fetchall()
     assert len(rows) == 1 and cache.valid(rows[0][0]) and 'glyphs.caps=' in rows[0][0]
     monkeypatch.setattr('arris.font._MEM', {})
+    monkeypatch.setattr('arris.draw._GRID', {})       # the grid's corrections, kept beside the drawings
     assert _place('A', p) == first                                        # from the file
     # the glyph's module changes: the row is stale, the drawing is made again and the row replaced
     monkeypatch.setattr(cache, '_HASHES', dict(cache.hashes(), **{'glyphs.caps': 'ffffffffffff'}))
     monkeypatch.setattr(cache, '_VALID', {})
     monkeypatch.setattr('arris.font._MEM', {})
+    monkeypatch.setattr('arris.draw._GRID', {})       # the grid's corrections, kept beside the drawings
     assert _place('A', p) == first
     rows = con.execute('SELECT e FROM draw').fetchall()
     assert len(rows) == 1 and 'glyphs.caps=ffffffffffff' in rows[0][0]
