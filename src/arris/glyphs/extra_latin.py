@@ -353,10 +353,19 @@ def thorn(g):
     g.stroke(f.P(1, 8), B(*f.P(7, 8)), B(*f.P(7, 1)), f.P(1, 1), closed=True)
 
 
+ETH_RUN = 0.65   # modules: how far the ð's bar runs past its diagonal at the least (as at Regular)
+
+
 @glyph('eth', '\u00f0', letter_width(8, 2), kind='lower')
 def eth(g):
     """An o whose right side rises and bends back over it at 45 degrees,
-    crossed level partway up (the barred d's bar)."""
+    crossed level partway up (the barred d's bar). The bar keeps to the
+    crossbar rule: it runs past the diagonal by ETH_RUN modules at the
+    least, keeps a module of white above the bowl, and stops gaining weight
+    at EXTRA_HOLD (Glyph.held). Drawn 3.2 modules long at the bowl's
+    shoulder, it was shorter than the diagonal is wide along it from 800
+    (at Black 192 units against 208) and sank into it: the ð read as ∂."""
+    from ..draw import _thickness
     p = g.p
     f = Frame(g, 8, 'asc')
     W8 = letter_width(8, 2)(p)
@@ -366,9 +375,11 @@ def eth(g):
     y_bend = p.xh - g.sh / 2
     reach = p.asc - y_bend
     g.stroke((xr, p.xh / 2), (xr, y_bend), (xr - reach, p.asc), end='h')
-    yb = p.xh + 0.45 * (p.asc - p.xh)
+    t = g.held()
+    yb = max(p.xh + 0.45 * (p.asc - p.xh), p.xh + p.m + t / 2)
     xc = xr - (yb - y_bend)                                  # the diagonal's centre at the bar
-    g.stroke((xc - 1.6 * p.m, yb), (xc + 1.6 * p.m, yb))
+    half = max(1.6 * p.m, _thickness(p, g.sh)((-1.0, 1.0)) * SQRT2 / 2 + ETH_RUN * p.m)
+    g.stroke((xc - half, yb, t), (xc + half, yb))
     g.clip = (0, 0, g.W, p.asc)
 
 
