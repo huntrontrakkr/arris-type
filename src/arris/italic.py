@@ -272,11 +272,15 @@ def _even_bend(rings_, segs, curved, p: Params):
     return moved
 
 
-def _plan(rings_, p: Params, record, names=None, lock=None):
+def _plan(rings_, p: Params, record, names=None, lock=None, fade=0.0, near=None):
     """({(ring, index): turn_left} for the segments that curve, {(ring,
-    index): moved point}) for a drawing (see curve_rings). ``names``: each
+    index): moved point}, {(ring, index): how much of its curve a segment
+    keeps, under 1}) for a drawing (see curve_rings). ``names``: each
     ring's edge names (geom.ink's tags); ``lock``: {edge name: curves}, the
-    decisions a heavy weight keeps from Bold (held)."""
+    decisions a heavy weight keeps from Bold; ``fade``: how far the curves
+    beside a closing edge fade here; ``near``: (the rings EARLIER units
+    lighter, the curved segments as many heavier), to tell a closing edge
+    from a new one and a curve that ends from one that goes on (held)."""
     segs = _segments(rings_, record, p)
     edges: dict = {}
     for s in segs:
@@ -291,9 +295,94 @@ def _plan(rings_, p: Params, record, names=None, lock=None):
             held.add(own)
     curved = {(ri, i): left for ri, i, own, smooth, left, _ in segs
               if (own[0] == 'bowl' and own not in held) or (own[0] != 'bowl' and smooth)}
+    keep = {}
     if lock and names:
         _keep(rings_, names, lock, curved)
-    return curved, _even_bend(rings_, segs, curved, p)
+        if fade > 0:
+            keep = _closing(rings_, curved, p, fade, *(near or (None, None)))
+    return curved, _even_bend(rings_, segs, curved, p), keep
+
+
+FADE = 0.25   # chamfer legs: a curve beside an edge shorter than this fades with it, to nothing where it closes
+
+
+def _closing(rings_, curved, p: Params, fade, earlier, later):
+    """{(ring, index): share of its curve kept} for the curves beside a
+    closing edge: as a short edge next to a curve shrinks toward SNAP,
+    where the clean-up closes it and the chamfers either side become one
+    edge under a new name (or meet in a point), the curve fades to nothing
+    with it, so it does not snap off a weight later (R's bowl at Black, J's
+    hook, r's arm, the flag of h and k). ``fade``: how much of that fading
+    this weight takes. ``earlier``: the same drawing EARLIER units of weight
+    lighter: an edge is closing if the edge there in its place, running its
+    way, was longer; a new edge, or one growing (c's terminal meeting its
+    clip box at 790), leaves its curve be. ``later``: the curved segments as
+    many units heavier: a curve that is still there, on the edge the
+    closing leaves (the ogonek's at 830), goes on and does not fade."""
+    from .geom import SNAP
+    full = max(FADE * p.c, SNAP + 1.0)
+    before = []
+    for ring in earlier or ():
+        q = _ring_pts(ring)
+        before += [(q[j], q[(j + 1) % len(q)]) for j in range(len(q))]
+
+    def shrinking(u, v):
+        L = math.dist(u, v)
+        if L < 1e-9:
+            return True
+        d = ((v[0] - u[0]) / L, (v[1] - u[1]) / L)
+        m = ((u[0] + v[0]) / 2, (u[1] + v[1]) / 2)
+        best = None
+        for a, b in before:
+            Lb = math.dist(a, b)
+            if Lb < 1e-9 or abs(_cross(d, ((b[0] - a[0]) / Lb, (b[1] - a[1]) / Lb))) > 0.05 or \
+                    (b[0] - a[0]) * d[0] + (b[1] - a[1]) * d[1] <= 0:
+                continue
+            dm = math.dist(m, ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2))
+            if dm < max(EARLIER, 2 * full) and (best is None or dm < best[0]):
+                best = (dm, Lb)
+        return best is not None and best[1] > L + 0.25
+    def goes_on(a, b):
+        m = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+        L = math.dist(a, b) or 1.0
+        d = ((b[0] - a[0]) / L, (b[1] - a[1]) / L)
+        for u, v in later or ():
+            Lv = math.dist(u, v)
+            if Lv < 1e-9 or abs(_cross(d, ((v[0] - u[0]) / Lv, (v[1] - u[1]) / Lv))) > 0.1:
+                continue
+            t = min(max(((m[0] - u[0]) * (v[0] - u[0]) + (m[1] - u[1]) * (v[1] - u[1])) / (Lv * Lv), 0.0), 1.0)
+            if math.dist(m, (u[0] + t * (v[0] - u[0]), u[1] + t * (v[1] - u[1]))) < full:
+                return True
+        return False
+    out = {}
+    for ri, i in curved:
+        pts = _ring_pts(rings_[ri])
+        n = len(pts)
+        a, b = pts[i], pts[(i + 1) % n]
+        short = math.inf
+        for u, v in ((pts[i - 1], a), (b, pts[(i + 2) % n])):
+            L = math.dist(u, v)
+            if L < full and shrinking(u, v):
+                short = min(short, L)
+        if short == math.inf or goes_on(a, b):
+            continue
+        k = min(max((short - SNAP) / (full - SNAP), 0.0), 1.0)
+        k = 1.0 - fade * (1.0 - k)
+        if k < 1.0 - 1e-9:
+            out[(ri, i)] = k
+    return out
+
+
+def curved_segments(rings_, p: Params, record, names=None, lock=None):
+    """The segments a drawing curves, as (a, b): what a lighter weight's
+    closing edges are judged against (_closing)."""
+    record, _ = split_warp(record)
+    curved = _plan(rings_, p, record, names, lock)[0]
+    out = []
+    for ri, i in curved:
+        pts = _ring_pts(rings_[ri])
+        out.append((pts[i], pts[(i + 1) % len(pts)]))
+    return out
 
 
 def _named(names):
@@ -309,31 +398,55 @@ def _named(names):
     return out
 
 
+def lengths(rings_, names):
+    """{edge name: (length, (the name of the edge before it, of the one
+    after))} for the edges named once in a drawing: the size and the
+    company a held decision was made in."""
+    out = {}
+    for nm, (ri, i) in _named(names).items():
+        pts = _ring_pts(rings_[ri])
+        n = len(names[ri])
+        out[nm] = (math.dist(pts[i], pts[(i + 1) % len(pts)]), (names[ri][i - 1], names[ri][(i + 1) % n]))
+    return out
+
+
 def decisions(rings_, p: Params, record, names):
     """{edge name: curves} for every chamfer the italic finds in a drawing:
     what a heavier weight of its cut keeps (held)."""
     record, _ = split_warp(record)
     segs = _segments(rings_, record, p)
-    curved, _ = _plan(rings_, p, record)
+    curved = _plan(rings_, p, record)[0]
     at = {v: k for k, v in _named(names).items()}
     return {at[(ri, i)]: (ri, i) in curved for ri, i, *_ in segs if (ri, i) in at}
+
+
+GROWN = 1.5   # an edge longer than this many times its length at Bold is no longer the chamfer Bold decided
 
 
 def _keep(rings_, names, lock, curved):
     """The held decisions applied: a named edge Bold curved curves (if it is
     still a 45-degree corner here, its turn read from its neighbours), one
-    Bold kept straight stays straight; the rest as this weight finds them."""
+    Bold kept straight stays straight; the rest as this weight finds them.
+    An edge grown past GROWN times its length at Bold, or one with other
+    edges either side of it than at Bold, is no longer the corner Bold
+    decided (ю's bowl chamfer, which its bar runs into from 736: Bold's
+    curve bulged across the junction): this weight decides it."""
     for nm, (ri, i) in _named(names).items():
         if nm not in lock:
             continue
-        if not lock[nm]:
+        held, at_bold, company = lock[nm]
+        pts = _ring_pts(rings_[ri])
+        n = len(pts)
+        a, b = pts[i], pts[(i + 1) % n]
+        if math.dist(a, b) > GROWN * at_bold + 1.0:
+            continue
+        if (names[ri][i - 1], names[ri][(i + 1) % len(names[ri])]) != company:
+            continue                                        # another edge has come up against it: this weight decides
+        if not held:
             curved.pop((ri, i), None)
             continue
         if (ri, i) in curved:
             continue
-        pts = _ring_pts(rings_[ri])
-        n = len(pts)
-        a, b = pts[i], pts[(i + 1) % n]
         seg = (b[0] - a[0], b[1] - a[1])
         if not _diag(seg):
             continue
@@ -346,7 +459,7 @@ def _keep(rings_, names, lock, curved):
         curved[(ri, i)] = t1 > 0
 
 
-def curve_rings(rings_, p: Params, record, names=None, lock=None):
+def curve_rings(rings_, p: Params, record, names=None, lock=None, fade=0.0, near=None):
     """Rings of points -> contours of (x, y, on_curve), in the upright frame,
     with their corners made curves.
 
@@ -362,7 +475,7 @@ def curve_rings(rings_, p: Params, record, names=None, lock=None):
     it straightened the bowl at the weights where the bar or spine reached
     it (the italic e from 400, the s from 250 to 450, the j's hook), and
     curved at the others. Edge breaks curve on their own."""
-    curved, moved = _plan(rings_, p, record, names, lock)
+    curved, moved, keep = _plan(rings_, p, record, names, lock, fade, near)
     out = []
     for ri, ring in enumerate(rings_):
         pts = _ring_pts(ring)
@@ -374,6 +487,9 @@ def curve_rings(rings_, p: Params, record, names=None, lock=None):
             c.append((m[0], m[1], True))
             if (ri, i) in curved:
                 q = _corner(a, b, curved[(ri, i)])
+                k = keep.get((ri, i), 1.0)
+                if k < 1.0:                                 # fading: the control slides to the chord's middle
+                    q = ((a[0] + b[0]) / 2 + k * (q[0] - (a[0] + b[0]) / 2), (a[1] + b[1]) / 2 + k * (q[1] - (a[1] + b[1]) / 2))
                 c.append((q[0], q[1], False))
         out.append(c)
     return out
@@ -396,14 +512,14 @@ def warped(contours, warp):
     return [[(x, warp(y), on) for x, y, on in c] for c in contours]
 
 
-def outline(rings, record, p: Params, names=None, lock=None):
+def outline(rings, record, p: Params, names=None, lock=None, fade=0.0, near=None):
     """The italic outline: contours of (x, y, on), sheared, ink on the left
     (as the upright rings). Chamfers are found and curved on the exact
     drawing; the optical corrections (a warp in the record) then move the
     curved outline, and the shear comes last. ``names`` and ``lock``: the
     curves held from Bold (held)."""
     record, warp = split_warp(record)
-    return [shear(c, p) for c in warped(curve_rings(rings, p, record, names, lock), warp)]
+    return [shear(c, p) for c in warped(curve_rings(rings, p, record, names, lock, fade, near), warp)]
 
 
 # --- Curves held from Bold ---------------------------------------------------------
@@ -419,13 +535,14 @@ def outline(rings, record, p: Params, names=None, lock=None):
 # corners Bold does not have.
 
 HOLD_FROM = 700.0
+HELD_SCRIPTS = ('LATIN', 'GREEK', 'CYRILLIC')   # the letters held so far, by their Unicode names
 HOLD_AT = (650.0, 675.0, 700.0, 725.0, 750.0)
 _HELD: dict = {}
 
 
 def held_scripts(name):
     """Whether a glyph's italic curves are held from Bold: its character a
-    Latin letter (the first set the rule is tried on)."""
+    letter of one of HELD_SCRIPTS (Latin first, then Greek and Cyrillic)."""
     import unicodedata
 
     from .draw import REGISTRY
@@ -435,32 +552,39 @@ def held_scripts(name):
     if not cp:
         return False
     try:
-        return unicodedata.name(chr(cp)).startswith('LATIN')
+        return unicodedata.name(chr(cp)).startswith(HELD_SCRIPTS)
     except ValueError:
         return False
 
 
+FADE_IN = 50.0   # weights past HOLD_FROM over which the curves beside closing edges take their fade (_closing)
+EARLIER = 20.0   # units of weight back to the drawing a closing edge is told by (_closing)
+
+
 def hold(name, p: Params, decide):
-    """{edge name: curves} a glyph at p keeps from Bold, or None (lighter
-    than HOLD_FROM, not a font's own cut, not a held script). ``decide(q)``
-    gives the decisions at q, a weight of p's cut."""
+    """({edge name: (curves, its length and company at Bold)} a glyph at p keeps from Bold, how far the curves
+    beside its closing edges fade at p, the parameters EARLIER units of
+    weight lighter and heavier), or (None, 0, None) (lighter than
+    HOLD_FROM, not a font's own cut, not a held script). ``decide(q)`` gives (decisions,
+    lengths) at q, a weight of p's cut."""
     if not p.slant or not held_scripts(name):
-        return None
+        return None, 0.0, None
     from .draw import _cut
     cut = _cut(p)
     if cut is None or cut[0] < HOLD_FROM - 1e-9:
-        return None
+        return None, 0.0, None
+    fade = min(max((cut[0] - HOLD_FROM) / FADE_IN, 0.0), 1.0)
     at = cut[1]
     key = (name, at(HOLD_FROM))
     if key not in _HELD:
         votes: dict = {}
         for a in HOLD_AT:
-            for nm, c in decide(at(a)).items():
+            for nm, c in decide(at(a))[0].items():
                 votes.setdefault(nm, []).append(c)
-        mid = decide(at(HOLD_FROM))
-        _HELD[key] = {nm: (sum(v) * 2 > len(v)) if sum(v) * 2 != len(v) else mid.get(nm, v[0])
-                      for nm, v in votes.items() if len(v) * 2 > len(HOLD_AT)}
-    return _HELD[key]
+        mid, size = decide(at(HOLD_FROM))
+        _HELD[key] = {nm: ((sum(v) * 2 > len(v)) if sum(v) * 2 != len(v) else mid.get(nm, v[0]),) + size[nm]
+                      for nm, v in votes.items() if len(v) * 2 > len(HOLD_AT) and nm in size}
+    return _HELD[key], fade, (at(cut[0] - EARLIER), at(cut[0] + EARLIER))
 
 
 def tt_contours(outline_):
@@ -538,7 +662,7 @@ def _chamfer_map(rings_, record, p: Params):
     """({(a, b): control} for every chamfer segment a-b a drawing curves,
     {a: moved a} for the ends an even bend slides), keyed by the drawing's
     own points."""
-    curved, moved = _plan(rings_, p, record)
+    curved, moved, _ = _plan(rings_, p, record)
     controls, ends = {}, {}
     for (ri, i), left in curved.items():
         pts = _ring_pts(rings_[ri])

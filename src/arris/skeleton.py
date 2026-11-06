@@ -232,7 +232,7 @@ def corners(g, rings, rec, p: Params) -> dict[str, bool]:
     held: set = set()
     if p.slant:
         if hasattr(IT, '_plan'):
-            curved, _ = IT._plan(rings, p, rec)
+            curved = IT._plan(rings, p, rec)[0]
             held = {idx for idx, ss in found.items() if not any((s[0], s[1]) in curved for s in ss)}
         else:                                               # 1.005's rule, for comparing builds
             held = {idx for idx, ss in found.items() if any(not s[3] for s in ss)}

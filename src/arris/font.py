@@ -87,13 +87,19 @@ def place(name: str, p: Params, tune=None):
         def decide(q):
             nq: list = []
             rq, recq, _ = _place(name, q, tune, record=True, tags=nq)
-            return italic.decisions(rq, q, recq, nq)
-        lock = None if REGISTRY[name].cell else italic.hold(name, p, decide)
+            return italic.decisions(rq, q, recq, nq), italic.lengths(rq, nq)
+        lock, fade, around = (None, 0.0, None) if REGISTRY[name].cell else italic.hold(name, p, decide)
+        near = None
+        if around is not None and fade > 0:
+            earlier = _place(name, around[0], tune, record=True)[0]
+            nl: list = []
+            rl, recl, _ = _place(name, around[1], tune, record=True, tags=nl)
+            near = (earlier, italic.curved_segments(rl, around[1], recl, nl, lock))
         if REGISTRY[name].cell:
             # a terminal cell's drawing joins the cells above and below it:
             # curved like the italic, never slanted (see _place)
             p = p.with_(slant=0.0)
-        return italic.outline(rings, record, p, names, lock), adv
+        return italic.outline(rings, record, p, names, lock, fade, near), adv
     rings, _, adv = _place(name, p, tune)
     return rings, adv
 
