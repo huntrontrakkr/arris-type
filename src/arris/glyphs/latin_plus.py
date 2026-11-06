@@ -290,36 +290,48 @@ def Gstroke(g):
     g.stroke((xs - 1.5 * p.m - p.sv / 2, 0.27 * p.cap), (xs + 1.5 * p.m + p.sv / 2, 0.27 * p.cap))
 
 
+def _g_room(p):
+    """The room under the g's bowl, down to its hook's top edge, as
+    lower.hook draws it (the hook deepening as it must)."""
+    from ..params import inner_leg
+    from .figures import STACK_MIN
+    from .lower import HOOK_ROOM, least_white
+    tail = min(p.sh, max(STACK_MIN * p.sh, p.desc - inner_leg(p) - least_white(p)))
+    extra = min(HOOK_ROOM, max(0.0, least_white(p) - (p.desc - tail - inner_leg(p))))
+    return p.desc + extra - tail
+
+
+def _gstroke_t(p):
+    """ǥ's bar: the weight's own horizontal up to where the white above and
+    below it in the room under the bowl falls to half a module (about 350),
+    and that weight's from there on (draw.frozen)."""
+    from ..draw import frozen
+    return frozen(p, lambda q, t: (_g_room(q) - t) / 2)
+
+
 def _gstroke_run(p):
     """How far ǥ's bar runs out past its stem on each side: a module and a
-    half, and half of what the bar is drawn thinner than the stem, so a
-    thin bar still reads as a bar (gstroke)."""
-    return 1.5 * p.m + max(0.0, p.sv - p.floor) / 2
+    half, and half of what the bar is thinner than the stem, so a bar that
+    has stopped gaining weight still reads as a bar (gstroke)."""
+    return 1.5 * p.m + max(0.0, p.sv - _gstroke_t(p)) / 2
 
 
 @glyph('uni01E5', 'ǥ', lambda p: REGISTRY['g'].width(p) + _gstroke_run(p), kind='lower')
 def gstroke(g):
     """g with a bar across its descender's stem. The descender holds little
-    room under the bowl (101 units to the hook at Regular, 146 at Black, the
+    room under the bowl (122 units to the hook at Regular, 146 at Black, the
     g's hook deepening as it must: lower.hook), and a bar a stroke thick
-    pressed against the bowl at every weight and merged into the hook from
-    600. So the bar is the font's thinnest stroke (Params.floor) at every
-    weight, centred in that room, with white above and below it, and runs
-    out further the thinner it is than the stem (_gstroke_run), as the owner
-    asked: thin, and long where it is thin (2026-11-06)."""
-    from ..params import inner_leg
-    from .figures import STACK_MIN
-    from .lower import HOOK_ROOM, least_white
+    pressed against the bowl and merged into the hook from 600. As the
+    owner asked (2026-11-06): the bar is centred in that room and keeps the
+    weight's thickness up to where the white around it starts to close
+    (half a module each side, about 350), frozen there to Black, and runs
+    out further the thinner it is than the stem (_gstroke_run)."""
     p = g.p
     run = _gstroke_run(p)
     w = stamp(g, 'g', width=g.W - run)
     xs = w - p.sv / 2
-    # the g's hook, as lower.hook draws it: the tail's top edge under the bowl
-    tail = min(g.sh, max(STACK_MIN * g.sh, p.desc - inner_leg(p) - least_white(p)))
-    extra = min(HOOK_ROOM, max(0.0, least_white(p) - (p.desc - tail - inner_leg(p))))
-    tail_top = -(p.desc + extra) + tail
-    t = p.floor
-    y = tail_top / 2
+    t = _gstroke_t(p)
+    y = -_g_room(p) / 2
     g.stroke((xs - run - p.sv / 2, y, t), (xs + run + p.sv / 2, y))
     g.clip = None
 

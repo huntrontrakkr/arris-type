@@ -977,6 +977,38 @@ def _at_watch(p, watch):
     return q
 
 
+def frozen(p, white_at, least=None, direction=(1.0, 0.0)) -> float:
+    """The thickness of a stroke added to a letter (a bar across its stem),
+    running in ``direction``: the weight's own, up to the weight of p's cut
+    where the white beside it, ``white_at(q, t)`` (q that weight's
+    parameters, t the stroke's thickness there), would fall under
+    ``least(q)`` (half a module), and that weight's from there on. Frozen
+    where it starts to merge, the stroke keeps the weight it had where it
+    last read, to Black (the owner, 2026-11-06). The weight's own where the
+    white keeps at every weight, or where p is not a font's own (_cut)."""
+    least = least or (lambda q: q.m / 2)
+    own = _thickness(p, p.sh)(direction)
+    if white_at(p, own) >= least(p):
+        return own
+    cut = _cut(p)
+    if cut is None:
+        return own
+    w, at = cut
+
+    def ok(w_):
+        q = at(w_)
+        return white_at(q, _thickness(q, q.sh)(direction)) >= least(q)
+    lo, hi = 100.0, w
+    if not ok(lo):
+        q = at(lo)
+        return _thickness(q, q.sh)(direction)
+    for _ in range(24):                                     # the heaviest weight whose stroke still reads
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if ok(mid) else (lo, mid)
+    q = at(lo)
+    return min(own, _thickness(q, q.sh)(direction))
+
+
 def _lighter(p):
     """The parameters of the lighter weights of p's own cut, from the
     Regular's up (every 100), if p is a font's own; else None (_cut)."""
