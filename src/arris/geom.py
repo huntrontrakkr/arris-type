@@ -537,6 +537,8 @@ JOG = 1.0           # a step between parallel edges shorter than this share of t
 STRAY = 3.0         # degrees: a vertex bending less than this between two long edges goes (_close_jogs)
 POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
 SLIT = 0.35         # white narrower than twice this share of the chamfer leg, and long, is a slit
+HAIR = 1e-3         # units: white narrower than twice this is no white (_fill_slits)
+SLIT_RAMP = 0.5     # a slit's limits (three eps long, one eps across) ease in over this share of eps about them
 # Continuity (the owner, 2026-11-05): the outline is a continuous function of
 # the weight. A clean-up that acts on a feature past a limit (a step shorter
 # than a break, a sliver, a slit) acts in proportion as the feature nears
@@ -600,11 +602,22 @@ def _fill_slits(u, eps):
     in every inside corner) open to the outside become ink, unless filling
     one would seal a counter's mouth or join two parts that are drawn apart
     (a tonos and its capital): the topology stays what it is, at every
-    weight, for the variable font."""
+    weight, for the variable font.
+
+    Continuity: a slit is long (over three times ``eps``) and thin (under
+    ``eps`` across on average), and each eases in over a span about its
+    limit (SLIT_RAMP): a gap part way in is filled only where it is
+    narrower than twice that share of ``eps``, from its narrowest outward.
+    Filled whole or not at all, a cedilla's gap under ç that sat on both
+    limits at once was filled at 890 and open at 880 and 900."""
     if eps <= 0 or u.is_empty:
         return u
     closed = u.buffer(eps, join_style='mitre').buffer(-eps, join_style='mitre')
-    gaps = closed.difference(u)
+    # the closing leaves hairlines of no width along edges that meet at a shallow angle: opened away
+    # (HAIR), so an inside corner's small triangle is not joined by one to a long reach of nothing and
+    # filled as a slit (the turned brace's notch under its point, kept at 421 and filled at 422)
+    raw = closed.difference(u)
+    gaps = raw.buffer(-HAIR, join_style='mitre').buffer(HAIR, join_style='mitre')    # measured opened, filled as found
     # a counter (white enclosed by ink) is never filled here: its topology
     # must be the same at every weight, for the variable font
     filled = shapely.union_all([Polygon(g.exterior) for g in getattr(u, 'geoms', [u]) if isinstance(g, Polygon)])
@@ -618,8 +631,15 @@ def _fill_slits(u, eps):
         r = part.minimum_rotated_rectangle
         xs, ys = r.exterior.coords.xy
         long = max(math.hypot(xs[i + 1] - xs[i], ys[i + 1] - ys[i]) for i in range(2))
-        if long > 3 * eps and part.area < long * eps:
-            fill.append(part)
+        k = (_ease(long, (3 + SLIT_RAMP) * eps, (3 - SLIT_RAMP) * eps)
+             * _ease(part.area / max(long, 1e-9), (1 - SLIT_RAMP / 2) * eps, (1 + SLIT_RAMP / 2) * eps))
+        if k >= 1 - 1e-9:
+            fill.append(raw.intersection(part.buffer(2 * HAIR, join_style='mitre')))
+        elif k > 0:                                         # part way: the gap's white narrower than 2 k eps
+            r = k * eps
+            piece = u.buffer(r, join_style='mitre').buffer(-r, join_style='mitre').difference(u).intersection(part)
+            if not piece.is_empty and piece.area > 1e-6:
+                fill.append(piece)
     if not fill:
         return u
 
