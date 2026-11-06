@@ -135,6 +135,9 @@ and where the optical corrections come from. In short:
   narrower than a break.
 * `tools/squint_scan.py`: holes and slots a squinting reader loses, weight
   by weight (`arris.vision.narrow_whites`).
+* `tools/vf_switch_check.py`: a variable font's form switches (the second
+  forms of $ and ¢) sit under `rlig` and swap one unit either side of each
+  threshold, as HarfBuzz shapes them.
 
 ## Licence
 

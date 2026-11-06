@@ -88,6 +88,10 @@ def _build_master(i: int) -> int:
     return i
 
 
+FEATURE_VARS_TAG_KEY = 'com.github.fonttools.varLib.featureVarsFeatureTag'
+FEATURE_VARS_TAG = 'rlig'   # the feature the designspace rules (the form switches) compile under
+
+
 def make_vf(job: Masters, forms: Mapping[str, Form]) -> TTFont:
     """The variable font from the master fonts as the glyphs now stand."""
     doc = DesignSpaceDocument()
@@ -101,6 +105,10 @@ def make_vf(job: Masters, forms: Mapping[str, Form]) -> TTFont:
         src = SourceDescriptor()
         src.path, src.location = str(job.tmp / f'master-{i}.ttf'), {'Weight': m[0], 'Grade': m[1], 'Watch': m[2]}
         doc.addSource(src)
+    # the form switches compile under rlig, not rvrn (fontTools' default): rvrn runs before every
+    # other feature, misses a glyph reached through one, and some Adobe apps mishandle it (Glyphs'
+    # handbook); rlig is on everywhere and runs in the feature order (tools/vf_switch_check.py)
+    doc.lib[FEATURE_VARS_TAG_KEY] = FEATURE_VARS_TAG
     for n, (alt, regions) in forms.items():
         if regions:
             rule = RuleDescriptor()
