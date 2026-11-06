@@ -658,35 +658,41 @@ def _key(q):
     return (round(q[0], 6), round(q[1], 6))
 
 
-def _chamfer_map(rings_, record, p: Params):
+def _chamfer_map(rings_, record, p: Params, hold=None):
     """({(a, b): control} for every chamfer segment a-b a drawing curves,
     {a: moved a} for the ends an even bend slides), keyed by the drawing's
-    own points."""
-    curved, moved, _ = _plan(rings_, p, record)
+    own points. ``hold``: (edge names, lock, fade, near), the curves a heavy
+    master keeps from Bold, as the static fonts' (font.italic_hold)."""
+    curved, moved, keep = _plan(rings_, p, record, *(hold or ()))
     controls, ends = {}, {}
     for (ri, i), left in curved.items():
         pts = _ring_pts(rings_[ri])
         a, b = pts[i], pts[(i + 1) % len(pts)]
-        controls[(_key(a), _key(b))] = _corner(a, b, left)
+        q = _corner(a, b, left)
+        k = keep.get((ri, i), 1.0)
+        if k < 1.0:                                         # fading, as curve_rings draws it
+            q = ((a[0] + b[0]) / 2 + k * (q[0] - (a[0] + b[0]) / 2), (a[1] + b[1]) / 2 + k * (q[1] - (a[1] + b[1]) / 2))
+        controls[(_key(a), _key(b))] = q
     for (ri, i), m in moved.items():
         ends[_key(_ring_pts(rings_[ri])[i])] = m
     return controls, ends
 
 
-def prepare_outlines(originals, records, params_):
+def prepare_outlines(originals, records, params_, holds=None):
     """What ``aligned_outlines`` reads of each master, made once: its warp,
     and its chamfer map from the record split from the warp (curved on the
     exact drawing, then moved: outline). The maps do not depend on the
     alignment, so one preparation serves every candidate alignment of a
-    glyph."""
+    glyph. ``holds``: per master, the curves it keeps from Bold
+    (_chamfer_map), or None."""
     out = []
-    for o, r, p in zip(originals, records, params_):
+    for j, (o, r, p) in enumerate(zip(originals, records, params_)):
         rec, warp = split_warp(r)
-        out.append((warp, _chamfer_map(o, rec, p)))
+        out.append((warp, _chamfer_map(o, rec, p, holds[j] if holds else None)))
     return out
 
 
-def aligned_outlines(aligned, originals, records, params_, prepared=None):
+def aligned_outlines(aligned, originals, records, params_, prepared=None, holds=None):
     """Italic outlines for point-compatible upright masters
     (``variable.align``). A segment that is a chamfer in any master carries
     a control point in every master: at the corner it cut where it is a
@@ -696,7 +702,7 @@ def aligned_outlines(aligned, originals, records, params_, prepared=None):
     the masters, else made here."""
     k = len(aligned)
     if prepared is None:
-        prepared = prepare_outlines(originals, records, params_)
+        prepared = prepare_outlines(originals, records, params_, holds)
     warps = [w for w, _ in prepared[:k]]
     maps = [m for _, m in prepared[:k]]
     out = [[] for _ in range(k)]

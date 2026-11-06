@@ -42,6 +42,7 @@ from arris import geom
 from arris import italic as ital
 from arris.draw import REGISTRY
 from arris.font import _place, place
+from arris.font import italic_hold as font_italic_hold
 from arris.geom import rings_to_shapely
 from arris.variable import align
 
@@ -244,6 +245,17 @@ def _merge(a: dict[Place, float], b: dict[Place, float]) -> dict[Place, float]:
     return out
 
 
+def _holds(n: str, drawn: Sequence[Drawn], cps: Sequence) -> list:
+    """Per master, the curves its italic keeps from Bold (font.italic_hold,
+    as the static fonts take them), with its own drawing's edge names; None
+    for a master lighter than Bold."""
+    out = []
+    for u, p in zip(drawn, cps):
+        lock, fade, near = font_italic_hold(n, p)
+        out.append(None if lock is None else (u.edges, lock, fade, near))
+    return out
+
+
 class _Curved:
     """The italic outlines a candidate alignment gives the font, and their
     folds (measure.folds): the choice must hold for the curved outlines the
@@ -259,7 +271,8 @@ class _Curved:
         key = id(variant)
         if key not in self.prepared:
             cps = [self.ctx.p(m).with_(slant=0.0) if REGISTRY[self.n].cell else self.ctx.p(m) for m in nodes_]
-            self.prepared[key] = (cps, ital.prepare_outlines([u.rings for u in variant], [u.record for u in variant], cps))
+            self.prepared[key] = (cps, ital.prepare_outlines([u.rings for u in variant], [u.record for u in variant], cps,
+                                                             _holds(self.n, variant, cps)))
         return self.prepared[key]
 
     def folds(self, al: Sequence[Rings], ns: Sequence[Place], kind: str, k: int, variant: Sequence[Drawn],
@@ -399,12 +412,14 @@ def _finish(ctx: Context, n: str, best: Best | None, first: float | None, up: li
                 cps = [ctx.p(m).with_(slant=0.0) if REGISTRY[n].cell else ctx.p(m) for m in nodes_]
                 if kind != 'predicted grid':
                     rings = ital.aligned_outlines(al, [u.rings for u in up_all[:len(nodes_)]],
-                                                  [u.record for u in up_all[:len(nodes_)]], cps)
+                                                  [u.record for u in up_all[:len(nodes_)]], cps,
+                                                  holds=_holds(n, up_all[:len(nodes_)], cps))
                 else:
                     # the rest predicted from the leading masters' italic
                     # outlines, curves and all
                     rings = predicted(ital.aligned_outlines(al[:k], [u.rings for u in up_all[:k]],
-                                                            [u.record for u in up_all[:k]], cps[:k]),
+                                                            [u.record for u in up_all[:k]], cps[:k],
+                                                            holds=_holds(n, up_all[:k], cps[:k])),
                                       nodes_, _LEAD_MODELS[k])
             # every master's advance as the font has it (the font's masters'
             # interpolated: HVAR and the kerning come from those)

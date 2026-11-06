@@ -83,18 +83,7 @@ def place(name: str, p: Params, tune=None):
         from . import italic
         names: list = []
         rings, record, adv = _place(name, p, tune, record=True, tags=names)
-
-        def decide(q):
-            nq: list = []
-            rq, recq, _ = _place(name, q, tune, record=True, tags=nq)
-            return italic.decisions(rq, q, recq, nq), italic.lengths(rq, nq)
-        lock, fade, around = (None, 0.0, None) if REGISTRY[name].cell else italic.hold(name, p, decide)
-        near = None
-        if around is not None and fade > 0:
-            earlier = _place(name, around[0], tune, record=True)[0]
-            nl: list = []
-            rl, recl, _ = _place(name, around[1], tune, record=True, tags=nl)
-            near = (earlier, italic.curved_segments(rl, around[1], recl, nl, lock))
+        lock, fade, near = italic_hold(name, p, tune)
         if REGISTRY[name].cell:
             # a terminal cell's drawing joins the cells above and below it:
             # curved like the italic, never slanted (see _place)
@@ -102,6 +91,30 @@ def place(name: str, p: Params, tune=None):
         return italic.outline(rings, record, p, names, lock, fade, near), adv
     rings, _, adv = _place(name, p, tune)
     return rings, adv
+
+
+def italic_hold(name: str, p: Params, tune=None):
+    """(lock, fade, near) for the italic of a glyph at p: the curves it
+    keeps from Bold, how far the curves beside its closing edges fade, and
+    the drawings either side that tell a closing edge (italic.hold); (None,
+    0, None) where nothing is held. The static fonts (place) and the
+    variable font's masters (arris.vf) take the same."""
+    from . import italic
+    if REGISTRY[name].cell:
+        return None, 0.0, None
+
+    def decide(q):
+        nq: list = []
+        rq, recq, _ = _place(name, q, tune, record=True, tags=nq)
+        return italic.decisions(rq, q, recq, nq), italic.lengths(rq, nq)
+    lock, fade, around = italic.hold(name, p, decide)
+    near = None
+    if around is not None and fade > 0:
+        earlier = _place(name, around[0], tune, record=True)[0]
+        nl: list = []
+        rl, recl, _ = _place(name, around[1], tune, record=True, tags=nl)
+        near = (earlier, italic.curved_segments(rl, around[1], recl, nl, lock))
+    return lock, fade, near
 
 
 def _shift_record(record, dx):
