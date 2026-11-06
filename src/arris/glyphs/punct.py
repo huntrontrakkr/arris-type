@@ -799,11 +799,13 @@ def greaterequal(g):
 
 @punct('notequal', '≠', 8, 1)
 def notequal(g):
+    from ..draw import held_c
     equal(g)
     p, W = g.p, g.W
     a = axis(p)
     w = p.ss / STEEP[1]
-    g.stroke((W / 2 - 2 * p.m, a - 4 * p.m), (W / 2 + 2 * p.m, a + 4 * p.m), start='h', end='h')
+    g.lay((W / 2 - 2 * p.m, a - 4 * p.m, g.held((1.0, 2.0))), (W / 2 + 2 * p.m, a + 4 * p.m), c=held_c(p),
+          start='h', end='h')                                # its slash, added: the Regular's from there on
 
 
 def dagger_bar(p):

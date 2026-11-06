@@ -477,7 +477,8 @@ def _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs):
     finished overlays joined. Rings as ``ink`` returns them. The join
     loses only the edges of less than JOIN_SLIVER it makes where the bar's
     edge passes a letter's point a fraction of a unit off (_polish on that
-    alone); every edge longer stays, so nothing jumps as the weight moves
+    alone), and the white narrower than that (_fill_slits on that alone);
+    every edge and white wider stays, so nothing jumps as the weight moves
     (a polish on the chamfer's share took the 10 units of Ѣ's stem between
     its bowl and its bar at 840, and a notch of the stem with it)."""
     pieces = []
@@ -503,6 +504,10 @@ def _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs):
     if rec is not None:
         rec.extend(_hidden_ends(rings, shapely.union_all(pieces)))
     u = shapely.make_valid(shapely.union_all([rings_to_shapely(rings)] + pieces))
+    if not butt:
+        # white the join leaves under JOIN_SLIVER across (an overlay's edge passing a letter's corner a
+        # fraction of a unit off: ∄'s slash at Thin in the italic) is a hairline, never a design's
+        u = _fill_slits(u, JOIN_SLIVER / 2)
     given = {(round(q[0], 6), round(q[1], 6)) for r in rings for q in r}
     given |= {(round(q[0], 6), round(q[1], 6)) for pc in pieces for r in [pc.exterior] + list(pc.interiors)
               for q in r.coords}

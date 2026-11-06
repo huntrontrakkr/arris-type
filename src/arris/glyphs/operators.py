@@ -296,11 +296,17 @@ def le_height(g):
 def negate(g, half=None, x=None, y=None):
     """The not-equal sign's 2:1 stroke, crossing at (x, y) and reaching
     ``half`` up and down (default: the not-equal sign's four modules)."""
+    from ..draw import NUDGE
     p = g.p
     x = g.W / 2 if x is None else x
     y = axis(p) if y is None else y
     half = 4 * p.m if half is None else half
-    g.stroke((x - half / 2, y - half), (x + half / 2, y + half), start='h', end='h')
+    # added to the sign: the Regular's weight at every heavier one, laid over it (draw.EXTRA_HOLD), and
+    # settled a few units across where its edge would pass a hairline off the sign's (∄'s bottom arm at
+    # Thin, in the italic)
+    t = g.held((1.0, 2.0))
+    g.settle([[((x + d - half / 2, y - half, t), (x + d + half / 2, y + half), {'start': 'h', 'end': 'h'})]
+              for d in NUDGE], curves=True, lay=True)
 
 
 def cdot(g, x, y, s=None):
@@ -642,9 +648,11 @@ def greateroverequal(g):
 def _bar_with_stroke(g):
     """A bar crossed by a short 2:1 stroke: the 'not equal' under a relation."""
     def fn(g, yc):
+        from ..draw import held_c
         g.stroke((0, yc), (g.W, yc))
         h = g.sh / 2 + max(1.75 * g.p.m, 1.0 * g.p.sv)
-        g.stroke((g.W / 2 - h / 2, yc - h), (g.W / 2 + h / 2, yc + h), start='h', end='h')
+        g.lay((g.W / 2 - h / 2, yc - h, g.held((1.0, 2.0))), (g.W / 2 + h / 2, yc + h), c=held_c(g.p),
+              start='h', end='h')
     return Shape(lambda g: g.sh, fn)
 
 
