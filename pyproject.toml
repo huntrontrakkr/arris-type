@@ -2,7 +2,7 @@
 name = "arris"
 version = "1.002"
 description = "Arris: a chamfered geometric sans family with an industrial character, drawn by code"
-license = "OFL-1.1"
+license = "MIT AND OFL-1.1"   # the code MIT (LICENSE), the glyph drawings in src/arris/glyphs/ and the fonts OFL (OFL.txt)
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
