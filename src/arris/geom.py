@@ -508,6 +508,23 @@ JOG = 1.0           # a step between parallel edges shorter than this share of t
 STRAY = 3.0         # degrees: a vertex bending less than this between two long edges goes (_close_jogs)
 POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
 SLIT = 0.35         # white narrower than twice this share of the chamfer leg, and long, is a slit
+# Continuity (the owner, 2026-11-05): the outline is a continuous function of
+# the weight. A clean-up that acts on a feature past a limit (a step shorter
+# than a break, a sliver, a slit) acts in proportion as the feature nears
+# the limit, over its last RAMP share, wholly only beyond: closed at once
+# at the limit, a feature jumped by the limit's size from one weight to the
+# next, and a variable font animating its weight flickered there
+# (tools/continuity_scan.py).
+RAMP = 0.4
+
+
+def _ease(x, full, none):
+    """How far a clean-up acts on a feature measuring ``x``: 1 at ``full``
+    or beyond it, 0 at ``none`` or beyond it, in proportion between (either
+    may be the larger)."""
+    if none == full:
+        return 1.0 if x == full else 0.0
+    return min(max((none - x) / (none - full), 0.0), 1.0)
 
 
 def _fill_slits(u, eps):
@@ -575,7 +592,16 @@ def _close_jogs(pts, eps, moved):
     module more is not made (the step is a feature, not a miss). A vertex
     bending less than STRAY degrees between two long edges also goes.
     Choices are made by geometry alone, so a symmetric drawing stays
-    symmetric."""
+    symmetric.
+
+    Continuity: every one of those tests eases in (_ease) rather than
+    switching, so the outline is a continuous function of the weight. A
+    step closes wholly below 1 - RAMP of the limit and in proportion
+    above it (the two edges move toward each other's line by that share,
+    the step shortening); edges that are nearly parallel, a step that is
+    nearly steep enough, a move nearly too far, act in proportion too; and
+    where the two edges are nearly the same length both move, the shorter
+    the more, so the side that moves does not change at once."""
     pts = list(pts)
     # vertices on a straight line (a stroke's end inside another's edge):
     # no corner there, and they hide the jogs beside them
@@ -591,6 +617,8 @@ def _close_jogs(pts, eps, moved):
         i += 1
     cx = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2 if pts else 0.0
     skip = set()
+    cos_full, cos_none = math.cos(math.radians(5)), math.cos(math.radians(10))
+    sin_full, sin_none = math.sin(math.radians(40)), math.sin(math.radians(30))
     while len(pts) > 5:
         n = len(pts)
         best = None
@@ -611,51 +639,75 @@ def _close_jogs(pts, eps, moved):
             skip.add((a, b))
             continue
         u_in, u_out, u_s = _unit(e_in), _unit(e_out), _unit(step)
-        parallel = _dot(u_in, u_out) > math.cos(math.radians(10))
-        stepping = abs(_cross(u_in, u_s)) > math.sin(math.radians(30))
-        if not (parallel and stepping) or abs(_len(e_in) - _len(e_out)) < 1e-6:
+        l_in, l_out, L = _len(e_in), _len(e_out), _len(step)
+        if abs(l_in - l_out) < 1e-6:                         # no shorter side (a symmetric drawing's own steps)
             skip.add((a, b))
             continue
-        limit = _len(step) + eps
-        if _len(e_in) < _len(e_out):                       # the incoming edge moves onto the outgoing's line
-            q = _line_meet(pp, _sub(prev, pp), b, u_out)
-            if q is None or _len(_sub(q, prev)) > limit or len({hh, h, i, j}) < 4:
-                skip.add((a, b))
-                continue
-            moved[prev] = q
-            moved[a] = q
-            moved[b] = q
-            pts[h] = q
+        act = (_ease(L, (1 - RAMP) * eps, eps)
+               * _ease(_dot(u_in, u_out), cos_full, cos_none)          # the two edges run the same way
+               * _ease(abs(_cross(u_in, u_s)), sin_full, sin_none))     # and the step steps across them
+        alpha = _ease((l_out - l_in) / (l_out + l_in), 0.2, -0.2)      # 1: the incoming edge is the shorter, it moves
+        limit = L + eps
+        q_in = _line_meet(pp, _sub(prev, pp), b, u_out)                # where each edge's far end goes, moved wholly
+        q_out = _line_meet(nn, _sub(nxt, nn), a, u_in)
+        ok_in = _ease(_len(_sub(q_in, prev)), 0.8 * limit, limit) if q_in is not None else 0.0
+        ok_out = _ease(_len(_sub(q_out, nxt)), 0.8 * limit, limit) if q_out is not None else 0.0
+        b_in, b_out = act * alpha * ok_in, act * (1 - alpha) * ok_out
+        if b_in + b_out <= 1e-9:
+            skip.add((a, b))
+            continue
+        a2 = _add(a, _mul(step, b_in))                                 # the step's ends move toward each other
+        b2 = _sub(b, _mul(step, b_out))
+        d_in = _unit(_add(_mul(u_in, 1 - b_in), _mul(u_out, b_in)))     # each edge turns onto the other's line as it moves
+        d_out = _unit(_add(_mul(u_out, 1 - b_out), _mul(u_in, b_out)))
+        prev2 = _line_meet(pp, _sub(prev, pp), a2, d_in) if b_in > 0 else prev
+        nxt2 = _line_meet(nn, _sub(nxt, nn), b2, d_out) if b_out > 0 else nxt
+        if prev2 is None or nxt2 is None:
+            skip.add((a, b))
+            continue
+        moved[prev], moved[nxt] = prev2, nxt2
+        pts[h], pts[k] = prev2, nxt2
+        if b_in + b_out >= 1 - 1e-9:                                   # closed: the step's two vertices go
+            moved[a] = moved[b] = a2
             for idx in sorted((i, j), reverse=True):
                 del pts[idx]
-        else:                                               # the outgoing edge moves onto the incoming's line
-            q = _line_meet(nn, _sub(nxt, nn), a, u_in)
-            if q is None or _len(_sub(q, nxt)) > limit or len({i, j, k, kk}) < 4:
-                skip.add((a, b))
-                continue
-            moved[nxt] = q
-            moved[a] = q
-            moved[b] = q
-            pts[k] = q
-            for idx in sorted((i, j), reverse=True):
-                del pts[idx]
-    # stray vertices: a barely bent long edge
+        else:
+            moved[a], moved[b] = a2, b2
+            pts[i], pts[j] = a2, b2
+            skip.add((a2, b2))
+    # stray vertices: a barely bent long edge straightens, wholly below half
+    # of STRAY, in proportion above it and as its edges near the long limit
     long_ = 4 * eps
+    done = set()
     changed = True
     while changed and len(pts) > 4:
         changed = False
         n = len(pts)
         for i in range(n):
             a, b, c2 = pts[i - 1], pts[i], pts[(i + 1) % n]
+            if b in done:
+                continue
             u, v = _sub(b, a), _sub(c2, b)
-            if _len(u) < long_ or _len(v) < long_:
+            if _len(u) < 0.75 * long_ or _len(v) < 0.75 * long_:
                 continue
             t = abs(math.degrees(math.atan2(_cross(_unit(u), _unit(v)), _dot(_unit(u), _unit(v)))))
-            if 1e-6 < t < STRAY:
+            if not 1e-6 < t < STRAY:
+                continue
+            r = _ease(t, STRAY / 2, STRAY) * _ease(min(_len(u), _len(v)), long_, 0.75 * long_)
+            if r <= 0:
+                continue
+            if r >= 1 - 1e-9:
                 moved[b] = b
                 del pts[i]
-                changed = True
-                break
+            else:
+                ch = _sub(c2, a)
+                foot = _add(a, _mul(ch, _dot(_sub(b, a), ch) / _dot(ch, ch)))
+                b2 = _add(b, _mul(_sub(foot, b), r))
+                moved[b] = b2
+                pts[i] = b2
+                done.add(b2)
+            changed = True
+            break
     return pts
 
 
@@ -679,7 +731,15 @@ def _polish(pts, eps, moved):
     a symmetric drawing stays symmetric: the short edges go in an order a
     mirror image shares (length, then height, then distance from the ring's
     middle), and a jog whose two sides are the same length closes on its
-    midpoint."""
+    midpoint.
+
+    Continuity: each fix eases in (_ease). A short edge is taken out
+    wholly below 1 - RAMP of the limit, in proportion above it (its ends
+    move that share of the way); the jog's fix and the corner's blend over
+    turns of 10 to 20 degrees, and fade out toward a spike's 165 and a
+    corner too far away; and a jog whose sides are nearly the same length
+    closes between its ends, nearer the longer side's line the more it
+    is the longer."""
     pts = list(pts)
     skip = set()
     cx = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2 if pts else 0.0
@@ -704,31 +764,33 @@ def _polish(pts, eps, moved):
             continue
         u_in, u_out = _unit(e_in), _unit(e_out)
         turn = abs(math.degrees(math.atan2(_cross(u_in, u_out), _dot(u_in, u_out))))
-        if turn < 15:                                         # a jog or a kink
-            l_in, l_out = _len(e_in), _len(e_out)
-            if abs(l_in - l_out) <= 1e-6 * max(l_in, l_out):  # no shorter side: meet halfway
-                q = _mul(_add(a, b), 0.5)
-                moved[a] = q
-                moved[b] = q
-                pts[i] = q
-                del pts[j]
-            elif l_in < l_out:
-                moved[a] = b
-                del pts[i]
-            else:
-                moved[b] = a
-                del pts[j]
-        elif turn < 165:                                      # a micro-flat at a corner
-            q = _meet_pts(prev, a, b, nxt)
-            if q is None or _len(_sub(q, _mul(_add(a, b), 0.5))) > 2 * eps:
-                skip.add((a, b))
-                continue
-            moved[a] = q
-            moved[b] = q
-            pts[i] = q
+        l_in, l_out, L = _len(e_in), _len(e_out), _len(_sub(b, a))
+        # the jog's fix: the vertex on the shorter side onto the other (both to the middle when even)
+        if abs(l_in - l_out) <= 1e-6 * max(l_in, l_out):
+            alpha = 0.5
+        else:
+            alpha = _ease((l_out - l_in) / (l_out + l_in), 0.2, -0.2)
+        jog = _add(a, _mul(_sub(b, a), alpha))
+        # the corner's fix: both onto the corner the edges either side make
+        mix = _ease(turn, 20.0, 10.0)
+        q = _meet_pts(prev, a, b, nxt) if mix > 0 else None
+        if mix > 0 and q is None:
+            mix = 0.0
+        flat = _ease(_len(_sub(q, _mul(_add(a, b), 0.5))), 1.5 * eps, 2 * eps) if q is not None else 0.0
+        s = _ease(L, (1 - RAMP) * eps, eps) * ((1 - mix) + mix * flat) * _ease(turn, 155.0, 165.0)
+        if s <= 0:
+            skip.add((a, b))
+            continue
+        target = _add(_mul(jog, 1 - mix), _mul(q, mix)) if mix > 0 else jog
+        if s >= 1 - 1e-9:
+            moved[a] = moved[b] = target
+            pts[i] = target
             del pts[j]
         else:
-            skip.add((a, b))
+            a2, b2 = _add(a, _mul(_sub(target, a), s)), _add(b, _mul(_sub(target, b), s))
+            moved[a], moved[b] = a2, b2
+            pts[i], pts[j] = a2, b2
+            skip.add((a2, b2))
     return pts
 
 
