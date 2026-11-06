@@ -42,6 +42,36 @@ SIL Open Font License 1.1 (`OFL.txt`), copyright The Arris Project Authors
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.013
+
+- The rest of the math pieces, 22 new glyphs. ⎰ ⎱, two-line braces: each
+  end runs on the brace's 45 degrees to its line's edge, so stacked they
+  close into the point where the lines meet, and turned half round each
+  serves its other use. ⎲ ⎳, the two-line summation: ∑ split where its
+  lines meet. ⎸ ⎹ ⏐ ⎯ ⎷ ⎺ ⎻ ⎼ ⎽, terminal cells: the box lines at the
+  cell's edges, the vertical extension where | stands, the horizontal
+  extension on the operators' axis (it meets an arrow's shaft), the
+  radical's foot with its upright at the right edge where ⎹ carries it
+  on, the VT100's scan lines. ⏜ ⏝ ⏞ ⏟ ⏠ ⏡ ⎴ ⎵ ⎶: the parenthesis, brace,
+  tortoise shell and square bracket turned on their sides, as long as the
+  upright brackets are tall, in the line's margin above the cap height or
+  below the baseline, where math fonts set them. Upright in the italic,
+  as the other pieces are.
+- The bracket and integral pieces (⎛ to ⎭, ⌠ ⎮ ⌡) run exactly to the
+  line and are cut square there, as box drawing's lines are. They ran a
+  break past it and were cut there, the next line's piece meant to cover
+  the chamfers: drawn and smoothed one by one, the two chamfers left a
+  nick at every join, wider with the weight, and with any more room
+  between lines than the font's own (an editor's 1.2) the pieces stood
+  apart, each end chamfered, and in the italic rounded. Now the next piece
+  continues the stem with no notch, and ⎪ meets the line where │ does.
+  Only their free ends (a paren's turn, a brace's point, an integral's
+  hooks) are cut as Arris cuts.
+- Nothing else changes. Every static font against 1.012's, glyph by
+  glyph, upright and italic at all nine weights: the 22 bracket and
+  integral pieces move, the 22 new pieces are added, and no other glyph
+  moves by as much as a unit.
+
 ## 1.012
 
 - Arris Mono Narrow, a new family beside Arris Mono, in the same six
