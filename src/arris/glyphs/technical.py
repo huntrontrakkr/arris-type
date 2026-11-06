@@ -3,8 +3,17 @@ media controls and the watch's own pictographs.
 
 * **Keys** (⌘ ⌥ ⌃ ⎋ ⌫ ⌦ ⏏, with ⇧ and ⇪ among the arrows) share the
   cap height and the arrows' heads.
-* **Bracket pieces** (⎛-⎮, ⌠ ⌡) run from the line's descent to its ascent,
-  so they join when stacked line on line.
+* **Bracket pieces** (⎛-⎮, the two-line braces ⎰ ⎱ and summation ⎲ ⎳,
+  ⌠ ⌡) run from the line's descent to its ascent, so they join when
+  stacked line on line: exactly to them and cut square there, as a
+  terminal cell's lines are (``terminal``), the next line's piece
+  continuing the stem with no notch; only their free ends (a paren's
+  turn, a brace's point, an integral's hooks) are cut as Arris cuts.
+  Upright in the italic. The box lines ⎸ ⎹, the extensions ⏐ ⎯, the
+  radical's foot ⎷ and the scan lines ⎺ ⎻ ⎼ ⎽ are terminal cells.
+* **Horizontal brackets** (⏜ ⏝ ⏞ ⏟ ⏠ ⏡ ⎴ ⎵ ⎶) are the brackets turned on
+  their sides, as long as they are tall, in the line's margin above the
+  cap height or below the baseline.
 * **Media controls** (⏩-⏺) are solid shapes, the same height, centred on
   the axis: triangles whose sides run at 2:1 (as wide as they are tall,
   near an equilateral's proportions), a square, an octagon, bars; their
@@ -43,8 +52,25 @@ def piece(name, char, width):
     line on line (spacing by ink would shift a piece with a point or a
     hook off it). Upright in the italic, as a terminal cell is (curved like
     the italic, never slanted): each line's glyphs slant about their own
-    baseline, so slanted pieces would step sideways at every join."""
-    return glyph(name, char, _mono(width), kind='fig', cell=True)
+    baseline, so slanted pieces would step sideways at every join.
+
+    It joins the pieces above and below it as a terminal cell joins its
+    rows: its stem runs exactly to the line's ascent and descent and is cut
+    square there (the clip and ``Glyph.butt``). Run a break past them and
+    cut there by the corner rule, the stems' ends were chamfers that the
+    next piece was to cover: drawn glyph by glyph, each smoothed on its own,
+    the two chamfers left a notch at every join, wider with the weight, and
+    with any more room between lines than the font's own the pieces stood
+    apart, each end chamfered."""
+    def wrap(fn):
+        def drawn(g):
+            fn(g)
+            asc, desc = line_top(g.p)
+            g.clip = (-g.W, desc, 2 * g.W, asc)
+            g.butt = tuple(g.butt) + (('y', asc), ('y', desc))
+        drawn.__name__, drawn.__module__ = getattr(fn, '__name__', 'piece'), fn.__module__
+        return glyph(name, char, _mono(width), kind='fig', cell=True)(drawn)
+    return wrap
 
 
 def lighten(g):
@@ -55,12 +81,11 @@ def lighten(g):
 
 
 def line_top(p):
-    """The line's ascent and descent (font.Metrics), in this drawing's units,
-    and an edge break past them: bracket pieces span them so they join line
-    on line, the corner rule's cuts falling in the overlap."""
+    """The line's ascent and descent (font.Metrics), in this drawing's units:
+    bracket pieces run exactly to them, as terminal cells do (piece)."""
     from ..font import Metrics
     m = Metrics()
-    return m.asc * p.m / 60.0 + p.c, m.desc * p.m / 60.0 - p.c
+    return m.asc * p.m / 60.0, m.desc * p.m / 60.0
 
 
 # --- Diameter, house, keys ---------------------------------------------------------
@@ -499,7 +524,6 @@ def _paren_piece(g, part, mirror):
         g.stroke(T(xs, asc), T(xs, bot + reach_), T(xs + reach_, bot), start='h', end='h')
     else:
         g.stroke(T(xs, desc), T(xs, asc))
-    g.clip = None
 
 
 def _bracket_piece(g, part, mirror):
@@ -553,6 +577,262 @@ PIECES = [
 ]
 for cp, fn, part, mirror, wm in PIECES:
     piece(u(cp), chr(cp), letter_width(wm, 1))(lambda g, fn=fn, part=part, mirror=mirror: fn(g, part, mirror))
+
+
+# Two-line braces: ⎰ the upper section of a left brace or the lower section
+# of a right one, ⎱ the mirror. Each end runs to its line's edge on the
+# brace's 45-degree point, so stacked they close into the point where the
+# lines meet; turned half round each serves its other use. Set as the
+# brace's pieces are (the spine at the middle of the same body), so ⎪
+# extends them.
+
+def _moustache(g, mirror):
+    p = g.p
+    W = g.W
+    asc, desc = line_top(p)
+    xs = W / 2
+    reach_ = max(xs - p.sv / 2, p.sd + 0.5 * p.sv)
+    e = p.sv                                                # run past the line for the clip to cut square
+    T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
+    g.stroke(T(xs + reach_ + e, asc + e), T(xs, asc - reach_), T(xs, desc + reach_), T(xs - reach_ - e, desc - e))
+
+
+piece(u(0x23B0), '\u23b0', letter_width(6, 1))(lambda g: _moustache(g, False))
+piece(u(0x23B1), '\u23b1', letter_width(6, 1))(lambda g: _moustache(g, True))
+
+
+# Two-line summation: ∑ split where its lines meet. ⎲ is its top bar and
+# the chevron's upper arm, ⎳ the lower arm and its bottom bar, on ∑'s 2:1;
+# the bars stand as far from the meeting line as each other (the top at the
+# cap height and half a module of the line above, the foot half a module
+# under the baseline of the line below), and the point is a short upright
+# flat across the meeting line, two edge breaks long, as a chevron's point
+# is cut.
+
+def _sum_width(p):
+    w = p.ss / STEEP[1]
+    return max(letter_width(10, 1)(p), w + (p.cap + 0.5 * p.m - line_top(p)[1]) / 2 + w + p.m)
+
+
+def _sum_piece(g, upper):
+    p = g.p
+    W = g.W
+    asc, desc = line_top(p)
+    w = p.ss / STEEP[1]
+    xl = w / 2
+    yt = p.cap + 0.5 * p.m - g.sh / 2
+    D = yt - desc                                           # the top bar above the meeting line: the foot as far below
+    xp = xl + (D - p.c) / 2                                 # the point's flat, on the 2:1 from the bar's end
+    e = p.sv
+    if upper:
+        g.stroke((W, yt), (xl, yt), (xp, desc + p.c), (xp, desc - e))
+    else:
+        yb = asc - D
+        g.stroke((xp, asc + e), (xp, asc - p.c), (xl, yb), (W, yb))
+
+
+piece(u(0x23B2), '\u23b2', _sum_width)(lambda g: _sum_piece(g, True))
+piece(u(0x23B3), '\u23b3', _sum_width)(lambda g: _sum_piece(g, False))
+
+
+# Cells: the box lines at the cell's edges, the vertical and horizontal
+# extensions, the radical's foot and the VT100's scan lines are terminal
+# cells (terminal.cell): the figures' advance wide, the line high, every
+# line that reaches an edge cut square there, upright in the italic.
+
+def _cell_piece(cp):
+    from .terminal import cell_width
+    return glyph(u(cp), chr(cp), cell_width, kind='fig', cell=True)
+
+
+@_cell_piece(0x23B8)
+def boxline_left(g):
+    """⎸ a light line down the cell's left edge."""
+    from .terminal import cell, weights
+    cell(g)
+    lv, _ = weights(g)
+    asc, desc = line_top(g.p)
+    g.stroke((lv / 2, desc), (lv / 2, asc))
+
+
+@_cell_piece(0x23B9)
+def boxline_right(g):
+    """⎹ a light line down the cell's right edge."""
+    from .terminal import cell, weights
+    W, _, _ = cell(g)
+    lv, _ = weights(g)
+    asc, desc = line_top(g.p)
+    g.stroke((W - lv / 2, desc), (W - lv / 2, asc))
+
+
+@_cell_piece(0x23D0)
+def vline_ext(g):
+    """⏐ the vertical line extension: a stem down the cell's middle, where
+    the monospaced | and ⎮ stand."""
+    from .terminal import cell
+    _, cx, _ = cell(g)
+    asc, desc = line_top(g.p)
+    g.stroke((cx, desc), (cx, asc))
+
+
+@_cell_piece(0x23AF)
+def hline_ext(g):
+    """⎯ the horizontal line extension: a light line across the cell on the
+    operators' axis, square at both edges, so it runs on into the next."""
+    from .terminal import cell
+    W, _, _ = cell(g)
+    a = axis(g.p)
+    g.stroke((0, a), (W, a))
+
+
+@_cell_piece(0x23B7)
+def radical_foot(g):
+    """⎷ the radical's foot: √'s 45-degree tick down to the baseline, and
+    from there an upright to the line's top at the cell's right edge, where
+    ⎹ carries it on up."""
+    from .terminal import cell, weights
+    W, _, _ = cell(g)
+    p = g.p
+    lv, _ = weights(g)
+    asc, _ = line_top(p)
+    x = W - lv / 2
+    t = 2.0 * p.m
+    g.stroke((x - t - p.sv, t + p.sv), (x, 0), start='v')
+    g.stroke((x, 0), (x, asc))
+
+
+def _scan(k):
+    """A VT100 scan line, k of 9 from the cell's top: the first along the
+    top edge, the ninth along the foot, the others evenly between."""
+    def drawn(g):
+        from .terminal import cell, weights
+        W, _, _ = cell(g)
+        _, lh = weights(g)
+        asc, desc = line_top(g.p)
+        y = asc - lh / 2 - (k - 1) / 8 * (asc - desc - lh)
+        g.stroke((0, y), (W, y))
+    return drawn
+
+
+for _cp, _k in ((0x23BA, 1), (0x23BB, 3), (0x23BC, 7), (0x23BD, 9)):
+    _cell_piece(_cp)(_scan(_k))
+
+
+# Horizontal brackets (over and under a run of text or a formula): Arris's
+# parenthesis, square bracket and brace turned on their sides, and the
+# tortoise shell (the square bracket with its corners cut a bowl's
+# chamfer), each as long as the upright brackets are tall. They stand where
+# math fonts set them, outside the letters: an over bracket on the cap
+# height in the line's margin above it, an under one hanging from the
+# baseline in the margin below, both as deep as the narrower margin less
+# half a module, so neither reaches into the letters or the next line. As
+# the weight grows the band deepens to the line's edge, as far as the
+# legs need to stay a stroke long past the back; past that the strokes stop
+# gaining weight (about three quarters of Black's at Black, as a stack of
+# arrows lightens). ⎶ is ⎵ over ⎴, back to back across the axis. Slanted in
+# the italic as the brackets are.
+
+def _hb_width(p):
+    return p.cap + p.desc                                   # the upright brackets' height (cap + half a module to the foot)
+
+
+def _hb_fit(g):
+    """The band's depth: the narrower of the line's margins (above the cap
+    height, below the baseline) less half a module, deepening toward the
+    line's edge as far as the bracket's legs need to stay a stroke long past
+    its back; past that the strokes are lightened (continuously) to fit, as
+    far as the brace's point needs as well."""
+    from .punct import _brace_parts
+    p = g.p
+    asc, desc = line_top(p)
+    room = min(asc - p.cap, -desc)
+    tip = _brace_parts(p, p.sh)[2]
+    k = min(1.0, room / (p.sh + p.sv), room / (0.5 * p.sh + tip))
+    if k < 1.0:
+        g.p = _lightened(p, k)
+    return min(max(room - 0.5 * p.m, p.sh + p.sv), room)
+
+
+def _hb_band(g, over):
+    """(the band's foot, its top, the back's edge, the legs' end) of an over or under bracket."""
+    D = _hb_fit(g)
+    lo, hi = (g.p.cap, g.p.cap + D) if over else (-D, 0.0)
+    return lo, hi, (hi if over else lo), (lo if over else hi)
+
+
+def _hparen(g, over):
+    lo, hi, back, end = _hb_band(g, over)
+    W = g.W
+    y = back - g.sh / 2 if over else back + g.sh / 2
+    reach_ = abs(end - y)                                   # 45 degrees from the back out to the end, as ( turns
+    g.stroke((0, end), (reach_, y), (W - reach_, y), (W, end), start='v', end='v')
+    g.clip = (0, lo, W, hi)
+
+
+def _hsquare(g, over, band=None, cut=False):
+    lo, hi, back, end = band or _hb_band(g, over)
+    p = g.p
+    W = g.W
+    y = back - g.sh / 2 if over else back + g.sh / 2
+    x0, x1 = p.sv / 2, W - p.sv / 2
+    if cut:
+        g.stroke((x0, end), B(x0, y), B(x1, y), (x1, end))
+    else:
+        g.stroke((x0, end), (x0, y), (x1, y), (x1, end))
+    g.clip = (0, lo, W, hi)
+
+
+def _htortoise(g, over):
+    _hsquare(g, over, cut=True)
+
+
+def _hbrace(g, over):
+    """The brace turned: its spine along the band, its arms at the ends
+    turning off it with the brace's curl, its 2:1 point out the other way at
+    the middle, the arms' ink and the point's each half of what the spine
+    leaves of the band; the point's ink runs on past the band by half its
+    reach and the band's edge cuts it, as Arris cuts a point. Each arm is
+    all curl, on the brace's 2:1, from the spine to its end: in a band this
+    shallow the upright's flat half left the curl's inside edge shorter than
+    an edge break at the heavy weights, and it closed (the corner rule
+    filling the bend at once, the italic's at 697)."""
+    from .punct import _brace_parts
+    lo, hi, _, end = _hb_band(g, over)
+    p = g.p
+    W = g.W
+    sh = g.sh
+    tip = _brace_parts(p, sh)[2]
+    h = (hi - lo - sh) / 2                                  # the arms' ink past the spine, and the point's
+    s = -1 if over else 1                                   # the arms' way
+    ys = end - s * (h + sh / 2)                             # the spine's centreline
+    a = h + sh / 2                                          # an arm, from the spine's centreline
+    d = a - tip / 2                                         # the point's centreline past the spine's (_hb_fit keeps it a quarter stroke)
+    r = a / 2                                               # the curl's run along the spine (2:1)
+    mid = W / 2
+    xa, xb = p.sv / 2, W - p.sv / 2
+    g.stroke((xa, end), (xa + r, ys), (mid - d / 2, ys), (mid, ys - s * d), (mid + d / 2, ys), (xb - r, ys), (xb, end))
+    g.clip = (0, lo, W, hi)
+
+
+for _cp, _fn, _over in ((0x23DC, _hparen, True), (0x23DD, _hparen, False), (0x23DE, _hbrace, True),
+                        (0x23DF, _hbrace, False), (0x23E0, _htortoise, True), (0x23E1, _htortoise, False),
+                        (0x23B4, _hsquare, True), (0x23B5, _hsquare, False)):
+    tech(u(_cp), chr(_cp), _hb_width)(lambda g, fn=_fn, over=_over: fn(g, over))
+
+
+@tech(u(0x23B6), '\u23b6', _hb_width)
+def bottom_over_top_bracket(g):
+    """⎶ ⎵ over ⎴: their backs face each other across the axis, a stroke's
+    white apart, each as deep as the others' band."""
+    D = _hb_fit(g)
+    p = g.p
+    a = axis(p)
+    w = max(p.m, 0.6 * p.sv)
+    lo, hi = a + w / 2, a + w / 2 + D
+    _hsquare(g, False, (lo, hi, lo, hi))
+    lo, hi = a - w / 2 - D, a - w / 2
+    _hsquare(g, True, (lo, hi, hi, lo))
+    g.clip = (0, a - w / 2 - D, g.W, a + w / 2 + D)
 
 
 # --- Media controls ---------------------------------------------------------------------
