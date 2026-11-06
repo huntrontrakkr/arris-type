@@ -4,7 +4,12 @@ font built as the variable font is (a designspace rule, the lib key)."""
 from __future__ import annotations
 
 import uharfbuzz as hb
-from fontTools.designspaceLib import AxisDescriptor, DesignSpaceDocument, RuleDescriptor, SourceDescriptor
+from fontTools.designspaceLib import (
+    AxisDescriptor,
+    DesignSpaceDocument,
+    RuleDescriptor,
+    SourceDescriptor,
+)
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.varLib import build as varlib_build

@@ -32,7 +32,8 @@ def check(path: str) -> list[str]:
         return ['no feature variations']
     if 'avar' in tt:
         faults.append('an avar table: thresholds here are read through the default mapping')
-    data = open(path, 'rb').read()
+    with open(path, 'rb') as fh:
+        data = fh.read()
     face = hb.Face(data)
     font = hb.Font(face)
 
