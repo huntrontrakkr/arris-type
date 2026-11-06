@@ -225,7 +225,10 @@ one way at every weight (₼'s arch, a few units lower from Bold).
 
 **An added stroke keeps the Regular's weight and is laid over the
 letter.** Every stroke added to a letter or sign (a bar, a slash: Đ Ħ ŧ Ł
-Ø ð ℏ ǥ Ѣ Ғ Ұ Ҟ Ӿ and their lower cases) is as thick at every heavier
+Ø ð ℏ ǥ Ѣ Ғ Ұ Ҟ Ӿ and their lower cases; the bars and strokes of € ¥ $ ¢ £
+₦ ₩ ₳ ₸ ₱ ₽ ₣ ₭ ₤ ₴ ₵ ₲ ₡ ₿ ₫ ⃀ ₺ ₮ ₥, a pair of bars by the pair's own
+formula at the Regular, no longer thinned further by the squint) is as
+thick at every heavier
 weight as at the Regular (`draw.EXTRA_HOLD`, `hold_weight`: in Arris Mono
 Narrow its own Regular, drawn at 350), one rule for all of them (the
 owner, 2026-11-06). It is laid over the finished letter, not unioned with

@@ -467,9 +467,11 @@ def dollar(g):
     from .caps import S
     S(g)
     p = g.p
+    from ..draw import held_c
     runs = dollar_stem(p, g.sh, g.free('stem', 1.0) >= 0.5)
+    t = g.held((0.0, 1.0))                                  # its stroke, added: the Regular's from there on
     for y0, y1 in runs:
-        g.stroke((g.W / 2, y0), (g.W / 2, y1))
+        g.lay((g.W / 2, y0, t), (g.W / 2, y1), c=held_c(p))
     g.clip = (0, runs[0][0], g.W, runs[-1][1])
 
 

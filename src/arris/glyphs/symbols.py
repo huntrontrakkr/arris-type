@@ -40,15 +40,24 @@ def _bars_inset(p):
 
 def _bars_limit(p):
     """How far the squint rule may thin a pair of bars: to PAIR_T_MIN of the
-    horizontal, never under the font's stroke floor."""
+    horizontal, never under the font's stroke floor; both the Regular's past
+    it, as the bars are (currency.pair_t), so the limit is never thicker
+    than the bars (at the current weight's, 0.65 of Black's horizontal was
+    more than the held bars and the rule thickened ¥'s)."""
+    from ..draw import held_at
     from .currency import PAIR_T_MIN, pair_t
-    return max(PAIR_T_MIN * p.sh, min(p.floor, pair_t(p))) / pair_t(p)
+    h = held_at(p)
+    return max(PAIR_T_MIN * h.sh, min(h.floor, pair_t(p))) / pair_t(p)
 
 
-# The squint rule for a sign with a pair of bars (here and in currency): the
-# bars thin, from the drawing's own down to PAIR_T_MIN of the horizontal,
-# until their white reads.
-BARS = (Squint('bars', _bars_limit),)
+# The squint rule for a sign with a pair of bars (here and in currency) thinned
+# the bars, from the drawing's own down to PAIR_T_MIN of the horizontal, until
+# their white read. Added bars keep the Regular's weight now, every one of them
+# (draw.EXTRA_HOLD: the owner, 2026-11-06), so they no longer thin under it:
+# held, they keep their white, and a rule thinning them further below the
+# Regular's flipped from one weight to the next (₩'s italic at 787, 0.65 of
+# the pair, at 788 all of it). _bars_limit stays for the record of what it was.
+BARS = ()
 # A sign written with one bar as well as two (¥ ₩ ₦): in Mono's narrow cell,
 # where even the thinned pair cannot keep its white (held to what reads, not
 # to the Regular, which reads no better), the pair becomes one bar if one
@@ -78,11 +87,12 @@ def cent(g):
     # the bar thins at heavy weights so the counter it closes stays open; where
     # even then the white beside it closes under the squint, it stops at the
     # c and stands only above and below it, as the dollar's does
-    t = p.sv * g.free('slash', 1.0)
+    from ..draw import held_c
+    t = g.held((0.0, 1.0)) * g.free('slash', 1.0)          # the Regular's from there on, as every added stroke
     lo, hi = -0.15 * p.cap, p.xh + 0.15 * p.cap
     runs = [(lo, hi)] if g.free('stem', 1.0) >= 0.5 else [(lo, g.sh / 2), (p.xh - g.sh / 2, hi)]
     for y0, y1 in runs:
-        g.stroke((g.W / 2, y0, t), (g.W / 2, y1))
+        g.lay((g.W / 2, y0, t), (g.W / 2, y1), c=held_c(p))
     g.clip = None
 
 
@@ -93,7 +103,8 @@ def sterling(g):
     p = f.p
     g.stroke(f.P(8, 11), B(*f.P(2.5, 11)), f.P(2.5, 1))
     g.stroke((0, f.Y(1)), (f.W, f.Y(1)))
-    g.stroke(f.P(0.5, 6), f.P(6, 6))
+    from ..draw import held_c
+    g.lay(f.P(0.5, 6) + (g.held(),), f.P(6, 6), c=held_c(p))   # its bar, added: the Regular's from there on
 
 
 @glyph('yen', '¥', letter_width(10, 2), kind='cap', squint=BARS_OR_ONE)

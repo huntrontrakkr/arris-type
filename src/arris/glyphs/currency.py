@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from ..draw import B, NUDGE, REGISTRY, draw, glyph, white_features
+from ..draw import B, NUDGE, REGISTRY, draw, glyph, held_at, held_c, white_features
 from ..params import SQRT2
 from .caps import big
 from .figures import STACK_MIN, beak_depth, heaviness, jog
@@ -100,7 +100,9 @@ PAIR_T_MIN = 0.65    # as thin as the squint rule takes them
 
 def pair_t(p):
     """Thickness of a pair of bars as drawn: the weight's horizontal, easing
-    toward Black to PAIR_T of it."""
+    toward Black to PAIR_T of it, and from the Regular on the Regular's, as
+    every stroke added to a letter (draw.EXTRA_HOLD)."""
+    p = held_at(p)
     return p.sh * (1 - (1 - PAIR_T) * heaviness(p))
 
 
@@ -163,13 +165,14 @@ def bar_inset(p):
 def bar_pair(g, yc, x0, x1):
     """Two bars from x0 to x1 about yc (see pair). Returns their centres."""
     t, gap = pair(g)
+    c = held_c(g.p)
     if one_bar(g):
-        g.stroke((x0, yc, pair_t(g.p)), (x1, yc))
+        g.lay((x0, yc, pair_t(g.p)), (x1, yc), c=c)
         mark_bars(g, x0, x1, yc, yc)
         return yc, yc
     off = (t + gap) / 2
     for y in (yc - off, yc + off):
-        g.stroke((x0, y, t), (x1, y))
+        g.lay((x0, y, t), (x1, y), c=c)
     mark_bars(g, x0, x1, yc - off, yc + off)
     return yc - off, yc + off
 
@@ -184,7 +187,7 @@ def fit_pair(g, lo, hi, x0, x1):
     off = (t + gap) / 2
     yc = (lo + hi) / 2
     for y in (yc - off, yc + off):
-        g.stroke((x0, y, t), (x1, y))
+        g.lay((x0, y, t), (x1, y), c=held_c(g.p))
     mark_bars(g, x0, x1, yc - off, yc + off)
 
 
@@ -207,16 +210,17 @@ def cedi(g):
     p = g.p
     REGISTRY['C'].fn(g)
     x = 0.5 * g.W + 0.25 * p.sv
-    g.stroke((x, -1.5 * p.m), (x, p.cap + 1.5 * p.m))
+    g.lay((x, -1.5 * p.m, g.held((0.0, 1.0))), (x, p.cap + 1.5 * p.m), c=held_c(p))
     g.clip = (0, -1.5 * p.m, g.W, p.cap + 1.5 * p.m)
 
 
 def _stubs(g, xs, top, bot, h):
     """Strokes standing out of a letter's top and bottom bars."""
     p = g.p
+    t = g.held((0.0, 1.0))
     for x in xs:
-        g.stroke((x, top - g.sh / 2), (x, top + h))
-        g.stroke((x, bot + g.sh / 2), (x, bot - h))
+        g.lay((x, top - g.sh / 2, t), (x, top + h), c=held_c(p))
+        g.lay((x, bot + g.sh / 2, t), (x, bot - h), c=held_c(p))
 
 
 def _stub_xs(p, xc):
@@ -312,12 +316,12 @@ def _under_bar(g, name, width=None):
     """A letter over a bar on the descender's floor, raised where heavy
     strokes leave too little white between them."""
     p = g.p
-    t = g.sh
+    t = g.held()
     lift = max(0.0, t + wmin(p) - p.desc)
     sub = stamp(g, name, 0, lift, width=width)
     xs = [x for r in sub.rings() for x, _ in r]
     y = -p.desc + t / 2
-    g.stroke((min(xs), y), (max(xs), y))
+    g.lay((min(xs), y, t), (max(xs), y), c=held_c(p))
 
 
 @cur('dong', '₫', lambda p: REGISTRY['dcroat'].width(p), kind='lower')
@@ -350,18 +354,19 @@ def naira(g):
     at = lambda y: o + cx(y)[0]                              # the diagonal's centre at height y
     xs_l, xs_r = o + q.sv / 2, g.W - o - q.sv / 2            # the stems' centres
     if one_bar(g):                                          # one bar, run out from the stems only, so it
-        g.stroke((-hang, yc, pair_t(p)), (xs_l, yc))        # cuts no sliver against the diagonal
-        g.stroke((xs_r, yc, pair_t(p)), (g.W + hang, yc))
+        g.lay((-hang, yc, pair_t(p)), (xs_l, yc), c=held_c(p))   # cuts no sliver against the diagonal
+        g.lay((xs_r, yc, pair_t(p)), (g.W + hang, yc), c=held_c(p))
         mark_bars(g, -hang, g.W + hang, yc, yc)
         return
     # each bar passes behind the diagonal on one side: the upper is cut
     # between the left stem and the diagonal, the lower between the
     # diagonal and the right stem, so the white each side of the diagonal is
     # one counter, not a cell and a sliver of a triangle
-    g.stroke((-hang, yu, t), (xs_l, yu))
-    g.stroke((at(yu), yu, t), (g.W + hang, yu))
-    g.stroke((-hang, yl, t), (at(yl), yl))
-    g.stroke((xs_r, yl, t), (g.W + hang, yl))
+    c = held_c(p)
+    g.lay((-hang, yu, t), (xs_l, yu), c=c)
+    g.lay((at(yu), yu, t), (g.W + hang, yu), c=c)
+    g.lay((-hang, yl, t), (at(yl), yl), c=c)
+    g.lay((xs_r, yl, t), (g.W + hang, yl), c=c)
     mark_bars(g, -hang, g.W + hang, yl, yu)
 
 
@@ -402,9 +407,9 @@ def tenge(g):
     t, gap = pair(g)
     y1 = p.cap - t / 2
     y2 = y1 - t - gap
-    g.stroke((0, y1, t), (g.W, y1))
-    g.stroke((0, y2, t), (g.W, y2))
-    g.stroke((g.W / 2, y2), (g.W / 2, 0))
+    g.lay((0, y1, t), (g.W, y1), c=held_c(p))
+    g.lay((0, y2, t), (g.W, y2), c=held_c(p))
+    g.stroke((g.W / 2, y2 + t / 2), (g.W / 2, 0))           # into the bar it hangs from: its top's breaks under it
     mark_bars(g, 0, g.W, y2, y1)
 
 
@@ -424,7 +429,7 @@ def peso(g):
     y3 = y2 - t - gap
     g.stroke((xs, 0), (xs, top))
     g.stroke((-hang, y1, t), B(xr, y1), B(xr, y3, None, t), (xs, y3))
-    g.stroke((-hang, y2, t), (xr, y2))
+    g.lay((-hang, y2, t), (xr, y2), c=held_c(p))
     g.clip = (-hang, 0, W, top)
     mark_bars(g, -hang, xr, y3, y1)
 
@@ -448,7 +453,7 @@ def ruble(g):
     f = frame(p, g.W - dx, 9)
     under = f.Y(6) - g.sh / 2 - wmin(p)                 # the bar's top reaches this at most, under the bowl
     foot = max(p.m, 2.5 * p.c)
-    t = min(g.sh, max(STACK_MIN * g.sh, under - foot))
+    t = min(g.held(), max(STACK_MIN * g.held(), under - foot))
     y = min(f.Y(3), under - t / 2)
     x0, x1, stem = -hang, dx + p.sv + bar_out(p) + 1.5 * p.m, dx + p.sv / 2
     cands, seen = [], set()
@@ -465,7 +470,7 @@ def ruble(g):
     if g.clip is not None:
         cx0, cy0, cx1, cy1 = g.clip
         g.clip = (cx0, min(cy0, -max(foot - (y - t / 2) + 12, 0.0)), cx1, cy1)
-    g.settle(cands)
+    g.settle(cands, lay=True)
 
 
 @cur('franc', '₣', lambda p: REGISTRY['F'].width(p) + bar_inset(p))
@@ -476,7 +481,7 @@ def franc(g):
     inset_letter(g, 'F', dx, g.W - dx)
     f = frame(p, g.W - dx, 8)
     y = min(f.Y(3), f.Y(6) - g.sh - wmin(p))
-    g.stroke((-hang, y), (dx + p.sv + bar_out(p) + p.m, y))
+    g.lay((-hang, y, g.held()), (dx + p.sv + bar_out(p) + p.m, y), c=held_c(p))
 
 
 @cur('uni20AD', '₭', lambda p: REGISTRY['K'].width(p) + bar_inset(p))
@@ -485,7 +490,7 @@ def kip(g):
     p = g.p
     dx, hang = bar_inset(p), bar_hang(p)
     inset_letter(g, 'K', dx, g.W - dx)
-    g.stroke((-hang, p.cap / 2), (dx + p.sv + 1.5 * p.m, p.cap / 2))
+    g.lay((-hang, p.cap / 2, g.held()), (dx + p.sv + 1.5 * p.m, p.cap / 2), c=held_c(p))
 
 
 @cur('lira', '₤', letter_width(8, 1), squint=BARS)
@@ -560,7 +565,7 @@ def hryvnia(g):
     g.stroke(*top, B(xr, yt), (xr, y_hi), (x_at(yu), yu), start='flat' if beak_hi else 'v', end='h')
     g.stroke((x_at(yl), yl), (xl, y_lo), B(xl, yb), *foot, start='h', end='flat' if beak_lo else 'v')
     for y in (yl, yu):
-        g.stroke((-hang, y, t), (W + hang, y))
+        g.lay((-hang, y, t), (W + hang, y), c=held_c(p))
     mark_bars(g, -hang, W + hang, yl, yu)
     g.square = 'bowl'       # a corner's side shrinks to a point and opens again: curved throughout (italic.SQUARE)
 
@@ -572,7 +577,8 @@ def _cross_pair(p):
     and how far each reaches either side of the stem's centre (never less
     than the stem's half and a module and a quarter, so they read as
     strokes and not as bumps on the stem)."""
-    t = p.sd * (1 - 0.4 * heaviness(p))
+    h = held_at(p)                                          # as every added stroke, the Regular's from there on
+    t = h.sd * (1 - 0.4 * heaviness(h))
     dy = SQRT2 * (t + max(p.m, 0.5 * p.sv))
     e = 1.4 * p.m + p.sv / 2
     return t, dy, e
@@ -589,7 +595,7 @@ def _cross(g, xs, y_lo, y_hi, t, arms):
     (lower left, lower right, upper left, upper right) reaches."""
     a = arms
     for y, el, er in ((y_lo, a[0], a[1]), (y_hi, a[2], a[3])):
-        g.stroke((xs - el, y - el, across(g.p, t, (1, 1))), (xs + er, y + er), start='v', end='v')
+        g.lay((xs - el, y - el, across(g.p, t, (1, 1))), (xs + er, y + er), c=held_c(g.p), start='v', end='v')
 
 
 @cur('uni20BA', '\u20ba', growing_width(9, 2, 1.0))
@@ -637,9 +643,10 @@ def mill(g):
     xc = f.X(6)
     h = 1.5 * p.m + p.ss / 2
     sh = sub.sh
-    g.stroke((xc, sh), (xc - h / 2, -h), start='flat', end='h')
+    t = g.held((1.0, 2.0))
+    g.lay((xc, sh, t), (xc - h / 2, -h), c=held_c(p), start='flat', end='h')
     y0 = p.xh - sh - p.leg - p.m                            # (from below the stem's chamfered top)
-    g.stroke((xc, y0), (xc + (p.xh + h - y0) / 2, p.xh + h), start='flat', end='h')
+    g.lay((xc, y0, t), (xc + (p.xh + h - y0) / 2, p.xh + h), c=held_c(p), start='flat', end='h')
     g.clip = None
 
 

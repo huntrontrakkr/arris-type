@@ -100,6 +100,7 @@ def _joins_smoothly(v, seg) -> bool:
 SQUARE = 'square'   # a record entry: the glyph's edge breaks against a square diagonal curve (_segments)
 HID = 'hid'         # a record entry: a 45-degree edge an overlay covers at one end (geom._hidden_ends)
 HID_AT = 1e-3       # font units: how near a ring's point must lie to where a hidden edge now ends
+PIECE_MIN = 2.0     # font units: a chamfer showing past an overlay by less is a sliver, its ends one point (_cover); a curve shorter has control legs under the topology check's TINY
 
 
 def _hidden(record):
@@ -406,8 +407,16 @@ def _cover(rings_, curved, bend, hid):
         def Q(t):
             return ((1 - t) ** 2 * A1[0] + 2 * t * (1 - t) * C[0] + t * t * B1[0],
                     (1 - t) ** 2 * A1[1] + 2 * t * (1 - t) * C[1] + t * t * B1[1])
-        moved[(ri, i)] = Q(t0)
-        moved[(ri, (i + 1) % n)] = Q(t1)
+        q0, q1 = Q(t0), Q(t1)
+        if (ha or hb) and math.dist(q0, q1) < PIECE_MIN:
+            # the chamfer only just shows past the overlay: a sliver, not a curve; its ends meet where
+            # it goes under (₩ ₸ ₥ in the italic at 850 on the light grade)
+            q = q1 if hb else q0
+            moved[(ri, i)] = moved[(ri, (i + 1) % n)] = q
+            controls[(ri, i)] = None
+            continue
+        moved[(ri, i)] = q0
+        moved[(ri, (i + 1) % n)] = q1
         if ha or hb:
             w0, w1, w2 = (1 - t0) * (1 - t1), (1 - t0) * t1 + t0 * (1 - t1), t0 * t1
             controls[(ri, i)] = (w0 * A1[0] + w1 * C[0] + w2 * B1[0], w0 * A1[1] + w1 * C[1] + w2 * B1[1])
@@ -469,7 +478,7 @@ def curve_rings(rings_, p: Params, record):
             a, b = pts[i], pts[(i + 1) % n]
             m = moved.get((ri, i), a)
             c.append((m[0], m[1], True))
-            if (ri, i) in curved:
+            if (ri, i) in curved and not ((ri, i) in controls and controls[(ri, i)] is None):
                 q = controls.get((ri, i)) or _corner(a, b, curved[(ri, i)])
                 c.append((q[0], q[1], False))
         out.append(c)
@@ -582,6 +591,8 @@ def _chamfer_map(rings_, record, p: Params):
     for (ri, i), left in curved.items():
         pts = _ring_pts(rings_[ri])
         a, b = pts[i], pts[(i + 1) % len(pts)]
+        if (ri, i) in given and given[(ri, i)] is None:       # a sliver past an overlay: no curve
+            continue
         controls[(_key(a), _key(b))] = given.get((ri, i)) or _corner(a, b, left)
     for (ri, i), m in moved.items():
         ends[_key(_ring_pts(rings_[ri])[i])] = m
