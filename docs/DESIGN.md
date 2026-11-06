@@ -223,6 +223,22 @@ to the next settles too, of its steps the one that leaves the most
 corners curved (ϖ's bar, Ѫ's arch), or stands where the decision holds
 one way at every weight (₼'s arch, a few units lower from Bold).
 
+**A bar laid across a letter freezes where its white would close.** A bar
+added across a letter's stem or crossing (ǥ Ѣ ѣ ҟ Ӿ ӿ) keeps the weight's
+thickness, held from 600 as every added stroke is, up to the weight where
+white half a module square no longer sits on its edge at each end, above
+and below, and that weight's thickness from there to Black, running out
+further the thinner it is than the letter's own (`draw.lay_bar`,
+`bar_white`). It is laid over the finished letter, not unioned with its
+strokes (`Glyph.lay`, `geom.ink`'s overlay): finished alone, its ends
+broken on the chamfer of the weight whose thickness it has, and joined to
+the letter as it stands. No corner rule runs over the junction, so nothing
+fills in round the bar as the letter grows on, and the letter under it is
+the letter (the g in ǥ is the g). In the italic, a chamfer the bar covers at
+one end (ǥ's hook bend under the bar) is curved as the letter's own and
+cut where it passes under the bar's edge, so the curve is the g's at every
+weight, the variable italic included.
+
 **Ends that stay ends.** A tail, a hook or a beak shorter than the corner
 it turns on ends in that corner's chamfer, a point, and from Bold up the
 chamfer grows faster than the tail. So a tail runs at least as far as its

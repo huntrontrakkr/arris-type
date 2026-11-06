@@ -459,7 +459,7 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
                 continue
             rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
     if overlay:
-        rings = _lay_over(rings, overlay, thick, clip, rec, butt, moved, min_hole, segs)
+        rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs)
     if rec is not None and moved:
         _follow(rec, moved)
     if tags is not None:
@@ -471,10 +471,15 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     return rings
 
 
-def _lay_over(rings, overlay, thick, clip, rec, butt, moved, min_hole, segs):
+def _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs):
     """``ink``'s overlay: each stroke finished alone on its own chamfer leg
     (cut at the clip first, as any stroke is), then the finished ink and the
-    finished overlays joined. Rings as ``ink`` returns them."""
+    finished overlays joined. Rings as ``ink`` returns them. The join
+    loses only the edges of less than JOIN_SLIVER it makes where the bar's
+    edge passes a letter's point a fraction of a unit off (_polish on that
+    alone); every edge longer stays, so nothing jumps as the weight moves
+    (a polish on the chamfer's share took the 10 units of Ѣ's stem between
+    its bowl and its bar at 840, and a notch of the stem with it)."""
     pieces = []
     for i, (st, c_ov) in enumerate(overlay):
         e = [] if segs is not None else None
@@ -506,8 +511,9 @@ def _lay_over(rings, overlay, thick, clip, rec, butt, moved, min_hole, segs):
         if not isinstance(poly, Polygon) or poly.area <= 1e-9:
             continue
         poly = orient(poly, sign=1.0)
-        out.append(_straight(list(poly.exterior.coords)[:-1], given))
-        out += [_straight(list(h.coords)[:-1], given) for h in poly.interiors if Polygon(h).area >= min_hole]
+        out.append(_polish(_straight(list(poly.exterior.coords)[:-1], given), JOIN_SLIVER, moved))
+        out += [_polish(_straight(list(h.coords)[:-1], given), JOIN_SLIVER, moved)
+                for h in poly.interiors if Polygon(h).area >= min_hole]
     return out
 
 
@@ -529,6 +535,17 @@ def _hidden_ends(rings, over):
                 continue
             a_in, b_in = over.contains(Point(a)), over.contains(Point(b))
             if a_in == b_in:
+                # an end on the overlay's edge, or a sliver off it (the join's polish takes the sliver
+                # and moves the end onto the edge): covered as it comes out from under it, the edge
+                # that went on from it is the letter's (ǥ's hook at 648 in the italic)
+                if not a_in:
+                    da, db = over.distance(Point(a)), over.distance(Point(b))
+                    if db <= JOIN_SLIVER < da:
+                        nxt = tuple(r[(i + 2) % n][:2])
+                        out.append(('hid', b, b, _sub(nxt, b), 'end'))
+                    elif da <= JOIN_SLIVER < db:
+                        prev = tuple(r[i - 1][:2])
+                        out.append(('hid', a, a, _sub(a, prev), 'start'))
                 continue
             cut = LineString([a, b]).intersection(over.boundary)
             pts = [(q.x, q.y) for q in getattr(cut, 'geoms', [cut]) if q.geom_type == 'Point']
@@ -609,6 +626,7 @@ JOG = 1.0           # a step between parallel edges shorter than this share of t
 STRAY = 3.0         # degrees: a vertex bending less than this between two long edges goes (_close_jogs)
 POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
 SLIT = 0.35         # white narrower than twice this share of the chamfer leg, and long, is a slit
+JOIN_SLIVER = 1.0   # font units: an edge shorter than this, where an overlay joins the letter, is a point (_lay_over)
 
 
 def _fill_slits(u, eps):
@@ -853,6 +871,8 @@ def _follow(rec, moved):
     for i, r in enumerate(rec):
         if r and r[0] == 'chord':
             rec[i] = ('chord', near(r[1]), near(r[2]))
+        elif r and r[0] == 'hid':
+            rec[i] = ('hid', near(r[1])) + tuple(r[2:])
 
 
 def rings_to_shapely(rings):

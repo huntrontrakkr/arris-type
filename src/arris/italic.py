@@ -115,9 +115,10 @@ def _ends(a, b, vin, vout, hid):
     ha = hb = False
     for _, at, full, d, which in hid:
         if which == 'end' and math.dist(b, at) < HID_AT:
-            b, vout, hb = tuple(full), tuple(d), True
+            # an end on the overlay's edge is the letter's own: its edge, not cut
+            b, vout, hb = tuple(full), tuple(d), math.dist(b, full) >= HID_AT
         elif which == 'start' and math.dist(a, at) < HID_AT:
-            a, vin, ha = tuple(full), tuple(d), True
+            a, vin, ha = tuple(full), tuple(d), math.dist(a, full) >= HID_AT
     return a, b, vin, vout, ha, hb
 
 

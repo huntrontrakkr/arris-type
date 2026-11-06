@@ -547,9 +547,10 @@ def Koppa(g):
 def Hastroke(g):
     """X with a bar across its crossing, the body's width less half a module
     each side, so it reaches past the diagonals at every weight."""
+    from ..draw import lay_bar
     REGISTRY['X'].fn(g)
     f = Frame(g, 10)
-    g.stroke(f.P(0.5, 6), f.P(9.5, 6))
+    lay_bar(g, lambda t, own: ((f.X(0.5) - (own - t) / 2, f.Y(6)), (f.X(9.5) + (own - t) / 2, f.Y(6))))
 
 
 @ccap('uni04FC', 'Ӽ', 10, 2, width=plus_room('X', 0.5))
@@ -850,9 +851,10 @@ def ertick(g):
 
 @glyph('uni04FF', 'ӿ', letter_width(8, 2), kind='lower')
 def hastroke(g):
+    from ..draw import lay_bar
     REGISTRY['x'].fn(g)
     f = Frame(g, 8, 'lower')
-    g.stroke(f.P(0.5, 4.5), f.P(7.5, 4.5))
+    lay_bar(g, lambda t, own: ((f.X(0.5) - (own - t) / 2, f.Y(4.5)), (f.X(7.5) + (own - t) / 2, f.Y(4.5))))
 
 
 @glyph('uni04FD', 'ӽ', plus_room('x', 0.5), kind='lower')
@@ -871,8 +873,10 @@ def kastroke(g):
     from ..draw import _build
     p = g.p
     dx = room(p)
+    from ..draw import lay_bar
     g.add_glyph(_build(REGISTRY['k'], p, 0.0, 0.0, {}, g.W - dx), dx)
-    cross_bar(g, 0, dx + p.sv + room(p), (p.xh + p.asc) / 2 + p.m / 2)
+    y = (p.xh + p.asc) / 2 + p.m / 2
+    lay_bar(g, lambda t, own: ((-(own - t) / 2, y), (dx + p.sv + room(p), y)))
 
 
 @glyph('uni0495', 'ҕ', letter_width(8, 2), kind='lower')

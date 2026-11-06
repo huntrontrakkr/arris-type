@@ -1009,6 +1009,135 @@ def frozen(p, white_at, least=None, direction=(1.0, 0.0)) -> float:
     return min(_thickness(p, p.sh)(direction), _thickness(q, q.sh)(direction))
 
 
+# A bar laid across a letter (Ѣ ѣ Ҟ ҟ Ӿ ӿ: lay_bar) reads while white half a module square still sits on
+# every stretch of its edge that shows, between it and the rest of the letter: it keeps the weight's
+# thickness (to EXTRA_HOLD) up to the weight where that white would close, and that weight's from there
+# to Black, laid over the letter so nothing fills in round it, and longer the thinner it is than the
+# letter's own (the owner, 2026-11-06: "look at the weight where it starts to merge in and then freeze
+# it there"; "the thickening doesn't glop on it at all after it's frozen").
+BAR_WHITE = 0.5     # modules: the side of the square of white a laid bar keeps on its edge
+_BAR_AT: dict = {}
+
+
+def _held_at(q):
+    """q, or its cut's EXTRA_HOLD weight past it (Glyph.held)."""
+    cut = _cut(q)
+    return cut[1](EXTRA_HOLD) if cut is not None and cut[0] > EXTRA_HOLD else q
+
+
+def _bar_held(q) -> float:
+    """A bar's own thickness at q: the weight's horizontal, held from EXTRA_HOLD."""
+    q = _held_at(q)
+    return _thickness(q, q.sh)((1.0, 0.0))
+
+
+def bar_white(g) -> float:
+    """How much white the laid bar (g.overlay's first stroke, a level bar)
+    keeps beside it where it shows: at each of its ends, above and below,
+    the side of the largest square of white that sits on its edge in the
+    stretch the letter leaves showing from that end in (0 where the letter
+    covers the end); the least of the four, in units, at most two modules.
+    A bar reads by its ends: white bounded by the letter on both sides (an
+    X's notch over the bar at its crossing) is the letter's own."""
+    from shapely.geometry import LineString, box
+    from .geom import rings_to_shapely
+    st, _ = g.overlay[0]
+    (x0, y, t), x1 = (st.nodes[0].x, st.nodes[0].y, st.nodes[0].w), st.nodes[-1].x
+    x0, x1 = min(x0, x1), max(x0, x1)
+    over, g.overlay = g.overlay, []
+    try:
+        letter = rings_to_shapely(g.outline(record=False)[0])
+    finally:
+        g.overlay = over
+    cap = 2 * g.p.m
+    best = cap
+    for sgn in (1.0, -1.0):
+        e = y + sgn * t / 2
+        free = LineString([(x0, e + sgn * 0.5), (x1, e + sgn * 0.5)]).difference(letter)
+        spans = [tuple(sorted((q.coords[0][0], q.coords[-1][0]))) for q in getattr(free, 'geoms', [free])
+                 if not q.is_empty and q.length > 1e-6]
+        for end in (x0, x1):
+            span = next((sp for sp in spans if abs(sp[0] - end) < 1.0 or abs(sp[1] - end) < 1.0), None)
+            if span is None:
+                return 0.0
+            lo, hi = span
+
+            def fits(side, lo=lo, hi=hi, e=e, sgn=sgn):
+                if hi - lo < side:
+                    return False
+                strip = box(lo, min(e, e + sgn * side), hi, max(e, e + sgn * side)).intersection(letter)
+                ink = sorted((q.bounds[0], q.bounds[2]) for q in getattr(strip, 'geoms', [strip])
+                             if not q.is_empty and q.area > 1e-6)
+                x = lo
+                for a, b in ink:
+                    if a - x >= side:
+                        return True
+                    x = max(x, b)
+                return hi - x >= side
+            if fits(cap):
+                continue
+            a, b = 0.0, cap
+            for _ in range(14):
+                mid = (a + b) / 2
+                a, b = (mid, b) if fits(mid) else (a, mid)
+            best = min(best, a)
+    return best
+
+
+def _bar_weight(g):
+    """The parameters of the weight whose bar g's weight draws: g's own up
+    to the heaviest weight of its cut where the bar, its own thickness
+    there, still keeps BAR_WHITE (bar_white), that weight's past it. Found
+    once a cut, on the drawing itself."""
+    p = g.p
+    cut = _cut(p)
+    if cut is None:
+        return p
+    w, at = cut
+    key = (g.name, at(400.0))
+    if key not in _BAR_AT:
+        spec = REGISTRY[g.name]
+
+        def reads(w_):
+            q = at(w_)
+            depth = _DEPTH[0]
+            _DEPTH[0] = 0                                   # drawn as itself (Mono: in its own cell)
+            try:
+                h = _build(spec, q, 0.0, 0.0, {'bar_t': _bar_held(q)})
+            finally:
+                _DEPTH[0] = depth
+            return bar_white(h) >= BAR_WHITE * q.m - 1e-6
+        if reads(900.0):
+            _BAR_AT[key] = 900.0
+        elif not reads(100.0):
+            _BAR_AT[key] = 100.0
+        else:
+            lo, hi = 100.0, 900.0
+            for _ in range(12):                             # to a fifth of a weight unit
+                mid = (lo + hi) / 2
+                lo, hi = (mid, hi) if reads(mid) else (lo, mid)
+            _BAR_AT[key] = lo
+    return at(min(w, _BAR_AT[key]))
+
+
+def lay_bar(g, ends):
+    """A level bar laid across the letter (Glyph.lay), frozen where its
+    white would close (_bar_weight). ``ends(t, own)``: the bar's two end
+    points at thickness t, the thickness ``own`` it would have unfrozen
+    (a drawing runs the bar further the thinner it is than that)."""
+    p = g.p
+    own = _bar_held(p)
+    t = g.overrides.get('bar_t')
+    if t is not None:
+        q = p
+    else:
+        q = _bar_weight(g)
+        t = min(own, _bar_held(q))
+    a, b = ends(t, own)
+    g.lay((a[0], a[1], t), b, c=min(p.c, _held_at(q).c))   # its ends broken as at the weight whose thickness it has
+    return t
+
+
 def freeze(p, white_at, least=None, direction=(1.0, 0.0)):
     """The parameters of the weight a stroke freezes at (``frozen``): p's
     own while its white keeps. Its chamfer leg (``.c``) is the leg the
