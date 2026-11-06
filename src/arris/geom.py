@@ -654,6 +654,17 @@ def _fill_slits(u, eps):
     return u
 
 
+def _drawn(v) -> bool:
+    """Whether an edge runs on one of the drawing's own directions: level,
+    upright, 45 degrees or a 2:1 slope either way (to a ten-thousandth, as
+    the italic reads them: italic._axis, italic._diag)."""
+    n = _len(v)
+    if n <= 1e-9:
+        return False
+    x, y = abs(v[0]) / n, abs(v[1]) / n
+    return min(x, y) <= 1e-4 or abs(x - y) <= 1e-4 or abs(x - 2 * y) <= 1e-4 or abs(y - 2 * x) <= 1e-4
+
+
 def _line_meet(p1, d1, p2, d2):
     """Where the line through p1 along d1 meets the line through p2 along
     d2 (None if they are parallel)."""
@@ -662,6 +673,44 @@ def _line_meet(p1, d1, p2, d2):
         return None
     t = _cross(_sub(p2, p1), d2) / den
     return _add(p1, _mul(d1, t))
+
+
+def _keep_drawn(pts, i, r, reach, moved, ease=False):
+    """Straighten the vertex pts[i] between two nearly straight edges by
+    share ``r``, keeping an edge that runs on a drawn direction (_drawn) on
+    it: the other edge turns onto its line, its far end sliding along its
+    own other neighbour (as a jog's edges do), and once on it the vertex
+    goes. Removed or straightened onto the chord between them instead, the
+    drawn edge tilted by hundredths of a unit and the italic, which curves
+    a corner only between edges that run on the drawn directions, left it
+    straight. None if neither edge or both run on one (the caller's own
+    way then); else the share it went, 0 where the end would move further
+    than ``reach`` (with ``ease``, fading out from 0.8 of it), 1 where the
+    vertex went."""
+    n = len(pts)
+    if n < 5:
+        return None
+    a, b, c2 = pts[i - 1], pts[i], pts[(i + 1) % n]
+    u, v = _sub(b, a), _sub(c2, b)
+    du, dv = _drawn(u), _drawn(v)
+    if du == dv:
+        return None
+    far, nb, keep = ((i + 1) % n, (i + 2) % n, u) if du else ((i - 1) % n, (i - 2) % n, v)
+    q = _line_meet(pts[nb], _sub(pts[far], pts[nb]), b, keep)
+    if q is None:
+        return 0.0
+    d = _len(_sub(q, pts[far]))
+    r = r * _ease(d, 0.8 * reach, reach) if ease else (r if d <= reach else 0.0)
+    if r <= 0:
+        return 0.0
+    f2 = _add(pts[far], _mul(_sub(q, pts[far]), r))
+    moved[pts[far]] = f2
+    pts[far] = f2
+    if r >= 1 - 1e-9:
+        moved[b] = b
+        del pts[i]
+        return 1.0
+    return r
 
 
 def _close_jogs(pts, eps, moved):
@@ -695,8 +744,14 @@ def _close_jogs(pts, eps, moved):
         a, b, c2 = pts[i - 1], pts[i], pts[(i + 1) % n]
         u, v = _sub(b, a), _sub(c2, b)
         if _len(u) > 1e-9 and _len(v) > 1e-9 and abs(_cross(_unit(u), _unit(v))) < 0.005 and _dot(u, v) > 0:
-            moved[b] = b
-            del pts[i]
+            went = _keep_drawn(pts, i, 1.0, eps, moved)          # a drawn edge keeps its direction
+            if went is None:
+                moved[b] = b
+                del pts[i]
+            elif went < 1:
+                i += 1
+                continue
+            i = max(i - 2, 0)    # the slid end, or the vertex's neighbours, may be on a straight line now
             continue
         i += 1
     cx = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2 if pts else 0.0
@@ -774,7 +829,14 @@ def _close_jogs(pts, eps, moved):
             pts[i], pts[j] = a2, b2
             skip.add((a2, b2))
     # stray vertices: a barely bent long edge straightens, wholly below half
-    # of STRAY, in proportion above it and as its edges near the long limit
+    # of STRAY, in proportion above it and as its edges near the long limit.
+    # Where one of the two edges runs on a drawn direction (_drawn) it keeps
+    # it, as a jog's edges do: the other turns onto its line, the far end
+    # sliding along its own other neighbour. Straightened onto the chord
+    # between them, a level edge tilted by hundredths of a unit, and the
+    # italic, reading it as no corner's edge, left its corner straight (the
+    # italic p's bowl at its stem, where the bowl's top sits under the
+    # x-height by the slant's thinning and the stem's top runs up to it).
     long_ = 4 * eps
     done = set()
     changed = True
@@ -794,7 +856,15 @@ def _close_jogs(pts, eps, moved):
             r = _ease(t, STRAY / 2, STRAY) * _ease(min(_len(u), _len(v)), long_, 0.75 * long_)
             if r <= 0:
                 continue
-            if r >= 1 - 1e-9:
+            if _drawn(u) and _drawn(v):
+                continue
+            went = _keep_drawn(pts, i, r, eps, moved, ease=True)   # never further than a break
+            if went is not None:
+                if went <= 0:
+                    continue
+                if went < 1:
+                    done.add(b)
+            elif r >= 1 - 1e-9:
                 moved[b] = b
                 del pts[i]
             else:
@@ -818,7 +888,9 @@ def _polish(pts, eps, moved):
     * a short edge between two edges running the same way (a jog: two
       strokes that should share a line miss it by a few units; a clipped
       stroke's leftover cap): its vertex on the shorter side goes, so the
-      longer edge keeps its line;
+      longer edge keeps its line; where it steps across two parallel
+      edges, it is left to _close_jogs, which keeps both edges'
+      directions;
     * a short edge where the edges either side turn a corner (a micro-flat
       in place of a point): the two edges meet at their intersection.
 
@@ -875,7 +947,14 @@ def _polish(pts, eps, moved):
         if mix > 0 and q is None:
             mix = 0.0
         flat = _ease(_len(_sub(q, _mul(_add(a, b), 0.5))), 1.5 * eps, 2 * eps) if q is not None else 0.0
-        s = _ease(L, (1 - RAMP) * eps, eps) * ((1 - mix) + mix * flat) * _ease(turn, 155.0, 165.0)
+        # a step across two edges running the same way is _close_jogs' to close: the shorter
+        # edge onto the longer's line, both keeping their directions. Merged here into one
+        # point, it tilted the edges either side by its height (both, where they were nearly
+        # the same length): a level edge off level, which the italic reads as no corner's edge
+        hand = 0.0 if abs(l_in - l_out) < 1e-6 or n <= 5 or L < 1e-9 else (
+            _ease(_dot(u_in, u_out), math.cos(math.radians(5)), math.cos(math.radians(10)))
+            * _ease(abs(_cross(u_in, _unit(_sub(b, a)))), math.sin(math.radians(40)), math.sin(math.radians(30))))
+        s = _ease(L, (1 - RAMP) * eps, eps) * ((1 - mix) + mix * flat) * _ease(turn, 155.0, 165.0) * (1 - hand)
         if s <= 0:
             skip.add((a, b))
             continue

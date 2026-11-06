@@ -667,6 +667,10 @@ def degree(g):
     x0, x1, y0, y1 = t / 2, W - t / 2, top - W + th / 2, top - th / 2
     leg = p.leg * 0.6
     g.stroke(B(x0, y0, leg, th), B(x1, y0, leg, t), B(x1, y1, leg, th), B(x0, y1, leg, t), closed=True)
+    # light, its chamfers meet at the sides' middles, the sides shrunk to a
+    # point: the italic curves them throughout (italic.SQUARE), a round ring
+    # as where a sliver of side was left between them (1.012)
+    g.square = 'bowl'
 
 
 @punct('bullet', '\u2022', 4, width=lambda p: 2.4 * p.sv)
