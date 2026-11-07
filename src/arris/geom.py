@@ -442,12 +442,17 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     # finished ink (a stamped glyph) standing apart from the strokes is kept
     # as it was finished: the corner rule, polish and jog closing are not
     # idempotent, and run again they changed a stamped C by a jog where an
-    # accent stood near it (Ć's C was not C)
+    # accent stood near it (Ć's C was not C). So under a clip that leaves it
+    # whole (the same polygon): until 1.014 any clip sent it round again, and
+    # every Mono glyph has one (its cell), as has ø (its slash's): Mono's ǿ
+    # was not ø, and the second finish of ø's slash junction at Bold came out
+    # one way or the other as the last bits of a float fell (a stamp moved
+    # by 1e-13 of a unit turned it), so two builds of one code differed
     done = [q for f in finished for q in getattr(f, 'geoms', [f]) if isinstance(q, Polygon) and q.area > 1e-9]
     for poly in u.geoms:
         poly = orient(poly, sign=1.0)
-        if clip is None and any(abs(poly.area - f.area) <= 1e-6 * max(f.area, 1.0)
-                                and poly.symmetric_difference(f).area <= 1e-6 * max(f.area, 1.0) for f in done):
+        if any(abs(poly.area - f.area) <= 1e-6 * max(f.area, 1.0)
+               and poly.symmetric_difference(f).area <= 1e-6 * max(f.area, 1.0) for f in done):
             for r in [poly.exterior] + list(poly.interiors):
                 pts = list(r.coords)[:-1]
                 if r is poly.exterior or Polygon(r).area >= min_hole:

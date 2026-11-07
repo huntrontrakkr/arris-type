@@ -67,6 +67,18 @@ before a commercial distribution if wanted.
   ǥ's hook bend is the g's curve under the bar at every weight (it had
   stayed straight and snapped round at 648), and Ø's O keeps four round
   corners under the slash. The variable italic does the same.
+- A letter stamped into another glyph is the letter, in Arris Mono too.
+  Its finished ink is kept as it was finished wherever it stands apart;
+  until now any clip sent it round the corner rule a second time, and
+  every Mono glyph has a clip (its cell), as has ø (its slash's). So in
+  Mono ǿ's ø was not ø, đ's d not d, ¢'s c not c (60 to 75 glyphs a
+  font: Ø ø Ǿ ǿ Đ đ Ð ǥ ħ ŧ ł ľ ŉ IJ ij ẁ ẃ ẅ ŵ, the Greek letters with
+  tonos, the fractions, ¢ ¥ ₫ ₥ ℃ ℅ ℏ and their kin; in the italic ĝ ğ
+  ġ ģ ǧ ǵ Ŕ Ŗ Ř too), and in Arris Ø ø Ǿ ǿ's O and o were not O and o
+  from Thin to ExtraBold.
+  The second finish was not only wrong but unsteady: at Mono Bold ǿ's
+  slash junction came out one way or the other on the last bits of a
+  float, and two builds of the same code differed.
 - ≨ ≩ ⊊ ⊋: a stacked sign measures a stroke laid over one of its parts
   as that part's ink, so the chevron or the set sign stands the equal
   sign's white above the slash's top. ≨ ≩ have ≤'s chevron (1.013 had
