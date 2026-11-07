@@ -56,10 +56,32 @@ def _register_small(suffix, chars, dy_of):
         glyph(f'{n}.{suffix}', ch, lambda p: small(p).fig_w, kind=('punct', 0.55))(fn)
 
 
+_INFERIOR_FLOOR: dict = {}
+
+
+def inferior_dy(p):
+    """The inferiors' baseline (the figures' and supsubs' letters and
+    signs, one line for all, so H₂O and xₚ set together): hanging 0.22 of
+    the cap height below the baseline; in Mono no lower than keeps the
+    deepest of them, the small p's descender (ₚ), inside the line box, a
+    terminal's cell (font.Metrics' descent, two units in, as
+    marks.line_top keeps the top)."""
+    dy = -0.22 * p.cap
+    if p.mono:
+        from ..font import Metrics
+        from .symkit import small_all
+        if p not in _INFERIOR_FLOOR:
+            ys = [y for r in draw('p', small_all(p)).rings() for _, y in r]
+            m = Metrics()
+            _INFERIOR_FLOOR[p] = (m.desc + 2) * p.cap / m.cap - min(ys)
+        dy = max(dy, _INFERIOR_FLOOR[p])
+    return dy
+
+
 # superiors: tops on the cap height; inferiors: hanging below the baseline;
 # numerators: tops on the cap height; denominators: on the baseline.
 _register_small('sups', SUPS, lambda p: p.cap - small(p).cap)
-_register_small('subs', SUBS, lambda p: -0.22 * p.cap)
+_register_small('subs', SUBS, inferior_dy)
 _register_small('numr', None, lambda p: p.cap - small(p).cap)
 _register_small('dnom', None, lambda p: 0.0)
 

@@ -159,21 +159,61 @@ def horn_reach(p):
     return 1.0 * p.m * white_scale(p) + p.sv / 2
 
 
-def horn_at(g, ax, ay, case):
+def horn_at(g, ax, ay, case, give=0.0):
     """A horn leaving (ax, ay): a 45-degree stroke square to the corner's
-    chamfer, starting inside the letter, then rising, cut flat on top."""
-    p = g.p
+    chamfer, starting inside the letter, then rising, cut flat on top.
+    ``give``: how far it gives way in Mono's cell (horn_give), as a stack
+    of marks does (marks._squeeze): its run and rise shorten, then it
+    lightens and shrinks."""
+    t, kl = marks._squeeze(give) if give > 0 else (1.0, 1.0)
+    p = marks.accent_params(g.p, kl)
+    target = g if p is g.p else Glyph(p, W=g.W)
     k = p.sd / 2                                            # half the diagonal, across
     u = 1 / SQRT2
     x0, y0 = ax - k * u, ay - k * u                         # buried in the letter's corner
-    reach = horn_reach(p)
+    reach = t * horn_reach(p)
     x1, y1 = ax + reach * u, ay + reach * u
-    top = ay + horn_rise(p, case)
-    g.stroke((x0, y0), (x1, y1), (x1, max(top, y1 + p.c)), end='h')
+    top = ay + t * horn_rise(p, case)
+    target.stroke((x0, y0), (x1, y1), (x1, max(top, y1 + p.c)), end='h')
+    if target is not g:
+        g.add_glyph(target)
+
+
+def horn_give(g, case):
+    """How far a horn gives way in Mono's cell (marks._squeeze's s): none,
+    unless with the letter drawn as narrow as it goes (draw.cell_floor) the
+    horn still runs out of the cell (CELL_GAP inside it), as the font
+    carries it: in the italic, where the slant leans the horn's top out
+    and the letter's foot the other way, Ư Ơ ư ơ at Bold. Then as little
+    as brings it in, as the caron's apostrophe gives way
+    (marks._caron_apostrophe)."""
+    p = g.p
+    if not p.mono or not g.extra_src:
+        return 0.0
+    from ..draw import CELL_GAP, _ink_x
+    from ..geom import rings_to_shapely
+    bf = marks.at_floor(g)
+    x0f, x1f = _ink_x(bf, p)
+    room = x0f + p.fig_adv - 2 * CELL_GAP * p.m
+    fx, fy = horn_anchor(rings_to_shapely(bf.rings()))
+
+    def reach_right(s):
+        scratch = Glyph(p, W=g.W)
+        scratch.warp = getattr(bf, 'warp', None)            # (the letter's overshoot moves its horn: in the italic, leaned)
+        horn_at(scratch, fx, fy, case, s)
+        return max(_ink_x(scratch, p)[1], x1f)
+    if reach_right(0.0) <= room + 0.5:
+        return 0.0
+    lo, hi = (0.0, 1.0) if reach_right(1.0) <= room else (1.0, marks.CELL_GIVE)
+    for _ in range(16):
+        mid = (lo + hi) / 2
+        lo, hi = (lo, mid) if reach_right(mid) <= room else (mid, hi)
+    return hi
 
 
 def horn(g, x, case):
-    horn_at(g, *horn_anchor(g.extra[0]), case)
+    ax, ay = horn_anchor(g.extra[0])
+    horn_at(g, ax, ay, case, horn_give(g, case))
 
 
 ABOVE.update({'̉': hookabove, '̏': doublegrave, '̑': invertedbreve})
@@ -189,8 +229,7 @@ BESIDE.update(('̂', m) for m in ('́', '̀', '̉'))
 def turn(g, H):
     """Turn the drawn strokes half round within the body (W wide, H tall)."""
     W = g.W
-    g.strokes = [type(s)(tuple(type(n)(W - n.x, H - n.y, n.bowl, n.w) for n in s.nodes), s.closed, s.start, s.end)
-                 for s in g.strokes]
+    g.move(lambda x, y: (W - x, H - y))
 
 
 def _schwa_gap(g):

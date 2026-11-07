@@ -792,8 +792,7 @@ for _cp, _cap in SMALLCAP.items():
 def _turned(g, H):
     """Turn the drawn strokes half round within the body (x, y -> W - x, H - y)."""
     W = g.W
-    g.strokes = [type(s)(tuple(type(n)(W - n.x, H - n.y, n.bowl, n.w) for n in s.nodes), s.closed, s.start, s.end)
-                 for s in g.strokes]
+    g.move(lambda x, y: (W - x, H - y))
 
 
 @glyph('uni04D9', 'ә', letter_width(8, 2), kind='lower', openings=REGISTRY['e'].openings)

@@ -178,9 +178,15 @@ class Glyph:
         return self.overrides.get(name, default)
 
     def part(self, name: str):
-        """The ink of the named strokes, before the union and corner rule."""
+        """The ink of the named strokes, before the union and corner rule. A
+        glyph fitted to Mono's cell (_cell_fit) is its narrower drawing
+        stamped in: its parts are that drawing's, where it stands."""
         import shapely
         from .geom import stroke_polygon
+        fit = getattr(self, 'fit_src', None)
+        if name not in self.parts and fit is not None:
+            from shapely import affinity
+            return affinity.translate(fit[0].part(name), fit[1], 0.0)
         th = _thickness(self.p, self.sh)
         return shapely.union_all([stroke_polygon(self.strokes[i], th, self.p.c) for i in self.parts[name]])
 
@@ -257,6 +263,16 @@ class Glyph:
         self.stroke(*pts, start=start, end=end)
         self.overlay.append((self.strokes.pop(n), c))
         return self
+
+    def move(self, f):
+        """Move what is drawn so far node by node, f(x, y) -> (x, y): the
+        strokes and those laid over them (lay) alike. (Moved one by one, a
+        drawing turned or shifted left its laid strokes where they were:
+        a negation's slash 24 units off ∌'s middle in Mono Bold Italic.)"""
+        def moved(st):
+            return type(st)(tuple(type(n)(*f(n.x, n.y), n.bowl, n.w) for n in st.nodes), st.closed, st.start, st.end)
+        self.strokes = [moved(st) for st in self.strokes]
+        self.overlay = [(moved(st), c) for st, c in self.overlay]
 
     def rings(self):
         return self.outline(record=False)[0]
@@ -511,24 +527,206 @@ def _cell_kind(spec) -> bool:
         not (isinstance(spec.kind, tuple) and spec.kind[0] == 'liga')
 
 
-def _build(spec, p, ot, ob, overrides, width=None):
+CELL_GAP = 0.25   # modules: in Mono a letter's ink keeps this far inside its cell, so neighbours never touch
+# how a drawing asked for a body narrower than its parts allow fails: a
+# counter too small for its bowls, a stroke run to nothing (ℰ's inner E at
+# a letter's narrowest in Mono Narrow), a white divided by none
+UNDRAWABLE = (ValueError, IndexError, ZeroDivisionError)
+
+
+def _start(spec, p, ot, ob, overrides, width, cell=True):
+    """A glyph's drawing begun: its body, and in Mono its cell."""
     g = Glyph(p, spec.name, ot=ot, ob=ob, W=body_width(spec, p, width), overrides=dict(overrides))
     g.width_arg = width                     # (a body the caller set: a composite's base is drawn in it)
     g.sh_auto = overrides.get('sh_auto', 1.0)
     g.defaults['sh_auto'] = 1.0
-    if p.mono and _DEPTH[0] == 0 and _cell_kind(spec):
-        # Mono: no ink past the cell (the body sits centred in it); a stroke
-        # that would run on is cut at its edge, and the corner rule chamfers
-        # the cut like any other end. The glyph's own cell: a letter drawn
-        # inside another (an inset N in ₦) is cut at the outer glyph's cell,
-        # where it stands in it, when it is stamped (add_glyph), not at a
-        # cell of its own parameters
+    if cell and p.mono and _DEPTH[0] == 0 and _cell_kind(spec):
+        # Mono: no ink past the cell (the body sits centred in it). A letter
+        # is fitted into it (_cell_fit); anything else that would run on is
+        # cut at its edge, and the corner rule chamfers the cut like any
+        # other end. The glyph's own cell: a letter drawn inside another (an
+        # inset N in ₦) is cut at the outer glyph's cell, where it stands in
+        # it, when it is stamped (add_glyph), not at a cell of its own
+        # parameters
         g.cell = ((g.W - p.fig_adv) / 2, (g.W + p.fig_adv) / 2)
+    return g
+
+
+def _drawn(spec, g):
     _DEPTH[0] += 1
     try:
         spec.fn(g)
     finally:
         _DEPTH[0] -= 1
+    return g
+
+
+def _ink_x(g, p=None):
+    """(left, right) of a drawing's ink as the font carries it, its own clip
+    applied (not the cell's): in the italic curved and slanted
+    (italic.outline), as far as its curves reach (_curve_x), which is
+    where a renderer draws them and where tools/mono_cell_check.py
+    measures. Measured upright, a slanted letter ran out of its cell by its
+    slant: 31 units at the median in Mono Bold Italic, 103 at worst, in
+    more than half the glyphs. ``p``: the font's parameters, with which it
+    curves and slants every glyph (font.place), whatever a drawing was
+    drawn with: a sign drawn smaller (symkit) has a lower x-height, about
+    half of which the slant turns on, and measured by its own it stood 19
+    units from where the font put it (№ in Mono Narrow Italic)."""
+    p = p or g.p
+    if p.slant:
+        from .italic import outline
+        rings, rec = g.outline(record=True)
+        return _curve_x(outline(rings, rec, p))
+    from .geom import rings_to_shapely
+    x0, _, x1, _ = rings_to_shapely(g.rings()).bounds
+    return x0, x1
+
+
+def _curve_x(contours):
+    """(left, right) of quadratic contours ((x, y, on) points, two off-curve
+    points in a row meeting at their midpoint), as far as the curves reach:
+    not their off-curve points, which stand outside a rounded corner (a
+    heavy dot's by 5 units in the italic, so that a dieresis measured
+    within its room by its marks' ink was past it by its corners')."""
+    xs = []
+    for c in contours:
+        n = len(c)
+        for i, (x, _, on) in enumerate(c):
+            if on:
+                xs.append(x)
+                continue
+            px, _, pon = c[i - 1]
+            nx, _, non = c[(i + 1) % n]
+            a = px if pon else (px + x) / 2
+            b = nx if non else (nx + x) / 2
+            xs += [a, b]
+            den = a - 2 * x + b
+            if abs(den) > 1e-12 and 0.0 < (a - x) / den < 1.0:
+                t = (a - x) / den
+                xs.append((1 - t) ** 2 * a + 2 * (1 - t) * t * x + t * t * b)
+    return (min(xs), max(xs)) if xs else (0.0, 0.0)
+
+
+def cell_floor(W0, p) -> float:
+    """The narrowest a letter is drawn to fit its cell: 0.6 of its body, and
+    never so narrow that a counter between two stems closes (two stems and
+    the least white, letterframe.least_white). Past it a mark beside the
+    letter gives way (marks._caron_apostrophe)."""
+    from .glyphs.letterframe import least_white
+    return max(0.6 * W0, 2 * p.sv + least_white(p))
+
+
+def _cell_fit(g, spec, p, ot, ob, overrides, width):
+    """Mono: a letter whose ink would run out of its cell (a horn, the
+    apostrophe of ď ľ, an ogonek, a slash, a tone mark beside a circumflex)
+    is fitted into it, never cut: moved as little as brings its ink
+    CELL_GAP inside the cell, and if it is wider than that leaves room
+    for, drawn narrower until it is not (as the cursive set is,
+    italic_forms._in_cell), then centred. The letter gives up width, not
+    the mark. Drawn again without the cell, so nothing in it is cut, and
+    stamped into the cell (Glyph.add_glyph), laid strokes and all."""
+    gap = CELL_GAP * p.m                    # letters and signs alike (a sign kept a unit: № ℘ ⌃ ⌄ touched their neighbours)
+    lo, hi = g.cell[0] + gap, g.cell[1] - gap
+    optical = OPTICAL is not None and p.optical and spec.name.removesuffix('.ital') in OPTICAL['names']
+
+    def ink_x(d):
+        # with the optical corrections it will carry (_draw: they move the
+        # settled drawing, after this): an overshoot is vertical, but in the
+        # italic the slant leans it, 2 units each side of a round figure
+        if not (optical and p.slant):
+            return _ink_x(d, p)
+        _optical(d, spec, p)
+        try:
+            return _ink_x(d, p)
+        finally:
+            d.warp = None
+    x0, x1 = ink_x(g)
+    if x0 >= lo - 0.5 and x1 <= hi + 0.5:
+        return g
+    W0 = g.W
+    floor = cell_floor(W0, p) if spec.kind in LETTER_KINDS else 0.6 * W0
+    W, h = W0, _drawn(spec, _start(spec, p, ot, ob, overrides, width, cell=False))
+    x0, x1 = ink_x(h)
+    over = (x1 - x0) - (hi - lo)
+    wide, fit = W0, None                    # the narrowest body known too wide; the widest known to fit
+    prev = None
+    for _ in range(12):
+        if over <= 0.5:
+            fit = (W, h, x0, x1)
+            if over >= -1.0:
+                break
+        else:
+            wide = W
+            if W <= floor + 1e-6:
+                break
+        # the next body: where the last two drawings' ink meets the room
+        # (the ink need not narrow as the body does: ľ's stem stands in its
+        # middle, and moves half as far), the first step as if it did; kept
+        # between the bodies known too wide and known to fit
+        if prev is not None and abs(over - prev[1]) < 0.25 and abs(W - prev[0]) > 1.0:
+            # its ink did not narrow with its body: a sign drawn to its own
+            # proportions does not at all; one drawn in a body of its own
+            # (ℤ's in Mono Narrow, under the cell's) only past it. Tried as
+            # narrow as it goes, and left if that does not narrow it either
+            if W <= floor + 1e-6:
+                break
+            Wn = floor
+        elif prev is not None and abs(over - prev[1]) > 1e-6:
+            Wn = W - over * (W - prev[0]) / (over - prev[1])
+        else:
+            Wn = W - over * W / max(x1 - x0, 1.0)
+        bottom = floor if fit is None else fit[0]
+        if not bottom < Wn < wide:
+            Wn = (bottom + wide) / 2 if fit is not None else max(floor, min(Wn, wide))
+        if abs(Wn - W) < 0.05:
+            break
+        try:
+            hn = _drawn(spec, _start(spec, p, ot, ob, overrides, Wn, cell=False))
+            xn = ink_x(hn)
+        except UNDRAWABLE:
+            # it cannot be drawn so narrow (a counter would close): its floor
+            # lies above, at most halfway back to the last body drawn
+            floor = (Wn + W) / 2
+            if floor >= wide - 0.05 or abs(W - Wn) < 1.0:
+                break
+            continue
+        prev = (W, over)
+        W, h, (x0, x1) = Wn, hn, xn
+        over = (x1 - x0) - (hi - lo)
+    if over > 0.5 and fit is not None:
+        W, h, x0, x1 = fit
+    # where the body would stand (centred in the cell), then as little a move as brings the ink inside
+    dx = (W0 - h.W) / 2
+    if x1 - x0 > hi - lo:
+        dx = (lo + hi) / 2 - (x0 + x1) / 2
+    elif x1 + dx > hi:
+        dx = hi - x1
+    elif x0 + dx < lo:
+        dx = lo - x0
+    f = _start(spec, p, ot, ob, overrides, width)
+    f.p = h.p                               # (a sign drawn condensed or smaller, symkit: curved and slanted as its drawing was measured)
+    cell, f.cell = f.cell, None             # (fitted: nothing to cut as it is stamped; the cell's clip stands after)
+    f.add_glyph(h, dx, 0.0)
+    f.cell = cell
+    f.defaults.update(h.defaults)
+    f.defaults_used.update({k: (v + dx if k == 'stem' else v) for k, v in h.defaults_used.items()})
+    f.fitted = (round(W0 - h.W, 2), round(dx - (W0 - h.W) / 2, 2))   # (how much narrower, how far moved)
+    f.fit_src = (h, dx)                     # (its parts, for the openings' measures: Glyph.part)
+    return f
+
+
+def _build(spec, p, ot, ob, overrides, width=None):
+    g = _drawn(spec, _start(spec, p, ot, ob, overrides, width))
+    if g.cell is not None and not spec.cell:
+        g = _cell_fit(g, spec, p, ot, ob, overrides, width)
+        x0, x1 = _ink_x(g, p)
+        if g.cell[0] - 0.5 <= x0 and x1 <= g.cell[1] + 0.5:
+            # fitted: no clip. The cell's clip cuts the raw ink, before the
+            # corner rule breaks a stroke's tips, so a tip the rule would take
+            # off but that reached the cell's edge was cut flat there (the
+            # tonos of Ά Έ Ό at Bold)
+            return g
     if g.cell is not None:
         cx0, cx1 = g.cell
         x0, y0, x1, y1 = g.clip if isinstance(g.clip, tuple) else (cx0, -10 * p.cap, cx1, 10 * p.cap)

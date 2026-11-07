@@ -72,6 +72,9 @@ jobs:
       - run: uv sync --frozen
       - name: Build
         run: ARRIS_BUILD_WORKERS=$(nproc) uv run python tools/build_fonts.py all ${{ matrix.args }}
+      - name: Mono's cell (no ink cut by the cell, none past the line box)
+        if: contains(matrix.args, 'mono')
+        run: uv run python tools/mono_cell_check.py build/ArrisMono*.ttf
       - uses: actions/upload-artifact@v4
         with:
           name: fonts-static-${{ matrix.name }}

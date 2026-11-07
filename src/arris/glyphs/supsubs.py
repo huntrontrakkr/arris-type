@@ -35,8 +35,9 @@ def sup_dy(p):
 
 
 def sub_dy(p):
-    """Inferiors' baseline: the small figures' (hanging below the baseline)."""
-    return -0.22 * p.cap
+    """Inferiors' baseline: the small figures' (features.inferior_dy)."""
+    from .features import inferior_dy
+    return inferior_dy(p)
 
 
 def _small_width(base, letter):

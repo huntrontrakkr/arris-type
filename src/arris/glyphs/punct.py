@@ -750,8 +750,7 @@ def questiondown(g):
     # turned half round about the x-height's centre line
     p = g.p
     shift = p.xh - p.cap
-    g.strokes = [type(s)(tuple(type(n)(g.W - n.x, p.cap - n.y + shift, n.bowl, n.w) for n in s.nodes),
-                         s.closed, s.start, s.end) for s in g.strokes]
+    g.move(lambda x, y: (g.W - x, p.cap - y + shift))
     g.clip = (0, shift, g.W, p.xh)
 
 

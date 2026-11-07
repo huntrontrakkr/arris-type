@@ -16,7 +16,7 @@ import arris.glyphs  # noqa: F401  (the registry)
 from arris.draw import ARCH, ARCH_MODULES, REGISTRY, body_width
 from arris.font import place
 from arris.instances import MONO_WEIGHTS, NARROW_LIGHTER, narrow_weight, params
-from arris.italic import italic
+from arris.italic import flatten, italic
 from arris.params import MONO_BODY, MONO_CELL, MONO_NARROW
 
 LETTERS = tuple('abcdefghnopqrsuvwxyzHMNOW') + ('zero', 'one', 'two', 'three', 'four', 'five', 'seven')
@@ -98,10 +98,15 @@ def test_each_weight_from_regular_up_is_drawn_lighter():
 
 
 def _ink(name, p):
+    """A glyph's ink as a renderer draws it: the italic's curves, not their
+    control points, which stand outside a curved corner (21 units at u's in
+    Mono Narrow Bold Italic: measured by them, k and u stood 36 units apart,
+    drawn they stand 85)."""
     rings, adv = place(name, p)
     g = None
     for r in rings:
-        poly = Polygon([q[:2] for q in r]).buffer(0)
+        curved = any(len(q) > 2 and not q[2] for q in r)
+        poly = Polygon(flatten(r) if curved else [q[:2] for q in r]).buffer(0)
         g = poly if g is None else g.symmetric_difference(poly)
     return g, adv
 

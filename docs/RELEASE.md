@@ -44,6 +44,73 @@ Reserved Font Name. Every font carries the copyright
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.015
+
+- Arris Mono's cell, both ways: nothing is cut by it any more. Mono drew
+  each letter's body into the 600-unit cell and cut whatever ran past
+  the cell's edge, so a mark beside or under a letter was sliced flat
+  there: the horns of Ơ Ư and the Vietnamese letters made from them, the
+  apostrophe of ď ľ, the ogoneks of ą ę ų Ą Ę, Ø ø's slash, the tone
+  marks beside a circumflex (ấ ế ố), the tonos of Ά Έ Ή Ί Ό Ύ Ώ, ŀ's
+  dot, ҏ ҽ ƙ ǅ ǆ ĳ ỵ (84 characters in all, in some weight of Mono or
+  Mono Narrow). Now a letter that would run out of its cell is moved, and
+  if it must be drawn narrower, until its ink stands a quarter of a
+  module inside; past the narrowest that keeps its counter open, the
+  mark gives way (ď's apostrophe at Bold). Signs keep the same quarter
+  module (they kept a unit, and № ℘ ⌃ ⌄ touched their neighbours; at Bold
+  № ₠ ℘ ∫ ∮ and the currency signs' bars kept half of it, their margin
+  measured from the figures' body, which is wider at Bold).
+  The cell's clip had also cut stroke tips flat where they met its edge
+  before the corner rule broke them (the tonos, ¢ ¥ ₫'s arms and bars):
+  a glyph that fits is no longer clipped.
+- Arris Mono Italic and Mono Narrow Italic keep to their cells too. Their
+  letters were fitted as they are drawn, upright, and the italic's slant
+  (10°) then leaned them out: more than half the glyphs of every Mono
+  Italic ran past the cell, by 31 units at the median in Bold Italic and
+  103 at worst (the cell check had looked only up and down in the
+  italic). Now the fit measures the ink as the font carries it, slanted,
+  as far as its curves reach (not their off-curve points, which stand a
+  few units outside a rounded corner), with the overshoot it will be
+  given, and every italic letter is drawn as much narrower as its slant
+  needs: the slant leans a capital's top 127 units past its foot, so at
+  Bold Italic an O is about six sevenths of its upright, and a d, whose
+  stem rises on the right, is narrower than a b. The figures could not be
+  drawn narrower (they were drawn on the figures' body, whatever body
+  they were given), and now are; nor could Ŧ, ŀ and ỵ, whose T, l and
+  cursive y kept their own width. Signs are fitted the same way: a sign
+  drawn smaller is drawn smaller whole (©'s ring stayed the cell's width
+  while its C shrank, and in the italic the sign was drawn as small as it
+  goes and still leaned out), and a letter's sign is narrowed in the
+  italic as a letter is, condensed only where that is not enough (№ ℘ ₠).
+  The horns of Ư Ơ ư ơ and their Vietnamese letters give way at Bold
+  Italic as ď's apostrophe does, and the apostrophe, beside a d as narrow
+  as its bowl allows, goes on shrinking past an accent's smallest, as far
+  as the cell needs.
+- Signs laid out by their own strokes and gaps but clipped at the body
+  they were given lost what ran past it in Mono's narrower cell, and the
+  sign's fit, measuring what was left, saw it fit: ₪ had no right-hand
+  stem in any weight of Mono (its four stems and three gaps are wider
+  than the cell), ℞'s crossing stroke was cut short (and in Mono Italic
+  cut away with the leg's foot), and ∛ ∜ lost the top of the radical's
+  rise. Each is now cut on its own frame, so the fit sees all of it and
+  condenses it to fit.
+- Up and down, Mono's cell is its line box (975 above the baseline, 250
+  below), which a terminal's cell is: the stacks of accents over
+  capitals (Ǻ Ỗ Ẵ Ǜ Å Ȭ Ấ and the rest) and over ĥ ĺ ǩ ḟ stood up to 200
+  units above it and were cut there. The owner's choice: the line stays
+  and the accents give way. A stack closes up its gaps first, to half,
+  and then its marks lighten and shrink, as far as it needs to stand
+  under the line (it had fitted under the Windows box, 1180). Only Ǻ's
+  ring and acute stand a little over at the heaviest weights (29 units
+  at Bold). The proportional fonts' stacks keep to their line (the
+  Windows box) the same way, gaps first: where they meet it (Ǻ ǻ from
+  Regular, the Vietnamese and pinyin stacks Ấ Ẫ Ắ Ẵ Ế Ễ Ố Ỗ Ǘ Ǚ Ǜ Ȭ from
+  Bold) their marks are a little larger and their gaps closer than in
+  1.014, which shrank the marks first. The inferiors (₀–₉ ₊ ₋ ₌ ₍ ₎ ₐ–ₜ) stand 22 units higher in
+  Mono, together, so ₚ's descender stays inside the line.
+- `tools/mono_cell_check.py`: every Mono static font is checked as it is
+  built; a glyph cut by its cell or past the line box fails the release.
+
 ## 1.014
 
 - Every stroke added to a letter or sign keeps the Regular's weight and

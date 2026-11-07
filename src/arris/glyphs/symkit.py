@@ -260,81 +260,191 @@ def _body(width, p, kind):
     return width(p)
 
 
-def _ink_x(fn, p, W):
-    """The extent of a sign's ink, drawn with parameters p in a body W."""
-    from ..draw import Glyph
-    g = Glyph(p, W=W)
+PLAIN = (0.0, 0.0, ())      # a sign's look as drawn on its own (_look)
+
+
+def _look(g):
+    """What a sign's drawing takes from the glyph it is drawn for besides
+    its parameters and body: its horizontals as thinned for it (sh_auto,
+    draw._draw), which lean it wider in the italic. Its fit measures it
+    so: measured plain, ∮ $ @ at Mono Bold Italic, their horizontals
+    thinned, were up to 8 units wider than measured. (Not the free
+    variables its drawing tries: a whole fit for each of ∮'s hundreds of
+    trials took 25 seconds a weight.)"""
+    sh = round(g.sh_auto, 6)
+    return PLAIN if sh == 1.0 else (0.0, 0.0, (('sh_auto', sh),))
+
+
+def _ink_x(fn, p, W, slanted=True, look=PLAIN, at=None):
+    """The extent of a sign's ink, drawn with parameters p in a body W (and
+    as its glyph draws it: _look), as the font carries it (draw._ink_x): in
+    the italic slanted. Measured upright, a sign fitted to the cell ran out
+    of it by its slant in the italic (an arrow, ∬, ‰, № by 20 to 50 units
+    at Mono Italic). ``slanted`` False: as drawn, before the italic slants
+    it. ``at``: the font's parameters, with which it slants the sign
+    (draw._ink_x)."""
+    from ..draw import _ink_x as carried
+    g = _glyph(p, W, look)
     fn(g)
-    xs = [x for r in g.rings() for x, _ in r]
-    return (min(xs), max(xs)) if xs else (0.0, g.W)
+    rings = g.rings()
+    if not rings:
+        return (0.0, g.W)
+    if not slanted:
+        xs = [x for r in rings for x, _ in r]
+        return min(xs), max(xs)
+    return carried(g, at)
 
 
 _FIT: dict = {}
 
 
-def _mono_fit(key, fn, width, p, kind=None):
-    """(k, s, dx, dy) for a sign in the monospaced cell: condensed by k
-    (module and strokes) until its ink fits; if even K_MIN does not do it
+def _glyph(p, W, look):
+    """A drawing to measure a sign in, as its glyph draws it (_look)."""
+    from ..draw import Glyph
+    ot, ob, ov = look
+    g = Glyph(p, ot=ot, ob=ob, W=W, overrides=dict(ov))
+    g.sh_auto = dict(ov).get('sh_auto', 1.0)
+    return g
+
+
+S_MIN = 0.2                 # the smallest a sign is drawn
+FIT_STEPS = 9               # halvings in a sign's fit: k to 0.0006, s to 0.0016 (14 drew each sign 5 more times a weight for nothing)
+
+
+def _ladder_ks(t):
+    """(k, s) at t in [0, 1] along a sign's fit: condensed to K_MIN by t =
+    0.5, then drawn smaller, to S_MIN at 1."""
+    if t <= 0.5:
+        return 1.0 - (1.0 - K_MIN) * 2 * t, 1.0
+    return K_MIN, 1.0 - (1.0 - S_MIN) * (2 * t - 1)
+
+
+def _rung(k, s):
+    """Where (k, s) stands on the ladder (_ladder_ks)."""
+    return 0.5 + (1.0 - s) / (2 * (1.0 - S_MIN)) if s < 1.0 else (1.0 - k) / (2 * (1.0 - K_MIN))
+
+
+def _ladder(p, t):
+    k, s = _ladder_ks(t)
+    q = _condensed(p, k) if k < 1 else p
+    return _scaled(q, s) if s < 1 else q
+
+
+def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
+    """(k, s, dx, dy, body) for a sign in the monospaced cell: condensed by
+    k (module and strokes) until its ink fits; if even K_MIN does not do it
     (a sign whose long strokes are tied to the cap height, ‱), drawn
-    smaller by s about the axis; then centred on its ink."""
-    if (key, p) in _FIT:
-        return _FIT[(key, p)]
+    smaller by s about the axis; then centred on its ink. ``body``: what it
+    is drawn in (_drawn_body). The ink is measured as the font carries it
+    (_ink_x: in the italic slanted), and centred where it stands, raised by
+    dy (in the italic a raised sign leans right by its rise)."""
+    if (key, p, look) in _FIT:
+        return _FIT[(key, p, look)]
     from ..draw import LETTER_KINDS
-    cell = _body(width, p, kind)        # the body it is drawn in, whatever it is condensed by
+    cell = _body(width, p, kind)        # the glyph's body: the sign is centred in it
     tol = 0.5                           # font units
     def fits(q):
         # a letter's sign fills the cell it is given, as letters do, and is
-        # condensed only if its ink will not fit, bars hanging into half the
-        # cell's margin either side (currency.bar_hang); any other sign, its
-        # natural body and its ink, which a clip box may hide from the body
+        # condensed only if its ink will not fit the cell as a letter's must
+        # (draw.CELL_GAP inside it: bars may hang past the body,
+        # currency.bar_hang); any other sign, its natural body and its ink,
+        # which a clip box may hide from the body. (Half the cell's margin
+        # past the body, as it was, was CELL_GAP at Regular's 540 body, and
+        # half that at Bold's 570: № ₠ ℘ 7 units from their neighbours.)
+        # A letter's sign is drawn narrower in its cell as a letter is
+        # (draw._cell_fit), down to a letter's narrowest (draw.cell_floor),
+        # and condensed only if even so its ink (in the italic slanted)
+        # would not fit: a sign drawn to its body (₦ ₩ ℂ ℤ, the letter
+        # filling it) narrows with it; one drawn to its own proportions
+        # (№ ℘ ₠) does not. (Measured in the cell's body, ₭, its K filling
+        # the body and its arms a hair past it, never fitted, as condensing
+        # does not narrow a body, and was drawn as small as a sign goes)
         if kind in LETTER_KINDS:
-            a, b = _ink_x(fn, q, cell)
-            return b - a <= p.fig_w + (p.fig_adv - p.fig_w) / 2 + tol
+            from ..draw import CELL_GAP, UNDRAWABLE, cell_floor
+            try:
+                a, b = _ink_x(fn, q, cell_floor(cell, p), look=look, at=p)
+            except UNDRAWABLE:
+                # it cannot be drawn so narrow (a counter would close): as
+                # it stands in the cell's body, narrowed no further
+                a, b = _ink_x(fn, q, cell, look=look, at=p)
+            return b - a <= p.fig_adv - 2 * CELL_GAP * p.m + tol
         if width(q) > p.fig_w + tol:
             return False
-        a, b = _ink_x(fn, q, cell)
+        a, b = _ink_x(fn, q, _drawn_body(width, q, cell, kind), look=look, at=p)
         return b - a <= p.fig_w + tol
 
     k, s = 1.0, 1.0
-    if not fits(p):
+    if look != PLAIN:
+        # as its glyph draws it, from where the plain drawing fits, on along
+        # the same ladder (condensed, then drawn smaller) only as far as this
+        # drawing needs: a whole search for every look its glyph tries (each
+        # thinning of its horizontals, draw._draw) cost ten times the time
+        k, s = _mono_fit(key, fn, width, p, kind)[:2]
+        t0 = _rung(k, s)
+        if not fits(_ladder(p, t0)):
+            lo, hi = t0, 1.0
+            for _ in range(FIT_STEPS - 2):
+                mid = (lo + hi) / 2
+                lo, hi = (lo, mid) if fits(_ladder(p, mid)) else (mid, hi)
+            k, s = _ladder_ks(hi)
+    elif not fits(p):
         if fits(_condensed(p, K_MIN)):
             lo, hi = K_MIN, 1.0
-            for _ in range(14):
+            for _ in range(FIT_STEPS):
                 mid = (lo + hi) / 2
                 lo, hi = (mid, hi) if fits(_condensed(p, mid)) else (lo, mid)
             k = lo
         else:
             k = K_MIN
-            lo, hi = 0.2, 1.0
-            for _ in range(14):
+            lo, hi = S_MIN, 1.0
+            for _ in range(FIT_STEPS):
                 mid = (lo + hi) / 2
                 lo, hi = (mid, hi) if fits(_scaled(_condensed(p, K_MIN), mid)) else (lo, mid)
             s = lo
     q = _condensed(p, k) if k < 1 else p
     q = _scaled(q, s) if s < 1 else q
     dx, dy = 0.0, (1 - s) * p.cap / 2
+    body = _drawn_body(width, q, cell, kind) if (k < 1 or s < 1) else cell
     if k < 1 or s < 1:
-        a, b = _ink_x(fn, q, cell)
+        from ..draw import _ink_x as carried
+        g = _glyph(q, body, look)
+        fn(g)
+        shift(g, 0.0, dy)
+        a, b = carried(g, p)
         dx = (cell - (a + b)) / 2
-    _FIT[(key, p)] = (k, s, dx, dy)
-    return _FIT[(key, p)]
+    _FIT[(key, p, look)] = (k, s, dx, dy, body)
+    return _FIT[(key, p, look)]
+
+
+def _drawn_body(width, q, cell, kind):
+    """The body a fitted sign is drawn in: a letter's sign the cell's (it
+    fills it, as letters do); any other sign its own at the parameters it
+    is drawn with, at most the cell. A sign drawn to its body (the ring of
+    © ® ℗) is then drawn smaller with the rest of it: in a body kept at the
+    cell, its ring stayed as wide as the cell while its letter shrank, and
+    in the italic leaned out of the cell however small the sign was drawn."""
+    from ..draw import LETTER_KINDS
+    return cell if kind in LETTER_KINDS else min(width(q), cell)
 
 
 _OVER: dict = {}
 
 
-def mono_overflows(key, fn, width, p):
+def mono_overflows(key, fn, width, p, look=PLAIN):
     """Whether a symbol drawn at its own width in the monospaced cut runs
     out of its cell: its body centred in the cell (font.place), its ink
-    reaching past half the cell's margin on either side (as far as a
-    letter's sign may reach, _mono_fit)."""
-    if (key, p) not in _OVER:
+    reaching nearer an edge than a letter's may (draw.CELL_GAP, as far as a
+    letter's sign may reach, _mono_fit). (A quarter of the cell's room past
+    the figures' body, as it was, was CELL_GAP at Regular's 540 body and
+    half of it at Bold's 570: ∫ ∮ 10 units from their neighbours)"""
+    if (key, p, look) not in _OVER:
+        from ..draw import CELL_GAP
         W = width(p)
-        a, b = _ink_x(fn, p, W)
+        a, b = _ink_x(fn, p, W, look=look)
         x0 = (p.fig_adv - W) / 2                            # the body's place in the cell
-        edge = (p.fig_adv - p.fig_w) / 4
-        _OVER[(key, p)] = x0 + a < edge - 0.5 or x0 + b > p.fig_adv - edge + 0.5
-    return _OVER[(key, p)]
+        edge = CELL_GAP * p.m
+        _OVER[(key, p, look)] = x0 + a < edge - 0.5 or x0 + b > p.fig_adv - edge + 0.5
+    return _OVER[(key, p, look)]
 
 
 def mono_fitted(name, fn, width, kind):
@@ -347,41 +457,45 @@ def mono_fitted(name, fn, width, kind):
 
     def wrapped(g):
         p = g.p
-        if not p.mono or not mono_overflows(name, fn, width, p):
+        if not p.mono or not mono_overflows(name, fn, width, p, _look(g)):    # (as its glyph draws it)
             return fn(g)
-        k, s, dx, dy = _mono_fit(name, fn, width, p, kind)
+        k, s, dx, dy, body = _mono_fit(name, fn, width, p, kind, _look(g))
         if k < 1.0:
             g.p = _condensed(g.p, k)
         if s < 1.0:
             g.p = _scaled(g.p, s)
-        _fit_drawn(g, fn, dx, dy)
+        _fit_drawn(g, fn, dx, dy, body)
     wrapped.__module__ = fn.__module__
     wrapped.__name__ = fn.__name__
     wrapped.mono_fitted = True
     return wrapped, body
 
 
-def _fit_drawn(g, fn, dx, dy):
-    """Draw a fitted sign and move it by (dx, dy) into its cell. While it is
-    drawn, the cell it will stand in is where that is before the move: a
-    letter stamped into it is cut there (draw.Glyph.add_glyph)."""
-    cell = g.cell
+def _fit_drawn(g, fn, dx, dy, body=None):
+    """Draw a fitted sign in ``body`` (_drawn_body; the glyph keeps its
+    own) and move it by (dx, dy) into its cell. While it is drawn, the cell
+    it will stand in is where that is before the move: a letter stamped
+    into it is cut there (draw.Glyph.add_glyph)."""
+    cell, W = g.cell, g.W
     if cell is not None:
         g.cell = (cell[0] - dx, cell[1] - dx)
+    if body is not None:
+        g.W = min(body, g.W)                # (narrower still where Mono's cell asks it: draw._cell_fit)
     try:
         fn(g)
     finally:
-        g.cell = cell
+        g.cell, g.W = cell, W
     if dx or dy:
         shift(g, dx, dy)
 
 
 def shift(g, dx, dy):
-    """Move everything drawn in g by (dx, dy)."""
+    """Move everything drawn in g by (dx, dy): its strokes, the strokes laid
+    over it (Glyph.lay: a negation's slash, which until 1.015 stayed where
+    it was drawn as the sign moved into its cell, 24 units off ∌'s middle
+    at Mono Bold Italic), its extra ink and its clip."""
     from ..draw import _moved
-    from ..geom import Node, Stroke
-    g.strokes = [Stroke(tuple(Node(n.x + dx, n.y + dy, n.bowl, n.w) for n in st.nodes), st.closed, st.start, st.end)
-                 for st in g.strokes]
+    g.move(lambda x, y: (x + dx, y + dy))
     moved = [affinity.translate(e, dx, dy) for e in g.extra]
     src = {id(e): s for s in g.extra_src for e in g.extra if s[0] is e}
     g.extra_src = [(m, s[1], s[2], s[3][:4] + (s[3][4] + dx, s[3][5] + dy))
@@ -411,14 +525,12 @@ def sign(name, ch, width, kind=('punct', 1.0), solid=False, openings=(), squint=
         def wrapped(g):
             if not g.p.mono:
                 return fn(g)
-            k, s, dx, dy = _mono_fit(name, fn, width, g.p, kind)
-            p = g.p
+            k, s, dx, dy, body = _mono_fit(name, fn, width, g.p, kind, _look(g))
             if k < 1.0:
                 g.p = _condensed(g.p, k)
             if s < 1.0:
                 g.p = _scaled(g.p, s)
-            _fit_drawn(g, fn, dx, dy)
-            g.p = p if (k < 1 or s < 1) and False else g.p
+            _fit_drawn(g, fn, dx, dy, body)
         wrapped.__module__ = fn.__module__
         wrapped.__name__ = fn.__name__
         wrapped.mono_fitted = True

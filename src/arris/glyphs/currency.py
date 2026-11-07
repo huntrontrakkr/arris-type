@@ -152,9 +152,16 @@ def bar_out(p):
 
 
 def bar_hang(p):
-    """How far bars hang past the body: half of Mono's cell margin, nothing
-    in the proportional cuts (where the body grows instead)."""
-    return (p.fig_adv - p.fig_w) / 4 if p.mono else 0.0
+    """How far bars hang past the body: half of Mono's cell margin, but
+    never nearer the cell's edge than a letter's ink (draw.CELL_GAP: half
+    the margin was that at Regular's 540 body, and at Bold's 570 left the
+    bars half of it); nothing in the proportional cuts (where the body
+    grows instead)."""
+    if not p.mono:
+        return 0.0
+    from ..draw import CELL_GAP
+    margin = (p.fig_adv - p.fig_w) / 2
+    return max(0.0, min(margin / 2, margin - CELL_GAP * p.m))
 
 
 def bar_inset(p):
@@ -688,13 +695,17 @@ def lari(g):
 def sheqel(g):
     """Two hooks interlocked: a stem rising and turning down on the right,
     and inside it a stem falling and turning up on the right."""
-    p, W, H = g.p, g.W, g.p.cap
+    p, H = g.p, g.p.cap
     gap = max(1.5 * p.m, 0.75 * p.sv)
     xs = [p.sv / 2 + i * (p.sv + gap) for i in range(4)]
     yt, yb = H - g.sh / 2, g.sh / 2
     g.stroke((xs[0], 0), B(xs[0], yt), B(xs[2], yt), (xs[2], g.sh + gap))
     g.stroke((xs[1], H - g.sh - gap), B(xs[1], yb), B(xs[3], yb), (xs[3], H))
-    g.clip = (0, 0, W, H)
+    # the ends cut on the baseline and the cap height, the sides on its own
+    # four stems: clipped at its body, which in Mono's cell is narrower than
+    # four stems and three gaps, it lost its right stem, and the cell's fit
+    # (symkit._mono_fit) saw what was left fit
+    g.clip = (0, 0, xs[3] + p.sv / 2, H)
 
 
 # --- Letters set as one sign -------------------------------------------------------
