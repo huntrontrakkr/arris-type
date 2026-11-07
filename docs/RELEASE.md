@@ -102,7 +102,11 @@ before a commercial distribution if wanted.
   and then its marks lighten and shrink, as far as it needs to stand
   under the line (it had fitted under the Windows box, 1180). Only Ǻ's
   ring and acute stand a little over at the heaviest weights (29 units
-  at Bold). The inferiors (₀–₉ ₊ ₋ ₌ ₍ ₎ ₐ–ₜ) stand 22 units higher in
+  at Bold). The proportional fonts' stacks keep to their line (the
+  Windows box) the same way, gaps first: where they meet it (Ǻ ǻ from
+  Regular, the Vietnamese and pinyin stacks Ấ Ẫ Ắ Ẵ Ế Ễ Ố Ỗ Ǘ Ǚ Ǜ Ȭ from
+  Bold) their marks are a little larger and their gaps closer than in
+  1.014, which shrank the marks first. The inferiors (₀–₉ ₊ ₋ ₌ ₍ ₎ ₐ–ₜ) stand 22 units higher in
   Mono, together, so ₚ's descender stays inside the line.
 - `tools/mono_cell_check.py`: every Mono static font is checked as it is
   built; a glyph cut by its cell or past the line box fails the release.
