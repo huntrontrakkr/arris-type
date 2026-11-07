@@ -147,6 +147,20 @@ jobs:
           path: build
       - name: Interpolation check (the font against the drawings at the check's places)
         run: ARRIS_VF_WORKERS=2 uv run python tools/vf_compare.py "build/${{ matrix.font }}" "build/${{ matrix.font }}" --all
+      - name: Form switches (the second forms of $ and ¢ under rlig, swapped either side of each threshold)
+        run: uv run python tools/vf_switch_check.py "build/${{ matrix.font }}"
+      - name: Interpolatable (fontTools' heuristics; the report an artifact, not yet a gate)
+        run: |
+          uv run fonttools varLib.interpolatable --json "build/${{ matrix.font }}" > "build/interpolatable-${{ matrix.name }}.json" || true
+          uv run python -c "
+          import json, sys, collections
+          d = json.load(open(sys.argv[1]))
+          kinds = collections.Counter(p['type'] for ps in d.values() for p in ps)
+          print(len(d), 'glyphs flagged:', dict(kinds))" "build/interpolatable-${{ matrix.name }}.json" || true
+      - name: shaperglot (language support; a report)
+        run: |
+          uvx --quiet shaperglot check "build/${{ matrix.font }}" en_Latn de_Latn fr_Latn pl_Latn cs_Latn tr_Latn \
+            ro_Latn vi_Latn ru_Cyrl uk_Cyrl bg_Cyrl sr_Cyrl el_Grek | grep -v "auxiliary characters" || true
       - name: Topology (the font's outlines along the axes, arris.topology; the report an artifact)
         run: uv run python -m arris.topology "build/${{ matrix.font }}" --procs 2 --json "build/topology-${{ matrix.name }}.json" | tail -60 || true
       - name: Nesting (each counter inside the lighter weight's, arris.steady; the report an artifact)
@@ -158,6 +172,7 @@ jobs:
           path: |
             build/topology-*.json
             build/steady-*.json
+            build/interpolatable-*.json
           if-no-files-found: ignore
 
   fontbakery:
@@ -203,6 +218,20 @@ jobs:
       - name: The ital axis, each italic beside its Roman
         if: matrix.pair != ''
         run: uvx --quiet --from fontbakery fontbakery check-universal -c opentype/STAT/ital_axis ${{ matrix.pair }}
+      - name: OTS (the sanitizer browsers run; every font must pass)
+        run: |
+          uvx --quiet --from opentype-sanitizer python -c "
+          import sys, ots
+          bad = [f for f in sys.argv[1:] if ots.sanitize(f, capture_output=True).returncode]
+          print('OTS:', ', '.join(bad) if bad else 'every font sanitized')
+          sys.exit(1 if bad else 0)" ${{ matrix.files }}
+      - name: Fontspector (fontbakery's successor; a report until it has run clean)
+        if: matrix.name == 'upright' || matrix.name == 'variable upright'
+        continue-on-error: true
+        run: |
+          cargo install fontspector@1.9.0 --locked --quiet
+          fontspector --profile universal ${{ matrix.files }} > fontspector.log 2>&1 || true
+          tail -60 fontspector.log
 
   release:
     needs: [static, variable, fontbakery]

@@ -140,12 +140,13 @@ def hook(g, f, x, y_from, reach=4.0):
 
 
 def cross_bar(g, x0, x1, y):
-    """A bar added across a letter's stem: it stops gaining weight at
-    EXTRA_HOLD (Glyph.held), and settles a few units off where its edge
-    would land on one of the letter's (Glyph.settle)."""
+    """A bar added across a letter's stem: it keeps the Regular's weight
+    (Glyph.held), is laid over the letter (Glyph.lay), and settles a few
+    units off where its edge would land on one of the letter's
+    (Glyph.settle)."""
     from ..draw import NUDGE
     t = g.held()
-    g.settle([[((x0, y + d, t), (x1, y + d))] for d in NUDGE])
+    g.settle([[((x0, y + d, t), (x1, y + d))] for d in NUDGE], lay=True)
 
 
 def beak_free(g):
@@ -378,11 +379,40 @@ def Pedesc(g):
 
 @ccap('uni049E', 'Ҟ', 9, 1, width=plus_room('K'))
 def Kastroke(g):
-    """K with Ħ's bar through the top of its stem."""
+    """K with Ħ's bar through the top of its stem, laid over it at the
+    Regular's thickness (draw.lay_bar). Its right half sits in the V between
+    the stem and the upper arm, which the K's own growth closes from below
+    (at Black the arm's root reaches the bar), so the bar rises with the
+    weight as far as it must to keep BAR_WHITE beside it at both ends
+    (draw.bar_white): from about 600, to the top of the stem at Black (the
+    owner, 2026-11-06)."""
+    from ..draw import BAR_WHITE, Glyph, _thickness, bar_white
     p = g.p
     dx = room(p)
     stamp(g, 'K', dx, width=g.W - dx)
-    cross_bar(g, 0, dx + p.sv + room(p), 0.75 * p.cap + g.sh / 4)
+    x1 = dx + p.sv + room(p)
+    t = g.held()
+    y0 = 0.75 * p.cap + g.sh / 4
+
+    def white(y):
+        h = Glyph(p, g.name, W=g.W)
+        stamp(h, 'K', dx, width=g.W - dx)
+        h.clip = g.clip
+        h.lay((0.0, y, t), (x1, y), c=p.c)
+        return bar_white(h)
+    y = y0
+    least = BAR_WHITE * p.m
+    if white(y0) < least:
+        lo, hi = y0, p.cap - t / 2
+        for _ in range(14):
+            mid = (lo + hi) / 2
+            lo, hi = (lo, mid) if white(mid) >= least else (mid, hi)
+        y = hi
+    # settled a few units up where its end lands a hairline off the arm (Mono's italic at 550 on the
+    # heavy grade), never down into the white it rose for
+    run = (_thickness(p, g.sh)((1.0, 0.0)) - t) / 2
+    g.settle([[((-run, y_, t), (x1, y_))] for y_ in sorted({min(y + d, p.cap - t / 2) for d in (0, 2, 4, 8, 12)})],
+             lay=True)
 
 
 @ccap('uni04B4', 'Ҵ', 13, 3)
@@ -547,9 +577,10 @@ def Koppa(g):
 def Hastroke(g):
     """X with a bar across its crossing, the body's width less half a module
     each side, so it reaches past the diagonals at every weight."""
+    from ..draw import lay_bar
     REGISTRY['X'].fn(g)
     f = Frame(g, 10)
-    g.stroke(f.P(0.5, 6), f.P(9.5, 6))
+    lay_bar(g, lambda t, own: ((f.X(0.5) - (own - t) / 2, f.Y(6)), (f.X(9.5) + (own - t) / 2, f.Y(6))))
 
 
 @ccap('uni04FC', 'Ӽ', 10, 2, width=plus_room('X', 0.5))
@@ -850,9 +881,10 @@ def ertick(g):
 
 @glyph('uni04FF', 'ӿ', letter_width(8, 2), kind='lower')
 def hastroke(g):
+    from ..draw import lay_bar
     REGISTRY['x'].fn(g)
     f = Frame(g, 8, 'lower')
-    g.stroke(f.P(0.5, 4.5), f.P(7.5, 4.5))
+    lay_bar(g, lambda t, own: ((f.X(0.5) - (own - t) / 2, f.Y(4.5)), (f.X(7.5) + (own - t) / 2, f.Y(4.5))))
 
 
 @glyph('uni04FD', 'ӽ', plus_room('x', 0.5), kind='lower')
@@ -871,8 +903,10 @@ def kastroke(g):
     from ..draw import _build
     p = g.p
     dx = room(p)
+    from ..draw import lay_bar
     g.add_glyph(_build(REGISTRY['k'], p, 0.0, 0.0, {}, g.W - dx), dx)
-    cross_bar(g, 0, dx + p.sv + room(p), (p.xh + p.asc) / 2 + p.m / 2)
+    y = (p.xh + p.asc) / 2 + p.m / 2
+    lay_bar(g, lambda t, own: ((-(own - t) / 2, y), (dx + p.sv + room(p), y)))
 
 
 @glyph('uni0495', 'ҕ', letter_width(8, 2), kind='lower')

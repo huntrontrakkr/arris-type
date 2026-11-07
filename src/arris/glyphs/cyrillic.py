@@ -264,10 +264,11 @@ def yat_arm(p):
 @ccap('uni0462', 'Ѣ', 11, 2)
 def Yat(g):
     """Yat: the soft sign's stem crossed by a bar in its upper half."""
+    from ..draw import lay_bar
     f = Frame(g, 11)
     _sign(g, f, f.X(3), f.X(10))
     arm = yat_arm(g.p)
-    g.stroke((f.X(3) - arm, f.Y(9)), (f.X(3) + arm, f.Y(9)))
+    lay_bar(g, lambda t, own: ((f.X(3) - arm - (own - t) / 2, f.Y(9)), (f.X(3) + arm + (own - t) / 2, f.Y(9))))
 
 
 @ccap('uni046A', 'Ѫ', 12, 3)
@@ -414,8 +415,9 @@ def yat(g):
     x = f.X(3)
     g.stroke((x, 0), (x, f.Y(13)))
     g.stroke((x, f.Y(5)), B(f.X(10), f.Y(5)), B(f.X(10), f.Y(1)), (x, f.Y(1)), closed=True)
+    from ..draw import lay_bar
     arm = yat_arm(g.p)
-    g.stroke((x - arm, f.Y(8)), (x + arm, f.Y(8)))
+    lay_bar(g, lambda t, own: ((x - arm - (own - t) / 2, f.Y(8)), (x + arm + (own - t) / 2, f.Y(8))))
 
 
 @glyph('uni0431', 'б', letter_width(8, 2), kind='lower')

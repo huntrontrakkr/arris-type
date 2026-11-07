@@ -290,14 +290,41 @@ def Gstroke(g):
     g.stroke((xs - 1.5 * p.m - p.sv / 2, 0.27 * p.cap), (xs + 1.5 * p.m + p.sv / 2, 0.27 * p.cap))
 
 
-@glyph('uni01E5', 'ǥ', width_of('g', 1.5), kind='lower')
+def _g_room(p):
+    """The room under the g's bowl, down to its hook's top edge, as
+    lower.hook draws it (the hook deepening as it must)."""
+    from ..params import inner_leg
+    from .figures import STACK_MIN
+    from .lower import HOOK_ROOM, least_white
+    tail = min(p.sh, max(STACK_MIN * p.sh, p.desc - inner_leg(p) - least_white(p)))
+    extra = min(HOOK_ROOM, max(0.0, least_white(p) - (p.desc - tail - inner_leg(p))))
+    return p.desc + extra - tail
+
+
+def _gstroke_run(p):
+    """How far ǥ's bar runs out past its stem on each side: a module and a
+    half, and half of what the bar is thinner than the stem, so a bar held
+    at the Regular's weight still reads as a bar (gstroke)."""
+    from ..draw import bar_held
+    return 1.5 * p.m + max(0.0, p.sv - bar_held(p)) / 2
+
+
+@glyph('uni01E5', 'ǥ', lambda p: REGISTRY['g'].width(p) + _gstroke_run(p), kind='lower')
 def gstroke(g):
-    """g with a bar across its descender's stem."""
+    """g with a bar across its descender's stem, centred in the room under
+    the bowl (122 units to the hook at Regular, 146 at Black, the g's hook
+    deepening as it must: lower.hook). Like every added stroke it keeps the
+    Regular's thickness at the heavier weights, laid over the finished g
+    (draw.lay_bar), and runs out further the thinner it is than the stem
+    (_gstroke_run): nothing fills in where it crosses the stem as the g
+    grows on (the owner, 2026-11-06)."""
+    from ..draw import lay_bar
     p = g.p
-    w = stamp(g, 'g', width=g.W - 1.5 * p.m)
+    run = _gstroke_run(p)
+    w = stamp(g, 'g', width=g.W - run)
     xs = w - p.sv / 2
-    y = -0.4 * p.desc + g.sh / 2
-    g.stroke((xs - 1.5 * p.m - p.sv / 2, y), (xs + 1.5 * p.m + p.sv / 2, y))
+    y = -_g_room(p) / 2
+    lay_bar(g, lambda t, own: ((xs - run - p.sv / 2, y), (xs + run + p.sv / 2, y)))
     g.clip = None
 
 

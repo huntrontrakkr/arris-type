@@ -48,6 +48,8 @@ def _xform_rec(r, M, dx, dy):
         return ('warp', Shifted(f, dy, d))
     if r[0] == 'bowl':
         return ('bowl',) + tuple((pt(q), vec(v)) for q, v in r[1:])
+    if r[0] == 'hid':
+        return ('hid', pt(r[1]), pt(r[2]), vec(r[3]), r[4])
     return ('chord', pt(r[1]), pt(r[2]))
 
 

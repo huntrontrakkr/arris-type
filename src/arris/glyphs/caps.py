@@ -237,6 +237,23 @@ def R(g):
     g.stroke(f.P(1, 11), B(*f.P(8, 11)), B(*f.P(8, 6)), f.P(1, 6))
     a = W + p.c - k                                         # leg: x + y = a
     y0 = f.Y(6)
+    if p.slant:
+        # The italic rounds the bowl's lower corner, and the round sits on the
+        # bowl's flat underside between that corner's chamfer and the corner
+        # rule's fill where the leg leaves the bowl. Toward Black the leg's
+        # edge closes on the chamfer; under a corner break of flat the
+        # clean-up takes the step between their two 45-degree lines for a
+        # miss and closes it (geom.JOG), the chamfer runs on into the fill as
+        # one straight edge, and the round went hard at 850 (it swelled
+        # first, the curve on a corner the leg had all but taken). The leg
+        # stands back to keep TAIL_FLAT breaks of flat, as an exit tail does.
+        from .italic_forms import TAIL_FLAT
+        th = _thickness(p, g.sh)
+        wh, w45, wl = th((1.0, 0.0)), th((1.0, 1.0)), th((1.0, -1.0))
+        xc = f.X(8) - p.leg + w45 / math.sqrt(2) - wh / 2   # where the bowl's chamfer leaves its underside
+        x_in = a + wl / math.sqrt(2) - y0 + wh / 2           # where the leg's edge meets it
+        flat = xc - (x_in + 2 * p.c)                         # less the fill's run along it
+        a -= max(0.0, TAIL_FLAT * p.c - flat)
     g.stroke((a - y0, y0), (a, 0), start='h', end='h')
 
 

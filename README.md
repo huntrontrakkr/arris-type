@@ -135,16 +135,24 @@ and where the optical corrections come from. In short:
   narrower than a break.
 * `tools/squint_scan.py`: holes and slots a squinting reader loses, weight
   by weight (`arris.vision.narrow_whites`).
+* `tools/vf_switch_check.py`: a variable font's form switches (the second
+  forms of $ and ¢) sit under `rlig` and swap one unit either side of each
+  threshold, as HarfBuzz shapes them.
 
 ## Licence
 
-Arris is free and open: the fonts, and everything here that makes them (the
-drawing engine in `src/`, the build and check scripts in `tools/`, the
-documentation), are under the [SIL Open Font Licence 1.1](OFL.txt), with no
-Reserved Font Name. Use them for anything, commercial work included; embed
-them in apps, documents and websites; modify and redistribute them. The one
-thing the licence asks: the fonts are not sold by themselves, and modified
-versions stay under it.
+Arris is free and open, under two licences:
+
+* **The fonts and their drawings**: the font files, and the glyph drawings
+  in `src/arris/glyphs/` (the fonts' source), are under the
+  [SIL Open Font Licence 1.1](OFL.txt), with no Reserved Font Name. Use them
+  for anything, commercial work included; embed them in apps, documents and
+  websites; modify and redistribute them. The one thing the licence asks:
+  the fonts are not sold by themselves, and modified versions stay under it.
+* **The code**: the drawing engine in `src/arris/` (geometry, the corner
+  rule, the italic, spacing, kerning, the variable-font build), the build
+  and check scripts in `tools/`, the tests and the documentation are under
+  the [MIT licence](LICENSE): reuse any of it in anything.
 
 The watch's Draft lettering in `heritage/` is Apache-2.0 (Dymaxion
 contributors). The pictures the presentation sets in type are public domain

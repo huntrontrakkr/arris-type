@@ -167,12 +167,20 @@ def bounds(ctx, strokes):
     return x0, y0, x1, y1
 
 
+LAID = 'laid'   # a stroke's first node carries it as a fourth element: the stroke is added (strike), laid over
+
+
 def emit(g, strokes):
+    from ..draw import held_c
     for nodes, closed, start, end in strokes:
+        laid = bool(nodes) and nodes[0][0] != 'bowl' and len(nodes[0]) > 3 and nodes[0][3] == LAID
         pts = []
         for q in nodes:
-            pts.append(B(q[1], q[2], q[3], q[4]) if q[0] == 'bowl' else q)
-        g.stroke(*pts, closed=closed, start=start, end=end)
+            pts.append(B(q[1], q[2], q[3], q[4]) if q[0] == 'bowl' else tuple(q[:3]))
+        if laid:
+            g.lay(*pts, c=held_c(g.p), start=start, end=end)
+        else:
+            g.stroke(*pts, closed=closed, start=start, end=end)
 
 
 # --- Measures -------------------------------------------------------------------
@@ -708,7 +716,11 @@ def strike(ctx, spec, Ls, h):
     um = (-Ls + td - hd) / 2
     xm, ym = ctx.turn.vec(um, 0.0)
     half = max(offs) + ctx.ts / 2 + max(2.0 * p.m, 1.0 * p.sv)
-    return [([(xm - half / 2, ym - half), (xm + half / 2, ym + half)], False, 'h', 'h')]
+    # added to the arrow: the Regular's weight at every heavier one, laid over it (draw.EXTRA_HOLD)
+    from ..draw import _thickness, bar_held
+    d = (1.0, 2.0)
+    t = ctx.th(d) * min(1.0, bar_held(p, d) / max(_thickness(p, p.sh)(d), 1e-9))
+    return [([(xm - half / 2, ym - half, t, LAID), (xm + half / 2, ym + half)], False, 'h', 'h')]
 
 
 # --- Paired arrows ----------------------------------------------------------------

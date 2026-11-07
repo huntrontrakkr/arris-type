@@ -467,9 +467,11 @@ def dollar(g):
     from .caps import S
     S(g)
     p = g.p
+    from ..draw import held_c
     runs = dollar_stem(p, g.sh, g.free('stem', 1.0) >= 0.5)
+    t = g.held((0.0, 1.0))                                  # its stroke, added: the Regular's from there on
     for y0, y1 in runs:
-        g.stroke((g.W / 2, y0), (g.W / 2, y1))
+        g.lay((g.W / 2, y0, t), (g.W / 2, y1), c=held_c(p))
     g.clip = (0, runs[0][0], g.W, runs[-1][1])
 
 
@@ -797,11 +799,13 @@ def greaterequal(g):
 
 @punct('notequal', '≠', 8, 1)
 def notequal(g):
+    from ..draw import held_c
     equal(g)
     p, W = g.p, g.W
     a = axis(p)
     w = p.ss / STEEP[1]
-    g.stroke((W / 2 - 2 * p.m, a - 4 * p.m), (W / 2 + 2 * p.m, a + 4 * p.m), start='h', end='h')
+    g.lay((W / 2 - 2 * p.m, a - 4 * p.m, g.held((1.0, 2.0))), (W / 2 + 2 * p.m, a + 4 * p.m), c=held_c(p),
+          start='h', end='h')                                # its slash, added: the Regular's from there on
 
 
 def dagger_bar(p):

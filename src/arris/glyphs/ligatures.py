@@ -903,8 +903,10 @@ def _dollar_wrap(g, left, right):
     xc = s0 + ws / 2
     from .punct import dollar_stem
     through = d_sub.overrides.get('stem', 1.0) >= 0.5          # as the dollar's own stem runs
+    from ..draw import held_c
     for y0, y1 in dollar_stem(p, g.sh, through):
-        g.stroke((xc, y0), (xc, y1), start='h' if y0 < 0 else 'flat', end='h' if y1 > p.cap else 'flat')
+        g.lay((xc, y0, g.held((0.0, 1.0))), (xc, y1), c=held_c(p), start='h' if y0 < 0 else 'flat',
+              end='h' if y1 > p.cap else 'flat')
 
 
 liga('<$>')(lambda g: _dollar_wrap(g, True, True))

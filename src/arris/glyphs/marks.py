@@ -151,11 +151,36 @@ def commaabove(g, x, y, case):
     g.stroke((x, yb), (x, yt), (x + 0.75 * s, yt + 0.75 * s), end='h')
 
 
+CEDILLA_ROOM = 1.15   # descenders: how far below the baseline the cedilla's foot may hang (commabelow's room)
+
+
 def cedilla(g, x, y, case):
+    """A hook from the base: down, and a foot turning left underneath. The
+    notch between the base's underside and the foot is what makes it a
+    hook, and it must outlast the corner rule, which breaks the notch's
+    inside corners at the stem and the foot's end beyond it: so it is at
+    least a mark's gap (gap(), the white between a base and its accent)
+    tall, and that gap and two corner breaks wide.
+    Drawn at a fixed depth and reach, the foot grew up into the notch with
+    the weight (143 units of white at Thin, 86 at Regular, 44 at Bold, 16 at
+    Black), the corner breaks took what was left, and from Bold the hook
+    read as a block with a pinhole in it. So as the notch would close the
+    foot hangs lower and reaches further, as far as the comma below may hang
+    (CEDILLA_ROOM descenders), and past that the hook lightens, as
+    commabelow does. Thin and Light as they were; the Regular's foot 15
+    units longer; from Bold the hook reads as one."""
+    from ..draw import _thickness
     p = g.p
-    s = p.sv
-    yb = -p.desc + g.sh / 2 + 0.25 * p.m
-    g.stroke((x, g.sh / 2), (x, yb + 0.0), (x - 1.5 * p.m - s / 2, yb))
+    th = _thickness(p, g.sh)
+    wv, wh = th((0.0, 1.0)), th((1.0, 0.0))
+    room = CEDILLA_ROOM * p.desc
+    tall = gap(p)                                            # the notch's height, at least
+    k = min(1.0, (room - tall) / wh)                         # the hook's strokes, lightened only past the room
+    wv, wh = k * wv, k * wh
+    foot = max(min(-p.desc + 0.25 * p.m, -tall - wh), -room)  # the foot's underside: as drawn, or lower
+    yb = foot + wh / 2
+    reach = max(1.5 * p.m, gap(p) + 2 * p.c)                 # the notch's width past the stem, both its ends broken
+    g.stroke((x, g.sh / 2, wv), (x, yb, wh), (x - wv / 2 - reach, yb))
     if p.slant:
         # square to the base's underside, as the ogonek: the c's foot corner
         # ends where the stem begins, and the corner rule's fill at the join
@@ -163,7 +188,7 @@ def cedilla(g, x, y, case):
         # corner straight (and folded the outline back on itself at 550)
         from ..draw import _thickness
         under = g.sh / 2 - _thickness(p, g.sh)((1.0, 0.0)) / 2    # (lower.crotch_butt)
-        g.butt += (('y', under, x - s / 2 - 1.0, x + s / 2 + 1.0),)
+        g.butt += (('y', under, x - wv / 2 - 1.0, x + wv / 2 + 1.0),)
 
 
 OGONEK_ITALIC = 0.6   # stems: the italic ogonek's thickness (see ogonek)

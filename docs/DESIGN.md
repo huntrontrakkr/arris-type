@@ -223,6 +223,30 @@ to the next settles too, of its steps the one that leaves the most
 corners curved (ϖ's bar, Ѫ's arch), or stands where the decision holds
 one way at every weight (₼'s arch, a few units lower from Bold).
 
+**An added stroke keeps the Regular's weight and is laid over the
+letter.** Every stroke added to a letter or sign (a bar, a slash: Đ Ħ ŧ Ł
+Ø ð ℏ ǥ Ѣ Ғ Ұ Ҟ Ӿ and their lower cases; the bars and strokes of € ¥ $ ¢ £
+₦ ₩ ₳ ₸ ₱ ₽ ₣ ₭ ₤ ₴ ₵ ₲ ₡ ₿ ₫ ⃀ ₺ ₮ ₥, a pair of bars by the pair's own
+formula at the Regular, no longer thinned further by the squint) is as
+thick at every heavier
+weight as at the Regular (`draw.EXTRA_HOLD`, `hold_weight`: in Arris Mono
+Narrow its own Regular, drawn at 350), one rule for all of them (the
+owner, 2026-11-06). It is laid over the finished letter, not unioned with
+its strokes (`Glyph.lay`, `draw.lay_bar`, `geom.ink`'s overlay): finished
+alone, its ends broken on the Regular's chamfer, and joined to the letter
+as it stands. No corner rule runs over the junction, so nothing fills in
+round it as the letter grows on, and the letter under it is the letter
+(the g in ǥ is the g). A bar across a stem runs out further the thinner it
+is than the letter's own (ǥ Ѣ ѣ Ӿ ӿ Ҟ ҟ). Ҟ's bar sits in the V between
+stem and arm, which the K's own growth closes from below; it rises with
+the weight as far as it must to keep white half a module square on its
+edge at both ends (`bar_white`), to the top of the stem at Black. In the
+italic, a chamfer a stroke covers at one end (ǥ's hook bend under the bar)
+is curved as the letter's own and cut where it passes under the stroke's
+edge, so the curve is the g's at every weight, the variable italic
+included; a chamfer crossed in its middle (the O's corners under Ø's
+slash) stays straight, as it always has.
+
 **Ends that stay ends.** A tail, a hook or a beak shorter than the corner
 it turns on ends in that corner's chamfer, a point, and from Bold up the
 chamfer grows faster than the tail. So a tail runs at least as far as its
