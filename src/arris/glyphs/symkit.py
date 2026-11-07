@@ -275,13 +275,14 @@ def _look(g):
     return PLAIN if sh == 1.0 else (0.0, 0.0, (('sh_auto', sh),))
 
 
-def _ink_x(fn, p, W, slanted=True, look=PLAIN):
+def _ink_x(fn, p, W, slanted=True, look=PLAIN, at=None):
     """The extent of a sign's ink, drawn with parameters p in a body W (and
     as its glyph draws it: _look), as the font carries it (draw._ink_x): in
     the italic slanted. Measured upright, a sign fitted to the cell ran out
     of it by its slant in the italic (an arrow, ∬, ‰, № by 20 to 50 units
     at Mono Italic). ``slanted`` False: as drawn, before the italic slants
-    it."""
+    it. ``at``: the font's parameters, with which it slants the sign
+    (draw._ink_x)."""
     from ..draw import _ink_x as carried
     g = _glyph(p, W, look)
     fn(g)
@@ -291,7 +292,7 @@ def _ink_x(fn, p, W, slanted=True, look=PLAIN):
     if not slanted:
         xs = [x for r in rings for x, _ in r]
         return min(xs), max(xs)
-    return carried(g)
+    return carried(g, at)
 
 
 _FIT: dict = {}
@@ -361,15 +362,15 @@ def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
         if kind in LETTER_KINDS:
             from ..draw import CELL_GAP, UNDRAWABLE, cell_floor
             try:
-                a, b = _ink_x(fn, q, cell_floor(cell, p), look=look)
+                a, b = _ink_x(fn, q, cell_floor(cell, p), look=look, at=p)
             except UNDRAWABLE:
                 # it cannot be drawn so narrow (a counter would close): as
                 # it stands in the cell's body, narrowed no further
-                a, b = _ink_x(fn, q, cell, look=look)
+                a, b = _ink_x(fn, q, cell, look=look, at=p)
             return b - a <= p.fig_adv - 2 * CELL_GAP * p.m + tol
         if width(q) > p.fig_w + tol:
             return False
-        a, b = _ink_x(fn, q, _drawn_body(width, q, cell, kind), look=look)
+        a, b = _ink_x(fn, q, _drawn_body(width, q, cell, kind), look=look, at=p)
         return b - a <= p.fig_w + tol
 
     k, s = 1.0, 1.0
@@ -409,7 +410,7 @@ def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
         g = _glyph(q, body, look)
         fn(g)
         shift(g, 0.0, dy)
-        a, b = carried(g)
+        a, b = carried(g, p)
         dx = (cell - (a + b)) / 2
     _FIT[(key, p, look)] = (k, s, dx, dy, body)
     return _FIT[(key, p, look)]

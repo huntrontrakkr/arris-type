@@ -193,7 +193,7 @@ def horn_give(g, case):
     from ..draw import CELL_GAP, _ink_x
     from ..geom import rings_to_shapely
     bf = marks.at_floor(g)
-    x0f, x1f = _ink_x(bf)
+    x0f, x1f = _ink_x(bf, p)
     room = x0f + p.fig_adv - 2 * CELL_GAP * p.m
     fx, fy = horn_anchor(rings_to_shapely(bf.rings()))
 
@@ -201,7 +201,7 @@ def horn_give(g, case):
         scratch = Glyph(p, W=g.W)
         scratch.warp = getattr(bf, 'warp', None)            # (the letter's overshoot moves its horn: in the italic, leaned)
         horn_at(scratch, fx, fy, case, s)
-        return max(_ink_x(scratch)[1], x1f)
+        return max(_ink_x(scratch, p)[1], x1f)
     if reach_right(0.0) <= room + 0.5:
         return 0.0
     lo, hi = (0.0, 1.0) if reach_right(1.0) <= room else (1.0, marks.CELL_GIVE)

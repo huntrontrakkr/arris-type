@@ -5,7 +5,9 @@ leaves the line box (the hhea/typo ascent and descent: a terminal's cell,
 which clips what passes it). Left out are only the glyphs made to meet
 their neighbours: box drawing, blocks, shades, Braille, the Powerline
 separators, legacy computing, the maths and bracket pieces, the corner
-triangles, and the runs and ligatures (one gesture over several cells).
+triangles, the runs and ligatures (one gesture over several cells), and the
+underscore that runs on under Mono Italic's cursive f (.join: into the
+next cell, to the f's tail).
 The horizontal brackets ⏜–⏡ and the Powerline icons stand alone and are
 checked like any glyph.
 
@@ -30,7 +32,8 @@ TOLERANCE = 0.5
 def _meets(name: str, cp: int | None) -> bool:
     if cp is not None and any(a <= cp <= b for a, b in MEET):
         return True
-    return '.seq' in name or '.liga' in name or ('_' in name and not name.startswith('uni'))
+    return ('.seq' in name or '.liga' in name or name.endswith('.join')
+            or ('_' in name and not name.startswith('uni')))
 
 
 def check(path: str) -> list[str]:

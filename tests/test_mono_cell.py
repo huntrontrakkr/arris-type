@@ -18,7 +18,8 @@ from arris.instances import params
 from arris.italic import italic
 
 SAMPLE = ['d', 'b', 'O', 'zero', 'three', 'Uhorn', 'ohorn', 'uni1EE8', 'dcaron', 'lcaron', 'uni1ED1',
-          'numero', 'weierstrass', 'copyright', 'integral', 'uni222C', 'arrowupright', 'perthousand']
+          'numero', 'weierstrass', 'copyright', 'integral', 'uni222C', 'arrowupright', 'perthousand',
+          'uni20AA', 'uni20AD', 'uni220C', 'uni2124']
 SLACK = 2.0     # font units: the fit's own tolerance and a horn's measure of its letter at its floor
 
 
@@ -32,7 +33,7 @@ def _mono(w, ital):
 def test_ink_stands_inside_the_cell(name, ital):
     p = _mono(700, ital)
     g = D.draw(name, p)
-    x0, x1 = D._ink_x(g)
+    x0, x1 = D._ink_x(g, p)               # (as the font slants it: with its own parameters)
     c0 = (g.W - p.fig_adv) / 2
     gap = D.CELL_GAP * p.m
     assert x0 - c0 >= gap - SLACK and c0 + p.fig_adv - x1 >= gap - SLACK, (name, x0 - c0, c0 + p.fig_adv - x1)

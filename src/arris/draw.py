@@ -561,18 +561,23 @@ def _drawn(spec, g):
     return g
 
 
-def _ink_x(g):
+def _ink_x(g, p=None):
     """(left, right) of a drawing's ink as the font carries it, its own clip
     applied (not the cell's): in the italic curved and slanted
     (italic.outline), as far as its curves reach (_curve_x), which is
     where a renderer draws them and where tools/mono_cell_check.py
     measures. Measured upright, a slanted letter ran out of its cell by its
     slant: 31 units at the median in Mono Bold Italic, 103 at worst, in
-    more than half the glyphs."""
-    if g.p.slant:
+    more than half the glyphs. ``p``: the font's parameters, with which it
+    curves and slants every glyph (font.place), whatever a drawing was
+    drawn with: a sign drawn smaller (symkit) has a lower x-height, about
+    half of which the slant turns on, and measured by its own it stood 19
+    units from where the font put it (№ in Mono Narrow Italic)."""
+    p = p or g.p
+    if p.slant:
         from .italic import outline
         rings, rec = g.outline(record=True)
-        return _curve_x(outline(rings, rec, g.p))
+        return _curve_x(outline(rings, rec, p))
     from .geom import rings_to_shapely
     x0, _, x1, _ = rings_to_shapely(g.rings()).bounds
     return x0, x1
@@ -630,10 +635,10 @@ def _cell_fit(g, spec, p, ot, ob, overrides, width):
         # settled drawing, after this): an overshoot is vertical, but in the
         # italic the slant leans it, 2 units each side of a round figure
         if not (optical and p.slant):
-            return _ink_x(d)
+            return _ink_x(d, p)
         _optical(d, spec, p)
         try:
-            return _ink_x(d)
+            return _ink_x(d, p)
         finally:
             d.warp = None
     x0, x1 = ink_x(g)
@@ -715,7 +720,7 @@ def _build(spec, p, ot, ob, overrides, width=None):
     g = _drawn(spec, _start(spec, p, ot, ob, overrides, width))
     if g.cell is not None and not spec.cell:
         g = _cell_fit(g, spec, p, ot, ob, overrides, width)
-        x0, x1 = _ink_x(g)
+        x0, x1 = _ink_x(g, p)
         if g.cell[0] - 0.5 <= x0 and x1 <= g.cell[1] + 0.5:
             # fitted: no clip. The cell's clip cuts the raw ink, before the
             # corner rule breaks a stroke's tips, so a tip the rule would take

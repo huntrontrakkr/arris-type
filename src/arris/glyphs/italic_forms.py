@@ -59,7 +59,7 @@ def _in_cell(g, fn):
         h = Glyph(p, g.name, ot=g.ot, ob=g.ob, W=W0 - shrink, overrides=dict(g.overrides))
         h.sh_auto = g.sh_auto
         fn(h)
-        x0, x1 = _ink_x(h)                  # as the font carries it: slanted
+        x0, x1 = _ink_x(h, p)               # as the font carries it: slanted
         over = max(0.0, x1 - x0 - (hi - lo))
         if over <= 0.5:
             break

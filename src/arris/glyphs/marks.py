@@ -642,7 +642,7 @@ def _caron_apostrophe(g, base):
         # as the font carries them (in the italic, slanted)
         from ..draw import CELL_GAP, _ink_x
         bf = at_floor(g)
-        x0f, x1f = _ink_x(bf)
+        x0f, x1f = _ink_x(bf, p0)
         room = x0f + p0.fig_adv - 2 * CELL_GAP * p0.m
         inkf = rings_to_shapely(bf.rings())
         stem0 = inkf.intersection(box(-1e4, p.xh + g.sh, 1e4, (p.cap if base.isupper() else p.asc) + 1))
@@ -655,7 +655,7 @@ def _caron_apostrophe(g, base):
             scratch = Glyph(q, W=g.W)
             scratch.warp = getattr(bf, 'warp', None)        # (the letter's overshoot moves its marks: in the italic, leaned)
             _comma(scratch, None, right0 + t * max(q.m, 0.6 * q.sv) + 0.75 * q.sv + q.sd / SQRT2, top_, stub=1.5 * q.sv)
-            return max(_ink_x(scratch)[1], x1f)
+            return max(_ink_x(scratch, p0)[1], x1f)
         if reach_right(0.0) > room:
             # (past LIGHTEST only if LIGHTEST is not enough: _squeeze)
             lo_, hi_ = (0.0, 1.0) if reach_right(1.0) <= room else (1.0, CELL_GIVE)
