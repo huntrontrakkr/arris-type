@@ -528,6 +528,10 @@ def _cell_kind(spec) -> bool:
 
 
 CELL_GAP = 0.25   # modules: in Mono a letter's ink keeps this far inside its cell, so neighbours never touch
+# how a drawing asked for a body narrower than its parts allow fails: a
+# counter too small for its bowls, a stroke run to nothing (ℰ's inner E at
+# a letter's narrowest in Mono Narrow), a white divided by none
+UNDRAWABLE = (ValueError, IndexError, ZeroDivisionError)
 
 
 def _start(spec, p, ot, ob, overrides, width, cell=True):
@@ -672,10 +676,18 @@ def _cell_fit(g, spec, p, ot, ob, overrides, width):
             Wn = (bottom + wide) / 2 if fit is not None else max(floor, min(Wn, wide))
         if abs(Wn - W) < 0.05:
             break
+        try:
+            hn = _drawn(spec, _start(spec, p, ot, ob, overrides, Wn, cell=False))
+            xn = ink_x(hn)
+        except UNDRAWABLE:
+            # it cannot be drawn so narrow (a counter would close): its floor
+            # lies above, at most halfway back to the last body drawn
+            floor = (Wn + W) / 2
+            if floor >= wide - 0.05 or abs(W - Wn) < 1.0:
+                break
+            continue
         prev = (W, over)
-        W = Wn
-        h = _drawn(spec, _start(spec, p, ot, ob, overrides, W, cell=False))
-        x0, x1 = ink_x(h)
+        W, h, (x0, x1) = Wn, hn, xn
         over = (x1 - x0) - (hi - lo)
     if over > 0.5 and fit is not None:
         W, h, x0, x1 = fit

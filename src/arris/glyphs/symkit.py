@@ -359,8 +359,13 @@ def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
         # the body and its arms a hair past it, never fitted, as condensing
         # does not narrow a body, and was drawn as small as a sign goes)
         if kind in LETTER_KINDS:
-            from ..draw import CELL_GAP, cell_floor
-            a, b = _ink_x(fn, q, cell_floor(cell, p), look=look)
+            from ..draw import CELL_GAP, UNDRAWABLE, cell_floor
+            try:
+                a, b = _ink_x(fn, q, cell_floor(cell, p), look=look)
+            except UNDRAWABLE:
+                # it cannot be drawn so narrow (a counter would close): as
+                # it stands in the cell's body, narrowed no further
+                a, b = _ink_x(fn, q, cell, look=look)
             return b - a <= p.fig_adv - 2 * CELL_GAP * p.m + tol
         if width(q) > p.fig_w + tol:
             return False
