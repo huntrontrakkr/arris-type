@@ -20,7 +20,7 @@ def frame(g):
     # Figures that stack three bars thin their horizontals where an opening
     # needs it (see STACKED); elsewhere sh_k stays 1.
     g.sh_k = g.free('sh_k', 1.0)
-    W, H = p.fig_w, p.cap
+    W, H = g.W, p.cap                       # the body: the figures' own, or in Mono's cell narrower (draw._cell_fit)
     u, v = W / 9, H / 12
     xl, xr = p.sv / 2, W - p.sv / 2
     yb, yt = g.sh / 2, H - g.sh / 2

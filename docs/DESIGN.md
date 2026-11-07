@@ -865,12 +865,24 @@ area has a note in `docs/coverage/`, listing what was drawn and why:
   grows with the stem; every arrow comes from one builder (shaft, head,
   tail, eight directions); operators sit on the maths axis. In Mono a
   letter's sign fills the cell as letters do, and is condensed only when
-  its ink will not fit; bars hang into half the cell's margin, and a letter
+  its ink will not fit; bars may hang past its body but keep a letter's
+  quarter module from the cell's edge (`draw.CELL_GAP`), and a letter
   drawn narrower to give them room is condensed only as far as it needs
   to stay as open, for its width, as it is in its own cell. Every other
   symbol whose ink would run out of its cell (‰ ™ ∭ @ …) is condensed, or
-  drawn smaller, to fit (`symkit.mono_fitted`); the em dash just spans
-  the cell.
+  drawn smaller, to fit (`symkit.mono_fitted`): drawn smaller, it is
+  drawn smaller whole, the body it is drawn in with it (©'s ring with its
+  letter), and centred where it stands once raised. Its ink is measured as
+  the font carries it, slanted in the italic. A letter's sign is fitted
+  as it is drawn, upright; in the italic it is drawn narrower in its cell
+  as a letter is, and condensed for the slant only if, as narrow as a
+  letter goes, its slanted ink would still not fit (№ ℘ ₠, drawn to their
+  own proportions; ₦ ℂ, a letter filling the body, narrow with it). A
+  sign is measured as its glyph draws it, horizontals thinned as they
+  will be (`symkit._look`), and a sign laid out by its own strokes and
+  gaps is clipped on that frame, never on a narrower body it is given
+  (₪ ℞ ∛ ∜ lost a stem, a stroke, a rise to the cell that way). The em
+  dash just spans the cell.
 * **The Mono cell, both ways** (1.015): nothing in Arris Mono is cut by
   its cell. A letter whose ink would pass the 600-unit cell (a horn, the
   apostrophe of ď ľ ť Ľ, an ogonek, Ø's slash, a tone mark beside a
@@ -879,8 +891,24 @@ area has a note in `docs/coverage/`, listing what was drawn and why:
   for, drawn narrower until it is not, then centred (`draw._cell_fit`):
   the letter gives up width, not the mark, down to its floor (0.6 of its
   body, and never so narrow that a counter between two stems closes:
-  `draw.cell_floor`); past it the mark gives way (ď's apostrophe at Bold).
-  A sign keeps a unit inside. A letter that fits is not clipped at all:
+  `draw.cell_floor`); past it the mark gives way (ď's apostrophe at Bold,
+  the horn of Ư Ơ at Bold Italic: `latin_plus.horn_give`), measured
+  against its letter drawn at that floor (`marks.at_floor`). Signs keep
+  the same quarter module. Every measure is of the ink as the font
+  carries it, as far as its curves reach (`draw._ink_x`, `draw._curve_x`:
+  not their off-curve points, which stand outside a rounded corner), and
+  in the italic slanted, with the overshoot it will be given (vertical,
+  but leaned by the slant): the
+  slant leans a capital's top 127 units past its foot, so every letter of
+  Mono Italic is drawn narrower than its upright, as narrow as its own
+  slanted ink needs (a d, whose stem rises on the right, narrower than a
+  b), and the figures, drawn on the body they are given
+  (`figures.frame`), with them; a letter drawn inside another (Ŧ's T,
+  ŀ's l, the cursive y under ỵ's dot) gives up what its body does. Where
+  even the letter at its floor and the
+  mark at `LIGHTEST` run out of the cell, the mark goes on shrinking, to
+  `CELL_LIGHTEST` (ď at Bold Italic, where the slant takes 134 of the
+  cell's 570 units). A letter that fits is not clipped at all:
   the cell's clip cuts raw ink, before the corner rule breaks a stroke's
   tips, and cut the tonos of Ά Έ Ό flat. Up and down the cell is the line
   box (975 above, 250 below), a terminal's cell: a stack of marks fits

@@ -266,6 +266,8 @@ CEDILLA_AS_COMMA = set('KkLlNnRrGgTt')
 STACK_GAP = 0.6     # white between stacked marks, of the marks' gap
 TIGHTEST = 0.5      # the furthest a stack's gaps close up to stay inside the line (or the cell), before its marks shrink
 LIGHTEST = 0.5      # the furthest a stack of marks lightens and shrinks to stay inside the line
+CELL_LIGHTEST = 0.3     # the furthest a mark beside a letter shrinks to stay inside Mono's cell (_squeeze)
+CELL_GIVE = 2.0         # _squeeze's s at CELL_LIGHTEST
 
 
 def line_top(p):
@@ -380,7 +382,12 @@ def stack_above(p, marks, x, top, case, W, room=None, avoid=None, tight=1.0):
             ABOVE[m](scratch, xm, ym, case)
     over = 0.0
     if room is not None:
-        x0, _, x1, _ = mark_ink(scratch).bounds
+        # as the font carries the marks (draw._ink_x): in the italic
+        # slanted, where they stand highest and lean furthest, ~110 units at
+        # an accent's height, past a cell an upright measure fitted, and
+        # curved, as the letter under them is measured
+        from ..draw import _ink_x
+        x0, x1 = _ink_x(scratch)
         shift = min(0.0, room[1] - x1) or max(0.0, room[0] - x0)
         places = [(m, xm + shift, ym) for m, xm, ym in places]
         over = max(0.0, (x1 - x0) - (room[1] - room[0]))
@@ -496,8 +503,13 @@ def _register(name, ch, bname, base, marks):
         # (in the monospaced cell, the stack keeps the cell's margin: draw.CELL_GAP)
         from ..draw import CELL_GAP
         cell = (-(p.fig_adv - g.W) / 2 + CELL_GAP * p.m, g.W + (p.fig_adv - g.W) / 2 - CELL_GAP * p.m) if p.mono else None
-        # marks joined to the base (a horn) are kept clear of
-        avoid = (mark_ink(g), raw_ink(g)) if g.strokes and any(m in ATTACHED for m in marks) else None
+        # marks joined to the base (a horn) are kept clear of; a horn that
+        # gave way in Mono's cell is stamped in, drawn lighter (latin_plus.horn_give)
+        avoid = None
+        if any(m in ATTACHED for m in marks) and (g.strokes or len(g.extra) > 1):
+            import shapely
+            held = g.extra[1:]
+            avoid = (shapely.union_all([mark_ink(g), *held]), shapely.union_all([raw_ink(g), *held]))
         # the base's optical correction lifts what stands above its top (its
         # overshoot: more in Mono Narrow's narrower bowls) after the marks are
         # placed; the stack keeps under the line where it will stand
@@ -534,10 +546,17 @@ def _into_cell(g):
 def _squeeze(s):
     """(the gaps' share, the marks' scale) at s in [0, 1]: the gaps close up
     first (to TIGHTEST), then the marks lighten and shrink (to LIGHTEST),
-    so the stack changes continuously as s grows."""
+    so the stack changes continuously as s grows. On to s = CELL_GIVE, for
+    a mark beside a letter in Mono's cell only (the caron's apostrophe, the
+    horn): past LIGHTEST it goes on shrinking, to CELL_LIGHTEST, where the
+    letter at its narrowest and the mark at LIGHTEST still run out of the
+    cell, which a terminal cuts at (ď at Mono Bold Italic, where the slant
+    takes 134 of the cell's 570 units)."""
     if s <= 0.5:
         return 1.0 - (1.0 - TIGHTEST) * 2 * s, 1.0
-    return TIGHTEST, 1.0 - (1.0 - LIGHTEST) * (2 * s - 1)
+    if s <= 1.0:
+        return TIGHTEST, 1.0 - (1.0 - LIGHTEST) * (2 * s - 1)
+    return TIGHTEST, LIGHTEST - (LIGHTEST - CELL_LIGHTEST) * min(s - 1.0, CELL_GIVE - 1.0) / (CELL_GIVE - 1.0)
 
 
 def draw_above(g, above, x, top, case, cell=None, avoid=None, lift=0.0):
@@ -582,6 +601,19 @@ def _ogonek_x(g, base):
     return g.W - p.sv / 2 if base in 'aeiouAEIOUy' else g.W / 2
 
 
+def at_floor(g):
+    """A composite's base as the cell's fit draws it at its narrowest
+    (draw.cell_floor), where the marks beside it must still find room: the
+    base as drawn if it is there already, or g is no letter's composite."""
+    from ..draw import REGISTRY, body_width, cell_floor, draw
+    _, base, _, _ = g.extra_src[0]
+    spec = REGISTRY.get(g.name)
+    if spec is None or spec.base is None:
+        return base
+    floor = cell_floor(body_width(spec, g.p), g.p)
+    return base if g.W <= floor + 0.5 else draw(spec.base, g.p, g.ot, g.ob, width=floor)
+
+
 def _caron_apostrophe(g, base):
     """The caron on d, l, L and t is written as an apostrophe beside the stem.
 
@@ -593,6 +625,7 @@ def _caron_apostrophe(g, base):
 
     from .punct import _comma
     from ..draw import Glyph
+    from ..geom import rings_to_shapely
     from .figures import heaviness
     p0 = g.p
     ink = g.extra[0]
@@ -605,24 +638,27 @@ def _caron_apostrophe(g, base):
         # its floor (draw.cell_floor); where even that leaves too little, the
         # apostrophe gives way as a stack of marks does (_squeeze): its gap
         # closes up, then it lightens and shrinks (ď at Bold). Measured as
-        # drawn, against the letter as it stands at its floor
-        from ..draw import CELL_GAP, REGISTRY, body_width, cell_floor
-        spec = REGISTRY.get(g.name)
-        W0 = body_width(spec, p0) if spec is not None else g.W
-        at_floor = g.W - cell_floor(W0, p0)                 # how far the stem moves in at the floor
-        room = ink.bounds[0] + p0.fig_adv - 2 * CELL_GAP * p0.m
-        stem0 = ink.intersection(box(-1e4, p.xh + g.sh, 1e4, (p.cap if base.isupper() else p.asc) + 1))
-        right0 = (stem0.bounds[2] if not stem0.is_empty else p.sv) - at_floor
+        # drawn, against the letter as it stands at its floor (at_floor),
+        # as the font carries them (in the italic, slanted)
+        from ..draw import CELL_GAP, _ink_x
+        bf = at_floor(g)
+        x0f, x1f = _ink_x(bf)
+        room = x0f + p0.fig_adv - 2 * CELL_GAP * p0.m
+        inkf = rings_to_shapely(bf.rings())
+        stem0 = inkf.intersection(box(-1e4, p.xh + g.sh, 1e4, (p.cap if base.isupper() else p.asc) + 1))
+        right0 = stem0.bounds[2] if not stem0.is_empty else p.sv
 
         def reach_right(s_):
             t, k = _squeeze(s_)
             q = accent_params(p, k)
             top_ = q.cap if base.isupper() else q.asc
             scratch = Glyph(q, W=g.W)
+            scratch.warp = getattr(bf, 'warp', None)        # (the letter's overshoot moves its marks: in the italic, leaned)
             _comma(scratch, None, right0 + t * max(q.m, 0.6 * q.sv) + 0.75 * q.sv + q.sd / SQRT2, top_, stub=1.5 * q.sv)
-            return mark_ink(scratch).bounds[2]
+            return max(_ink_x(scratch)[1], x1f)
         if reach_right(0.0) > room:
-            lo_, hi_ = 0.0, 1.0
+            # (past LIGHTEST only if LIGHTEST is not enough: _squeeze)
+            lo_, hi_ = (0.0, 1.0) if reach_right(1.0) <= room else (1.0, CELL_GIVE)
             for _ in range(18):
                 mid = (lo_ + hi_) / 2
                 if reach_right(mid) <= room:

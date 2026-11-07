@@ -988,8 +988,7 @@ def tack(g, kind, n_v=1, n_h=1, short=False):
         for y in ys:
             g.stroke((xs[0], y), (g.W, y))
         if kind == 'left':
-            g.strokes = [type(s_)(tuple(type(nd)(g.W - nd.x, nd.y, nd.bowl, nd.w) for nd in s_.nodes),
-                                  s_.closed, s_.start, s_.end) for s_ in g.strokes]
+            g.move(lambda x, y: (g.W - x, y))
     else:
         yb = a - r + g.sh / 2 if kind == 'up' else a + r - g.sh / 2
         g.stroke((0, yb), (g.W, yb))
@@ -1431,8 +1430,7 @@ def minusplus(g):
     c = axis(p) * 2 + 0.0
     ys = [nd.y for s_ in g.strokes for nd in s_.nodes]
     mid = (max(ys) + min(ys)) / 2
-    g.strokes = [type(s_)(tuple(type(nd)(nd.x, 2 * mid - nd.y, nd.bowl, nd.w) for nd in s_.nodes),
-                          s_.closed, s_.start, s_.end) for s_ in g.strokes]
+    g.move(lambda x, y: (x, 2 * mid - y))
 
 
 @op(u(0x2215), '∕', width=lambda p: p.ss / STEEP[1] + 0.5 * OPW(p) * 1.2)
@@ -1461,8 +1459,7 @@ def asteriskmath(g):
     p = g.p
     ys = [nd.y for s_ in g.strokes for nd in s_.nodes]
     dy = axis(p) - (max(ys) + min(ys)) / 2
-    g.strokes = [type(s_)(tuple(type(nd)(nd.x, nd.y + dy, nd.bowl, nd.w) for nd in s_.nodes),
-                          s_.closed, s_.start, s_.end) for s_ in g.strokes]
+    g.move(lambda x, y: (x, y + dy))
     if g.clip:
         x0, y0, x1, y1 = g.clip
         g.clip = (x0, y0 + dy, x1, y1 + dy)
@@ -1604,9 +1601,7 @@ def proportional(g):
 
 def _flip_strokes(g, fx=None, fy=None):
     """Mirror the drawing so far: x -> fx - x, y -> fy - y."""
-    def m(nd):
-        return type(nd)(fx - nd.x if fx is not None else nd.x, fy - nd.y if fy is not None else nd.y, nd.bowl, nd.w)
-    g.strokes = [type(s_)(tuple(m(nd) for nd in s_.nodes), s_.closed, s_.start, s_.end) for s_ in g.strokes]
+    g.move(lambda x, y: (fx - x if fx is not None else x, fy - y if fy is not None else y))
 
 
 @glyph('universal', '∀', REGISTRY['A'].width, kind='cap')
@@ -1887,10 +1882,14 @@ def _root(g, n):
     wi, yb, dx, bar = _root_layout(p)
     top = p.cap + 0.5 * p.m
     t = _tick(p)
+    # the bar runs to the radical's own width and the clip stands there: at
+    # the body, which in Mono's cell is narrower than the radical, the bar
+    # ran back into the rise and the clip cut the rise's top off
+    end = _root_w(p)
     g.stroke((dx, t), (dx + t, 0), start='v', end='h')
     g.stroke((dx + t, 0), (dx + t + top / 2, top), start='h', end='h')
-    g.stroke((dx + t + top / 2 - p.sv / 2, top - g.sh / 2), (g.W, top - g.sh / 2))
-    g.clip = (0, 0, g.W, top)
+    g.stroke((dx + t + top / 2 - p.sv / 2, top - g.sh / 2), (end, top - g.sh / 2))
+    g.clip = (0, 0, end, top)
     sub = draw(n, _root_params(p))
     g.add_glyph(sub, 0, yb)
 

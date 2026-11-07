@@ -147,7 +147,7 @@ def hbar(g):
 @glyph('Tbar', 'Ŧ', width_of('T'), kind='cap')
 def Tbar(g):
     p = g.p
-    w = stamp(g, 'T')
+    w = stamp(g, 'T', width=g.W)            # (in its body: narrower in Mono's cell, draw._cell_fit)
     _bar(g, w / 2 - 2 * p.m, w / 2 + 2 * p.m, p.cap / 2)
 
 
@@ -266,10 +266,14 @@ def ldot(g):
     p = g.p
     gap = max(p.m, 0.6 * p.sv)
     # in the monospaced cell the l narrows (to 0.85 of its own at most) so
-    # that it and the dot fit the cell, and the pair then moves into it
+    # that it and the dot fit the cell, and the pair then moves into it;
+    # drawn narrower still in its cell (draw._cell_fit: in the italic, at
+    # Bold), the l gives up what the body does
     lw = None
     if p.mono:
-        lw = max(min(g.W - 2 * p.m, p.fig_adv - gap - 1.5 * p.sv), 0.85 * REGISTRY['l'].width(p))
+        from ..draw import body_width
+        own = body_width(REGISTRY['ldot'], p)
+        lw = max(min(own - 2 * p.m, p.fig_adv - gap - 1.5 * p.sv), 0.85 * REGISTRY['l'].width(p)) - max(0.0, own - g.W)
     sub = draw('l', p, width=lw)
     w = stamp(g, 'l', width=sub.W if p.mono else None)
     # beside the stem, over the tail

@@ -41,8 +41,7 @@ BOWL = (Squint('bowl', lambda p: 7.5),)
 def mirror(g):
     """Mirror the drawn strokes left to right within the body."""
     W = g.W
-    g.strokes = [type(s)(tuple(type(n)(W - n.x, n.y, n.bowl, n.w) for n in s.nodes), s.closed, s.start, s.end)
-                 for s in g.strokes]
+    g.move(lambda x, y: (W - x, y))
 
 
 # --- Capitals ----------------------------------------------------------------

@@ -1,11 +1,13 @@
-"""Arris Mono's cell, both ways, on the built fonts: no glyph's ink reaches
-its cell's edge (x 0 or its advance: there the cell cut it), and none
+"""Arris Mono's cell, both ways, on the built fonts, upright and italic: no
+glyph's ink reaches its cell's edge (x 0 or its advance: a terminal cuts
+there, or the next character collides), in the italic as slanted, and none
 leaves the line box (the hhea/typo ascent and descent: a terminal's cell,
-which clips what passes it). The glyphs made to meet their neighbours are
-left out: box drawing, blocks, shades, Braille, Powerline, legacy
-computing, the maths and bracket pieces, the corner triangles, and the
-runs and ligatures (one gesture over several cells). In the italic only
-the line box is checked: a slanted letter leans past its cell by design.
+which clips what passes it). Left out are only the glyphs made to meet
+their neighbours: box drawing, blocks, shades, Braille, the Powerline
+separators, legacy computing, the maths and bracket pieces, the corner
+triangles, and the runs and ligatures (one gesture over several cells).
+The horizontal brackets ⏜–⏡ and the Powerline icons stand alone and are
+checked like any glyph.
 
 usage: mono_cell_check.py FONT.ttf [FONT.ttf ...]   (exit 1 on a fault)
 """
@@ -16,8 +18,8 @@ import sys
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.ttLib import TTFont
 
-MEET = [(0x2500, 0x259F), (0x2800, 0x28FF), (0xE0A0, 0xE0D7), (0x1FB00, 0x1FBFF), (0x239B, 0x23B3),
-        (0x23B7, 0x23BD), (0x23D0, 0x23D0), (0x23DC, 0x23E1), (0x25E2, 0x25E5), (0x2320, 0x2321)]
+MEET = [(0x2500, 0x259F), (0x2800, 0x28FF), (0xE0B0, 0xE0D7), (0x1FB00, 0x1FBFF), (0x239B, 0x23B3),
+        (0x23B7, 0x23BD), (0x23D0, 0x23D0), (0x25E2, 0x25E5), (0x2320, 0x2321)]
 # What the owner accepted (2026-11-06): the line stays and the accents give
 # way, but Ǻ's ring and acute, closed up and shrunk as far as they go, still
 # stand a little over the line at the heaviest weights
@@ -36,7 +38,6 @@ def check(path: str) -> list[str]:
     gs = tt.getGlyphSet()
     hmtx = tt['hmtx']
     asc, desc = tt['hhea'].ascent, tt['hhea'].descent
-    italic = bool(tt['post'].italicAngle)
     names = {n: cp for cp, n in sorted(tt.getBestCmap().items(), reverse=True)}
     faults = []
     for name in tt.getGlyphOrder():
@@ -50,7 +51,7 @@ def check(path: str) -> list[str]:
             continue
         x0, y0, x1, y1 = pen.bounds
         label = f'{chr(cp)} {name}' if cp is not None else name
-        if not italic and (x0 < TOLERANCE or x1 > adv - TOLERANCE):
+        if x0 < TOLERANCE or x1 > adv - TOLERANCE:
             faults.append(f'{label}: ink {x0:.0f}..{x1:.0f} reaches the cell (0..{adv})')
         if (y1 > asc + TOLERANCE and cp not in OVER_LINE_OK) or y0 < desc - TOLERANCE:
             faults.append(f'{label}: ink {y0:.0f}..{y1:.0f} leaves the line box ({desc}..{asc})')

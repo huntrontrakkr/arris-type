@@ -45,17 +45,21 @@ def _in_cell(g, fn):
     narrower than the body as its hooks and tails need to stay inside the
     cell, then centred in it, ink and all, so the cell (and the grid) is the
     same. The letter gives up width, not its tail."""
-    from ..draw import Glyph
-    from ..geom import rings_to_shapely
+    from ..draw import REGISTRY, Glyph, _ink_x, body_width
     p = g.p
     W0 = g.W
     lo, hi = (W0 - p.fig_adv) / 2 + CELL_GAP * p.m, (W0 + p.fig_adv) / 2 - CELL_GAP * p.m
+    # drawn in a body narrower than its own (a composite fitted to the cell,
+    # draw._cell_fit: ỵ's dot beside its tail), as much less room
+    spec = REGISTRY.get(g.name)
+    less = max(0.0, body_width(spec, p) - W0) if spec is not None else 0.0
+    lo, hi = lo + less / 2, hi - less / 2
     shrink, h = 0.0, None
     for _ in range(4):
         h = Glyph(p, g.name, ot=g.ot, ob=g.ob, W=W0 - shrink, overrides=dict(g.overrides))
         h.sh_auto = g.sh_auto
         fn(h)
-        x0, _, x1, _ = rings_to_shapely(h.rings()).bounds
+        x0, x1 = _ink_x(h)                  # as the font carries it: slanted
         over = max(0.0, x1 - x0 - (hi - lo))
         if over <= 0.5:
             break

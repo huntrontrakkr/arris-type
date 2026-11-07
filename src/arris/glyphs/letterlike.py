@@ -453,7 +453,10 @@ def prescription(g):
     g.stroke((a - p.sv / 2, p.sv / 2), (a - bot, bot), start='flat', end='h')   # (overlapping the leg)
     xc = a - yc
     g.stroke((xc - e, yc - e), (xc + e, yc + e), start='v', end='v')
-    g.clip = (0, bot, g.W, p.cap)
+    # cut on its own frame: clipped at its body, which in Mono's cell is
+    # narrower, the crossing stroke was cut short, and in the italic, as
+    # narrow as a letter goes, cut away with the leg's foot
+    g.clip = (0, bot, _rx_width(p), p.cap)
 
 
 @sign('uni2128', 'ℨ', letter_width(9, 2), kind='cap')
