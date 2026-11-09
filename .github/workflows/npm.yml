@@ -2,10 +2,7 @@
 # zip's WOFF2s with CSS (tools/npm_package.py), the package's version the
 # font's (1.005 is 1.5.0). The Release workflow calls it once a release is
 # published; run it by hand (Actions, "npm", Run workflow) for a version
-# already released. It needs the repository secret NPM_TOKEN, an npm token
-# that may publish to the arristype scope: without it, it says so and
-# publishes nothing. A version already on npm is left as it is. Each version
-# carries npm's provenance: a link to the run that published it.
+# already released. npm trusts this workflow in huntrontrakkr/arris-type.
 name: npm
 
 on:
@@ -15,11 +12,10 @@ on:
         description: The release to publish (1.005); empty for src/arris/version.py
         type: string
         required: false
-  workflow_call:
-    inputs:
-      version:
-        type: string
-        required: true
+      previous:
+        description: Publish a historical release under the previous npm tag
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -30,17 +26,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
+          node-version: 24
+          package-manager-cache: false
       - name: Version
         id: v
         env:
           V: ${{ inputs.version }}
         run: |
           if [ -z "$V" ]; then V=$(python3 -c "import sys; sys.path.insert(0, 'src'); from arris.version import VERSION; print(VERSION)"); fi
+          if [[ ! "$V" =~ ^[0-9]+\.[0-9]+$ ]]; then echo "::error::Invalid font version"; exit 1; fi
           echo "version=$V" >> "$GITHUB_OUTPUT"
       - name: The release zip
         env:
@@ -48,17 +45,18 @@ jobs:
           V: ${{ steps.v.outputs.version }}
         run: gh release download "v$V" --pattern "Arris-$V.zip" --dir build/release
       - name: Package
-        run: python3 tools/npm_package.py "build/release/Arris-${{ steps.v.outputs.version }}.zip" build/npm
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: python3 tools/npm_package.py "build/release/Arris-$V.zip" build/npm
       - name: Publish
         working-directory: build/npm
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PREVIOUS: ${{ inputs.previous }}
         run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::warning::no NPM_TOKEN secret: the package is built but not published"; exit 0
-          fi
-          NAME=$(node -p "require('./package.json').name"); VER=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
           if npm view "$NAME@$VER" version > /dev/null 2>&1; then
             echo "$NAME@$VER is on npm already"; exit 0
           fi
+          if [ "$PREVIOUS" = true ]; then export NPM_CONFIG_TAG=previous; fi
           npm publish --access public --provenance
