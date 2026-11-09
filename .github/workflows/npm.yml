@@ -4,8 +4,8 @@
 # published; run it by hand (Actions, "npm", Run workflow) for a version
 # already released. It needs the repository secret NPM_TOKEN, an npm token
 # that may publish to the arristype scope: without it, it says so and
-# publishes nothing. A version already on npm is left as it is. Each version
-# carries npm's provenance: a link to the run that published it.
+# publishes nothing. Set the repository variable NPM_STAGE_RELEASES to true
+# to stage each version for a maintainer to approve on npm with 2FA.
 name: npm
 
 on:
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
       - name: Version
         id: v
@@ -51,8 +51,10 @@ jobs:
         run: python3 tools/npm_package.py "build/release/Arris-${{ steps.v.outputs.version }}.zip" build/npm
       - name: Publish
         working-directory: build/npm
+        shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          STAGE_RELEASES: ${{ vars.NPM_STAGE_RELEASES }}
         run: |
           if [ -z "$NODE_AUTH_TOKEN" ]; then
             echo "::warning::no NPM_TOKEN secret: the package is built but not published"; exit 0
@@ -61,4 +63,12 @@ jobs:
           if npm view "$NAME@$VER" version > /dev/null 2>&1; then
             echo "$NAME@$VER is on npm already"; exit 0
           fi
-          npm publish --access public --provenance
+          if [ "$STAGE_RELEASES" = "true" ]; then
+            staged=$(npm stage list "$NAME" --json | jq -r --arg version "$VER" '.[] | select(.version == $version) | .id')
+            if [ -n "$staged" ]; then
+              echo "$NAME@$VER is already staged ($staged)"; exit 0
+            fi
+            npm stage publish --access public --provenance
+          else
+            npm publish --access public --provenance
+          fi
