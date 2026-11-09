@@ -1,62 +1,57 @@
-# Publish the web fonts of a release to npm as @arristype/arris: the release
-# zip's WOFF2s with CSS (tools/npm_package.py), the package's version the
-# font's (1.005 is 1.5.0). The Release workflow calls it once a release is
-# published; run it by hand (Actions, "npm", Run workflow) for a version
-# already released. npm trusts this workflow in huntrontrakkr/arris-type.
 name: npm
-
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: The release to publish (1.005); empty for src/arris/version.py
-        type: string
-        required: false
-      previous:
-        description: Publish a historical release under the previous npm tag
-        type: boolean
-        default: false
-
+      batch:
+        type: choice
+        required: true
+        options: [older, newest]
 permissions:
   contents: read
   id-token: write
-
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Version
-        id: v
-        env:
-          V: ${{ inputs.version }}
-        run: |
-          if [ -z "$V" ]; then V=$(python3 -c "import sys; sys.path.insert(0, 'src'); from arris.version import VERSION; print(VERSION)"); fi
-          if [[ ! "$V" =~ ^[0-9]+\.[0-9]+$ ]]; then echo "::error::Invalid font version"; exit 1; fi
-          echo "version=$V" >> "$GITHUB_OUTPUT"
-      - name: The release zip
+      - name: Publish verified historical releases
         env:
           GH_TOKEN: ${{ github.token }}
-          V: ${{ steps.v.outputs.version }}
-        run: gh release download "v$V" --pattern "Arris-$V.zip" --dir build/release
-      - name: Package
-        env:
-          V: ${{ steps.v.outputs.version }}
-        run: python3 tools/npm_package.py "build/release/Arris-$V.zip" build/npm
-      - name: Publish
-        working-directory: build/npm
-        env:
-          PREVIOUS: ${{ inputs.previous }}
+          BATCH: ${{ inputs.batch }}
         run: |
-          NAME=$(node -p "require('./package.json').name")
-          VER=$(node -p "require('./package.json').version")
-          if npm view "$NAME@$VER" version > /dev/null 2>&1; then
-            echo "$NAME@$VER is on npm already"; exit 0
-          fi
-          if [ "$PREVIOUS" = true ]; then export NPM_CONFIG_TAG=previous; fi
-          npm publish --access public --provenance
+          while read -r font_version version packager_tag expected; do
+            if [[ "$BATCH" == newest && "$version" != 1.13.0 ]] || [[ "$BATCH" == older && "$version" == 1.13.0 ]]; then
+              continue
+            fi
+
+            spec="@arristype/arris@$version"
+            if published=$(npm view "$spec" dist.shasum); then
+              test "$published" = "$expected"
+              echo "$spec is already on npm with the expected checksum."
+              continue
+            fi
+
+            echo "Preparing $spec from Arris $font_version"
+            work="$RUNNER_TEMP/Arris-$font_version"
+            zip="Arris-$font_version.zip"
+            mkdir -p "$work"
+            if [[ -f ".github/npm-history/$zip" ]]; then
+              cp ".github/npm-history/$zip" "$work/$zip"
+            else
+              gh release download "v$font_version" --pattern "$zip" --dir "$work"
+            fi
+            gh api -H 'Accept: application/vnd.github.raw+json' \
+              "repos/$GITHUB_REPOSITORY/contents/tools/npm_package.py?ref=$packager_tag" > "$work/package.py"
+            python3 "$work/package.py" "$work/$zip" "$work/package"
+            (
+              cd "$work/package"
+              tarball=$(npm pack --silent --pack-destination "$work")
+              echo "$expected  $work/$tarball" | sha1sum --check --strict
+              npm publish "$work/$tarball" --access public --tag archive --provenance
+            )
+          done < .github/npm-history/packages.txt
