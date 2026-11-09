@@ -34,6 +34,11 @@ already tagged). The runners have no GPU, so the workflow skips
 `tools/vf_spikes.py`; run it on a GPU machine before tagging when the
 variable fonts' masters or interpolation change.
 
+After the GitHub release is public, the Release workflow dispatches
+`npm.yml` on the release tag and waits for it to publish `@arristype/arris`.
+npm authorizes `npm.yml` in `huntrontrakkr/arris-type` as a trusted
+publisher. To retry, run the npm workflow with the font version.
+
 ## Licence and metadata
 
 The fonts and the glyph drawings (`src/arris/glyphs/`): SIL Open Font

@@ -307,10 +307,20 @@ jobs:
   npm:
     needs: release
     if: github.ref_type == 'tag' || inputs.publish == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/npm.yml
-    with:
-      version: ${{ needs.release.outputs.version }}
-    secrets: inherit
+      actions: write
+      checks: read
+    steps:
+      - name: Publish the web fonts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          # Dispatch so npm sees the same trusted workflow for automatic releases and manual retries.
+          run_id=$(gh api -X POST "repos/$GH_REPO/actions/workflows/npm.yml/dispatches" \
+            -H 'X-GitHub-Api-Version: 2026-03-10' -f "ref=v$VERSION" -f "inputs[version]=$VERSION" \
+            --jq '.workflow_run_id')
+          gh run watch "$run_id" --exit-status --interval 15
