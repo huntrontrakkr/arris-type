@@ -19,7 +19,7 @@ from . import marks
 from .symkit import sign
 from .cyrillic import sc
 from .letterframe import STEEP, Frame, growing_width, least_white, plain_width as letter_width
-from .punct import _ring, axis, dot, punct
+from .punct import _ring, axis, dot, pct, pct_ring, punct
 
 ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyphen', 0x2011: 'hyphen'}
 # (no soft hyphen, U+00AD: where a word may break is the shaper's business, and it is never drawn)
@@ -265,14 +265,18 @@ def trademark(g):
     stamp(g, 'M', ps, dx=wt + 0.6 * p.m, dy=p.cap - ps.cap)
 
 
-@glyph('perthousand', '‰', lambda p: REGISTRY['percent'].width(p) + 5.5 * p.m, kind=('punct', 1.0))
+def _mille_width(p):
+    if p.mono:
+        return REGISTRY['percent'].width(p) + 5.5 * p.m
+    _, _, _, rw, _, white = pct(p)
+    return REGISTRY['percent'].width(p) + white + rw
+
+
+@glyph('perthousand', '‰', _mille_width, kind=('punct', 1.0))
 def perthousand(g):
-    p = g.p
+    """The percent sign and one more of its rings, the least white on."""
     w = stamp(g, 'percent')
-    s = p.sv
-    rw, rh = 4.5 * p.m + s, 5.0 * p.m + s
-    x0 = w + 1.0 * p.m
-    _ring(g, x0 + s / 2, g.sh / 2, x0 + rw - s / 2, rh - g.sh / 2)
+    pct_ring(g, w + pct(g.p)[5], 0)
 
 
 @glyph('daggerdbl', '‡', growing_width(6, 1, 2.0), kind=('punct', 1.0))

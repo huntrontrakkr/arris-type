@@ -133,19 +133,35 @@ def underscore(g):
     g.stroke((0, f.Y(-2)), (g.W, f.Y(-2)))
 
 
+def tick(p):
+    """How long a straight quote's tick is: a third of the cap height, or
+    two dots where those are more (from Bold). Until 1.017 two dots at
+    every weight, a quarter of the cap height at Regular and less below it:
+    faces of this kind draw them 0.31 to 0.36 of it (Chakra Petch, Oxanium,
+    Exo 2, Rajdhani, Tomorrow), and the pair read as two apostrophes."""
+    return max(2 * p.dot(), p.cap / 3)
+
+
+def tick_gap(p):
+    """The white between the double quote's ticks: a module and a half of
+    the weight's white, never under the least (it was two modules, a tick
+    and a half at Regular: those faces' ticks stand about one apart)."""
+    return max(1.5 * p.m * white_scale(p), least_white(p))
+
+
 @punct('quotesingle', "'", 2, width=stem_w())
 def quotesingle(g):
     f = Frame(g, 2, 'lower', top=g.p.cap)
     p = g.p
-    g.stroke((f.X(1), p.cap - 2 * p.dot()), (f.X(1), p.cap))
+    g.stroke((f.X(1), p.cap - tick(p)), (f.X(1), p.cap))
 
 
-@punct('quotedbl', '"', 6, 2)
+@punct('quotedbl', '"', 6, 2, width=lambda p: 2 * p.sv + tick_gap(p))
 def quotedbl(g):
-    f = Frame(g, 6, 'lower', top=g.p.cap)
     p = g.p
-    for x in (f.X(1), f.X(5)):
-        g.stroke((x, p.cap - 2 * p.dot()), (x, p.cap))
+    g.clip = (0, 0, g.W, p.cap)
+    for x in (p.sv / 2, g.W - p.sv / 2):
+        g.stroke((x, p.cap - tick(p)), (x, p.cap))
 
 
 @punct('quoteright', '’', 3, width=dot_w(1.5))
@@ -437,18 +453,35 @@ def greater(g):
 
 # --- ASCII symbols ---------------------------------------------------------
 
+HASH_PARTS = 6.0    # the number sign up its height, in strokes: two bars, a counter of one, two ends of one and a half
+
+
 @punct('numbersign', '#', 10, 2, width=growing_width(10, 2, 2.0))
 def numbersign(g):
-    """Two bars each way, never closer than a stroke: the square between
-    them stays open at every weight."""
+    """Two bars each way, never closer than a stroke, their ends never
+    shorter than a stroke and a half. Where its height does not hold that
+    at the weight's strokes (HASH_PARTS of them: from Bold) the sign's
+    strokes thin together until it does, 0.91 of the weight's at Bold and
+    0.72 at Black, as faces of this kind draw it (Chakra Petch Bold,
+    Oxanium ExtraBold, Rajdhani Bold: 0.8 to 0.9 of a stem).
+
+    The white between the bars gives to the ends first, down to a stroke;
+    across, where the body holds what it holds, the same.
+
+    Until 1.017 only the square between the bars was kept, at the full
+    strokes: at Black the ends stood 100 units past bars 149 thick, two
+    thirds of a stroke, and the sign was a cross with a hole in it."""
     f = Frame(g, 10, 'cap')
     p, W = g.p, g.W
-    gx = max(f.X(7) - f.X(3) - p.sv, p.sv)                 # white between the verticals
-    gy = max(f.Y(8) - f.Y(4) - g.sh, g.sh)                  # and between the horizontals
-    for x in (W / 2 - (gx + p.sv) / 2, W / 2 + (gx + p.sv) / 2):
-        g.stroke((x, f.Y(0.5)), (x, f.Y(11.5)))
-    for y in (p.cap / 2 - (gy + g.sh) / 2, p.cap / 2 + (gy + g.sh) / 2):
-        g.stroke((0, y), (W, y))
+    y0, y1 = f.Y(0.5), f.Y(11.5)
+    k = min(1.0, (y1 - y0) / (HASH_PARTS * g.sh))
+    tv, th = k * p.sv, k * g.sh
+    gx = max(min(f.X(7) - f.X(3) - tv, W - 5 * tv), tv)     # white between the verticals
+    gy = max(min(f.Y(8) - f.Y(4) - th, y1 - y0 - 5 * th), th)       # and between the horizontals
+    for x in (W / 2 - (gx + tv) / 2, W / 2 + (gx + tv) / 2):
+        g.stroke((x, y0, tv), (x, y1))
+    for y in (p.cap / 2 - (gy + th) / 2, p.cap / 2 + (gy + th) / 2):
+        g.stroke((0, y, th), (W, y))
 
 
 def dollar_stem(p, sh, through):
@@ -483,18 +516,80 @@ def _ring(g, x0, y0, x1, y1, w=None, leg=None):
     g.stroke(*pts, closed=True)
 
 
-@punct('percent', '%', 11, 3)
+PCT_RING = 5.0      # the percent's rings across, in modules (up, half the cap height)
+
+
+def pct_params(p):
+    """The percent's own strokes: the small figures' (0.8 of the weight's,
+    0.68 at Black: features.small), corners and edge breaks with them."""
+    k = 0.8 - 0.12 * heaviness(p)
+    return p.with_(sv=k * p.sv, sh=k * p.sh, sd=k * p.sd, ss=k * p.ss, c=k * p.c)
+
+
+def pct(p):
+    """The percent's parts: (its rings' stems, their bars, the slash's
+    thickness, a ring's width, its height, the white it keeps). The sign is
+    drawn in the small figures' strokes (pct_params), its rings half the
+    cap height and five modules across, or what a counter of the least
+    white needs; each stands that white clear of the slash. In the
+    monospaced cell the rings run into the slash, as they did everywhere
+    until 1.017."""
+    if p.mono:
+        return p.sv, p.sh, p.ss, 4.5 * p.m + p.sv, 5.0 * p.m + p.sv, p.m
+    q = pct_params(p)
+    white = max(p.m, 0.6 * q.sv)
+    return q.sv, q.sh, q.ss, max(PCT_RING * p.m, 2 * q.sv + white), p.cap / 2, white
+
+
+def pct_width(p):
+    """The percent's body: its two rings, the slash between them, and the
+    white from each ring's cut corner to the slash."""
+    if p.mono:
+        return letter_width(11, 3)(p)
+    q = pct_params(p)
+    vs, hs, ss, rw, _, white = pct(p)
+    lo = 0.6 * p.leg + (vs + hs) / 2 - q.sd / SQRT2         # the corner's outer flank
+    reach = max(white * math.sqrt(5) / 2 - lo / 2, 0.25 * white)     # ring to slash on the ring's foot line
+    return 2 * (rw + reach) + ss / STEEP[1]
+
+
+def pct_ring(g, x0, y0):
+    """One of the percent's rings, its box's lower left corner at (x0, y0),
+    in the sign's own strokes."""
+    p = g.p
+    vs, hs, _, rw, rh, _ = pct(p)
+    if p.mono:
+        _ring(g, x0 + vs / 2, y0 + g.sh / 2, x0 + rw - vs / 2, y0 + rh - g.sh / 2)
+        return
+    from ..draw import Glyph
+    ring = Glyph(pct_params(p), W=g.W)
+    _ring(ring, x0 + vs / 2, y0 + hs / 2, x0 + rw - vs / 2, y0 + rh - hs / 2, leg=0.6 * p.leg)
+    g.add_glyph(ring)
+
+
+@punct('percent', '%', 11, 3, width=pct_width)
 def percent(g):
-    f = Frame(g, 11, 'cap')
+    """Two rings and the 2:1 slash between them, each ring clear of it by
+    the least white (pct). Until 1.017 the rings were four and a half
+    modules of counter in the full stem, in a body their two widths did not
+    fit: each ran into the slash at every weight (50% read as 5096), and at
+    Black the sign was one mass, its counters 0.66 of a stem. Faces of this
+    kind draw the rings apart and lighter than the letters (Chakra Petch,
+    Oxanium, Exo 2, Rajdhani: 0.2 to 0.8 of a stem between ring and slash)."""
     p, W, H = g.p, g.W, g.p.cap
-    s = p.sv
-    rw = 4.5 * p.m + s                                       # ring outer width
-    rh = 5.0 * p.m + s
-    _ring(g, s / 2, H - rh + g.sh / 2, rw - s / 2, H - g.sh / 2)
-    _ring(g, W - rw + s / 2, g.sh / 2, W - s / 2, rh - g.sh / 2)
-    w = p.ss / STEEP[1]
-    x_at = lambda y: (W - w) / 2 - H / 4 + w / 2 + y / 2
-    g.stroke((x_at(0), 0), (x_at(H), H), start='h', end='h')
+    _, _, _, rw, rh, _ = pct(p)
+    pct_ring(g, 0, H - rh)
+    pct_ring(g, W - rw, 0)
+    if p.mono:
+        w = p.ss / STEEP[1]
+        x_at = lambda y: (W - w) / 2 - H / 4 + w / 2 + y / 2
+        g.stroke((x_at(0), 0), (x_at(H), H), start='h', end='h')
+        return
+    from ..draw import Glyph
+    slash = Glyph(pct_params(p), W=W)
+    slash.stroke((W / 2 - H / 4, 0), (W / 2 + H / 4, H), start='h', end='h')
+    g.add_glyph(slash)
+    g.clip = (0, 0, W, H)
 
 
 @punct('ampersand', '&', 10, 2)

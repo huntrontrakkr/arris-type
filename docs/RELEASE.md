@@ -180,6 +180,26 @@ letters redrawn.
   two stems (0.55 to 0.85 in those faces), i d H and the l a third at
   Black (0.84 to 1.0), "illicit" a comb. No longer than it was thick, it
   read as a bump on the stem. The tail tells the l from I and 1 as before.
+- The percent sign is three pieces. Its rings were four and a half
+  modules of counter in the full stem, in a body their two widths did not
+  fit: each ran into the slash at every weight (50% read as 5096), and at
+  Black the sign was one mass, its counters two thirds of a stem. Drawn in
+  the small figures' strokes (0.8 of the weight's, 0.68 at Black), its
+  rings half the cap height and five modules across, each stands the
+  least white clear of the slash (`punct.pct`), as those faces draw it
+  (0.2 to 0.8 of a stem between ring and slash). ‰ and ‱ carry the same
+  rings. In Arris Mono's cell the sign is as it was.
+- The number sign's ends are longer than its strokes. Only the square
+  between its bars was kept, at the full strokes: at Black the ends stood
+  two thirds of a stroke past the bars, a cross with a hole in it. Its
+  ends are a stroke and a half at least, and where its height does not
+  hold that its strokes thin together (0.91 of the weight's at Bold, 0.72
+  at Black; those faces 0.8 to 0.9 at Bold).
+- The straight quotes are a third of the cap height (two dots from Bold,
+  where that is more): they were two dots at every weight, a quarter of
+  it at Regular (0.31 to 0.36 in those faces). The double quote's ticks
+  stand a module and a half of white apart for two, so the pair no longer
+  reads as two apostrophes.
 - A crotch with a step in it is broken as any crotch. Where a diagonal
   lands on a short edge square to the bar it runs into (the Z's foot),
   the corner was filled as a right angle, no further than that short

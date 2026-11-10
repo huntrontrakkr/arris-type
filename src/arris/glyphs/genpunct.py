@@ -590,22 +590,22 @@ def _ring_gap(p):
 
 
 def _ring_w(p):
-    return 4.5 * p.m + p.sv
+    from .punct import pct
+    return pct(p)[3]
 
 
 @sign('uni2031', '‱', lambda p: REGISTRY['percent'].width(p) + 2 * (_ring_w(p) + _ring_gap(p)),
        kind=('punct', 1.0))
 def pertenthousand(g):
     """The per mille sign with one more ring."""
-    from .punct import _ring
+    from .punct import pct_ring
     p = g.p
     sub = draw('percent', p)
     w = sub.W
     g.add_glyph(sub)
-    s, rw, rh = p.sv, _ring_w(p), 5.0 * p.m + p.sv
+    rw = _ring_w(p)
     for i in range(2):
-        x0 = w + _ring_gap(p) + i * (rw + _ring_gap(p))
-        _ring(g, x0 + s / 2, g.sh / 2, x0 + rw - s / 2, rh - g.sh / 2)
+        pct_ring(g, w + _ring_gap(p) + i * (rw + _ring_gap(p)), 0)
 
 
 # --- Spaces -------------------------------------------------------------------------
