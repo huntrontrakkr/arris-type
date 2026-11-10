@@ -332,6 +332,16 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
     leg on its horizontal or vertical edge: c at a right angle, c in a
     crotch (crotch 1: draw.crotch_fill); the watch's own drawing and the
     italic keep the pixel rule's 2.
+
+    A crotch with a step in it (a diagonal that lands on a short edge
+    square to the bar it runs into: the Z's foot) is a crotch still: its
+    chord keeps its leg on the bar and runs square to the diagonal until
+    it meets it (_stepped_crotches). A right angle's fill is no longer than
+    its shorter edge, so as the Z grew and its foot's step went from 28
+    units at Bold to 10 at Black, the corner's break went from 35 units to
+    9, all but sharp, where the same crotch without a step (the z's, the
+    2's) is
+    broken 44. (Not in the watch's drawing or the italic, crotch 2.)
     """
     pts = [tuple(p) for p in coords[:-1]]
     # drop duplicate and collinear points
@@ -347,10 +357,12 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
                 break
     n = len(pts)
     kinds = []
+    turns = []
     for i in range(n):
         a, b, q = pts[i - 1], pts[i], pts[(i + 1) % n]
         u1, u2 = _unit(_sub(b, a)), _unit(_sub(q, b))
         turn = math.degrees(math.atan2(_cross(u1, u2), _dot(u1, u2)))  # + = left = convex
+        turns.append(turn)
         k1, k2 = _dir_class(u1), _dir_class(u2)
         kind = None
         if k1 == k2 == 'axis' and abs(abs(turn) - 90) < 1.0:
@@ -362,8 +374,12 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
         if butt and (_on_butt(a, b, butt, b) or _on_butt(b, q, butt, b)):
             kind = None                                     # ink cut square where it meets a butt line
         kinds.append(kind)
+    stepped = _stepped_crotches(pts, kinds, turns, c, crotch) if crotch < 2.0 - 1e-9 else {}
     out = []
     for i in range(n):
+        if i in stepped:
+            out.append(stepped[i])
+            continue
         a, b, q = pts[i - 1], pts[i], pts[(i + 1) % n]
         e_in, e_out = _sub(b, a), _sub(q, b)
         u_in, u_out = _unit(e_in), _unit(e_out)
@@ -396,6 +412,54 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
     if len(clean) > 1 and _len(_sub(clean[0], clean[-1])) < 1e-6:
         clean.pop()
     return clean
+
+
+def _stepped_crotches(pts, kinds, turns, c, crotch) -> dict:
+    """The crotches of a ring that have a step in them (_ring_rule): a
+    filled right angle whose other edge is shorter than a break and turns
+    again, the same way, into a 45-degree edge. The chord keeps its leg on
+    the long edge and runs square to the diagonal until it meets it: the
+    two points of each become the chord's ends, {point index: its new
+    place}. With no step this is the crotch's own chord, with a step a
+    break long the right angle's, and every chord between."""
+    n = len(pts)
+    out: dict = {}
+
+    def chord(v, room_axis, room_diag):
+        """The leg on the axis edge and the reach along the diagonal past
+        the step's end, for a step v long; None if there is no room."""
+        leg = c * (crotch - (crotch - 1.0) * v / c)          # a crotch's leg with no step, a right angle's at a full one
+        leg = min(leg, room_axis, v + room_diag * math.sqrt(2))
+        return (leg, (leg - v) / math.sqrt(2)) if leg > v + 1e-6 else None
+
+    for i in range(n):
+        if kinds[i] != 'right' or turns[i] > 0 or i in out:
+            continue
+        h, j = (i - 1) % n, (i + 1) % n
+        # the step after the right angle: axis in, step, diagonal out
+        if kinds[j] is None and abs(turns[j] + 45) < 1.0 and j not in out:
+            jj = (j + 1) % n
+            u_in, u_d = _unit(_sub(pts[i], pts[h])), _unit(_sub(pts[jj], pts[j]))
+            v = _len(_sub(pts[j], pts[i]))
+            if _dir_class(u_d) == 'diag' and v < c - 1e-6:
+                got = chord(v, _len(_sub(pts[i], pts[h])) * (0.5 if kinds[h] else 1.0),
+                            _len(_sub(pts[jj], pts[j])) * (0.5 if kinds[jj] else 1.0))
+                if got:
+                    out[i] = _sub(pts[i], _mul(u_in, got[0]))
+                    out[j] = _add(pts[j], _mul(u_d, got[1]))
+                    continue
+        # the step before it: diagonal in, step, axis out
+        if kinds[h] is None and abs(turns[h] + 45) < 1.0 and h not in out:
+            hh = (h - 1) % n
+            u_d, u_out = _unit(_sub(pts[h], pts[hh])), _unit(_sub(pts[j], pts[i]))
+            v = _len(_sub(pts[i], pts[h]))
+            if _dir_class(u_d) == 'diag' and v < c - 1e-6:
+                got = chord(v, _len(_sub(pts[j], pts[i])) * (0.5 if kinds[j] else 1.0),
+                            _len(_sub(pts[h], pts[hh])) * (0.5 if kinds[hh] else 1.0))
+                if got:
+                    out[h] = _sub(pts[h], _mul(u_d, got[1]))
+                    out[i] = _add(pts[i], _mul(u_out, got[0]))
+    return out
 
 
 def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=(),

@@ -218,3 +218,38 @@ def test_the_j_is_an_arm_a_stem_and_a_hook(w):
     arm = across(p.cap - p.sh / 2)
     assert arm.bounds[2] == pytest.approx(x1, abs=1)
     assert arm.length - p.sv >= min(p.sv, 0.3 * (x1 - x0)) - 1
+
+
+def test_a_crotch_with_a_step_in_it_keeps_its_leg():
+    """A diagonal that lands on a short edge square to the bar it runs
+    into: the chord keeps a break's leg on the bar and runs square to the
+    diagonal (until 1.017 it was no longer than the step: the Z's foot at
+    Black, 9 units for 44). With a step a break long it is the right
+    angle's own chord; the watch's rule (crotch 2) is as it was."""
+    from arris.geom import _ring_rule
+
+    def ring(v):                                            # a bar, a step v tall at x = 120, a diagonal off it
+        pts = [(0, 0), (400, 0), (400, 100), (120, 100), (120, 100 + v), (400, 380 + v), (400, 460 + v), (0, 460 + v)]
+        return pts + pts[:1]
+
+    def near(pts, q):
+        return any(abs(x - q[0]) < 1e-6 and abs(y - q[1]) < 1e-6 for x, y in pts)
+
+    out = _ring_rule(ring(10), 40, +1, crotch=1.0)
+    assert near(out, (160, 100)) and near(out, (135, 125))
+    assert not near(out, (120, 100)) and not near(out, (120, 110))
+    out = _ring_rule(ring(0.5), 40, +1, crotch=1.0)          # all but no step: the crotch's own chord
+    assert near(out, (160, 100)) and near(out, (120 + 39.5 / 2, 100.5 + 39.5 / 2))
+    out = _ring_rule(ring(40), 40, +1, crotch=1.0)           # a full step: the right angle's
+    assert near(out, (160, 100)) and near(out, (120, 140))
+    out = _ring_rule(ring(10), 40, +1, crotch=2.0)           # the pixel rule
+    assert near(out, (130, 100)) and near(out, (120, 110))
+
+
+@pytest.mark.parametrize('w', [700, 800, 900])
+def test_the_zs_foot_is_broken_a_full_break(w):
+    p = params(w)
+    g = draw('Z', p)
+    ring = max(g.rings(), key=len)
+    on_bar = [x for x, y, *_ in ring if abs(y - g.sh) < 1 and x < g.W / 2]     # where the foot's inner corner starts on the bar
+    assert max(on_bar) - p.sv == pytest.approx(p.c, abs=1.5)                   # a break from the foot's own side
