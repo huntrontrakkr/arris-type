@@ -49,6 +49,77 @@ Reserved Font Name. Every font carries the copyright
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.017
+
+How the letters stand together. Five causes, each measured, and five
+letters redrawn.
+
+- Every descender stands on one line. The g's and the y's hooks went
+  deeper than the p, q and j from Bold (to make room under the bowl: 34
+  units at Bold, 70 at Black), so a line of text stood on two descender
+  lines. A weight now has one: three modules to SemiBold, then what the
+  g's hook needs under its bowl (a horizontal and the least white over
+  it), 205 units at Bold, 230 at ExtraBold, 250 at Black, the font's
+  descent (`params.descender_line`). Brackets, signs and marks keep their
+  own depth (`Params.under`).
+- The hooks of g and y are as heavy as the letters' other strokes. They
+  were thinner from Light up (57 units to the bowl's 79 at Regular, about
+  three quarters), and it read as a mistake: a reader on r/typography
+  circled it. The hook measured its white past the inner leg of its own
+  corner, not from bar to bar, and thinned before it made room. On the
+  weight's descender line it keeps its weight at every weight.
+- A letter with one stem keeps its share of the line. Stems alone added
+  width, so from Regular to Black the H grew a fifth and the E, K, L, T,
+  Z, f, k, t and z not at all: each lost a fifth of its share (0.80 to
+  0.84 of what it had; in hand-drawn faces 0.93 to 1.08,
+  `tools/letter_shares.py`). Their arms, thicker in a body no wider, were
+  stubs, and the K's and k's diagonals rooted in one block along the stem.
+  Past Regular such a letter now widens by what its stem has grown
+  (`letterframe.letter_width`); Regular and lighter are as they were. The
+  r keeps eight ninths of the H's width at every weight: it had been a
+  third wider than the n at Thin and a tenth at Regular, its arm long for
+  the letter.
+- Open sides are spaced as hand-spaced faces space them. The spacing
+  counts the white beside a letter to a depth, and counted it a fifth of
+  the zone deep: twice what ten hand-spaced sans faces count (fitted to
+  their side bearings, `tools/spacing_depth.py`: 0.07 to 0.17 of the
+  x-height, the same for capitals and lowercase). Every open side (C K L
+  T E F, c r f t k) took most of its light from inside the letter and
+  stood against its neighbour: in DOCK the C stood 79 units from the K and
+  141 from the O, and the word read DO CK. The depth is now an eighth of
+  the x-height; those gaps are 125 and 148, and the D, with the O's
+  corners, stands 147 from the O.
+- The lowercase's horizontals thin a little more than the capitals'
+  toward Black (0.92 of them at Bold, 0.87 at Black; upright only), and
+  where three bars stack in the x-height (a e s) the inner one gives first
+  and the bar at the open end keeps its weight, as in hand-drawn faces
+  (`tools/stroke_roles.py`). Until now all three thinned alike.
+- The K is the k's drawing at every weight: the arm into the stem, the leg
+  off the arm, the crotch a point. From Bold, and in Arris Mono, it had
+  changed to the pixel master's form, arm and leg meeting in a block
+  beside the stem.
+- Redrawn, after the chamfered faces (Chakra Petch first), with Arris's
+  corners:
+  - a: an arch over a bowl. The arm starts in the c's beak and comes into
+    the stem through a bowl's corner; the open storey is seven eighths of
+    the bowl (it was two thirds, under a bare bar).
+  - e and s: their open ends turn through a cut corner into the same
+    beak, so a, c, e and s end alike; the e's bar stands above the middle.
+  - y: a bowl open at the top, its left corner cut all the way across,
+    and the g's hook. The arm lands on the baseline as the g's and p's
+    bowls do and the stem runs on into the hook as one line; it had run
+    into the stem as a diagonal, a lump from Bold.
+  - x: the X's drawing in the x-height. Both step at the crossing at the
+    light weights and lose the step as they grow; the x had crossed plain.
+  - 1: a stem whose top left corner is cut and run out into a flag that
+    ends plumb, no foot (Arris Mono keeps the foot its cell needs). It
+    was the watch's 1 on a foot six modules wide; the watch's cut takes
+    the new figure too.
+  - D: the O's corners. They were a module larger.
+- The italic keeps its own letters: its a, e, f, k, r, s, t, y and z are
+  drawn as they were (the r is the same outline at every weight); it takes
+  the descender line, the capitals' widths, the K, the D, the x and the 1.
+
 ## 1.016
 
 - Grade changes no width, in every glyph. The grade axis thickens or thins
@@ -70,22 +141,6 @@ before a commercial distribution if wanted.
   are held from are graded. Now a grade carries the strokes it was made
   from, and its ungraded self is the plain master exactly.
   The static fonts are ungraded and do not change.
-- The hooks of g and y are as heavy as the letters' other strokes. They
-  were thinner from Light up: 57 units to the bowl's 79 at Regular, 85 to
-  121 at Bold, about three quarters, and it read as a mistake (a reader
-  on r/typography circled it; the j's hook, with nothing over it, kept its
-  weight). The hook gives way to keep white between it and the bowl, and
-  it gave way too soon and the wrong way round: it measured that white
-  past the inner leg of its own corner, not from bar to bar, where there
-  was a stem and a third of it at Regular; and it thinned before it
-  deepened. Now the white is measured where it is seen, and the hook
-  keeps its weight and deepens first: full weight from Thin to ExtraBold,
-  97 in 100 at Black, at the descender's own depth to SemiBold, 25 units
-  under it at Bold (it was 34), 50 at ExtraBold and 70 at Black as before.
-  Every letter made from them follows (ğ ġ ý ÿ ỳ ỵ and the rest); ǥ's g,
-  which needs room under its bowl for the bar, is drawn for that room.
-  Among the 1,358 letters and figures no other stroke is drawn under its
-  weight between Light and Bold but an accent's.
 - `tools/grade_advance_check.py`: each variable font is checked as it is
   built; a glyph whose advance moves with the grade fails the release.
 

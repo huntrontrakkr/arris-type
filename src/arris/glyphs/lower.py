@@ -17,10 +17,6 @@ def low(char, wm, stems, width=None, openings=(), arm=ARM):
     return glyph(char, char, width or letter_width(wm, stems, arm), kind='lower', openings=openings)
 
 
-A_STOREYS = 0.9   # the a's upper white over its bowl's: the open storey a little under the closed one
-E_STOREYS = 1.1   # the e's lower white over its bowl's: the open storey a little over the closed one
-
-
 def bars3(g):
     """(outer, inner, outer): the three horizontals of a letter that stacks
     three in the x-height (a e s). Where three no longer fit at the zone's
@@ -47,10 +43,11 @@ def beak(g, w):
 def a(g):
     """The a: an arch over a bowl. The arm starts in the c's beak at the
     left, a short terminal hanging from a cut corner, runs along the
-    x-height and comes into the stem through a bowl's corner; under it the
-    bowl stands low enough that the open storey is nine tenths of the
-    closed one (A_STOREYS), as in the chamfered faces this follows (Chakra
-    Petch 0.89, Oxanium 0.89).
+    x-height and comes into the stem through a bowl's corner. The three
+    bars are drawn with the same white between them, and the optical centre
+    raises the middle as it does in every letter (draw.OPTICAL), so the open
+    storey comes to seven eighths of the bowl, as in the chamfered faces
+    this follows (Chakra Petch 0.89, Oxanium 0.89).
 
     Until 1.017 the upper storey was a bare bar on a tall bowl: square at
     its left end, all but square at the stem (the pixel master's one-step
@@ -60,8 +57,7 @@ def a(g):
     f = Frame(g, 8, 'lower')
     p = g.p
     arm, inner, foot = bars3(g)
-    white = p.xh - arm - inner - foot
-    low = white / (1 + A_STOREYS)                           # the bowl's white
+    low = (p.xh - arm - inner - foot) / 2                   # the bowl's white, and the open storey's
     ya = p.xh - arm / 2
     yb = foot + low + inner / 2
     g.defaults_used.update(arm=ya, bowl=yb)
@@ -109,8 +105,9 @@ def _e_gap(g):
 def e(g):
     """The e: a bowl over an arm that ends in the c's beak. Its lower arm
     turns up at the right through a cut corner into a short terminal, the
-    a's turned over, and the bar stands high enough that the open storey
-    is a tenth more than the closed one (E_STOREYS; Chakra Petch 1.14).
+    a's turned over. The three bars are drawn with the same white between
+    them and the optical centre raises the bar, so the open storey comes to
+    a seventh more than the bowl (Chakra Petch 1.14).
 
     Until 1.017 the arm ended square and the bar stood below the middle
     (the open storey 0.64 of the closed one), raised only as the weight
@@ -119,8 +116,7 @@ def e(g):
     f = Frame(g, 8, 'lower')
     p = g.p
     arm, bar, top = bars3(g)
-    white = p.xh - arm - bar - top
-    open_ = white * E_STOREYS / (1 + E_STOREYS)             # the white over the arm
+    open_ = (p.xh - arm - bar - top) / 2                    # the white over the arm, and the bowl's
     y1 = arm / 2
     yb = arm + open_ + bar / 2
     yt = p.xh - top / 2
