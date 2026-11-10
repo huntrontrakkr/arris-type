@@ -54,6 +54,65 @@ before a commercial distribution if wanted.
 How the letters stand together. Five causes, each measured, and five
 letters redrawn.
 
+- Inside corners stop growing at the Regular. One chord cut every corner
+  that sticks out and filled every corner that points in, a quarter of
+  the stem long. A cut takes ink off the outside of a letter; a fill puts
+  it into a counter or a join, and on one leg the fills grew as fast as
+  the stems while the whites they stand in shrank: from Bold the insides
+  of the letters clogged (the owner: "the interior ... is getting really
+  fat because we chamfer the bits at a certain level and it just doesn't
+  look right"). Other families tighten their joins as they get bolder:
+  across 37 measured, the widest spot at a join is 1.18 stems at Regular
+  and 1.10 at Black, where Arris stood at 1.38 at every weight. A fill
+  now has the weight's own leg up to the Regular and the Regular's from
+  there to Black (`draw.fill_leg`, 22.5 units where Black's cut is 44);
+  the cuts grow as they did. A bowl's inside chamfer is what its strokes
+  leave of it, down to the same leg: from ExtraBold it was held at an edge
+  break (the O's 44 units for 32 at Black), the stroke thicker round the
+  corner than along its sides. Nothing changes at Regular or lighter in
+  the upright. At Black the widest spot in the upright's b d g p q y goes
+  from 1.32 stems to 1.23, the a's and the e's from 1.28 to 1.18. The
+  watch's own drawing (WTCH 100) keeps one leg for every corner.
+- The italic fills a crotch one leg, as the upright does. Where a
+  diagonal meets a stem the italic kept the pixel rule's fill, two legs
+  along the stem: twice the upright's ink where a diagonal already lies
+  on a stem, 88 units up each side of the cursive e's eye at Black, whose
+  sides are 178. This one changes the italic at every weight, a little:
+  the notches over its branches (n h m r), its k, v, w, y and z and the
+  e's eye end in a smaller cut.
+- A shoulder keeps its neck. An arch's or an arm's diagonal started an
+  edge break into its stem, and the fill in the crotch over it was the
+  rest of the join: with a smaller fill the neck, where the stroke is
+  thinnest, would have lost that ink (the cursive r's arm at Black, 0.54
+  of a stem across where it leaves the stem, went to 0.37 in the making).
+  The diagonal starts deeper by what the fill is short
+  (`lower.shoulder_enter`): the notch stands on the stem where it always
+  did, and ends in the small cut. The cursive r's neck is 0.71 of a stem
+  at Regular (0.60) and 0.73 at Black (0.54); where a shoulder goes
+  square, and at which weight, is as it was, and the step under an arch
+  keeps a flat the outline holds (`lower.STEP_KEPT`: the cursive m's
+  arches, which rise half as far as the n's, would have lost theirs).
+- The cursive e gives only its top and its bar for its eye. Its eye was
+  kept open by thinning every horizontal of the letter, the foot with the
+  top, and then the bar: from SemiBold the foot was 0.70 of every other
+  letter's (104 units beside the a's and the o's 149 at Black), the top
+  fell from 98 units at 550 to 73 at 600 and the bar from 121 at Bold to
+  88 at Black, and the exit, a reach that shrinks with the white, stood
+  28 units over the foot at Black for 59 at Regular (the owner: "there's
+  definitely something weird going on with the thicknesses towards the
+  black ... the little bit at the bottom ... isn't nearly as thick").
+  The back and the foot are now the alphabet's strokes at every weight,
+  the exit stands a break and a half over the foot at least, and the top
+  and the bar give way together, for the eye alone: full to Bold, 0.97 of
+  their own at ExtraBold and 0.92 at Black (137 and 135 units beside the
+  foot's 149), never thinner than at the weight before
+  (`italic_forms._e_strokes`; the æ's e alike). The eye is held from
+  where it first falls short of half a stem, shrinking as the stem grows.
+- A step never closes past the end of the edge it slides along
+  (`geom._close_jogs`): under the ç at Black, where the c's corner, a
+  flat of 33 units and the fill into the cedilla's stem stand over a
+  stem side of 25, the fill slid 33 down it and the outline crossed
+  itself by four units.
 - Every descender stands on one line. The g's and the y's hooks went
   deeper than the p, q and j from Bold (to make room under the bowl: 34
   units at Bold, 70 at Black), so a line of text stood on two descender

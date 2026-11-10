@@ -26,7 +26,7 @@ from ..draw import AUTO_SHARE, REGISTRY, B, Opening, _counter_white, glyph
 from ..params import SQRT2, inner_leg, outer_leg
 from .figures import jog
 from .letterframe import Frame, plain_width as letter_width, white_scale
-from .lower import _dot, crotch_butt, hook, shoulder
+from .lower import _dot, crotch_butt, hook, shoulder, shoulder_enter
 
 TAIL = 1.75      # modules of white an exit tail reaches past its stem
 FLAG = 1.5       # modules an entry flag reaches left of its stem (and down)
@@ -419,7 +419,7 @@ def r_ital(g):
     p = g.p
     k = p.sd / SQRT2
     y8, y5 = f.Y(8), f.Y(8 - BRANCH)
-    x0 = xs + p.sv / 2 + k - p.c
+    x0 = xs + p.sv / 2 + k - shoulder_enter(p)
     g.stroke((x0, y5), (x0 + (y8 - y5), y8), f.P(8, 8), start='h')
 
 
@@ -570,36 +570,61 @@ def s_ital(g):
              (xr, y_lo), B(xr, yb), (f.X(0), yb))
 
 
-@ital('e', 8, 2, openings=[Opening(_one_counter, 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
+EYE = 0.6          # the least share of their own thickness the cursive e's top and bar keep, thinned for its eye
+EXIT_OVER = 1.5    # edge breaks: the least the cursive e's exit stands over its foot
+
+
+def _e_strokes(g, f, xl, xr, x_exit):
+    """The cursive e on a back at xl: the eye's top and bar, the foot and
+    the exit.
+
+    Only what closes the eye gives way to keep it open: the top and the
+    bar, together and by one share (``eye``, down to EYE of their own
+    thickness), as far as the eye's own share of the stem needs (the
+    opening, draw._opened) and no further. The back and the foot are the
+    alphabet's strokes at every weight, and the exit stands over the foot
+    by EXIT_OVER breaks at least.
+
+    Until 1.017 the eye was kept by thinning all the letter's horizontals,
+    the foot with the top, and then the bar: from SemiBold the foot was 0.70
+    of every other letter's (104 units beside the a's and the o's 149 at
+    Black), the top fell from 98 units at 550 to 73 at 600, the bar from 121
+    at Bold to 88 at Black, and the exit, a reach that shrinks with the
+    white, stood 28 units over the foot at Black for 59 at Regular: all but
+    gone. (The owner, 2026-11-10: "there's definitely something weird going
+    on with the thicknesses towards the black ... the little bit at the
+    bottom ... isn't nearly as thick"; and of the fix, "it's also important
+    that we remain uniform in thickness".)"""
+    p = g.p
+    full = max(g.sh0 * g.sh_k, p.floor)                     # the alphabet's horizontal here
+    k = g.free('eye', 1.0)
+    top, bar = full * k, p.sd * k
+    yt, yf = p.xh - top / 2, full / 2
+    g.stroke((xl, yt - (xr - xl), bar), (xr, yt))
+    L = max(_reach(p, FLAG), full / 2 + EXIT_OVER * p.c)
+    g.stroke((xr, yt, top), B(xl, yt), B(xl, yf, None, full), (x_exit, yf), (x_exit + L, yf + L), end='h')
+
+
+@ital('e', 8, 2, openings=[Opening(_one_counter, 'eye', lambda p: EYE, max_ratio=AUTO_SHARE, hold=True)])
 def e_ital(g):
     """The cursive e: its bar a 45-degree stroke rising from the left side
     into the top right corner, the eye the triangle above it; the lower arm
-    leaves on a 45-degree upstroke, a hand's exit. At heavy weights the bar
-    thins so the eye stays open."""
+    leaves on a 45-degree upstroke, a hand's exit. At heavy weights the top
+    and the bar thin so the eye stays open (_e_strokes)."""
     f = Frame(g, 8, 'lower')
     _free(g)
-    p = g.p
-    xl, xr = f.X(1), f.X(7)
-    yt = f.Y(8)
-    g.stroke((xl, yt - (xr - xl), p.sd * g.free('bar', 1.0)), (xr, yt))
-    L = _reach(p, FLAG)
-    g.stroke((xr, yt), B(xl, yt), B(xl, f.Y(1)), (f.X(6), f.Y(1)), (f.X(6) + L, f.Y(1) + L), end='h')
+    _e_strokes(g, f, f.X(1), f.X(7), f.X(6))
 
 
 @ital('ae', 14, 3, width=lambda p: REGISTRY['a.ital'].width(p) + REGISTRY['e.ital'].width(p) - p.sv,
-      openings=[Opening(lambda g: _counter_white(g, 2), 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
+      openings=[Opening(lambda g: _counter_white(g, 2), 'eye', lambda p: EYE, max_ratio=AUTO_SHARE, hold=True)])
 def ae_ital(g):
     """The single-storey a and the cursive e on one stem: the a's bowl on
     its left, the e's eye and exit on its right."""
     f = Frame(g, 14, 'lower')
     _free(g)
-    p = g.p
-    xl, xm, xr = f.X(1), f.X(7), f.X(13)
-    yt = f.Y(8)
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    g.stroke((xm, yt - (xr - xm), p.sd * g.free('bar', 1.0)), (xr, yt))
-    L = _reach(p, FLAG)
-    g.stroke((xr, yt), B(xm, yt), B(xm, f.Y(1)), (f.X(12), f.Y(1)), (f.X(12) + L, f.Y(1) + L), end='h')
+    _e_strokes(g, f, f.X(7), f.X(13), f.X(12))
 
 
 # --- Cyrillic italic ---------------------------------------------------------

@@ -320,12 +320,30 @@ def g_(g):
     g_strokes(g)
 
 
+def shoulder_enter(p) -> float:
+    """How far into its stem a shoulder's diagonal starts: its upper edge
+    leaves the stem's side this far over its cut. An edge break, where a
+    crotch is filled as the pixel rule fills it; and by as much more as
+    the fill is less, so the notch over the shoulder stands on the stem
+    where it always did and the join keeps its thickness: the fill went
+    from two legs to one in the italic and stops growing at the Regular's
+    in both (draw.crotch_fill, draw.fill_leg), and a shoulder still drawn a
+    break into its stem lost that ink at its neck, where it is thinnest
+    (the cursive r's arm at Black, 0.54 of a stem across where it leaves
+    the stem, went to 0.37; the owner, of the smaller inside corners:
+    "it's also important that we remain uniform in thickness")."""
+    from ..draw import crotch_fill, fill_leg
+    was = 2.0 if p.slant else 2.0 - p.optical               # the legs a crotch was filled until 1.017
+    return (1.0 + was) * p.c - crotch_fill(p) * fill_leg(p)
+
+
 def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     """An arch's shoulder, as the r's: it leaves the stem at 45 degrees
     ``drop`` modules below the arch (SHOULDER_DROP, two; a bowl's join half
     that, BOWL_DROP; the italic's branch lower), an edge break into the
-    stem, and leaves a notch under it (the 1's flag, turned). Returns the arch's points up to its
-    right corner, and how the stroke's start is cut.
+    stem (shoulder_enter), and leaves a notch under it (the 1's flag,
+    turned). Returns the arch's points up to its right corner, and how the
+    stroke's start is cut.
 
     The diagonal needs room between the stems. Where there is less (the
     monospaced m, the heaviest weights) it rises less and starts further
@@ -361,8 +379,8 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     k = p.sd / 2 ** 0.5
     y_top = f.Y(top)
     full = f.Y(top) - f.Y(top - drop)
-    x_full = xs + p.sv / 2 + k - p.c
-    room = x_right - p.leg - p.c - x_full                  # the diagonal ends clear of the corner
+    x_full = xs + p.sv / 2 + k - p.c                        # (its room and its rise: as drawn a break into the stem,
+    room = x_right - p.leg - p.c - x_full                  # so it goes square where it always did) the diagonal ends clear of the corner
     upright = notch and not p.slant                        # the italic keeps its own branch (italic_forms)
     if upright:
         room = min(room, shoulder_room(g, xs, x_right, full))
@@ -374,6 +392,16 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     x0 = xs + r * (x_full - xs)
     if not notch:
         return [(xs, y_top - rise - (x0 - xs)), (x0 + rise, y_top), B(x_right, y_top)], 'v'
+    # deeper into the stem by what its crotch's fill is short (shoulder_enter), as far as leaves the cut
+    # under it a flat the outline keeps (a step shorter than an edge break between two 45-degree edges is
+    # taken for a miss and closed, geom.JOG: the italic m's arches, which rise half as far as the n's for
+    # want of room, lost the step under each at Regular)
+    from ..draw import fill_leg
+    flat = x0 + k - (xs + p.sv / 2) - fill_leg(p)
+    deeper = r * (shoulder_enter(p) - p.c)
+    if flat > STEP_KEPT * p.c:
+        deeper = min(deeper, flat - STEP_KEPT * p.c)
+    x0 -= deeper
     step = rise - g.sh / 2                                  # the diagonal's cut, below the arch's underside
     if upright and step < p.c:
         over = g.sh / 2 + rise - (1 - r) * (p.sv / 2 + k) - r * p.c   # the diagonal's top at the stem's side, below the arch's
@@ -389,6 +417,7 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
 # weights, the bowl stood a long way off its stem and read as a stroke of its own; shown it at two, one and
 # 0.6, he chose one.
 SHOULDER_DROP = 2.0     # modules below the arch where an arch's shoulder leaves its stem
+STEP_KEPT = 1.1         # edge breaks: the flat a shoulder's cut keeps past its fill (over geom.JOG, so the outline keeps the step)
 BOWL_DROP = 1.0         # the same for a bowl's join to its stem
 SHOULDER_NOTCH = 1.5    # the least notch over a shoulder, in edge breaks down the stem's side: a break deep where the stem
                         # stops at the arch (n), and where it goes on (h) a break of it is the corner's own fill
@@ -599,6 +628,7 @@ def r(g):
         # cut (at Bold the diagonal ran into the end itself, and left it a
         # face of 7 units)
         rise = min(rise, max(0.0, f.X(8) - (k - g.sh / 2) - 2 * p.c - x6))
+    x6 -= shoulder_enter(p) - p.c                           # and deeper by what its crotch's fill is short (shoulder_enter)
     g.stroke((x6, y8 - rise), (x6 + rise, y8), f.P(8, 8), start='h')
     if p.mono:                                              # a foot, as the 1's
         u = g.W / 9

@@ -50,6 +50,8 @@ class Opening:
     limit: Callable[[Params], float]
     max_ratio: float | None = None   # cap on the watch's share, if it is generous
     hold: bool = False               # past the weight where it first acts, the counter it had there, shrinking (_engaged)
+    own: bool = False                # the glyph thins the strokes round this counter itself, by ``free``: the thinning
+                                     # of all its horizontals for its closed counters (draw) is off where it draws with it
 
 
 @dataclass(frozen=True)
@@ -132,11 +134,25 @@ def crotch_fill(p) -> float:
     """How far along the stem the corner rule fills the crotch a diagonal
     makes with it, in breaks (geom._ring_rule): one in Arris, the leg every
     other corner has on its horizontal or vertical edge; two in the watch's
-    own drawing (the pixel rule the figures came with, WTCH 100) and in the
-    italic, whose letters are drawn for it."""
-    if p.slant:
-        return 2.0
+    own drawing (the pixel rule the figures came with, WTCH 100). The
+    italic's were two as well until 1.017, twice the upright's ink where a
+    diagonal already lies on a stem: 88 units along each side of the
+    cursive e's eye at Black."""
     return 2.0 - p.optical
+
+
+def fill_leg(p) -> float:
+    """The leg of the chord that fills a concave corner (geom._ring_rule):
+    the weight's own break up to its cut's Regular, and the Regular's from
+    there to Black (held_at), so the insides of the letters stop filling
+    as the stems grow. The watch's own drawing (WTCH 100) keeps the pixel
+    rule, one leg for every corner.
+
+    The owner, 2026-11-10: "the interior ... is getting really fat because
+    we chamfer the bits at a certain level and it just doesn't look
+    right"; shown the fills held at the Regular's, the italic's crotches
+    filled one break and both, he chose both ("you can try three")."""
+    return p.c - (p.c - held_c(p)) * p.optical
 
 
 def facet_close(p) -> float | None:
@@ -373,7 +389,7 @@ class Glyph:
                                                  and src[1].p == p for src in self.extra_src)]
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished,
-                    overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p))
+                    overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p), fill=fill_leg(p))
         rec = (rec or []) + self.extra_chamfers if record else []
         if record and getattr(self, 'square', False):
             # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)
@@ -1758,6 +1774,8 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
     auto = _auto_counters(spec)
     if any(op.hold for op in spec.openings):
         auto = None             # an opening that holds is the counter's rule (thinning on its own share grew it again)
+    if any(op.own and op.free in g.defaults for op in spec.openings):
+        auto = None             # the drawing thins what bounds its counter, and only that (the cursive e's top and bar)
     if auto is not None:
         n, ratio = auto
         share = min(ratio, AUTO_SHARE)

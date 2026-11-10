@@ -161,35 +161,37 @@ def _cap_point(p, d, side_pt, kind):
 
 
 def stroke_polygon(stroke: Stroke, thick: Thickness, c: float, rec: list | None = None,
-                   edges: list | None = None) -> Polygon:
+                   edges: list | None = None, fill: float | None = None) -> Polygon:
     """The ink of one stroke. If a stroke's bowl chamfers do not fit inside it
     (very heavy weights), the bowls shrink until they do. ``rec`` collects
     the lines the bowls' chamfer edges lie on (see ``ink``); ``edges`` the
-    outline's edges, each named for what made it (see ``ink``'s tags)."""
+    outline's edges, each named for what made it (see ``ink``'s tags).
+    ``fill``: the least leg of a bowl's inside chamfer (the corner rule's
+    fill, _ring_rule), where it is not ``c``."""
     try:
-        return _stroke_polygon(stroke, thick, c, rec=rec, edges=edges)
+        return _stroke_polygon(stroke, thick, c, rec=rec, edges=edges, fill=fill)
     except ValueError:
         if not any(n.bowl for n in stroke.nodes):
             # a stroke thicker than it is long (a short diagonal at the very
             # heaviest settings): repair it and log it
             REPAIRED.append(stroke)
-            return _stroke_polygon(stroke, thick, c, repair=True, rec=rec, edges=edges)
+            return _stroke_polygon(stroke, thick, c, repair=True, rec=rec, edges=edges, fill=fill)
     lo, hi = 0.0, 1.0
     for _ in range(30):
         mid = (lo + hi) / 2
         try:
-            _stroke_polygon(_scale_bowls(stroke, mid), thick, c)
+            _stroke_polygon(_scale_bowls(stroke, mid), thick, c, fill=fill)
             lo = mid
         except ValueError:
             hi = mid
     try:
-        return _stroke_polygon(_scale_bowls(stroke, lo * 0.98), thick, c, rec=rec, edges=edges)
+        return _stroke_polygon(_scale_bowls(stroke, lo * 0.98), thick, c, rec=rec, edges=edges, fill=fill)
     except ValueError:
         # Last resort: repair the outline and log the stroke for review, so a
         # crowded extreme (a ligature squeezed into a monospaced cell at Black)
         # degrades instead of failing the build.
         REPAIRED.append(stroke)
-        return _stroke_polygon(stroke, thick, c, repair=True, rec=rec, edges=edges)
+        return _stroke_polygon(stroke, thick, c, repair=True, rec=rec, edges=edges, fill=fill)
 
 
 REPAIRED: list = []
@@ -200,7 +202,7 @@ def _scale_bowls(stroke: Stroke, k: float) -> Stroke:
 
 
 def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = False,
-                    rec: list | None = None, edges: list | None = None) -> Polygon:
+                    rec: list | None = None, edges: list | None = None, fill: float | None = None) -> Polygon:
     pts, bowls, widths, labels = _expand(stroke)
     closed = stroke.closed
     m = len(pts)
@@ -232,9 +234,13 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
     left, llines = side(+1)
     right, rlines = side(-1)
 
-    # Inner side of a bowl: if the offset chamfer is shorter than the edge
-    # break (or inverted), use the plain inner corner; the corner rule then
-    # fills it with the edge-break chord, so the inner leg never drops below c.
+    # Inner side of a bowl: if the offset chamfer is shorter than the corner
+    # rule's fill (or inverted), use the plain inner corner; the corner rule
+    # then fills it with its chord, so the inner leg never drops below the
+    # fill's (``fill``; c where none is given: until 1.017 always c, which
+    # from ExtraBold held a bowl's inside chamfer above what its strokes make
+    # of it, 44 units for 32 at Black, the stroke thicker round the corner
+    # than along its sides).
     # verts[i] sits at pts[i] on both sides (caps included for open strokes);
     # bowl k runs from pts[k] to pts[k+1] along segment k.
     for k in bowls:
@@ -244,7 +250,7 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
         corner = _meet(p1, d1, p2, d2)
         if corner is None:
             continue
-        if _dot(_sub(corner, verts[k]), din) < c - EPS:
+        if _dot(_sub(corner, verts[k]), din) < (c if fill is None else min(fill, c)) - EPS:
             verts[k] = corner
             verts[(k + 1) % len(verts)] = corner
 
@@ -309,7 +315,8 @@ def _on_butt(a, b, butt, corner=None) -> bool:
 BUTT_TOL = 1e-6
 
 
-def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch: float = 2.0):
+def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch: float = 2.0,
+               fill: float | None = None):
     """The corner rule on one ring (ink on the left of travel), as the watch's
     pixel rule behaves:
 
@@ -341,8 +348,21 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
     units at Bold to 10 at Black, the corner's break went from 35 units to
     9, all but sharp, where the same crotch without a step (the z's, the
     2's) is
-    broken 44. (Not in the watch's drawing or the italic, crotch 2.)
+    broken 44. (Not in the watch's drawing, crotch 2.)
+
+    ``fill``: the leg of the chord that fills a concave corner (a right
+    angle's, a crotch's), where it is not the leg ``c`` that cuts a convex
+    one. A fill adds ink inside a letter where a cut takes it off outside:
+    on one leg, a quarter of the stem, the fills grew as fast as the stems
+    while the counters they stand in shrank, and from Bold the insides of
+    the letters clogged (the cursive e's eye at Black, 178 units a side,
+    gave 132 of them to its fills). Arris holds the fill at the Regular's
+    leg from there to Black (draw.fill_leg): outside corners grow with the
+    weight, inside corners do not, as every family measured tightens its
+    joins toward Black (the widest disk in a join, 1.18 stems at Regular
+    and 1.10 at Black across 37 families; Arris's 1.38 at every weight).
     """
+    f = c if fill is None else min(fill, c)
     pts = [tuple(p) for p in coords[:-1]]
     # drop duplicate and collinear points
     changed = True
@@ -374,7 +394,7 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
         if butt and (_on_butt(a, b, butt, b) or _on_butt(b, q, butt, b)):
             kind = None                                     # ink cut square where it meets a butt line
         kinds.append(kind)
-    stepped = _stepped_crotches(pts, kinds, turns, c, crotch) if crotch < 2.0 - 1e-9 else {}
+    stepped = _stepped_crotches(pts, kinds, turns, f, crotch) if crotch < 2.0 - 1e-9 else {}
     out = []
     for i in range(n):
         if i in stepped:
@@ -388,14 +408,14 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
         room_in = _len(e_in) * (0.5 if kinds[i - 1] else 1.0)
         room_out = _len(e_out) * (0.5 if kinds[(i + 1) % n] else 1.0)
         if k in ('right', 'steep'):
-            r = min(c, room_in, room_out)
+            r = min(c if turns[i] > 0 else f, room_in, room_out)
             out += [_sub(b, _mul(u_in, r)), _add(b, _mul(u_out, r))]
             if rec is not None and k == 'right':
                 rec.append(('chord', out[-2], out[-1]))
         elif k == 'acute':
             leg = c * math.sqrt(2)
             if _cross(u_in, u_out) < 0:                     # a crotch: its fill, by its leg on the axis edge
-                leg *= crotch / 2.0
+                leg = f * math.sqrt(2) * crotch / 2.0
             if _dir_class(u_in) == 'diag':
                 bb = min(leg, room_in, room_out / math.sqrt(2))
                 out += [_sub(b, _mul(u_in, bb)), _add(b, _mul(u_out, bb * math.sqrt(2)))]
@@ -464,7 +484,7 @@ def _stepped_crotches(pts, kinds, turns, c, crotch) -> dict:
 
 def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=(),
         tags: list | None = None, extra_edges=(), finished=(), overlay=(), crotch: float = 2.0,
-        facet: float | None = None):
+        facet: float | None = None, fill: float | None = None):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
 
@@ -497,7 +517,7 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     polys = []
     for i, st in enumerate(strokes):
         e = [] if segs is not None else None
-        polys.append(stroke_polygon(st, thick, c, rec, edges=e))
+        polys.append(stroke_polygon(st, thick, c, rec, edges=e, fill=fill))
         if e:
             segs.extend((a, b, ('s', i) + t) for a, b, t in e)
     polys += list(extra)
@@ -536,11 +556,11 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
                 if r is poly.exterior or Polygon(r).area >= min_hole:
                     rings.append(pts)
             continue
-        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
+        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
+            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
     if overlay:
         rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, crotch)
     if rec is not None and moved:
@@ -773,6 +793,13 @@ def _line_meet(p1, d1, p2, d2):
     return _add(p1, _mul(d1, t))
 
 
+def _past(q, far, near) -> bool:
+    """Whether q, on the line through ``far`` and ``near``, lies at or beyond
+    ``far`` (seen from ``near``): a point slid along the edge near-far has
+    run off its end."""
+    return _dot(_sub(q, far), _sub(near, far)) <= 1e-9
+
+
 def _close_jogs(pts, eps, moved, even=None):
     """Steps left where strokes that should share a line miss it, larger
     than _polish's slivers but still far smaller than a drawn step (a pixel
@@ -782,7 +809,12 @@ def _close_jogs(pts, eps, moved, even=None):
     the step's two vertices go: every edge keeps its direction (a right
     angle stays one, a diagonal stays on its 45 or 2:1), only lengths change.
     A move that would carry a point further than the step is long and a
-    module more is not made (the step is a feature, not a miss). A vertex
+    module more is not made (the step is a feature, not a miss), nor one
+    that would carry it past the far end of the edge it slides along (the
+    edge would turn round and the outline cross itself: under the ç at
+    Black, where the c's corner, a flat of 33 units and the fill into the
+    cedilla's stem stand over a stem side of 25, the fill slid 33 down it).
+    A vertex
     bending less than STRAY degrees between two long edges also goes.
     Choices are made by geometry alone, so a symmetric drawing stays
     symmetric.
@@ -842,7 +874,7 @@ def _close_jogs(pts, eps, moved, even=None):
             q1 = _line_meet(pp, _sub(prev, pp), mid, u_in) if close else None
             q2 = _line_meet(nn, _sub(nxt, nn), mid, u_in) if close else None
             if q1 is None or q2 is None or max(_len(_sub(q1, prev)), _len(_sub(q2, nxt))) > limit \
-                    or len({hh, h, i, j, k, kk}) < 6:
+                    or len({hh, h, i, j, k, kk}) < 6 or _past(q1, pp, prev) or _past(q2, nn, nxt):
                 skip.add((a, b))
                 continue
             moved[prev] = q1
@@ -856,7 +888,7 @@ def _close_jogs(pts, eps, moved, even=None):
             continue
         if _len(e_in) < _len(e_out):                       # the incoming edge moves onto the outgoing's line
             q = _line_meet(pp, _sub(prev, pp), b, u_out)
-            if q is None or _len(_sub(q, prev)) > limit or len({hh, h, i, j}) < 4:
+            if q is None or _len(_sub(q, prev)) > limit or len({hh, h, i, j}) < 4 or _past(q, pp, prev):
                 skip.add((a, b))
                 continue
             moved[prev] = q
@@ -867,7 +899,7 @@ def _close_jogs(pts, eps, moved, even=None):
                 del pts[idx]
         else:                                               # the outgoing edge moves onto the incoming's line
             q = _line_meet(nn, _sub(nxt, nn), a, u_in)
-            if q is None or _len(_sub(q, nxt)) > limit or len({i, j, k, kk}) < 4:
+            if q is None or _len(_sub(q, nxt)) > limit or len({i, j, k, kk}) < 4 or _past(q, nn, nxt):
                 skip.add((a, b))
                 continue
             moved[nxt] = q

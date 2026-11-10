@@ -164,6 +164,24 @@ node chamfers the centreline. The union of the strokes then gets the corner
 rule above. At the watch's parameters this reproduces the pixel figures
 exactly. At other parameters it is the same drawing at a different weight.
 
+**Outside corners grow, inside corners do not** (`draw.fill_leg`). The
+pixel rule has one chord for a corner that sticks out and a corner that
+points in. In Arris the chord that cuts an outside corner is a quarter of
+the weight's stem, and the chord that fills an inside one is the weight's
+own up to the Regular and the Regular's from there to Black. A cut takes
+ink off the outside of a letter; a fill puts it into a counter or a join,
+where the white is already shrinking as the stems grow, and on one leg the
+insides of the heavy weights clogged: the widest spot at a join stood at
+1.38 stems at every weight, where the families measured for it tighten
+theirs from 1.18 at Regular to 1.10 at Black. A bowl's inside chamfer is
+what its strokes leave of it, down to the same leg. A crotch, where a
+diagonal meets a stem, is filled one leg along the stem (the pixel rule's
+two put twice a right angle's ink where the strokes already overlap), in
+the italic as in the upright; and a shoulder's diagonal starts deeper in
+its stem by what the fill is short, so the join keeps its thickness and
+only its corner is smaller (`lower.shoulder_enter`). The watch's own
+drawing keeps the pixel rule whole.
+
 **Coordinates from the masters** (`arris.glyphs.letterframe`). A letter's
 construction names points in its master's module coordinates. A frame maps
 them to font units for each weight, anchored where strokes sit against the

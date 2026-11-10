@@ -301,12 +301,74 @@ def test_a_crotch_with_a_step_in_it_keeps_its_leg():
 
 
 @pytest.mark.parametrize('w', [700, 800, 900])
-def test_the_zs_foot_is_broken_a_full_break(w):
+def test_the_zs_foot_is_broken_the_fills_whole_leg(w):
+    from arris.draw import fill_leg
     p = params(w)
     g = draw('Z', p)
     ring = max(g.rings(), key=len)
     on_bar = [x for x, y, *_ in ring if abs(y - g.sh) < 1 and x < g.W / 2]     # where the foot's inner corner starts on the bar
-    assert max(on_bar) - p.sv == pytest.approx(p.c, abs=1.5)                   # a break from the foot's own side
+    assert max(on_bar) - p.sv == pytest.approx(fill_leg(p), abs=1.5)           # a fill's leg from the foot's own side, step or none
+
+
+def test_inside_corners_stop_growing_at_the_regular():
+    """draw.fill_leg, geom._ring_rule: the chord that fills a concave
+    corner has the weight's own leg up to the Regular and the Regular's
+    from there to Black; the chord that cuts a convex one grows with the
+    stem. The italic's crotches are filled one leg, as the upright's. The
+    watch's own drawing keeps the pixel rule (one leg, crotches two)."""
+    from arris.draw import crotch_fill, fill_leg
+    from arris.geom import _ring_rule
+    from arris.italic import italic
+    reg = params(400).c
+    assert fill_leg(params(300)) == pytest.approx(params(300).c)
+    for w in (400, 600, 900):
+        for p in (params(w), italic(params(w))):
+            assert fill_leg(p) == pytest.approx(reg)
+            assert crotch_fill(p) == pytest.approx(1.0)
+    watch = params(900, watch=1.0)
+    assert fill_leg(watch) == pytest.approx(watch.c) and crotch_fill(watch) == pytest.approx(2.0)
+
+    def near(pts, q):
+        return any(abs(x - q[0]) < 1e-6 and abs(y - q[1]) < 1e-6 for x, y in pts)
+    ell = [(0, 0), (300, 0), (300, 100), (100, 100), (100, 300), (0, 300), (0, 0)]    # ink on the left
+    out = _ring_rule(ell, 40, +1, fill=20)
+    assert near(out, (120, 100)) and near(out, (100, 120))              # the inside corner, filled 20
+    assert near(out, (260, 0)) and near(out, (300, 40))                 # an outside corner, cut 40
+    assert near(_ring_rule(ell, 40, +1), (140, 100))                    # one leg where no fill is given
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_a_shoulder_keeps_its_neck(w):
+    """lower.shoulder_enter: a shoulder's diagonal starts deeper in its
+    stem by what its crotch's fill is short of the fill it was drawn for
+    (one leg of the weight's own in the upright, two in the italic), so
+    the notch over it stands on the stem where it did and the join keeps
+    its ink. To the Regular the upright's starts an edge break in, as
+    ever."""
+    from arris.draw import crotch_fill, fill_leg
+    from arris.glyphs.lower import shoulder_enter
+    from arris.italic import italic
+    for p, was in ((params(w), 1.0), (italic(params(w)), 2.0)):
+        assert shoulder_enter(p) + crotch_fill(p) * fill_leg(p) == pytest.approx((1 + was) * p.c)
+    if w <= 400:
+        assert shoulder_enter(params(w)) == pytest.approx(params(w).c)
+    watch = params(w, watch=1.0)
+    assert shoulder_enter(watch) == pytest.approx(watch.c)              # the watch's own drawing: the pixel rule
+
+
+@pytest.mark.parametrize('w', [850, 900])
+def test_a_bowls_inside_corner_is_what_its_strokes_make_of_it(w):
+    """geom._stroke_polygon: from ExtraBold a bowl's inside chamfer was
+    held at an edge break, more than its strokes leave it (the O's 44
+    units for 32 at Black); it follows them down to the fill's leg."""
+    from arris.draw import fill_leg
+    p = params(w)
+    g = draw('O', p)
+    hole = min(g.rings(), key=lambda r: max(q[0] for q in r) - min(q[0] for q in r))
+    legs = sorted(abs(b[0] - a[0]) for a, b in zip(hole, hole[1:] + hole[:1])           # (across: the optical centre moves heights)
+                  if abs(b[0] - a[0]) > 1 and abs(b[1] - a[1]) > 1)
+    want = max(fill_leg(p), p.leg - (p.sv + g.sh) / 2 + p.sd / 2 ** 0.5)
+    assert legs and legs[0] == pytest.approx(want, abs=1.0) and legs[0] < p.c - 0.5
 
 
 @pytest.mark.parametrize('w', [300, 400, 700, 900])
@@ -345,7 +407,8 @@ def test_the_l_ends_in_one_cut_at_every_weight():
         assert short >= 0.95 * p.c, w
         x1 = max(x for x, _ in ring)
         face = sorted(y for x, y in ring if x > x1 - 0.5)
-        assert face[0] == pytest.approx(p.c, abs=1.0) and face[-1] == pytest.approx(2 * p.c, abs=1.5), w
+        toe = min(3 * p.c, p.sh * p.low)                                    # the cut's own thickness (lower._toe)
+        assert face[0] == pytest.approx(p.c, abs=1.0) and face[-1] == pytest.approx(toe - p.c, abs=1.5), w
         on_line = [x for x, y in ring if abs(y) < 0.5]
         assert max(on_line) - min(on_line) <= 0.7 * p.sv, w                # no foot
     assert len(counts) == 1
@@ -415,6 +478,38 @@ def test_the_italics_q_g_and_y_take_the_bowls_notch_and_keep_their_tails_flat(w)
         left = ink.intersection(box(x0 - 1, y0 - 1, x0 + 0.6 * p.sv, 0.0 - p.c))
         bar = ink.intersection(LineString([((ink.bounds[0] + ink.bounds[2]) / 2, y0 - 10), ((ink.bounds[0] + ink.bounds[2]) / 2, -p.c)]))
         assert left.bounds[3] <= bar.bounds[3] + 1.0, ch
+
+
+def test_the_cursive_e_gives_only_its_top_and_bar_for_its_eye():
+    """italic_forms._e_strokes: the foot is the alphabet's horizontal at
+    every weight (the o's own), the exit stands over it, and the top and
+    the bar give way together, for the eye alone: by less than a tenth to
+    Black, and never thinner than at the weight before. Until 1.017 every
+    horizontal of the letter thinned for the eye, the foot too (0.70 of the
+    o's from SemiBold), the top fell by a quarter between Medium and
+    SemiBold and the bar by a quarter from Bold to Black."""
+    from arris.glyphs.italic_forms import EXIT_OVER
+    from arris.italic import italic
+
+    def run(ink, x):                                    # the ink's first run up the upright line at x, from under the baseline
+        cut = ink.intersection(LineString([(x, -50), (x, 250)]))
+        part = min((s for s in getattr(cut, 'geoms', [cut]) if s.length > 1), key=lambda s: s.bounds[1])
+        return part.bounds[1], part.bounds[3]
+    last = 0.0
+    for w in (400, 500, 600, 700, 800, 900):
+        p = italic(params(w))
+        g, o = draw('e', p), draw('o', p)
+        k = g.free('eye', 1.0)
+        assert 0.9 <= k <= 1.0 and g.sh_auto == pytest.approx(1.0), (w, k)
+        assert p.sh * k >= last - 1e-6, w               # the top (and the bar with it) never loses weight
+        last = p.sh * k
+        x_exit = p.sv / 2 + (g.W - p.sv) * 5 / 6        # where the exit leaves the foot (the frame's sixth module)
+        y0, y1 = run(rings_to_shapely(g.rings()), x_exit - 1.5 * p.c)       # the foot, under the opening
+        b0, b1 = run(rings_to_shapely(o.rings()), o.W / 2)
+        assert y1 - y0 == pytest.approx(p.sh, abs=1.5), w                   # the weight's horizontal, whole
+        assert y1 - y0 == pytest.approx(b1 - b0, rel=0.03), w               # and the o's (which thins its own a little for its counter)
+        end = max(q[1] for r in g.rings() for q in r if q[0] > x_exit + p.c and q[1] < p.xh / 2)
+        assert end >= y1 + EXIT_OVER * p.c - 1.5, w
 
 
 @pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
@@ -520,18 +615,34 @@ def test_v_w_and_y_bend_at_one_height(w):
 @pytest.mark.parametrize('w', [300, 400, 500, 600, 700, 800, 900])
 def test_no_letter_keeps_a_crumb(w):
     """No edge of a letter or figure is shorter than half an edge break, at
-    any named weight (0.45 of one: the v's flank at Black is 0.48). Until
+    any named weight (0.45 of one: the v's flank at Black is 0.48; of the
+    fill's own leg, for an edge inside a corner: draw.fill_leg). Until
     1.017 twenty-two of the sixty-two kept one at some weight: the wall of
     a counter between its corners' cuts (a e s B G 3 5 6 8 9), the flat
     under a bar's stub between its two cuts (f t l 4), the flat the X's
     step left in its crotches at Regular (6 units)."""
     import math
+
+    from arris.draw import fill_leg
     p = params(w)
+    cross = lambda u, v: u[0] * v[1] - u[1] * v[0]
     for ch in LATIN:
         for ring in draw(CMAP[ch], p).rings():
             pts = [(q[0], q[1]) for q in ring]
-            short = [round(math.hypot(b[0] - a[0], b[1] - a[1]), 1) for a, b in zip(pts, pts[1:] + pts[:1])
-                     if 0.5 < math.hypot(b[0] - a[0], b[1] - a[1]) < 0.45 * p.c]
+            n = len(pts)
+            short = []
+            for i in range(n):
+                h, a, b, k = pts[i - 1], pts[i], pts[(i + 1) % n], pts[(i + 2) % n]
+                e_in, e, e_out = (a[0] - h[0], a[1] - h[1]), (b[0] - a[0], b[1] - a[1]), (k[0] - b[0], k[1] - b[1])
+                # an edge the ring turns into the white at both ends of (ink on its left) is a fill's chord or
+                # stands between two: those are measured on the fill's leg, the Regular's from there to Black
+                # (a crotch's chord may run straight on into the cut beside it: a turn into the white at one
+                # end and next to none at the other)
+                turn = lambda u, v: math.degrees(math.atan2(cross(u, v), u[0] * v[0] + u[1] * v[1]))
+                t_in, t_out = turn(e_in, e), turn(e, e_out)
+                inside = min(t_in, t_out) < -20 and max(t_in, t_out) < 5
+                if 0.5 < math.hypot(*e) < 0.45 * (fill_leg(p) if inside else p.c):
+                    short.append(round(math.hypot(*e), 1))
             assert not short, (ch, w, short)
 
 
