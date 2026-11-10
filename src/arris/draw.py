@@ -6,7 +6,6 @@ spacing is added when the font is assembled.
 """
 from __future__ import annotations
 
-import contextlib
 import os
 
 from dataclasses import dataclass, field
@@ -189,7 +188,6 @@ class Glyph:
     zones: list = field(default_factory=list)   # (x0, y0, x1, y1) boxes whose white the Squint rule watches
     cell: tuple[float, float] | None = None     # Mono: the cell (x0, x1) no ink may pass (see _build)
     extra_src: list = field(default_factory=list)   # (ink in extra, stamped glyph, its rings, affine map): names its edges
-    kept_ink: list = field(default_factory=list)    # finished parts kept at the Regular inside stamped glyphs, where they stand here (kept_polys)
     overlay: list = field(default_factory=list)     # (stroke, chamfer leg): laid over the finished ink (lay, geom.ink)
 
     def held(self, direction=(1.0, 0.0)) -> float:
@@ -305,54 +303,6 @@ class Glyph:
         self.overlay.append((self.strokes.pop(n), c))
         return self
 
-    @contextlib.contextmanager
-    def kept(self, butt=()):
-        """What is drawn inside is a small part added to the letter (a
-        mark, a flag, a tail, a flick): from the cut's Regular on it is
-        the Regular's own at every heavier weight, its strokes, its size
-        and its breaks, while the letter under it goes on getting heavier
-        (the owner, 2026-11-10: "anything that is ... like a small little
-        extension or a cross or a little diacritic mark that is on a
-        letter, don't let it get bigger than what it is at regular").
-
-        Inside, the glyph's parameters are the Regular's (held_at): a
-        drawing reads its sizes from ``g.p`` as ever, and what it must
-        place by the letter (a stem's side, a bar's top) it takes before it
-        enters. What was drawn is then stamped in as its own finished piece
-        (add_glyph), kept as it was finished wherever it stands apart
-        (outline): joined to the letter, the corner rule fills the join as
-        it does any. Up to the Regular it is drawn as it always was.
-        ``butt``: lines the part meets the letter on, where its own corners
-        stay square as it is finished alone (geom.ink's butt), as they
-        would be inside the letter."""
-        p = self.p
-        q = held_at(p)
-        if q is p:
-            yield self
-            return
-        n0, m0 = len(self.strokes), len(self.overlay)
-        zone_k, sh_auto = self.zone_k, self.sh_auto
-        self.p = q
-        if zone_k != 1.0:
-            self.zone_k = q.low                             # (the zone's share of the Regular's horizontals)
-        self.sh_auto = 1.0
-        try:
-            yield self
-        finally:
-            self.p, self.zone_k, self.sh_auto = p, zone_k, sh_auto
-        sub = Glyph(q, self.name, W=self.W, clip=self.clip, butt=tuple(self.butt) + tuple(butt))
-        sub.zone_k = q.low if zone_k != 1.0 else 1.0
-        sub.sh_k = self.sh_k
-        sub.strokes, sub.overlay = self.strokes[n0:], self.overlay[m0:]
-        del self.strokes[n0:], self.overlay[m0:]
-        sub.kept_part = True
-        if sub.strokes or sub.overlay:
-            cell, self.cell = self.cell, None               # (the letter's cell cuts the letter; its marks are fitted by their own rules)
-            try:
-                self.add_glyph(sub)
-            finally:
-                self.cell = cell
-
     def move(self, f):
         """Move what is drawn so far node by node, f(x, y) -> (x, y): the
         strokes and those laid over them (lay) alike. (Moved one by one, a
@@ -433,16 +383,13 @@ class Glyph:
             box = _box(*self.clip)
         rec = [] if record else None
         # glyphs stamped as drawn at this one's parameters, only moved (an
-        # accented letter's base): finished, as is a part kept at the Regular
-        # (Glyph.kept). One drawn at other parameters (a small figure in a
-        # fraction) or scaled is finished again here.
+        # accented letter's base): finished. One drawn at other parameters
+        # (a small figure in a fraction) or scaled is finished again here.
         finished = [e for e in self.extra if any(src[0] is e and tuple(src[3][:4]) == (1.0, 0.0, 0.0, 1.0)
-                                                 and (src[1].p == p or getattr(src[1], 'kept_part', False))
-                                                 for src in self.extra_src)]
-        kept = self.kept_polys()
+                                                 and src[1].p == p for src in self.extra_src)]
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished,
-                    overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p), fill=fill_leg(p), kept=kept)
+                    overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p), fill=fill_leg(p))
         rec = (rec or []) + self.extra_chamfers if record else []
         if record and getattr(self, 'square', False):
             # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)
@@ -482,18 +429,6 @@ class Glyph:
         self.extra.append(affinity.translate(rings_to_shapely(rings), dx, dy))
         self.extra_src.append((self.extra[-1], sub, rings, (1.0, 0.0, 0.0, 1.0, dx, dy)))
         self.extra_chamfers += [_moved(r, dx, dy) for r in rec]
-        self.kept_ink += [affinity.translate(k, dx, dy) for k in sub.kept_polys()]
-
-    def kept_polys(self) -> list:
-        """The finished parts kept at the Regular in this drawing (Glyph.kept,
-        marks.kept_mark), as they were finished and where they stand: its
-        own, and those inside the glyphs stamped into it (the tail of the
-        dotless i under an ogonek). Their edges are finished already, on
-        their own leg, and the outline leaves them as they are (geom.ink's
-        ``kept``)."""
-        own = [src[0] for src in self.extra_src if getattr(src[1], 'kept_part', False)
-               and tuple(src[3][:4]) == (1.0, 0.0, 0.0, 1.0)]
-        return own + list(self.kept_ink)
 
     def _extra_edges(self):
         """The edges of the extra ink, named: a stamped glyph's by its own

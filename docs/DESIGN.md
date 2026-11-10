@@ -182,21 +182,6 @@ its stem by what the fill is short, so the join keeps its thickness and
 only its corner is smaller (`lower.shoulder_enter`). The watch's own
 drawing keeps the pixel rule whole.
 
-**Small parts stay the Regular's size** (`Glyph.kept`). A mark over or
-under a letter, the dot of the i, the cross on the f and the t, and the
-strokes a cursive letter comes in and leaves on are parts added to a
-letter, and from the cut's Regular to its heaviest weight they are the
-Regular's own: drawn with the Regular's parameters, finished alone on the
-Regular's chamfer leg, and stamped into the heavier letter, which goes on
-growing under them. A drawing writes `with g.kept():` round the strokes of
-such a part and reads its sizes from `g.p` as ever; what it must place by
-the letter (a stem's side, the top of a bar, the letter's own underside)
-it takes before it enters. Standing apart, the part is kept as it was
-finished. Joined to the letter, the corner rule fills the join, and the
-outline's tidying, whose thresholds are shares of the heavier letter's
-leg, leaves the part's own edges alone (`geom.ink`'s `kept`). The bars of
-e, a, A and H are strokes of their letters and grow with them.
-
 **Coordinates from the masters** (`arris.glyphs.letterframe`). A letter's
 construction names points in its master's module coordinates. A frame maps
 them to font units for each weight, anchored where strokes sit against the

@@ -480,135 +480,36 @@ def test_the_italics_q_g_and_y_take_the_bowls_notch_and_keep_their_tails_flat(w)
         assert left.bounds[3] <= bar.bounds[3] + 1.0, ch
 
 
-def test_the_cursive_e_keeps_its_strokes_and_its_bar_and_flick_are_the_regulars():
-    """italic_forms._e_strokes: the top, the back and the foot are the
-    alphabet's strokes at every weight (the foot the o's own), and the
-    bar across the eye and the flick it leaves on are the Regular's from
-    there to Black: as thick, and the flick as far over the foot. Until
-    1.017 every horizontal of the letter thinned for the eye, the foot too
-    (0.70 of the o's from SemiBold), the top fell by a quarter between
-    Medium and SemiBold and the bar by a quarter from Bold to Black; with
-    the bar at the weight's own thickness the eye was a slit from Bold and
-    the join under it the heaviest spot of the cursive."""
+def test_the_cursive_e_gives_only_its_top_and_bar_for_its_eye():
+    """italic_forms._e_strokes: the foot is the alphabet's horizontal at
+    every weight (the o's own), the exit stands over it, and the top and
+    the bar give way together, for the eye alone: by less than a tenth to
+    Black, and never thinner than at the weight before. Until 1.017 every
+    horizontal of the letter thinned for the eye, the foot too (0.70 of the
+    o's from SemiBold), the top fell by a quarter between Medium and
+    SemiBold and the bar by a quarter from Bold to Black."""
+    from arris.glyphs.italic_forms import EXIT_OVER
     from arris.italic import italic
 
     def run(ink, x):                                    # the ink's first run up the upright line at x, from under the baseline
         cut = ink.intersection(LineString([(x, -50), (x, 250)]))
         part = min((s for s in getattr(cut, 'geoms', [cut]) if s.length > 1), key=lambda s: s.bounds[1])
         return part.bounds[1], part.bounds[3]
-
-    def through(ink, x, y, d):                          # the ink's chord through (x, y) along d
-        cut = ink.intersection(LineString([(x - 300 * d[0], y - 300 * d[1]), (x + 300 * d[0], y + 300 * d[1])]))
-        return min(getattr(cut, 'geoms', [cut]), key=lambda s: s.distance(box(x, y, x, y))).length
-
-    def measured(w):
+    last = 0.0
+    for w in (400, 500, 600, 700, 800, 900):
         p = italic(params(w))
         g, o = draw('e', p), draw('o', p)
-        assert g.free('eye', 1.0) == pytest.approx(1.0) and g.sh_auto == pytest.approx(1.0), w     # nothing gives for the eye
-        ink = rings_to_shapely(g.rings())
+        k = g.free('eye', 1.0)
+        assert 0.9 <= k <= 1.0 and g.sh_auto == pytest.approx(1.0), (w, k)
+        assert p.sh * k >= last - 1e-6, w               # the top (and the bar with it) never loses weight
+        last = p.sh * k
         x_exit = p.sv / 2 + (g.W - p.sv) * 5 / 6        # where the exit leaves the foot (the frame's sixth module)
-        y0, y1 = run(ink, x_exit - 1.5 * p.c)           # the foot, under the opening
+        y0, y1 = run(rings_to_shapely(g.rings()), x_exit - 1.5 * p.c)       # the foot, under the opening
         b0, b1 = run(rings_to_shapely(o.rings()), o.W / 2)
         assert y1 - y0 == pytest.approx(p.sh, abs=1.5), w                   # the weight's horizontal, whole
         assert y1 - y0 == pytest.approx(b1 - b0, rel=0.03), w               # and the o's (which thins its own a little for its counter)
-        top = ink.intersection(LineString([(g.W / 2, p.xh - 1.2 * p.sh), (g.W / 2, p.xh + 20)]))
-        assert top.length == pytest.approx(p.sh, abs=1.5), w                # the top too
-        a, b = g.strokes[0].nodes[:2]                   # the bar, across its middle
-        bar = through(ink, (a.x + b.x) / 2, (a.y + b.y) / 2, (0.7071, -0.7071))
-        end = max(q[1] for r in g.rings() for q in r if q[0] > x_exit + 23 and q[1] < p.xh / 2)
-        over = end - y1                                 # the flick over the foot, and its run halfway up
-        cut = ink.intersection(LineString([(x_exit, y1 + over / 2), (1e4, y1 + over / 2)]))
-        return bar, over, cut.length
-
-    regular = measured(400)
-    for w in (500, 600, 700, 800, 900):
-        assert measured(w) == pytest.approx(regular, abs=1.5), w
-
-
-def _cut(style, w):
-    from arris.italic import italic
-    p = params(w)
-    return italic(p) if style == 'italic' else p.with_(mono=True) if style == 'mono' else p
-
-
-@pytest.mark.parametrize('style', ['upright', 'italic', 'mono'])
-def test_a_mark_is_the_regulars_at_every_heavier_weight(style):
-    """The owner, 2026-11-10: "anything that is ... like a small little
-    extension or a cross or a little diacritic mark that is on a letter,
-    don't let it get bigger than what it is at regular." A mark over or
-    under a letter is the Regular's own from there to Black, its strokes,
-    its size and its breaks (marks.kept_mark, Glyph.kept), while the
-    letter under it goes on getting heavier, and the dot of the i and the
-    j with them (lower._dot). Until 1.017 an acute was 81 units across at
-    Regular and 147 at Black, the dots of a dieresis 90 and 175, and a
-    cedilla's hook as heavy as the c it hung from."""
-    def mark(ch, w, below):
-        p = _cut(style, w)
-        ink = _ink(ch, p)
-        top = p.cap if ch.isupper() else p.xh
-        # (a mark under a letter hangs from the letter's own foot, a unit or two under the line: its lowest hundred units)
-        clear = 60 if below is None else 30                 # (the cursive i's stem ends in a slanted top, over the line)
-        part = ink.intersection(box(-1e4, -1e4, 1e4, ink.bounds[1] + 100) if below else box(-1e4, top + clear, 1e4, 1e4))
-        x0, y0, x1, y1 = part.bounds
-        return part.area, x1 - x0, y1 - y0
-    heavier = (500, 700) if style == 'mono' else (500, 700, 900)
-    for chars, below in (('éèêñöåőēĕėǎÉÑÅ', False), ('țạçşąę', True), ('ij', None)):
-        for ch in chars:
-            regular = mark(ch, 400, below)
-            assert regular[0] > 3000, ch
-            for w in heavier:
-                assert mark(ch, w, below) == pytest.approx(regular, rel=2e-3, abs=0.6), (ch, w)
-
-
-@pytest.mark.parametrize('w', [500, 600, 700, 800, 900])
-def test_the_cursives_flags_and_tails_are_the_regulars(w):
-    """The stroke a cursive letter comes in on and the one it leaves on
-    (italic_forms.entry, tail): as thick and as long at every weight from
-    the Regular as the Regular's own, on a stem that goes on getting
-    heavier."""
-    from arris.italic import italic
-
-    def run(ink, x, y0, y1):
-        cut = ink.intersection(LineString([(x, y0), (x, y1)]))
-        return max((s.length for s in getattr(cut, 'geoms', [cut])), default=0.0)
-
-    def tail(ch, w):
-        p = italic(params(w))
-        g = draw(CMAP[ch], p)
-        ink = rings_to_shapely(g.rings())
-        return run(ink, ink.bounds[2] - 30, -20, p.xh / 2), ink.bounds[2] - g.W        # its thickness, its reach past the stem
-
-    def flag(ch, w):
-        p = italic(params(w))
-        ink = _ink(ch, p)
-        x0 = ink.intersection(box(-1e4, p.xh / 2, 1e4, p.xh + 5)).bounds[0]
-        return run(ink, x0 + 30, p.xh / 2, p.xh + 5), x0                                # its thickness, its reach left of the stem
-    for ch in 'adnuhmi':
-        assert tail(ch, w) == pytest.approx(tail(ch, 400), abs=0.6), ch
-    for ch in 'inmrupy':
-        (thick, reach), (thick0, reach0) = flag(ch, w), flag(ch, 400)
-        assert thick == pytest.approx(thick0, abs=0.6), ch
-        assert reach0 - 0.6 <= reach <= reach0 + 5.0, ch                # (its end cut a few units higher, to run into the stem: entry)
-
-
-@pytest.mark.parametrize('style', ['upright', 'italic', 'mono'])
-def test_the_crossbar_of_f_and_t_is_the_regulars(style):
-    """lower.crossbar: the cross on the f's and the t's stem is the
-    Regular's bar from there to Black, 79 units on a stem of 175, its top
-    where the weight's own stood. (It was 129, and where it crossed the
-    stem was the widest spot of the lowercase.)"""
-    def bar(ch, w):
-        p = _cut(style, w)
-        ink = _ink(ch, p)
-        x0 = ink.intersection(box(-1e4, p.xh - 50, 1e4, p.xh - 30)).bounds[0]          # the bar's left end
-        cut = ink.intersection(LineString([(x0 + 24, p.xh - 200), (x0 + 24, p.xh + 20)]))
-        part = max(getattr(cut, 'geoms', [cut]), key=lambda s: s.bounds[3])
-        return part.length, part.bounds[3]
-    for ch in 'ft':
-        regular = bar(ch, 400)
-        assert regular[0] == pytest.approx(_cut(style, 400).sh, abs=1.5), ch
-        for w in (500, 700) if style == 'mono' else (500, 700, 900):
-            assert bar(ch, w) == pytest.approx(regular, abs=0.8), (ch, w)
+        end = max(q[1] for r in g.rings() for q in r if q[0] > x_exit + p.c and q[1] < p.xh / 2)
+        assert end >= y1 + EXIT_OVER * p.c - 1.5, w
 
 
 @pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
@@ -776,29 +677,3 @@ def test_a_step_between_two_equal_cuts_closes_evenly():
     assert any(abs(x) < 1e-6 and abs(y - 106) < 1e-6 for x, y in out) and any(abs(x - 92) < 1e-6 and abs(y - 14) < 1e-6 for x, y in out)
     assert _close_jogs(stub, 40, {}) == stub
     assert _close_jogs(stub, 40, {}, even=10) == stub      # a flat of half a break or more is a flat
-
-
-@pytest.mark.parametrize('ch', list('ij'))
-def test_the_cursive_i_keeps_its_slanted_top(ch):
-    """The cursive i's and j's stem ends in a roof: the entry flag's upper
-    edge runs up over the stem's top to a point, and one line comes down
-    from it to the stem's far side (italic_forms.entry). One line at every
-    weight, the point a cut's leg over the x-height and a little: with the
-    flag kept at the Regular's size and nothing to carry the stem's cut up
-    to it, the top was a flat with a horn at its end from Medium to
-    ExtraBold and a roof again at Black."""
-    from arris.italic import italic
-    last = 0.0
-    for w in (300, 400, 450, 500, 600, 700, 800, 900):
-        p = italic(params(w))
-        g = draw(CMAP[ch], p)
-        right = g.W                                         # (the stem stands at the frame's right side in both)
-        body = max((r for r in g.rings() if any(q[1] < p.xh / 2 for q in r)), key=len)
-        n = len(body)
-        i = max(range(n), key=lambda k: body[k][1] if body[k][1] < p.xh + 70 else -1e9)        # the point
-        peak, a, b = body[i], body[i - 1], body[(i + 1) % n]
-        assert peak[1] - p.xh == pytest.approx(p.c, abs=6.0), w
-        assert peak[1] - p.xh >= last - 0.5, w                                              # and never lower than at the weight before
-        last = peak[1] - p.xh
-        down = a if a[0] > peak[0] else b                                                   # the roof's foot: the stem's far side, a cut down
-        assert (down[0], down[1]) == pytest.approx((right, p.xh - p.c), abs=1.0), w

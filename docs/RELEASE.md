@@ -92,59 +92,22 @@ letters redrawn.
   square, and at which weight, is as it was, and the step under an arch
   keeps a flat the outline holds (`lower.STEP_KEPT`: the cursive m's
   arches, which rise half as far as the n's, would have lost theirs).
-  Under the diagonal, where its cut meets the stem, the fill is the small
-  one too, and the cut is made lower by what that fill is short
-  (`lower.shoulder_under`): the r's join is 125 units tall on its stem at
-  Black, as it was before the fills changed, and the n's neck at Bold 71
-  units across (66). The m's inner neck at Black, between its two arches
-  where there is no flat left to give, is 101 units where it was 107.
-- The cursive e keeps its strokes. Its eye was kept open by thinning
-  every horizontal of the letter, the foot with the top, and then the
-  bar: from SemiBold the foot was 0.70 of every other letter's (104 units
-  beside the a's and the o's 149 at Black), the top fell from 98 units at
-  550 to 73 at 600 and the bar from 121 at Bold to 88 at Black, and the
-  exit, a reach that shrinks with the white, stood 28 units over the foot
-  at Black for 59 at Regular (the owner: "there's definitely something
-  weird going on with the thicknesses towards the black ... the little
-  bit at the bottom ... isn't nearly as thick"; and "it's also important
-  that we remain uniform in thickness"). The top, the back and the foot
-  are now the alphabet's strokes at every weight. The bar across the eye
-  is the letter's cross and the exit its flick, and both are the
-  Regular's from there to Black (below): the bar 81 units, the flick as
-  thick and as far over the foot as the Regular's. The eye stays open
-  without anything giving for it, and the join under it, the heaviest
-  spot of the cursive with the bar at full weight (1.51 stems at Black),
-  is 1.35 (`italic_forms._e_strokes`; the æ's e alike).
-- Small parts stay the Regular's size. The owner: "anything that is ...
-  like a small little extension or a cross or a little diacritic mark
-  that is on a letter, don't let it get bigger than what it is at
-  regular." From each cut's Regular to its heaviest weight these are now
-  the Regular's own, their strokes, their size and their breaks, on a
-  letter that goes on getting heavier (`Glyph.kept`, `marks.kept_mark`):
-  - every accent, over a letter or under it, and the dot of the i and
-    the j with them: an acute was 81 units across at Regular and 147 at
-    Black, the dots of a dieresis 90 and 175, a cedilla's hook as heavy
-    as the c it hung from. One dot now stands over i, j, ï, ż and İ at
-    every weight;
-  - the crossbar of f and t (`lower.crossbar`), 79 units on a stem of
-    175 at Black where it was 129: the crossing was the widest spot of
-    the lowercase, 1.53 stems across, and is 1.21;
-  - the cursive's entry flags and exit tails (`italic_forms.entry`,
-    `tail`, `exit_past`): strokes of 147 and 149 units at Black, now the
-    Regular's 81 and 78, as long as the Regular's. A stem turns into its
-    tail through the same curve as ever. The i and the j keep their
-    slanted top, the stem's cut carried up to the flag at every weight
-    (a point a cut's leg over the x-height: 25 units at Regular, 46 at
-    Black), and a flag's square end now runs a unit into its stem, so
-    the corner under it is filled alike in every letter (it came and
-    went by letter and weight: the b's had a fill at Regular and Black
-    and none between).
-  A kept part joined to its letter is finished once, on its own leg: the
-  outline's tidying, measured on the heavier letter's, leaves its edges
-  as they are (`geom.ink`'s `kept`; the italic ogonek's end, a wall of 9
-  units between two cuts, closed to a point at Black). Nothing changes
-  at Regular or lighter. Not held: the 1's flag, the Q's tail, Mono's
-  feet, and the bars of e, a, A and H, which are strokes of the letter.
+- The cursive e gives only its top and its bar for its eye. Its eye was
+  kept open by thinning every horizontal of the letter, the foot with the
+  top, and then the bar: from SemiBold the foot was 0.70 of every other
+  letter's (104 units beside the a's and the o's 149 at Black), the top
+  fell from 98 units at 550 to 73 at 600 and the bar from 121 at Bold to
+  88 at Black, and the exit, a reach that shrinks with the white, stood
+  28 units over the foot at Black for 59 at Regular (the owner: "there's
+  definitely something weird going on with the thicknesses towards the
+  black ... the little bit at the bottom ... isn't nearly as thick").
+  The back and the foot are now the alphabet's strokes at every weight,
+  the exit stands a break and a half over the foot at least, and the top
+  and the bar give way together, for the eye alone: full to Bold, 0.97 of
+  their own at ExtraBold and 0.92 at Black (137 and 135 units beside the
+  foot's 149), never thinner than at the weight before
+  (`italic_forms._e_strokes`; the æ's e alike). The eye is held from
+  where it first falls short of half a stem, shrinking as the stem grows.
 - A step never closes past the end of the edge it slides along
   (`geom._close_jogs`): under the ç at Black, where the c's corner, a
   flat of 33 units and the fill into the cedilla's stem stand over a

@@ -419,22 +419,19 @@ def _spacing_width(p):
 for nm, (ch, comb) in SPACING.items():
     def fn(g, comb=comb):
         p = g.p
-        marks.kept_mark(g, marks.ABOVE[comb], g.W / 2, p.xh + marks.gap(marks.mark_params(p)), 'lc')
+        marks.ABOVE[comb](g, g.W / 2, p.xh + marks.gap(p), 'lc')
     glyph(nm, ch, _spacing_width, kind=('punct', 0.6))(fn)
 
 
 @glyph('cedilla', '¸', lambda p: 3 * p.m + p.sv, kind=('punct', 0.6))
 def cedilla(g):
-    q = marks.mark_params(g.p)
-    marks.kept_mark(g, marks.cedilla, g.W - q.sv / 2 - 0.5 * q.m, 0, 'lc')
+    marks.cedilla(g, g.W - g.p.sv / 2 - 0.5 * g.p.m, 0, 'lc')
 
 
 @glyph('ogonek', '˛', lambda p: 3 * p.m + p.sv, kind=('punct', 0.6))
 def ogonek(g):
-    def hook(g):
-        from .italic_forms import tail_run
-        p = g.p
-        yb = -p.under + g.sh / 2 + 0.25 * p.m
-        x = p.sv / 2
-        g.stroke((x, g.sh), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))
-    marks.kept_mark(g, hook)
+    from .italic_forms import tail_run
+    p = g.p
+    yb = -p.under + g.sh / 2 + 0.25 * p.m
+    x = p.sv / 2
+    g.stroke((x, g.sh), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))
