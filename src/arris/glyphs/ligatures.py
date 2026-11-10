@@ -822,7 +822,7 @@ def www(g):
     f = Frame(Glyph(p, 'w', W=ws.W), 14, 'lower')
     xl, xm, xr = f.X(1), ws.W / 2, f.X(13)
     q1, q3 = (xl + xm) / 2, (xm + xr) / 2
-    ya = _vee(f)
+    ya, cut = _vee(f)
     yt = min(ya + 2 * (q1 - xl), p.xh)                      # the w's 2:1
     step = xr - xl
     o = g.W / 2 - (xl + 1.5 * step)
@@ -834,6 +834,8 @@ def www(g):
     g.stroke(*pts, (o + xl + 3 * step, p.xh))
     for k in (1, 2):
         g.stroke((o + xl + k * step, yt), (o + xl + k * step, p.xh))
+    g.clip = (-g.W, cut, 2 * g.W, p.xh)                    # the points cut where the w's are (lower._vee)
+    g.butt += (('y', cut),)
 
 
 @liga('??')

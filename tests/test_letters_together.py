@@ -41,14 +41,29 @@ def test_a_one_stem_lowercase_letter_keeps_its_share(ch):
 
 
 @pytest.mark.parametrize('w', [100, 300, 400, 600, 900])
-def test_the_r_is_seven_ninths_of_the_h(w):
+def test_the_r_is_two_thirds_of_the_h(w):
     """One share of the H at every weight: at Thin it was a third wider
     than the n, and at eight ninths still the lightest letter of the
     alphabet, its advance 0.94 of the n's where faces of this kind give
-    the r 0.62 to 0.72."""
+    the r 0.62 to 0.72. Six ninths (the owner, twice: a module off the
+    arm)."""
     p = params(w)
-    assert REGISTRY['r'].width(p) == pytest.approx(7 / 9 * REGISTRY['H'].width(p))
-    assert _width('r', p) <= _width('n', p)
+    assert REGISTRY['r'].width(p) == pytest.approx(6 / 9 * REGISTRY['H'].width(p))
+    assert _width('r', p) <= 0.9 * _width('n', p)
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_v_and_w_hang_a_break_under_the_line(w):
+    """Their points hang one edge break under the baseline and end blunt,
+    more than a break wide (until 1.017: 1.7 breaks down to a flat of
+    0.9; then, for a while, cut on the line)."""
+    p = params(w)
+    for ch in 'vw':
+        ink = _ink(ch, p)
+        assert ink.bounds[1] == pytest.approx(-p.c, abs=1), ch
+        foot = ink.intersection(LineString([(-50, -p.c + 0.5), (2000, -p.c + 0.5)]))
+        flats = [s.length for s in getattr(foot, 'geoms', [foot])]
+        assert len(flats) == (1 if ch == 'v' else 2) and min(flats) >= 1.2 * p.c, (ch, flats)
 
 
 def _whites(ch, p, at=0.5):

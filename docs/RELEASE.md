@@ -156,10 +156,10 @@ letters redrawn.
   is a tenth narrower (1.46 of the n to 1.33; 1.24 to 1.42), the M eleven
   modules for twelve (1.29 of the H to 1.19; 1.15 to 1.31), the W thirteen
   for fourteen (1.37 to 1.28), the T the E's eight for ten (0.98 to 0.79;
-  0.79 to 0.84), and the r seven ninths of the H for eight (its advance
-  was 0.94 of the n's, where every one of those faces has it under 0.72;
-  it keeps its notch and its arm). In Arris Mono every letter fills the
-  cell as before.
+  0.79 to 0.84), and the r two thirds of the H for eight ninths (its
+  advance was 0.94 of the n's, where every one of those faces has it under
+  0.72; it keeps its notch and its arm). In Arris Mono every letter fills
+  the cell as before.
 - A crotch with a step in it is broken as any crotch. Where a diagonal
   lands on a short edge square to the bar it runs into (the Z's foot),
   the corner was filled as a right angle, no further than that short
@@ -202,10 +202,17 @@ letters redrawn.
   crotches at Regular, which goes with the first. The italic and the
   watch's drawing are finished as they were. At the named weights no edge
   of a letter is now under 0.45 of a break (the v's flank at Black, 0.48).
+- The points of v and w hang an edge break under the baseline and are
+  cut flat there, a break and a half wide (22 units down at Regular, 44
+  at Black). They had run 38 and 73 units under the line to a flat under
+  a break wide, the sharpest end in the alphabet; the drop is theirs and
+  stays, the needle goes. The w's middle peak ends as the corner rule
+  ends any point (cut at the x-height first, it kept two crumbs at
+  ExtraBold).
 - Ends at Black. The f's top corner is cut down to the t's, so bar and
-  corner make one plane; the Q's tail gives as the bowl grows; v and w
-  stand on blunt points on the baseline; the 4 keeps a module of white
-  beside its stem and the G's bar a least white over its foot; the beaks
+  corner make one plane; the Q's tail gives as the bowl grows; the 4 keeps
+  a module of white beside its stem and the G's bar a least white over
+  its foot; the beaks
   of c and j are measured by the lowercase's own bar (they had kept the
   capitals', and the j's beak a 19-unit step).
 - The italic keeps its own letters: its a, e, f, k, r, s, t, y and z are

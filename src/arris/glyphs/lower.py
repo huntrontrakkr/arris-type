@@ -431,7 +431,7 @@ def q(g):
 # with two stems, lost them: a third wider than the n at Thin (1.37), a
 # tenth at Regular (1.09), its arm long for the letter (the owner,
 # 2026-11-10: trim it back at the lighter weights); now 1.08 and 1.02.
-@low('r', 8, 1, width=share_width(7))
+@low('r', 8, 1, width=share_width(6))
 def r(g):
     f = Frame(g, 8, 'lower')
     p = g.p
@@ -489,17 +489,21 @@ def u(g):
     g.stroke(f.P(7, 0), f.P(7, 9))
 
 
-def _vee(f):
-    """Centreline height of a lowercase point (v w), its arms at 2:1: the
-    outer edges stand two edge breaks apart on the baseline, where the body
-    cuts the point flat, as it cuts the capitals' (A V W, caps._vee).
+V_HANG = 1.0    # how far a lowercase point (v w) hangs under the baseline, in edge breaks
 
-    Until 1.017 the point ran on under the baseline, 38 units at Regular
-    and 73 at Black, to a flat one break wide: half the capitals', the
-    sharpest end in the alphabet, and the only letters hanging under the
-    line that were not descenders."""
+
+def _vee(f):
+    """Centreline height of a lowercase point (v w), its arms at 2:1, and
+    the line it is cut on: an edge break under the baseline (V_HANG), where
+    the point is a break and a half wide.
+
+    The point hangs: until 1.017 it ran on under the line 38 units at
+    Regular and 73 at Black to a flat one break wide, half the capitals'
+    and the sharpest end in the alphabet. Cut on the baseline (a first
+    1.017) the letters lost the drop that was theirs; the point keeps it
+    for one break, 22 units at Regular and 44 at Black, and ends blunt."""
     p = f.p
-    return p.ss * 5 ** 0.5 / 2 - 2 * p.c
+    return -p.c + f.k, -V_HANG * p.c
 
 
 @low('v', 8, 2)
@@ -507,12 +511,13 @@ def v(g):
     f = Frame(g, 8, 'lower')
     p, W = f.p, f.W
     xl, xr = f.X(1), f.X(7)
-    ya = _vee(f)
+    ya, cut = _vee(f)
     # 2:1 arms (the 7's slope): a 45-degree gable in an x-height leaves too
     # little diagonal, and the v reads as a u (docs/research/legibility.md)
     yt = min(ya + 2 * (W / 2 - xl), p.xh)
     g.stroke((xl, p.xh), (xl, yt), (W / 2, ya), (xr, yt), (xr, p.xh))
-    g.clip = (0, 0, W, p.xh)
+    g.clip = (0, cut, W, p.xh)
+    g.butt += (('y', cut),)                                  # the point's end is the cut itself, flat
 
 
 @low('w', 14, 3, width=letter_width(12.6, 3))
@@ -524,11 +529,15 @@ def w(g):
     p, W = f.p, f.W
     xl, xm, xr = f.X(1), W / 2, f.X(13)
     q1, q3 = (xl + xm) / 2, (xm + xr) / 2
-    ya = _vee(f)
+    ya, cut = _vee(f)
     yt = min(ya + 2 * (q1 - xl), p.xh)                      # 2:1, as the v
     g.stroke((xl, p.xh), (xl, yt), (q1, ya), (xm, yt), (q3, ya), (xr, yt), (xr, p.xh))
     g.stroke((xm, yt), (xm, f.Y(6)))
-    g.clip = (0, 0, W, p.xh)
+    # the middle peak ends as the corner rule ends a point, a break's chord
+    # across it; from ExtraBold it reaches the x-height, and cut there first
+    # it was left a flat of a few units that the rule made two crumbs of
+    g.clip = (0, cut, W, p.xh + p.c)
+    g.butt += (('y', cut),)                                  # the point's end is the cut itself, flat
 
 
 def x_strokes(g, xl, xr, W, H):
