@@ -125,24 +125,24 @@ class Frame:
         return (self.X(x), self.Y(y))
 
 
-def k_arms(g, x_stem: float, W: float, top: float, branch: bool = False):
+def k_arms(g, x_stem: float, W: float, top: float, branch: bool = True):
     """K's arm and leg for a stem at x_stem in a body W wide and ``top`` tall.
 
-    Both leave the body's right corners an edge break in. At light weights
-    they meet in a short vertical beside the stem, as the K master draws it;
-    when heavier strokes would make that junction a lump (their outer edges
-    no longer reach the vertical), the arm runs on into the stem and the leg
-    branches from the arm, so the crotch between them stays open.
-    Returns strokes as (points, start cap, end cap)."""
+    Both leave the body's right corners an edge break in. The arm runs on
+    into the stem and the leg branches from the arm where they cross (from
+    the stem, if they cross inside it), so the crotch between them is a
+    point at every weight and the two read as two strokes.
+
+    Until 1.017 the capital changed its drawing along the weight: where the
+    body was narrow for its strokes (from Bold, and in Arris Mono) arm and
+    leg met in a short vertical beside the stem, as the K's pixel master
+    draws it, a block a stem wide with a flat-bottomed crotch, while the k,
+    drawn in the x-height, never did. (``branch`` is kept for callers that
+    named it.) Returns strokes as (points, start cap, end cap)."""
     p = g.p
     k = p.sd / SQRT2
     a_arm = W - top + p.c - k                               # arm: x - y = a_arm
     a_leg = W + p.c - k                                     # leg: x + y = a_leg
-    xj = x_stem + p.sv * 0.999                             # (overlapping the stem by a hair)
-    if not branch and 2 * xj + p.sv > a_arm + a_leg + 2 * k + 1e-6:
-        y_hi, y_lo = xj - a_arm, a_leg - xj
-        mid = [(xj, y_hi), (xj, y_lo)] if y_hi > y_lo + 1e-9 else [(xj, y_hi)]
-        return [([(top + a_arm, top), *mid, (a_leg, 0)], 'h', 'h')]
     # the leg leaves the arm where they cross, or the stem if they cross inside it
     xm = max((a_arm + a_leg) / 2, x_stem)
     return [([(top + a_arm, top), (x_stem, x_stem - a_arm)], 'h', 'flat'),

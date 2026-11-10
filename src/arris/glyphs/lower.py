@@ -22,15 +22,44 @@ def _a_gap(g):
     return g.defaults_used['arm'] - g.defaults_used['bowl'] - g.sh
 
 
+A_WHITE = 1.0     # the white between the a's flag and its bowl's cut corner, in least whites
+
+
+def a_flag(g, ya, yb):
+    """Where the a's flag leaves its roof (x), and where it ends: the flag
+    lies over the bowl's cut corner, parallel to it, the least white of a
+    letter between the two, and ends where its point reaches the body's
+    edge."""
+    p = g.p
+    k = p.sd / 2 ** 0.5
+    cut = outer_leg(p, sh=g.sh)                              # the bowl's cut corner: x - y = cut - top
+    xa = cut - (yb + g.sh / 2) + ya - k - A_WHITE * least_white(p) * 2 ** 0.5
+    return xa, k
+
+
 @low('a', 8, 2, openings=[Opening(_a_gap, 'bowl', lambda p: p.xh * 0.4, max_ratio=0.4)])
 def a(g):
+    """The a: the 1's flag and roof over a bowl. Its arm starts in a flag
+    at the left, a 45-degree stroke ending on a horizontal as the 1's does,
+    runs along the x-height and comes into the stem through a bowl's
+    corner. The flag lies over the bowl's cut corner, the two parallel, and
+    is as long as the white between them allows: long at Light, a point at
+    Black.
+
+    Until 1.017 the upper storey was a bare bar: square at its left end and
+    all but square at the stem (the pixel master's one-step corner), the
+    one letter whose top had none of the font's corners."""
     g.stack(3, g.p.xh, ratio=0.75)
     f = Frame(g, 8, 'lower')
-    small = g.p.m / 2                                       # a one-step corner, as drawn
     ya = f.Y(8)
     yb = g.free('bowl', f.Y(5))                             # heavy weights lower the bowl
     g.defaults_used.update(arm=ya, bowl=yb)
-    g.stroke((f.X(1), ya), B(f.X(7), ya, small), f.P(7, 0))
+    xa, x0 = a_flag(g, ya, yb)
+    xa = min(xa, f.X(7) - g.p.leg - g.p.sv / 2)             # (the roof keeps a flat before its corner)
+    if xa > x0:
+        g.stroke((x0, ya - (xa - x0)), (xa, ya), B(f.X(7), ya), f.P(7, 0), start='h')
+    else:
+        g.stroke((x0, ya), B(f.X(7), ya), f.P(7, 0))
     g.stroke((f.X(7), yb), B(f.X(1), yb), B(*f.P(1, 1)), f.P(7, 1), closed=True)
 
 
