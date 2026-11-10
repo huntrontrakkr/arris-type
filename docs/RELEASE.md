@@ -168,7 +168,9 @@ letters redrawn.
   stems set. The f and the t are six modules for seven, hook, foot and
   crossbar each a module shorter (0.61 and 0.69); the j's hook is three
   modules of white across for four, the room its two corners need (0.54);
-  the l's tail runs a module and a half past its stem for three (0.49).
+  the l's tail runs two modules past its stem for three (0.54: a module
+  and a half left its corner no flat to end on, and from Regular to
+  Medium the tail's end closed to a point and opened again).
   The ſ follows the f. Arris Mono's and the italic's own f, j and l are
   as they were.
 - The l has no flag. It carried the 1's at the top, a module to the left
@@ -234,6 +236,15 @@ letters redrawn.
   gaps on a shared row were counted, and a j's hook under an l's, a t's
   or an L's foot shares none: 0.18 to 0.20 of a gap at Regular (0.43 to
   0.97 in those faces), now 0.35.
+- The w's middle peak is a peak at every weight. Its middle stroke ran
+  from the peak to the sixth module, and where the peak is lower than
+  that it stood over it: a post 65 units tall at Thin, a stub at Light,
+  and at Regular a spearhead with a barb of 11 units each side. The
+  stroke now stands in the peak, never over it.
+- Arris Mono's r ends its arm on a whole face at Bold. In the cell the
+  arm is short, and the shoulder's diagonal ran into its end, leaving it
+  a face of 7 units; the shoulder now rises no further than leaves the
+  arm's underside an edge break of flat.
 - An arm keeps six tenths of a gap from a side. The capitals whose arms
   stand upright for half their height (A V W Y) take the bearing their
   open half earns, and beside a bowl or another arm that left two upright

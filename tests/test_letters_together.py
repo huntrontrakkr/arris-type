@@ -57,14 +57,15 @@ def test_the_narrow_letters_are_narrow(w):
     """Advances against the n's, inside what chamfered and squared faces
     give a letter with one stem and an arm (Chakra Petch, Oxanium,
     Rajdhani, Exo 2, Tomorrow, Share Tech, Regular and their heaviest): the
-    l 0.40 to 0.56, the t 0.53 to 0.74, the f 0.48 to 0.72. On their
+    l 0.40 to 0.56 (ours 0.54 at Regular: its tail needs two modules to
+    end on a flat), the t 0.53 to 0.74, the f 0.48 to 0.72. On their
     masters' module widths the l stood at 0.65 at Regular, the t at 0.79
     and the f at 0.72, and a line with several of them lost its rhythm.
     The j's hook turns through two corners and needs their room: 0.54 for
     those faces' 0.41 to 0.51 (it was 0.65)."""
     p = params(w)
     adv = lambda ch: place(CMAP[ch], p)[1]
-    assert 0.40 <= adv('l') / adv('n') <= 0.61
+    assert 0.40 <= adv('l') / adv('n') <= 0.65
     assert 0.53 <= adv('t') / adv('n') <= 0.75
     assert 0.48 <= adv('f') / adv('n') <= 0.73
     assert 0.41 <= adv('j') / adv('n') <= 0.68
@@ -325,6 +326,40 @@ def test_wide_and_narrow_letters_stand_where_such_faces_put_them(w):
 
 
 LATIN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+
+
+def test_the_ls_tail_ends_on_a_flat_at_every_weight():
+    """One outline from Thin to Black, nothing in it shorter than nine
+    tenths of a break: a tail a module and a half long left its corner no
+    flat to end on, and its end closed to a point about Medium (13 units
+    at 500) and opened again."""
+    import math
+    counts = set()
+    for w in range(100, 901, 50):
+        p = params(w)
+        ring = max(draw('l', p).rings(), key=len)
+        counts.add(len(ring))
+        short = min(math.dist(a, b) for a, b in zip(ring, ring[1:] + ring[:1]) if math.dist(a, b) > 1e-6)
+        assert short >= 0.9 * p.c, w
+    assert len(counts) == 1
+
+
+@pytest.mark.parametrize('w', [100, 200, 300, 400, 450, 500, 700])
+def test_the_ws_middle_peak_is_a_peak(w):
+    """It ends as a point ends, a chord a break wide at most, at every
+    weight: the middle stroke stands in the peak and never over it (it was
+    a post 65 units tall at Thin, a stub at Light, and at Regular a
+    spearhead with a barb of 11 units each side)."""
+    p = params(w)
+    g = draw('w', p)
+    xm = g.W / 2
+    near = [(x, y) for r in g.rings() for x, y in r if abs(x - xm) < 0.9 * p.sv and y > 0.45 * p.xh]
+    top = max(y for _, y in near)
+    crown = [x for x, y in near if y > top - 0.5]
+    assert max(crown) - min(crown) <= 1.6 * p.c + 1.0
+    below = [(x, y) for x, y in near if y <= top - 0.5 and y > top - 1.2 * p.sv]
+    assert all(abs(x - xm) > (max(crown) - min(crown)) / 2 - 0.5 for x, _ in below)       # nothing stands out beside the flat
+    assert len([q for q in near if q[1] > top - 2.0 * p.c]) <= 2 or w <= 300
 
 
 @pytest.mark.parametrize('w', [300, 400, 500, 600, 700, 800, 900])

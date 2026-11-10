@@ -375,7 +375,7 @@ def k(g):
     g.clip = (0, -f.p.desc, f.W, f.p.asc)
 
 
-L_TAIL = 1.5    # modules of white the l's tail runs past its stem
+L_TAIL = 2.0    # modules of white the l's tail runs past its stem: room for its corner and a flat past it at every weight
 
 
 @low('l', 2 + L_TAIL, 1)
@@ -468,7 +468,14 @@ def r(g):
     k = p.sd / 2 ** 0.5
     y8, y6 = f.Y(8), f.Y(6)
     x6 = xs + p.sv / 2 + k - p.c                             # starts an edge break into the stem
-    g.stroke((x6, y6), (x6 + (y8 - y6), y8), f.P(8, 8), start='h')
+    rise = y8 - y6
+    if p.mono:
+        # in the cell the arm is short: the shoulder rises no further than
+        # leaves the arm's underside an edge break of flat before its end's
+        # cut (at Bold the diagonal ran into the end itself, and left it a
+        # face of 7 units)
+        rise = min(rise, max(0.0, f.X(8) - (k - g.sh / 2) - 2 * p.c - x6))
+    g.stroke((x6, y8 - rise), (x6 + rise, y8), f.P(8, 8), start='h')
     if p.mono:                                              # a foot, as the 1's
         u = g.W / 9
         g.stroke((xs - 2.5 * u, f.Y(1)), (xs + 2.5 * u, f.Y(1)))
@@ -556,7 +563,12 @@ def w(g):
     ya, cut = _vee(f)
     yt = min(ya + 2 * (q1 - xl), p.xh)                      # 2:1, as the v
     g.stroke((xl, p.xh), (xl, yt), (q1, ya), (xm, yt), (q3, ya), (xr, yt), (xr, p.xh))
-    g.stroke((xm, yt), (xm, f.Y(6)))
+    # the middle stroke stands in the peak, down to the sixth module, and
+    # never over it: where the peak is lower than that (Thin to Regular) it
+    # was a post on the peak, 65 units at Thin, a stub at Light and at
+    # Regular a spearhead 43 units tall with a barb of 11 each side
+    if yt > f.Y(6):
+        g.stroke((xm, yt), (xm, f.Y(6)))
     # the middle peak ends as the corner rule ends a point, a break's chord
     # across it; from ExtraBold it reaches the x-height, and cut there first
     # it was left a flat of a few units that the rule made two crumbs of

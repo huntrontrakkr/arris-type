@@ -830,7 +830,8 @@ def www(g):
     for k in range(3):
         b = o + k * step
         pts += [(b + q1, ya), (b + xm, yt), (b + q3, ya), (b + xr, yt)]
-        g.stroke((b + xm, yt), (b + xm, f.Y(6)))           # the w's middle
+        if yt > f.Y(6):                                     # the w's middle, never over its peak (lower.w)
+            g.stroke((b + xm, yt), (b + xm, f.Y(6)))
     g.stroke(*pts, (o + xl + 3 * step, p.xh))
     for k in (1, 2):
         g.stroke((o + xl + k * step, yt), (o + xl + k * step, p.xh))
