@@ -194,6 +194,24 @@ def e(g):
 NARROW = 6      # the f's and the t's frame, in modules (their masters' seven, less one)
 
 
+def crossbar(g, x0, x1, y_top):
+    """The f's and the t's crossbar, x0 to x1 with its top on ``y_top``:
+    the cross on the letter's stem. It is the Regular's from there to
+    Black, as thick and its ends broken as the Regular's, while the stem
+    it crosses goes on getting heavier (Glyph.kept; the owner, 2026-11-10:
+    "anything that is ... like a small little extension or a cross or a
+    little diacritic mark that is on a letter, don't let it get bigger
+    than what it is at regular"). Until 1.017 it was the weight's own bar,
+    129 units on a stem of 175 at Black, and where it crossed the stem
+    was the widest spot of the lowercase, a stem and a half across."""
+    from ..draw import _thickness
+    own = _thickness(g.p, g.sh)((1.0, 0.0))
+    top = y_top - g.sh / 2 + own / 2                        # the weight's own bar's top (the italic's, a hair under the line)
+    with g.kept():
+        t = min(own, _thickness(g.p, g.sh)((1.0, 0.0)))     # (inside, the Regular's own)
+        g.stroke((x0, top - t / 2, t), (x1, top - t / 2))
+
+
 @low('f', NARROW, 1)
 def f_(g):
     """A stem, its hook and a crossbar. The hook at every weight: the top
@@ -204,11 +222,11 @@ def f_(g):
     if g.p.mono:
         f = Frame(g, 9, 'asc')
         g.stroke(f.P(3.5, 0), B(*f.P(3.5, 12)), f.P(9, 12))
-        g.stroke(f.P(0.5, 8), f.P(8, 8))
+        crossbar(g, f.X(0.5), f.X(8), g.p.xh)
         return
     f = Frame(g, NARROW, 'asc')
     g.stroke(f.P(2, 0), B(*f.P(2, 12), f_leg(g, f)), f.P(NARROW, 12))
-    g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
+    crossbar(g, f.X(0), f.X(NARROW - 1), g.p.xh)
 
 
 def f_leg(g, f):
@@ -337,6 +355,16 @@ def shoulder_enter(p) -> float:
     return (1.0 + was) * p.c - crotch_fill(p) * fill_leg(p)
 
 
+def shoulder_under(p) -> float:
+    """How much lower a shoulder's diagonal is cut than where it was drawn
+    from: what the fill under its cut, in the corner the cut makes with
+    the stem, is short of an edge break (draw.fill_leg). With
+    shoulder_enter it keeps the join as tall on the stem's side as it
+    always was."""
+    from ..draw import fill_leg
+    return p.c - fill_leg(p)
+
+
 def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     """An arch's shoulder, as the r's: it leaves the stem at 45 degrees
     ``drop`` modules below the arch (SHOULDER_DROP, two; a bowl's join half
@@ -398,17 +426,20 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     # want of room, lost the step under each at Regular)
     from ..draw import fill_leg
     flat = x0 + k - (xs + p.sv / 2) - fill_leg(p)
-    deeper = r * (shoulder_enter(p) - p.c)
-    if flat > STEP_KEPT * p.c:
-        deeper = min(deeper, flat - STEP_KEPT * p.c)
+    room_ = max(0.0, flat - STEP_KEPT * p.c) if flat > STEP_KEPT * p.c else 1e9
+    deeper = min(r * (shoulder_enter(p) - p.c), room_)
     x0 -= deeper
+    # and its cut lower along the same line by what the fill under it is short (shoulder_under), within
+    # the same flat: the neck is as tall on the stem's side as it was, from the fill under it to the
+    # notch over it
+    under = min(r * shoulder_under(p), max(0.0, room_ - deeper))
     step = rise - g.sh / 2                                  # the diagonal's cut, below the arch's underside
     if upright and step < p.c:
         over = g.sh / 2 + rise - (1 - r) * (p.sv / 2 + k) - r * p.c   # the diagonal's top at the stem's side, below the arch's
         if not joined and over < SHOULDER_NOTCH * p.c:
             return plain
         return [(x0 + step, y_top - g.sh / 2), (x0 + rise, y_top), B(x_right, y_top)], 'h'
-    return [(x0, y_top - rise), (x0 + rise, y_top), B(x_right, y_top)], 'h'
+    return [(x0 - under, y_top - rise - under), (x0 + rise, y_top), B(x_right, y_top)], 'h'
 
 
 # Two rule sets (the owner, 2026-11-10: "you shouldn't be changing the m's and the n's and the r's ... it's
@@ -445,11 +476,16 @@ def h(g):
 
 def _dot(g, f, x):
     """The tittle: a square as wide as the stem, centred between x-height and
-    ascender, but never closer to the x-height than 0.4 of a stem."""
-    p = g.p
-    s = p.dot()
-    yc = max((p.xh + p.asc) / 2, p.xh + 0.4 * s + s / 2)
-    g.stroke((x, yc - s / 2, s), (x, yc + s / 2))
+    ascender, but never closer to the x-height than 0.4 of a stem. From the
+    Regular on it is the Regular's own (Glyph.kept), as the dots of the
+    accents are: one size of dot over i, j, ï, ż and İ at every weight (with
+    the accents' kept and the tittle growing, the j's dot at Black was twice
+    the ż's beside it)."""
+    with g.kept():
+        p = g.p
+        s = p.dot()
+        yc = max((p.xh + p.asc) / 2, p.xh + 0.4 * s + s / 2)
+        g.stroke((x, yc - s / 2, s), (x, yc + s / 2))
 
 
 def _mono_foot(g, f, x, u):
@@ -629,7 +665,8 @@ def r(g):
         # face of 7 units)
         rise = min(rise, max(0.0, f.X(8) - (k - g.sh / 2) - 2 * p.c - x6))
     x6 -= shoulder_enter(p) - p.c                           # and deeper by what its crotch's fill is short (shoulder_enter)
-    g.stroke((x6, y8 - rise), (x6 + rise, y8), f.P(8, 8), start='h')
+    u_ = 0.0 if p.mono else shoulder_under(p)               # its cut lower by what the fill under it is short
+    g.stroke((x6 - u_, y8 - rise - u_), (x6 + rise, y8), f.P(8, 8), start='h')
     if p.mono:                                              # a foot, as the 1's
         u = g.W / 9
         g.stroke((xs - 2.5 * u, f.Y(1)), (xs + 2.5 * u, f.Y(1)))
@@ -663,12 +700,12 @@ def t(g):
         f = Frame(g, 9, 'asc')
         g.defaults_used['stem'] = f.X(3)
         g.stroke(f.P(3, 11), B(*f.P(3, 1)), f.P(8.5, 1))
-        g.stroke(f.P(0.5, 8), f.P(8, 8))
+        crossbar(g, f.X(0.5), f.X(8), g.p.xh)
         return
     f = Frame(g, NARROW, 'asc')
     g.defaults_used['stem'] = f.X(2)                        # (extra_latin._slot reads it for the ŧ's bar)
     g.stroke(f.P(2, 11), B(*f.P(2, 1)), f.P(NARROW, 1))
-    g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
+    crossbar(g, f.X(0), f.X(NARROW - 1), g.p.xh)
 
 
 @low('u', 8, 2)

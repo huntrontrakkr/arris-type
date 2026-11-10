@@ -20,6 +20,47 @@ from ..draw import B, REGISTRY, Glyph, glyph
 from ..params import SQRT2
 
 
+def mark_params(p):
+    """The parameters a mark is drawn with: the weight's own up to its
+    cut's Regular, and the Regular's from there to Black (draw.held_at). A
+    mark is a small part added to a letter, and it is no bigger over a
+    Black letter than over a Regular one: its strokes, its size and its
+    breaks (the owner, 2026-11-10: "anything that is ... like a small
+    little extension or a cross or a little diacritic mark that is on a
+    letter, don't let it get bigger than what it is at regular"). Until
+    1.017 a mark grew with the letter and only gave way where a stack ran
+    out of the line (draw_above)."""
+    from ..draw import held_at
+    return held_at(p)
+
+
+def kept_mark(g, fn, *args):
+    """Draw a mark into g with its own parameters (mark_params): at g's own
+    weight where they are the same; else in a drawing of its own, stamped
+    into g as it was finished (Glyph.add_glyph). The mark reads the letter
+    it hangs from, and the letter's parameters, off its drawing
+    (``base_ink``, ``own_p``); a line it must meet flush is the letter's
+    too (``butt``)."""
+    from ..draw import Glyph
+    q = mark_params(g.p)
+    if q is g.p:
+        return fn(g, *args)
+    target = Glyph(q, W=g.W)
+    target.base_ink = g.extra[0] if g.extra else None
+    target.own_p, target.own_sh = g.p, g.sh
+    fn(target, *args)
+    g.butt += target.butt
+    stamp_kept(g, target)
+
+
+def stamp_kept(g, target):
+    """Stamp a mark drawn with other parameters into g, kept as it was
+    finished wherever it stands apart (Glyph.outline)."""
+    target.kept_part = True
+    if target.strokes or target.overlay or target.extra:
+        g.add_glyph(target)
+
+
 def gap(p):
     """White between a base and a mark above it (the i's dot gap)."""
     return max(p.m, 0.4 * p.sv)
@@ -197,7 +238,8 @@ def cedilla(g, x, y, case):
         # merged with the corner's chamfer from 600 up, which held the
         # corner straight (and folded the outline back on itself at 550)
         from ..draw import _thickness
-        under = g.sh / 2 - _thickness(p, g.sh)((1.0, 0.0)) / 2    # (lower.crotch_butt)
+        own, own_sh = getattr(g, 'own_p', p), getattr(g, 'own_sh', g.sh)    # the letter's own (kept_mark): its underside
+        under = own_sh / 2 - _thickness(own, own_sh)((1.0, 0.0)) / 2        # (lower.crotch_butt)
         g.butt += (('y', under, x - wv / 2 - 1.0, x + wv / 2 + 1.0),)
 
 
@@ -208,9 +250,10 @@ def ogonek(g, x, y, case):
     """Hangs from the base's rightmost ink on the baseline (a stem's foot or
     a bar's end, whichever the letter has), turning right underneath."""
     p = g.p
+    own = getattr(g, 'own_p', p)                            # the letter's own parameters (kept_mark)
     yb = -p.under + g.sh / 2 + 0.25 * p.m
     from shapely.geometry import LineString
-    base = g.extra[0]
+    base = getattr(g, 'base_ink', None) or g.extra[0]
     cut = base.intersection(LineString([(-1e4, 0.3 * g.sh), (1e4, 0.3 * g.sh)]))
     xs = [c[0] for gg in getattr(cut, 'geoms', [cut]) for c in getattr(gg, 'coords', [])]
     if p.slant:
@@ -245,7 +288,7 @@ def ogonek(g, x, y, case):
         else:
             # a bowl corner at the foot of that edge (the e's arm, the o's and
             # U's bowls): under the bowl, clear of the corner's outer chamfer
-            x = xr - outer_leg(p) - TAIL_FLAT * p.c - w / 2
+            x = xr - outer_leg(own) - TAIL_FLAT * own.c - w / 2
         under = base.intersection(box(x - w / 2, -1e4, x + w / 2, top))
         g.stroke((x, g.sh / 2, w), B(x, yb, p.m / 2, w),
                  (x + max(1.5 * p.m + p.sv / 2, run_floor(p, p.m / 2, w)), yb))
@@ -501,13 +544,13 @@ def _register(name, ch, bname, base, marks):
                 ATTACHED[m](g, x, case)
             elif m == '\u0327' and base in CEDILLA_AS_COMMA:
                 if base == 'g':
-                    commaabove(g, x, top + gap(p), case)
+                    kept_mark(g, commaabove, x, top + gap(mark_params(p)), case)
                 else:
-                    commabelow(g, x, 0, case)
+                    kept_mark(g, commabelow, x, 0, case)
             elif m == '\u0328':
-                ogonek(g, _ogonek_x(g, base), 0, case)
+                kept_mark(g, ogonek, _ogonek_x(g, base), 0, case)
             else:
-                BELOW[m](g, clear_below(g.extra[0], p, BELOW[m], x, case, g.W), 0, case)
+                kept_mark(g, BELOW[m], clear_below(g.extra[0], mark_params(p), BELOW[m], x, case, g.W), 0, case)
         if not above:
             return
         # (in the monospaced cell, the stack keeps the cell's margin: draw.CELL_GAP)
@@ -581,9 +624,11 @@ def draw_above(g, above, x, top, case, cell=None, avoid=None, lift=0.0):
     def fits(st):
         return st[1] + lift <= line_top(p) and st[2] <= 0.5
 
+    r = mark_params(p)                                      # the Regular's marks from there to Black
+
     def at(s):
         t, k = _squeeze(s)
-        return stack_above(accent_params(p, k), above, x, top, case, g.W, cell, avoid, tight=t)
+        return stack_above(accent_params(r, k), above, x, top, case, g.W, cell, avoid, tight=t)
     s = 0.0
     st = at(0.0)
     if not fits(st):
@@ -598,12 +643,12 @@ def draw_above(g, above, x, top, case, cell=None, avoid=None, lift=0.0):
         st = at(s)
     places = st[0]
     k = _squeeze(s)[1]
-    q = accent_params(p, k)
-    target = g if k == 1.0 else Glyph(q, W=g.W)
+    q = accent_params(r, k)
+    target = g if q is p else Glyph(q, W=g.W)
     for m, xm, ym in places:
         ABOVE[m](target, xm, ym, case)
     if target is not g:
-        g.add_glyph(target)
+        stamp_kept(g, target)
 
 
 def _ogonek_x(g, base):
@@ -641,7 +686,8 @@ def _caron_apostrophe(g, base):
     ink = g.extra[0]
     # in the monospaced cell the apostrophe is drawn lighter toward Black (as
     # a stack of marks lightens), so a d keeps its counter beside it
-    p = accent_params(p0, 1 - 0.5 * heaviness(p0)) if p0.mono else p0
+    r0 = mark_params(p0)                                    # the Regular's apostrophe from there to Black
+    p = accent_params(r0, 1 - 0.5 * heaviness(r0)) if p0.mono else r0
     tight = 1.0
     if p0.mono:
         # the letter narrows to make room in the cell (draw._cell_fit) down to
@@ -693,4 +739,4 @@ def _caron_apostrophe(g, base):
     else:
         target = Glyph(p, W=g.W)
         _comma(target, None, x, top, stub=stub)
-        g.add_glyph(target)
+        stamp_kept(g, target)

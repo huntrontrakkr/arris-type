@@ -484,7 +484,7 @@ def _stepped_crotches(pts, kinds, turns, c, crotch) -> dict:
 
 def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=(),
         tags: list | None = None, extra_edges=(), finished=(), overlay=(), crotch: float = 2.0,
-        facet: float | None = None, fill: float | None = None):
+        facet: float | None = None, fill: float | None = None, kept=()):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
 
@@ -547,6 +547,13 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     # one way or the other as the last bits of a float fell (a stamp moved
     # by 1e-13 of a unit turned it), so two builds of one code differed
     done = [q for f in finished for q in getattr(f, 'geoms', [f]) if isinstance(q, Polygon) and q.area > 1e-9]
+    # a part kept at the Regular (``kept``) that touches the strokes is joined
+    # to them and the join finished here, but its own edges are finished
+    # already, on its own leg: this glyph's polish and jog closing, measured
+    # on a heavier leg, leave them be (the italic ogonek's end, a wall of 9
+    # units between its two cuts at every weight, closed to a point at Black,
+    # where a quarter of the letter's leg passed it)
+    own = _edges_of(kept)
     for poly in u.geoms:
         poly = orient(poly, sign=1.0)
         if any(abs(poly.area - f.area) <= 1e-6 * max(f.area, 1.0)
@@ -556,11 +563,11 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
                 if r is poly.exterior or Polygon(r).area >= min_hole:
                     rings.append(pts)
             continue
-        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
+        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c, own), JOG * c, moved, even, own))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
+            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c, own), JOG * c, moved, even, own))
     if overlay:
         rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, crotch)
     if rec is not None and moved:
@@ -800,7 +807,23 @@ def _past(q, far, near) -> bool:
     return _dot(_sub(q, far), _sub(near, far)) <= 1e-9
 
 
-def _close_jogs(pts, eps, moved, even=None):
+def _edges_of(polys) -> frozenset:
+    """The edges of finished ink, both ways round, as the point pairs a
+    ring carries them (ink's ``kept``)."""
+    out = set()
+    for f in polys:
+        for q in getattr(f, 'geoms', [f]):
+            if not isinstance(q, Polygon):
+                continue
+            for r in [q.exterior] + list(q.interiors):
+                cs = [(x, y) for x, y, *_ in r.coords]
+                for a, b in zip(cs, cs[1:]):
+                    out.add((a, b))
+                    out.add((b, a))
+    return frozenset(out)
+
+
+def _close_jogs(pts, eps, moved, even=None, leave=()):
     """Steps left where strokes that should share a line miss it, larger
     than _polish's slivers but still far smaller than a drawn step (a pixel
     step is a module; this is at most a corner break): a short edge between
@@ -841,7 +864,7 @@ def _close_jogs(pts, eps, moved, even=None):
             continue
         i += 1
     cx = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2 if pts else 0.0
-    skip = set()
+    skip = set(leave)                                       # (edges finished already: ink's ``kept``)
     while len(pts) > 5:
         n = len(pts)
         best = None
@@ -865,6 +888,13 @@ def _close_jogs(pts, eps, moved, even=None):
         parallel = _dot(u_in, u_out) > math.cos(math.radians(10))
         stepping = abs(_cross(u_in, u_s)) > math.sin(math.radians(30))
         if not (parallel and stepping):
+            skip.add((a, b))
+            continue
+        if leave and ((prev, a) in leave or (b, nxt) in leave):
+            # one of the two is a finished part's own edge: the flat between them is the part's
+            # design, not a miss (a kept tail's top, between the stem's turn and its end's break:
+            # a break and a quarter of the Regular's, under a break of the letter's from Bold,
+            # and where an ogonek ran its end's face on down, nothing stopped the close)
             skip.add((a, b))
             continue
         limit = _len(step) + eps
@@ -928,7 +958,7 @@ def _close_jogs(pts, eps, moved, even=None):
     return pts
 
 
-def _polish(pts, eps, moved, facet=None):
+def _polish(pts, eps, moved, facet=None, leave=()):
     """Slivers out of a finished ring: what stroke unions and clips leave
     behind, much shorter than any cut the design makes (a chamfer is at
     least 1.4 legs, a pixel step a module), and visible only as sloppiness
@@ -959,7 +989,7 @@ def _polish(pts, eps, moved, facet=None):
     middle), and a jog whose two sides are the same length closes on its
     midpoint."""
     pts = list(pts)
-    skip = set()
+    skip = set(leave)                                       # (edges finished already: ink's ``kept``)
     cx = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2 if pts else 0.0
     while len(pts) > 3:
         n = len(pts)

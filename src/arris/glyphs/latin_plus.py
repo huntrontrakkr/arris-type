@@ -166,7 +166,7 @@ def horn_at(g, ax, ay, case, give=0.0):
     of marks does (marks._squeeze): its run and rise shorten, then it
     lightens and shrinks."""
     t, kl = marks._squeeze(give) if give > 0 else (1.0, 1.0)
-    p = marks.accent_params(g.p, kl)
+    p = marks.accent_params(marks.mark_params(g.p), kl)     # the Regular's horn from there to Black
     target = g if p is g.p else Glyph(p, W=g.W)
     k = p.sd / 2                                            # half the diagonal, across
     u = 1 / SQRT2
@@ -176,7 +176,7 @@ def horn_at(g, ax, ay, case, give=0.0):
     top = ay + t * horn_rise(p, case)
     target.stroke((x0, y0), (x1, y1), (x1, max(top, y1 + p.c)), end='h')
     if target is not g:
-        g.add_glyph(target)
+        marks.stamp_kept(g, target)
 
 
 def horn_give(g, case):
@@ -568,9 +568,9 @@ def _combining(name, cp, seq, where, case):
             ax, ay = horn_origin(p, case)
             horn_at(g, x + ax, ay, case)
         elif where == 'ogonek':
-            ogonek_mark(g, x)
+            marks.kept_mark(g, ogonek_mark, x)
         else:
-            BELOW[seq[0]](g, x, 0, case)
+            marks.kept_mark(g, BELOW[seq[0]], x, 0, case)
     glyph(name, chr(cp) if cp else None, mark_width, kind='mark')(fn)
     MARKS[name] = (where, case, seq)
 

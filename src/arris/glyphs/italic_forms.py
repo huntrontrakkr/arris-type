@@ -26,7 +26,7 @@ from ..draw import AUTO_SHARE, REGISTRY, B, Opening, _counter_white, glyph
 from ..params import SQRT2, inner_leg, outer_leg
 from .figures import jog
 from .letterframe import Frame, plain_width as letter_width, white_scale
-from .lower import _dot, crotch_butt, hook, shoulder, shoulder_enter
+from .lower import _dot, crossbar, crotch_butt, hook, shoulder, shoulder_enter, shoulder_under
 
 TAIL = 1.75      # modules of white an exit tail reaches past its stem
 FLAG = 1.5       # modules an entry flag reaches left of its stem (and down)
@@ -256,18 +256,123 @@ def entry(g, f, xs, top=None):
     if p.mono:                                              # Mono's cursive letters leave their entry flags out
         return
     top = p.xh if top is None else top
-    k = p.sd / SQRT2
+    # The flag is the Regular's from there to Black (small_part): as thick,
+    # and as far out to the left of the stem's side and down from its cut
+    # corner, while the stem it leads into goes on getting heavier. Its
+    # upper edge still continues the stem's own cut.
+    q = small_part(p) or p
+    k = q.sd / SQRT2
     a = xs - p.sv / 2 + p.c - top + k                       # centreline: x - y = a
-    yf = top - _reach(p, FLAG) - p.sv / 2
-    g.stroke((xs, xs - a), (yf + a, yf), start='v', end='h')
+    yf = top - p.c - (_reach(q, FLAG) + q.sv / 2 - q.c)
+    if q is not p:
+        from ..draw import _thickness
+        x0 = xs - p.sv / 2
+        # The flag's square end runs into the stem's side. As the Regular's is placed its
+        # lower edge comes down on the end's cut three units short of the stem (the italic's
+        # diagonal is set a little off its nominal thickness), a notch of white which the
+        # outline filled as a slit in one letter and broke as a crotch in the next, at one
+        # weight and not the one after (the b's flag had a fill under it at Regular and Black
+        # and none between, the p's came and went four times). Kept, the end is cut where the
+        # lower edge is a unit inside the stem: one right angle, filled as any is.
+        short = x0 + 1.0 - (yf + a + _thickness(q, q.sh)((1.0, 1.0)) / SQRT2)
+        yf += max(0.0, short)
+        # Where the frame stands over the stem's top (the i, the j: room for the dot) the
+        # flag runs on over it, and its end, at the stem's middle, with the fill under it and
+        # the stem's own cut corner made the stem a slanted top: a roof from the flag's upper
+        # edge down to the stem's far side, one line because a fill and a cut were one leg.
+        # A fill is the Regular's now and the flag is the Regular's: the stem's cut is carried
+        # up to the flag's end by a square on its point, a cut's leg each way from the middle
+        # of the stem's top (under a frame that ends on the stem's top nothing of it shows).
+        g.stroke((xs - p.c / 2, top + p.c / 2, p.c * SQRT2), (xs + p.c / 2, top - p.c / 2))
+    # (the flag's end at the stem's middle stays square as the flag is finished alone, as it is inside the stem)
+    with g.kept(butt=(('x', xs),)):
+        g.stroke((xs, xs - a), (yf + a, yf), start='v', end='h')
+
+
+def small_part(p):
+    """The parameters the italic's small parts are drawn with where they
+    are not the weight's own: its cut's Regular, past it (draw.held_at);
+    None up to there. An entry flag, an exit tail and the e's flick are
+    extensions of a letter, and they are no bigger at Black than at Regular
+    while the letter goes on getting heavier (the owner, 2026-11-10:
+    "anything that is ... like a small little extension or a cross or a
+    little diacritic mark that is on a letter, don't let it get bigger
+    than what it is at regular"). Until 1.017 they grew with the stem: at
+    Black a flag and a tail were strokes of 147 and 149 units on a stem of
+    175, where the Regular's are 81 and 79 on 90."""
+    from ..draw import held_at
+    q = held_at(p)
+    return None if q is p else q
+
+
+def _tail_reach(p):
+    """How far an exit tail reaches past its stem (tail_end)."""
+    u = p.ungraded()                                  # (grade moves no stroke)
+    return max(_reach(p, TAIL), TAIL_FLOOR * u.sv, inner_leg(u) + (1 + TAIL_FLAT) * u.c)
+
+
+def _kept_tail(g, x0, xs):
+    """The Regular's exit tail past a stem at xs, from x0 inside the ink:
+    its thickness, its reach past the stem's side and its end's breaks
+    (Glyph.kept). Returns (its thickness, where it ends)."""
+    p = g.p
+    w = g.held()
+    y = _foot_line(g) + w / 2
+    x_end = xs + p.sv / 2 + _tail_reach(small_part(p))
+    with g.kept():
+        g.stroke((x0, y, w), (x_end, y))
+    return w, x_end
+
+
+def _foot_line(g) -> float:
+    """Where the underside of the letter's own horizontals lies, over the
+    baseline: a horizontal is drawn on the frame's first line, half the
+    weight's nominal thickness up, and the italic's is a little thinner
+    than that (set for the slant), so its underside stands a unit or so
+    over the line. A kept tail stands on the same line: a unit lower, the
+    letter's underside ran down to it on a slope no eye sees, and the
+    bowl's corner before it, its edge no longer level, was held straight
+    from Medium to Bold (a d u)."""
+    from ..draw import _thickness
+    return g.sh / 2 - _thickness(g.p, g.sh)((1.0, 0.0)) / 2
 
 
 def tail(g, f, xs, y=None):
     """Points that end a stem on the baseline with the t's foot: a corner
-    and a short stroke to the right."""
+    and a short stroke to the right. Past the Regular the stem turns into a
+    tail as thick as the Regular's and the tail itself is the Regular's,
+    laid on from inside the turn (small_part, _kept_tail)."""
     p = g.p
-    yb = f.Y(1) if y is None else y
-    return [B(xs, yb), tail_end(g, f, xs, yb)]
+    if small_part(p) is None or y is not None:
+        yb = f.Y(1) if y is None else y
+        return [B(xs, yb), tail_end(g, f, xs, yb)]
+    from ..draw import _thickness
+    w = g.held()
+    # where the turn's cut comes down on the baseline (the turn's own diagonal as the strokes take it:
+    # in the italic, set for the slant); the tail starts a break of its own before it, its start's
+    # break lying on that cut, so nothing of it shows outside the turn
+    x_cut = xs + w / 2 + p.leg - _thickness(p, g.sh)((1.0, -1.0)) / SQRT2
+    x_in = x_cut - small_part(p).c
+    _, x_end = _kept_tail(g, x_in, xs)
+    y = _foot_line(g) + w / 2
+    return [B(xs, y, None, w), ((x_in + x_end) / 2, y)]
+
+
+def exit_past(g, f, xs, foot_from=None):
+    """The exit past a stem at xs that stands on a bowl's foot (a d u): the
+    foot run on into the t's foot to the Regular; past it the foot ends
+    under the stem and the Regular's tail leaves the stem's side
+    (_kept_tail). ``foot_from``: the points of the foot's own stroke up to
+    the stem (the u's, drawn here to its end); None where the bowl is
+    closed and the exit is a stroke of its own."""
+    p = g.p
+    if small_part(p) is None:
+        end = tail_end(g, f, xs)
+        g.stroke(*(foot_from or [(xs, f.Y(1))]), end)
+        return
+    if foot_from:
+        g.stroke(*foot_from, (xs + p.sv / 2, f.Y(1)))       # the foot, to the stem's far side
+    _kept_tail(g, xs, xs)
 
 
 TAIL_FLOOR = 0.7   # stems: the least an exit tail reaches, so its end keeps a flat past its chamfer
@@ -291,9 +396,7 @@ def tail_end(g, f, xs, y=None):
     threshold: the h, l, d, n and the rest ended in a straight cut at
     SemiBold and Bold and a curve either side."""
     p = g.p
-    u = p.ungraded()                                  # (grade moves no stroke)
-    reach = max(_reach(p, TAIL), TAIL_FLOOR * u.sv, inner_leg(u) + (1 + TAIL_FLAT) * u.c)
-    return (xs + p.sv / 2 + reach, f.Y(1) if y is None else y)
+    return (xs + p.sv / 2 + _tail_reach(p), f.Y(1) if y is None else y)
 
 
 def run_floor(p, leg=None, across=None):
@@ -420,7 +523,8 @@ def r_ital(g):
     k = p.sd / SQRT2
     y8, y5 = f.Y(8), f.Y(8 - BRANCH)
     x0 = xs + p.sv / 2 + k - shoulder_enter(p)
-    g.stroke((x0, y5), (x0 + (y8 - y5), y8), f.P(8, 8), start='h')
+    u_ = shoulder_under(p)                                  # its cut lower by what the fill under it is short
+    g.stroke((x0 - u_, y5 - u_), (x0 + (y8 - y5), y8), f.P(8, 8), start='h')
 
 
 @ital('u', 8, 2)
@@ -429,7 +533,7 @@ def u_ital(g):
     _free(g)
     xl, xr = f.X(1), f.X(7)
     # the bowl's foot runs on under the right stem into the exit, as a hand writes a u
-    g.stroke(f.P(1, 9), B(*f.P(1, 1)), tail_end(g, f, xr))
+    exit_past(g, f, xr, [f.P(1, 9), B(*f.P(1, 1))])
     entry(g, f, xl)
     g.stroke(f.P(7, 9), f.P(7, 1))
 
@@ -444,7 +548,7 @@ def a_ital(g):
     # stem would cut across the bowl)
     g.stroke(f.P(7, 9), f.P(7, 1))
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    g.stroke(f.P(7, 1), tail_end(g, f, f.X(7)))
+    exit_past(g, f, f.X(7))
 
 
 @ital('d', 8, 2)
@@ -453,7 +557,7 @@ def d_ital(g):
     _free(g)
     g.stroke(f.P(7, 13), f.P(7, 1))
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    g.stroke(f.P(7, 1), tail_end(g, f, f.X(7)))
+    exit_past(g, f, f.X(7))
 
 
 @ital('b', 8, 2)
@@ -481,7 +585,7 @@ def f_ital(g):
     f = Frame(g, 7, 'asc')
     g.clip = (-f.W, -g.p.desc, 2 * f.W, g.p.asc)
     g.stroke(f.P(7, 12), B(*f.P(3.5, 12)), B(*f.P(3.5, -2)), f.P(0, -2))
-    g.stroke(f.P(0.5, 8), f.P(6.5, 8))
+    crossbar(g, f.X(0.5), f.X(6.5), g.p.xh)
 
 
 # --- Cursive forms ---------------------------------------------------------
@@ -578,12 +682,14 @@ def _e_strokes(g, f, xl, xr, x_exit):
     """The cursive e on a back at xl: the eye's top and bar, the foot and
     the exit.
 
-    Only what closes the eye gives way to keep it open: the top and the
-    bar, together and by one share (``eye``, down to EYE of their own
-    thickness), as far as the eye's own share of the stem needs (the
-    opening, draw._opened) and no further. The back and the foot are the
-    alphabet's strokes at every weight, and the exit stands over the foot
-    by EXIT_OVER breaks at least.
+    The top, the back and the foot are the alphabet's strokes at every
+    weight. The bar across the eye is the letter's cross and the exit its
+    flick, and from the Regular both are the Regular's own (small_part):
+    the bar as thick, the flick as thick and as far over the foot. With a
+    bar that stays the Regular's the eye stays open by itself; should it
+    ever fall short of its share of the stem (``eye``, the opening:
+    draw._opened), the top and the bar give together, down to EYE of their
+    own thickness, and nothing else does.
 
     Until 1.017 the eye was kept by thinning all the letter's horizontals,
     the foot with the top, and then the bar: from SemiBold the foot was 0.70
@@ -594,23 +700,41 @@ def _e_strokes(g, f, xl, xr, x_exit):
     gone. (The owner, 2026-11-10: "there's definitely something weird going
     on with the thicknesses towards the black ... the little bit at the
     bottom ... isn't nearly as thick"; and of the fix, "it's also important
-    that we remain uniform in thickness".)"""
+    that we remain uniform in thickness".) With the foot and the top whole
+    and the bar at the weight's own thickness the eye was a slit from Bold
+    and the join under it the widest spot of the cursive, a stem and a
+    half across at Black."""
     p = g.p
     full = max(g.sh0 * g.sh_k, p.floor)                     # the alphabet's horizontal here
     k = g.free('eye', 1.0)
-    top, bar = full * k, p.sd * k
+    q = small_part(p)
+    # the bar is the letter's cross and the exit its flick: both the
+    # Regular's from there to Black (small_part)
+    cross = g.held((1.0, 1.0))                              # the flick's stroke
+    top, bar = full * k, p.sd * g.held_share((1.0, 1.0)) * k
     yt, yf = p.xh - top / 2, full / 2
     g.stroke((xl, yt - (xr - xl), bar), (xr, yt))
-    L = max(_reach(p, FLAG), full / 2 + EXIT_OVER * p.c)
-    g.stroke((xr, yt, top), B(xl, yt), B(xl, yf, None, full), (x_exit, yf), (x_exit + L, yf + L), end='h')
+    if q is None:
+        L = max(_reach(p, FLAG), full / 2 + EXIT_OVER * p.c)
+        g.stroke((xr, yt, top), B(xl, yt), B(xl, yf, None, full), (x_exit, yf), (x_exit + L, yf + L), end='h')
+        return
+    # the foot ends on the flick's slope and the flick stands over it as far
+    # as the Regular's stands over its own; the flick itself is laid on from
+    # inside the foot, its end broken as the Regular's is (Glyph.kept)
+    over = max(_reach(q, FLAG) - q.sh / 2, EXIT_OVER * q.c)
+    L = full / 2 + over
+    back = full / 4
+    g.stroke((xr, yt, top), B(xl, yt), B(xl, yf, None, full), (x_exit, yf, cross), (x_exit + L / 2, yf + L / 2))
+    with g.kept():
+        g.stroke((x_exit - back, yf - back, cross), (x_exit + L, yf + L), end='h')
 
 
 @ital('e', 8, 2, openings=[Opening(_one_counter, 'eye', lambda p: EYE, max_ratio=AUTO_SHARE, hold=True)])
 def e_ital(g):
     """The cursive e: its bar a 45-degree stroke rising from the left side
     into the top right corner, the eye the triangle above it; the lower arm
-    leaves on a 45-degree upstroke, a hand's exit. At heavy weights the top
-    and the bar thin so the eye stays open (_e_strokes)."""
+    leaves on a 45-degree upstroke, a hand's exit. The bar and the exit are
+    the Regular's from there to Black, and the eye stays open (_e_strokes)."""
     f = Frame(g, 8, 'lower')
     _free(g)
     _e_strokes(g, f, f.X(1), f.X(7), f.X(6))
@@ -655,7 +779,7 @@ def _u_stems(g, f, xs, descender):
         # a small corner into the tick, so the foot stays straight past the last stem
         g.stroke(f.P(xs[0], 9), B(*f.P(xs[0], 1)), B(*f.P(xs[-1] + 1.5, 1), g.p.m / 2), f.P(xs[-1] + 1.5, -2))
     else:
-        g.stroke(f.P(xs[0], 9), B(*f.P(xs[0], 1)), tail_end(g, f, f.X(xs[-1])))
+        exit_past(g, f, f.X(xs[-1]), [f.P(xs[0], 9), B(*f.P(xs[0], 1))])
     entry(g, f, f.X(xs[0]))
     for x in xs[1:]:
         g.stroke(f.P(x, 9), f.P(x, 1))
