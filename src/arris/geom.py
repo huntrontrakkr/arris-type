@@ -982,8 +982,14 @@ def _polish(pts, eps, moved, facet=None):
 def _white_facet(prev, a, b, nxt) -> bool:
     """Whether the edge a-b is a wall of white between two cuts: the ring
     (ink on its left) turns right at both its ends, by 30 to 60 degrees
-    each, a quarter turn in all."""
-    u0, u1, u2 = _unit(_sub(a, prev)), _unit(_sub(b, a)), _unit(_sub(nxt, b))
+    each, a quarter turn in all. Not beside a doubled point: that edge,
+    the shortest there is, goes first, and this one is asked again (the
+    hourglass in Arris Mono Narrow Bold has one, and the build stopped on
+    its direction)."""
+    e0, e1, e2 = _sub(a, prev), _sub(b, a), _sub(nxt, b)
+    if min(_len(e0), _len(e1), _len(e2)) < 1e-9:
+        return False
+    u0, u1, u2 = _unit(e0), _unit(e1), _unit(e2)
     t1 = math.degrees(math.atan2(_cross(u0, u1), _dot(u0, u1)))
     t2 = math.degrees(math.atan2(_cross(u1, u2), _dot(u1, u2)))
     return -60 < t1 < -30 and -60 < t2 < -30

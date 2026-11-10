@@ -56,7 +56,12 @@ def bowl_join(g, f, stem_left, at_top):
     bowls". Tried at the stem's end first, where Chakra Petch, Tomorrow
     and Turret Road put theirs; he had it flipped, and a bowl's join made
     half as deep as an arch's (BOWL_DROP). Until 1.017 every bowl was a
-    closed octagon laid square against its stem."""
+    closed octagon laid square against its stem.
+
+    The italic's q, g and y take it too, at the foot (the owner: "the
+    descender should remain flat but ... a little bit of a crook in the
+    bowls ... little teeny weeny notch"); its own a b d p u branch as they
+    always have, and its hooks end flat as they always have."""
     arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=BOWL_DROP)
     pts = [*arch, B(*f.P(7, 1)), f.P(1, 1)]
     g.stroke(*placed(f.W, f.p.xh, pts, mirror=not stem_left, flip=not at_top), start=cut)
@@ -305,10 +310,7 @@ def g_strokes(g, white=None):
     """The g: its bowl and its hook (``white``: the room the hook leaves
     under the bowl, for a g that carries something there: ǥ's bar)."""
     f = Frame(g, 8, 'lower')
-    if g.p.slant:                                           # the italic's is the upright's as it was
-        g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    else:
-        bowl_join(g, f, stem_left=False, at_top=False)
+    bowl_join(g, f, stem_left=False, at_top=False)          # (the italic's too; its hook ends flat: hook)
     hook(g, f, white=white)
     g.butt += crotch_butt(g, f.Y(1))
 
@@ -568,10 +570,7 @@ def p_(g):
 def q(g):
     f = Frame(g, 8, 'lower')
     g.stroke(f.P(7, -3), f.P(7, 9))
-    if g.p.slant:                                           # the italic's is the upright's as it was (it has no q of its own)
-        g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-        return
-    bowl_join(g, f, stem_left=False, at_top=False)
+    bowl_join(g, f, stem_left=False, at_top=False)          # (the italic's too: it has no q of its own)
 
 
 # The r keeps its master's share of the line at every weight: eight ninths

@@ -130,9 +130,12 @@ letters redrawn.
   all the bowls". At the arches' depth, at the light weights, a bowl
   stood a long way off its stem and the line was noisy; shown it at two
   modules, one and 0.6 he chose one, and of the arches: "those remain
-  the same. It's just a different rule set.") The italic is as it was.
-  Letters that draw a bowl of their own (þ, the Cyrillic and Greek ones)
-  still close square.
+  the same. It's just a different rule set.") In the italic the q, the
+  g and the y take the notch too, at the foot ("a little teeny weeny
+  notch"); its own a, b, d, p and u branch as they always have, and its
+  hooks end flat as they always have ("the descender should remain
+  flat"). Letters that draw a bowl of their own (þ, the Cyrillic and
+  Greek ones) still close square.
 - Redrawn, after the chamfered faces (Chakra Petch first), with Arris's
   corners:
   - a: an arch over a bowl. The arm starts in the c's beak and comes into

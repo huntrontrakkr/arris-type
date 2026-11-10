@@ -7,7 +7,7 @@ from __future__ import annotations
 from itertools import pairwise
 
 import pytest
-from shapely.geometry import LineString
+from shapely.geometry import LineString, box
 
 import arris.glyphs  # noqa: F401  (the registry)
 from arris.draw import OPTICAL, REGISTRY, draw
@@ -393,6 +393,30 @@ def test_every_bowl_meets_its_stem_through_a_notch(w):
         assert _pieces(ch, p, foot) == notched, ch
 
 
+@pytest.mark.parametrize('w', [300, 400, 600, 700])
+def test_the_italics_q_g_and_y_take_the_bowls_notch_and_keep_their_tails_flat(w):
+    """The italic's bowls on a descending stem join it through the little
+    notch too, at the foot; its hooks end flat, without the upright's
+    terminal (the owner: "the descender should remain flat but ... a little
+    bit of a crook in the bowls ... little teeny weeny notch", and of the
+    y: "this should be on the y as well")."""
+    from arris.italic import italic, polylines
+    p = italic(params(w))
+
+    def slanted(ch):                                    # the italic's outline as the font has it, its curves in chords
+        return rings_to_shapely(polylines(place(CMAP[ch], p)[0]))
+    for ch in 'qgy':
+        ink = slanted(ch)
+        foot = ink.intersection(LineString([(-1e4, 0.4 * p.c), (1e4, 0.4 * p.c)]))
+        assert len([s for s in getattr(foot, 'geoms', [foot]) if s.length > 1]) == 2, ch       # the bowl's foot, the notch, the stem
+    for ch in 'gy':                                     # the hook's end: nothing of it rises over the hook's bar
+        ink = slanted(ch)
+        x0, y0 = ink.bounds[0], ink.bounds[1]
+        left = ink.intersection(box(x0 - 1, y0 - 1, x0 + 0.6 * p.sv, 0.0 - p.c))
+        bar = ink.intersection(LineString([((ink.bounds[0] + ink.bounds[2]) / 2, y0 - 10), ((ink.bounds[0] + ink.bounds[2]) / 2, -p.c)]))
+        assert left.bounds[3] <= bar.bounds[3] + 1.0, ch
+
+
 @pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
 def test_b_and_d_and_p_and_q_are_mirrors(w):
     from shapely import affinity
@@ -527,6 +551,8 @@ def test_a_wall_between_two_cuts_closes_to_a_point():
     assert _polish(pocket(12), 10, {}) == pocket(12)        # the watch's finish: slivers only
     bump = [(0, 0), (300, 0), (300, 140), (360, 194), (360, 206), (300, 260), (300, 400), (0, 400)]
     assert _polish(bump, 10, {}, 20) == bump
+    doubled = pocket(12)[:4] + [(240, 194)] + pocket(12)[4:]   # a point twice beside the wall: it goes, then the wall
+    assert _polish(doubled, 10, {}, 20) == out
 
 
 def test_a_step_between_two_equal_cuts_closes_evenly():

@@ -539,10 +539,15 @@ def k_ital(g):
 
 @ital('y', 8, 2)
 def y_ital(g):
-    """A u whose right stem runs on into the descender, as the g's."""
+    """A u whose right stem runs on into the descender, as the g's, and
+    whose foot comes into that stem through the bowls' notch (lower.bowl_join;
+    the owner, 2026-11-10: "this should be on the y as well"). Until 1.017
+    the foot met the stem square."""
+    from .lower import BOWL_DROP, turned
     f = Frame(g, 8, 'lower')
     _free(g)
-    g.stroke(f.P(1, 9), B(*f.P(1, 1)), f.P(7, 1))
+    arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=BOWL_DROP)
+    g.stroke(f.P(1, 9), *reversed(turned(f.W, f.p.xh, arch)), end=cut)
     entry(g, f, f.X(1))
     hook(g, f)
     g.butt += crotch_butt(g, f.Y(1))                    # the foot meets the descender square (lower.crotch_butt)
