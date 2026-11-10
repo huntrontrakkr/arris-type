@@ -17,7 +17,7 @@ Specimen, and the fonts to download: **[arristype.com](https://arristype.com)**.
 
 | Family | What it is |
 |---|---|
-| **Arris** | Proportional letters, tabular figures. Measured optics. Nine weights. |
+| **Arris** | Proportional letters and figures (the watch's tabular figures with `tnum`). Measured optics. Nine weights. |
 | **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem). |
 | **Arris Italic**, **Arris Mono Italic** | Slanted ten degrees, every chamfer a curve, every point the upright keeps sharp kept sharp; a single-storey a and a descending f. Nine weights; Mono Italic in Mono's six. |
 | **Arris Mono Narrow** | Arris Mono with narrower letters in the same cell: about a fifth of every cell white at every weight, twice Arris Mono's white between letters, and each weight from Regular up drawn a little lighter, for code and terminals where Arris Mono reads dense. Same six weights, each with its italic, every ligature and set. |
@@ -41,8 +41,8 @@ Coverage, about 2,150 code points (details in `docs/coverage/`):
 * **Terminal**: all box drawing, block elements, shades and Braille, cell
   for cell, and the Powerline glyphs.
 
-Features: `tnum` (default) `pnum` `calt` (the watch's time colon between
-figures) `zero` `ss01` `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`
+Features: `pnum` (default) `tnum` (the watch's tabular figures) `calt` (the
+time colon between figures) `zero` `ss01` `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`
 `case` `locl` `ccmp` `mark` `mkmk` `kern`; in Mono, `calt` ligatures and
 alignment (`- + *` drop beside lowercase, `:` rises beside capitals, `x` is
 `×` in `1920x1080` and `0xFF`), `ss03` (`<=` `>=` as their characters),

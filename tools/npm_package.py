@@ -107,7 +107,7 @@ h1   {{ font-weight: 850; font-variation-settings: "GRAD" 50, "WTCH" 100; }}
 | `watch.css` | Arris Watch | Nine weights with the watch's own stroke balance. |
 | `index.css` | all three | `arris.css`, `mono.css` and `watch.css`. |
 
-Features through `font-feature-settings`: `tnum` (default) `pnum` `zero`
+Features through `font-feature-settings`: `pnum` (default) `tnum` `zero`
 `ss01` `sups` `subs` `frac` `case`, and `ss20`, the figures in the watch's
 pixels; in Mono, `ss03` turns the ligatures off.
 

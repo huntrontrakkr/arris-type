@@ -200,6 +200,22 @@ letters redrawn.
   it at Regular (0.31 to 0.36 in those faces). The double quote's ticks
   stand a module and a half of white apart for two, so the pair no longer
   reads as two apostrophes.
+- Figures are proportional by default. The default was the watch's
+  tabular set, every figure centred on a ten-module cell: the figures
+  stood a third of the white between two stems apart (0.34; 0.63 to 0.88
+  in those faces), the 1 two whole ones from its neighbours (1.8 to 2.4;
+  0.6 to 0.9), and nothing was kerned against them: 1,110 and 7/11 fell
+  apart in a line of text. The same drawings are now spaced as the
+  letters are, each by its own white (the 0 against the 0 0.84, the 1
+  against the 1 0.68), and kerned with the letters and the marks (a
+  period after a 7 1.6 for 2.0). `tnum` gives the tabular set, unkerned,
+  on its cell (`pnum` undoes it), and every feature that takes a figure
+  takes either: `zero` `ss01` `ss02` `sups` `subs` `numr` `dnom` `frac`
+  `ordn` `ss20`. Between proportional figures the time colon keeps a
+  colon's sides; between tabular ones it is the watch's. Arris Mono is
+  unchanged: every figure on the cell. **Anyone who set a clock, a table
+  or a counter in Arris and relied on the default now needs
+  `font-variant-numeric: tabular-nums` (`tnum`).**
 - A crotch with a step in it is broken as any crotch. Where a diagonal
   lands on a short edge square to the bar it runs into (the Z's foot),
   the corner was filled as a right angle, no further than that short

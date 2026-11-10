@@ -1648,7 +1648,7 @@ def math_():
 def features():
     rows = [('frac', '1/2  7/8', 'frac'), ('sups', 'x2 + y2', 'sups'), ('subs', 'H2O CO2', 'subs'),
             ('zero', '0 Ø O', 'zero'), ('ss01', '2001', 'ss01'), ('ss02', '555', 'ss02'), ('case', '(A-Z) [HI]', 'case'),
-            ('calt', '12:45', 'calt'), ('pnum', '1110', 'pnum'), ('cv01', 'aaa', 'cv01')]
+            ('calt', '12:45', 'calt'), ('tnum', '1110', 'tnum'), ('cv01', 'aaa', 'cv01')]
     cells = ''.join(f'<div class="r"><span class="tag mono accent">{t}</span><span class="off" style="font-feature-settings:\'calt\' 0">{esc(s)}</span>'
                     f'<span class="arr dim">→</span><span class="on" style="font-feature-settings:\'{f}\' 1">{esc(s)}</span></div>'
                     for t, s, f in rows)

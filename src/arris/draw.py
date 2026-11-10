@@ -775,6 +775,11 @@ def _build(spec, p, ot, ob, overrides, width=None):
 # Params.optical (0 in the watch's own drawing, WTCH 100). Drawn on the base
 # letters and figures; composites inherit them. None turns them off.
 _FIGS = ('zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine')
+# The figures and their alternates that stand in text as letters do, spaced by
+# their own white (font._place_drawn) and kerned; each has a tabular twin on
+# the figures' cell (name.tnum: glyphs.features). In Arris Mono all share
+# the cell.
+PROPORTIONAL_FIGS = _FIGS + ('zero.zero', 'zero.dot', 'five.ss02')
 OPTICAL = {
     'names': set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') | set(_FIGS),
     # optical centre: the middle rises until the top counter of a three-bar

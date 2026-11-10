@@ -9,7 +9,7 @@ from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.pens.pointPen import SegmentToPointPen  # noqa: F401  (kept for later point pens)
 
-from .draw import REGISTRY, TAB_MATH, draw
+from .draw import PROPORTIONAL_FIGS, REGISTRY, TAB_MATH, draw
 from .params import Params
 
 UPM = 1000
@@ -216,7 +216,7 @@ def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: li
         # (where mark positioning, ``anchors``, moves it to its base)
         adv = 0.0
         dx = -g.W / 2 - mark_over(p)
-    elif spec.kind == 'fig' or p.mono:
+    elif (spec.kind == 'fig' and name not in PROPORTIONAL_FIGS) or p.mono:
         adv = p.fig_adv
         dx = (adv - g.W) / 2
     elif isinstance(spec.kind, tuple) and spec.kind[0] == 'punct':
@@ -498,7 +498,7 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     elif kern and not p.mono:
         from .kerning import fea as kern_fea, kerns
         kinds = {n: REGISTRY[n].kind for n in names}
-        kernable = [n for n in names if kinds[n] in ('cap', 'lower') or
+        kernable = [n for n in names if kinds[n] in ('cap', 'lower') or n in PROPORTIONAL_FIGS or
                     (isinstance(kinds[n], tuple) and n in KERN_PUNCT)]
         if p.slant:
             from .italic import polylines

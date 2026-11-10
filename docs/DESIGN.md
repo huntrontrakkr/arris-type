@@ -165,8 +165,9 @@ cap height one edge break in.
 
 **Widths.** A letter is its stems plus its white. Stems take the weight's
 stem; white widens a little at light weights and narrows a little at heavy
-ones, so counters change far less than strokes. Figures stay tabular
-within a weight but widen with it.
+ones, so counters change far less than strokes. Figures are spaced as
+the letters are, each by its own white; their tabular twins (`tnum`)
+share one cell within a weight, and it widens with the weight.
 
 **Openings stay open.** Heavier strokes grow inward, and a fixed body would
 close the 4's top, the 1's notch, the e's and a's apertures and the Q's
@@ -648,10 +649,15 @@ horizontals.
 
 ## 8. Features
 
-* `tnum` (default) and `pnum` figures.
+* `pnum` (default) and `tnum` figures: proportional in text, spaced and
+  kerned as letters; `tnum` gives the watch's, the same drawings on one
+  cell (the default until 1.017: on its cell the 1 stood two stems' white
+  from its neighbours and the others a third of one apart). In Arris Mono
+  every figure is on the cell.
 * `locl`, `ccmp`, `mark`, `mkmk`: local forms and mark positioning (section 10).
-* `calt`: a colon between figures becomes the watch's time colon, with
-  dots centred on the figures in a tighter slot.
+* `calt`: a colon between figures becomes the time colon, its dots
+  centred on the figures; between tabular figures the watch's, in a
+  tighter slot.
 * `zero`: a slashed zero, its slash square to the bowl's corners.
 * `ss01`: a dotted zero. Clocks should keep the plain 0: a dot or a slash
   moves a zero toward an 8, which is why the German number-plate face

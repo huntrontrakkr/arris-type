@@ -1,10 +1,16 @@
 """Alternate figures, small figures, case forms, and the OpenType features
 that reach them.
 
-* Figures are tabular by default (``tnum``); ``pnum`` gives proportional
-  ones, the same drawings spaced like letters.
-* ``calt`` turns a colon between figures into the watch's time colon: two
-  stem-square dots centred on the figures, in a tighter slot.
+* Figures are proportional in Arris, spaced by their own white as the
+  letters are and kerned (``draw.PROPORTIONAL_FIGS``); ``tnum`` gives the
+  watch's tabular ones, the same drawings on one cell (``pnum`` back).
+  Until 1.017 the tabular set was the default: on its ten-module cell the
+  figures stood a third of the white between two stems apart and the 1
+  two whole ones from its neighbours (1,110). In Arris Mono every figure
+  is on the cell either way.
+* ``calt`` turns a colon between figures into the time colon: two
+  stem-square dots centred on the figures; between tabular figures the
+  watch's, in a tighter slot.
 * ``zero``: a slashed zero, the slash square to the bowl's corners; ``ss01``:
   a dotted zero.
 * Small figures (superiors, inferiors, numerators, denominators) are drawn
@@ -16,7 +22,7 @@ from __future__ import annotations
 
 from shapely import affinity
 
-from ..draw import REGISTRY, draw, glyph
+from ..draw import PROPORTIONAL_FIGS, REGISTRY, draw, glyph
 from ..geom import rings_to_shapely
 from ..params import SQRT2
 from .letterframe import STEEP
@@ -86,13 +92,6 @@ _register_small('numr', None, lambda p: p.cap - small(p).cap)
 _register_small('dnom', None, lambda p: 0.0)
 
 
-# --- Proportional figures ------------------------------------------------
-
-for n in FIGS:
-    spec = REGISTRY[n]
-    glyph(f'{n}.pnum', None, spec.width, kind='cap', openings=spec.openings)(spec.fn)
-
-
 # --- Zeros ---------------------------------------------------------------
 
 @glyph('zero.zero', None, 'fig_w')
@@ -114,6 +113,19 @@ def zero_dot(g):
     if not p.mono:                                          # (Mono's zero is dotted already)
         from .figures import zero_dot
         zero_dot(g)
+
+
+# --- Tabular figures -----------------------------------------------------
+
+def _tabular(n):
+    """n.tnum: the figure n as it is drawn, on the figures' cell."""
+    def fn(g, n=n):
+        g.add_glyph(draw(n, g.p, width=g.W))
+    glyph(f'{n}.tnum', None, REGISTRY[n].width)(fn)
+
+
+for n in PROPORTIONAL_FIGS:
+    _tabular(n)
 
 
 # --- The time colon ------------------------------------------------------
@@ -237,7 +249,9 @@ def fea(mono: bool = False) -> str:
     """The feature file (the monospaced cut adds its programming ligatures)."""
     figs = ' '.join(FIGS)
     px = ' '.join(f'{n}.px' for n in FIGS)
-    sm = {s: ' '.join(f'{n}.{s}' for n in FIGS) for s in ('sups', 'subs', 'numr', 'dnom', 'pnum')}
+    sm = {s: ' '.join(f'{n}.{s}' for n in FIGS) for s in ('sups', 'subs', 'numr', 'dnom', 'tnum')}
+    alts = ' '.join(n for n in PROPORTIONAL_FIGS if n not in FIGS)          # zero.zero zero.dot five.ss02
+    alts_t = ' '.join(f'{n}.tnum' for n in PROPORTIONAL_FIGS if n not in FIGS)
     case = '\n'.join(f'    sub {n} by {n}.case;' for n in CASE)
     from ..draw import FEATURE_CODE, LANGSYS
     langsys = ''.join(f'languagesystem {t};\n' for t in dict.fromkeys(LANGSYS))
@@ -248,48 +262,52 @@ languagesystem latn dflt;
 {extra}
 
 @figs = [{figs}];
-@pnum = [{sm['pnum']}];
+@tnum = [{sm['tnum']}];
 @sups = [{sm['sups']}];
 @subs = [{sm['subs']}];
 @numr = [{sm['numr']}];
 @dnom = [{sm['dnom']}];
 @px = [{px}];
-@anyfig = [{figs} {sm['pnum']} zero.zero zero.dot five.ss02 {px}];
+@pfig = [{figs} {alts}];
+@tfig = [{sm['tnum']} {alts_t}];
 
-feature tnum {{ sub @pnum by @figs; }} tnum;
-feature pnum {{ sub @figs by @pnum; }} pnum;
-feature zero {{ sub zero by zero.zero; }} zero;
+feature tnum {{ sub @pfig by @tfig; }} tnum;
+feature pnum {{ sub @tfig by @pfig; }} pnum;
+feature zero {{ sub zero by zero.zero; sub zero.tnum by zero.zero.tnum; }} zero;
 feature ss01 {{
     featureNames {{ name "Dotted zero"; }};
     sub zero by zero.dot;
+    sub zero.tnum by zero.dot.tnum;
 }} ss01;
 feature ss02 {{
     featureNames {{ name "Open five"; }};
     sub five by five.ss02;
+    sub five.tnum by five.ss02.tnum;
 }} ss02;
 feature calt {{
-    sub @anyfig colon' @anyfig by colon.tf;
+    sub @pfig colon' @pfig by colon.case;
+    sub [@tfig @px] colon' [@tfig @px] by colon.tf;
 }} calt;
 feature ss20 {{
     featureNames {{ name "Watch pixels"; }};
     sub @figs by @px;
-    sub @pnum by @px;
-    sub [zero.zero zero.dot] by zero.px;
-    sub five.ss02 by five.px;
-    sub colon.tf by colon.tf.px;
+    sub @tnum by @px;
+    sub [zero.zero zero.dot zero.zero.tnum zero.dot.tnum] by zero.px;
+    sub [five.ss02 five.ss02.tnum] by five.px;
+    sub [colon.tf colon.case] by colon.tf.px;
 }} ss20;
-feature sups {{ sub @figs by @sups;{_more('sups')} }} sups;
-feature subs {{ sub @figs by @subs;{_more('subs')} }} subs;
-feature sinf {{ sub @figs by @subs;{_more('sinf')} }} sinf;
-feature numr {{ sub @figs by @numr;{_more('numr')} }} numr;
-feature dnom {{ sub @figs by @dnom;{_more('dnom')} }} dnom;
+feature sups {{ sub @figs by @sups; sub @tnum by @sups;{_more('sups')} }} sups;
+feature subs {{ sub @figs by @subs; sub @tnum by @subs;{_more('subs')} }} subs;
+feature sinf {{ sub @figs by @subs; sub @tnum by @subs;{_more('sinf')} }} sinf;
+feature numr {{ sub @figs by @numr; sub @tnum by @numr;{_more('numr')} }} numr;
+feature dnom {{ sub @figs by @dnom; sub @tnum by @dnom;{_more('dnom')} }} dnom;
 feature frac {{
     lookup FRAC_SLASH {{ sub slash by fraction; }} FRAC_SLASH;
-    lookup FRAC_NUMR {{ sub @figs by @numr; }} FRAC_NUMR;
+    lookup FRAC_NUMR {{ sub @figs by @numr; sub @tnum by @numr; }} FRAC_NUMR;
     lookup FRAC_DNOM {{ sub [fraction @dnom] @numr' by @dnom; }} FRAC_DNOM;
 }} frac;
 feature ordn {{
-    sub @figs [a o]' by [ordfeminine ordmasculine];
+    sub [@figs @tnum] [a o]' by [ordfeminine ordmasculine];
 }} ordn;
 feature case {{
 {case}{_more('case')}
