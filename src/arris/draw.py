@@ -128,6 +128,17 @@ def hold_weight(p) -> float:
     return EXTRA_HOLD
 
 
+def crotch_fill(p) -> float:
+    """How far along the stem the corner rule fills the crotch a diagonal
+    makes with it, in breaks (geom._ring_rule): one in Arris, the leg every
+    other corner has on its horizontal or vertical edge; two in the watch's
+    own drawing (the pixel rule the figures came with, WTCH 100) and in the
+    italic, whose letters are drawn for it."""
+    if p.slant:
+        return 2.0
+    return 2.0 - p.optical
+
+
 @dataclass
 class Glyph:
     p: Params
@@ -351,7 +362,7 @@ class Glyph:
                                                  and src[1].p == p for src in self.extra_src)]
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished,
-                    overlay=self.overlay)
+                    overlay=self.overlay, crotch=crotch_fill(p))
         rec = (rec or []) + self.extra_chamfers if record else []
         if record and getattr(self, 'square', False):
             # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)

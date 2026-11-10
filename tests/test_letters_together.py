@@ -143,3 +143,31 @@ def test_the_x_steps_as_the_capital_does(w):
     p = params(w)
     points = lambda ch: sum(len(r) for r in draw(CMAP[ch], p).rings())
     assert points('x') == points('X')
+
+
+@pytest.mark.parametrize('w', [400, 700, 900])
+def test_no_join_is_thicker_than_a_crossing(w):
+    """The largest disk that fits a letter's ink, in its heaviest strokes
+    (tools/stroke_audit.py): a T is 1.45 with its corners broken, a bar
+    across a stem 1.7 (t f 4), and no join a diagonal makes with a stem is
+    over a T's (K k M R Q 1: 1.5 to 1.6 until 1.017, the crotch filled two
+    breaks deep)."""
+    from shapely import maximum_inscribed_circle
+
+    from arris.draw import _heaviest_stroke
+    p = params(w)
+
+    def bloat(ch):
+        g = draw(CMAP[ch], p)
+        ink = rings_to_shapely(g.rings())
+        d = 0.0
+        for part in getattr(ink, 'geoms', [ink]):
+            r = maximum_inscribed_circle(part, tolerance=0.5)
+            (cx, cy), (ex, ey) = r.coords[0], r.coords[-1]
+            d = max(d, 2 * ((cx - ex) ** 2 + (cy - ey) ** 2) ** 0.5)
+        return d / _heaviest_stroke(g, p)
+
+    for ch in 'KkMRQNY1':
+        assert bloat(ch) <= 1.52, (ch, round(bloat(ch), 2))
+    for ch in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789':
+        assert bloat(ch) <= 1.75, (ch, round(bloat(ch), 2))

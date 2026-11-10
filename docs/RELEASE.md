@@ -94,6 +94,17 @@ letters redrawn.
   where three bars stack in the x-height (a e s) the inner one gives first
   and the bar at the open end keeps its weight, as in hand-drawn faces
   (`tools/stroke_roles.py`). Until now all three thinned alike.
+- Every corner takes one break's leg on its horizontal or vertical edge.
+  The corner rule broke a right angle by a chord with a leg on each side,
+  outside (cut) and inside (filled), and it filled the crotch a diagonal
+  makes with a stem by a chord as long: two legs along the stem, twice the
+  ink of any other corner, added where two strokes already overlap. The
+  joins of K, k, M, R, Q and the 1 were the thickest in the alphabet for
+  it (the largest disk that fits them 1.5 to 1.6 strokes across; a T is
+  1.45: `tools/stroke_audit.py`). A crotch is now filled one leg along the
+  stem; right angles are broken as before, and nothing is left sharp.
+  Those joins measure 1.41 to 1.5 at every weight and grade. The watch's
+  own drawing and the italic keep the pixel rule's chord.
 - The K is the k's drawing at every weight: the arm into the stem, the leg
   off the arm, the crotch a point. From Bold, and in Arris Mono, it had
   changed to the pixel master's form, arm and leg meeting in a block

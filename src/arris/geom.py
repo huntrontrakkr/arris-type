@@ -309,7 +309,7 @@ def _on_butt(a, b, butt, corner=None) -> bool:
 BUTT_TOL = 1e-6
 
 
-def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
+def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch: float = 2.0):
     """The corner rule on one ring (ink on the left of travel), as the watch's
     pixel rule behaves:
 
@@ -322,6 +322,16 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
     * a convex corner where a 2:1 edge meets a cap: a chord of leg c;
     * anything else (135-degree turns, the bends of gables): left alone;
     * a corner on a butt line (``butt``, see ``ink``): left square.
+
+    ``crotch``: how far along the axis edge the fill of a concave 45-degree
+    corner reaches, in breaks. The pixel rule's chord there is as long as a
+    right angle's (c*sqrt2), which is 2c along the stem and twice the ink
+    of a right angle's fill, added where a diagonal already overlaps a
+    stem: the joins of K k M R Q 4 and the 1 were the thickest in the
+    alphabet for it (tools/stroke_audit.py). Arris gives every corner one
+    leg on its horizontal or vertical edge: c at a right angle, c in a
+    crotch (crotch 1: draw.crotch_fill); the watch's own drawing and the
+    italic keep the pixel rule's 2.
     """
     pts = [tuple(p) for p in coords[:-1]]
     # drop duplicate and collinear points
@@ -368,6 +378,8 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
                 rec.append(('chord', out[-2], out[-1]))
         elif k == 'acute':
             leg = c * math.sqrt(2)
+            if _cross(u_in, u_out) < 0:                     # a crotch: its fill, by its leg on the axis edge
+                leg *= crotch / 2.0
             if _dir_class(u_in) == 'diag':
                 bb = min(leg, room_in, room_out / math.sqrt(2))
                 out += [_sub(b, _mul(u_in, bb)), _add(b, _mul(u_out, bb * math.sqrt(2)))]
@@ -387,7 +399,7 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=()):
 
 
 def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=(),
-        tags: list | None = None, extra_edges=(), finished=(), overlay=()):
+        tags: list | None = None, extra_edges=(), finished=(), overlay=(), crotch: float = 2.0):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
 
@@ -458,13 +470,13 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
                 if r is poly.exterior or Polygon(r).area >= min_hole:
                     rings.append(pts)
             continue
-        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
+        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch), POLISH * c, moved), JOG * c, moved))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt), POLISH * c, moved), JOG * c, moved))
+            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch), POLISH * c, moved), JOG * c, moved))
     if overlay:
-        rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs)
+        rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, crotch)
     if rec is not None and moved:
         _follow(rec, moved)
     if tags is not None:
@@ -476,7 +488,7 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     return rings
 
 
-def _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs):
+def _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, crotch=2.0):
     """``ink``'s overlay: each stroke finished alone on its own chamfer leg
     (cut at the clip first, as any stroke is), then the finished ink and the
     finished overlays joined. Rings as ``ink`` returns them. The join
@@ -499,9 +511,9 @@ def _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs):
             if not isinstance(q, Polygon) or q.area <= 1e-9:
                 continue
             q = orient(q, sign=1.0)
-            out = _close_jogs(_polish(_ring_rule(list(q.exterior.coords), c_ov, +1, rec, butt),
+            out = _close_jogs(_polish(_ring_rule(list(q.exterior.coords), c_ov, +1, rec, butt, crotch),
                                       POLISH * c_ov, moved), JOG * c_ov, moved)
-            holes = [_close_jogs(_polish(_ring_rule(list(h.coords), c_ov, +1, rec, butt), POLISH * c_ov, moved),
+            holes = [_close_jogs(_polish(_ring_rule(list(h.coords), c_ov, +1, rec, butt, crotch), POLISH * c_ov, moved),
                                  JOG * c_ov, moved) for h in q.interiors]
             pieces.append(Polygon(out, holes))
     if not pieces:
