@@ -173,9 +173,13 @@ def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: li
         return [], [], (p.fig_adv if p.mono and w > 0 else w)
     if p.slant and REGISTRY[name].cell:
         p = p.with_(slant=0.0)          # drawn upright, so no stroke is set for a shear (geom.Thickness)
-    if p.grade_k != 1.0:
+    if p.grade_k != 1.0 or p.grad:
         # Grade changes strokes only: space the glyph as its ungraded self,
         # then draw the graded strokes in the same body at the same place.
+        # (A grade that scales nothing, a positive one at Black, is spaced
+        # so too: its added strokes are a graded lighter weight's, and until
+        # 1.016 a glyph that turned on them took another advance, ⁜ 140
+        # units less.)
         p0 = p.ungraded()
         g0 = draw(name, p0, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0))
         r0, _, adv = _place(name, p0, tune)

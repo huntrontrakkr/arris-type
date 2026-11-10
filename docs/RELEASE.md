@@ -49,6 +49,30 @@ Reserved Font Name. Every font carries the copyright
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 1.016
+
+- Grade changes no width, in every glyph. The grade axis thickens or thins
+  the strokes and keeps every advance, so text does not reflow with it;
+  in the variable fonts 42 glyphs upright and 52 italic broke that. ⁜ was
+  140 units narrower at Black with the grade at 100 (‴ ⁗ in the italic 91
+  and 125), ⇿ 85 wider at SemiBold with the grade at -100, and the letters
+  and signs with a bar or a slash across them (ł Ł Ø ø ŧ Ħ Đ ₱ ₦ ₩ ₹ ₺ €
+  ≠ ≱ ⊈ ∄ and the rest) moved by 2 to 25. A graded glyph is spaced as its
+  ungraded self, and that self was not always the plain master. Its
+  strokes were the graded ones divided by the grade's factor again, which
+  is the number they started as only to its last bit: nothing that asks
+  whose parameters these are knew them for a weight of the font, so an
+  added stroke (held at the Regular's weight from 1.014) was drawn at
+  another's and the glyph was spaced round that; and a drawing that turns
+  on a threshold at a named weight (⇿ at SemiBold) fell on its other
+  side. And a grade that scales nothing, a positive one at Black, was not
+  taken for a grade at all, though the lighter weights its added strokes
+  are held from are graded. Now a grade carries the strokes it was made
+  from, and its ungraded self is the plain master exactly.
+  The static fonts are ungraded and do not change.
+- `tools/grade_advance_check.py`: each variable font is checked as it is
+  built; a glyph whose advance moves with the grade fails the release.
+
 ## 1.015
 
 - Arris Mono's cell, both ways: nothing is cut by it any more. Mono drew

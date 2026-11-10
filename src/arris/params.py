@@ -8,7 +8,7 @@ zone masters). Font instances use 60 units per module, so the cap height is
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, replace, field
+from dataclasses import dataclass, field, fields, replace
 
 SQRT2 = math.sqrt(2)
 
@@ -55,6 +55,7 @@ class Params:
     slant: float = 0.0         # italic: tan of the slant (outlines are sheared when built)
     floor: float = 0.0         # no stroke drawn thinner (instances.stroke_floor); 0 for the heritage
     raw: tuple | None = None   # (sv, sh, sd, ss) before the floor, where it raised them
+    pregrade: tuple | None = field(default=None, compare=False, repr=False)   # a grade's strokes and break before it: (sv, sh, sd, ss, c) (ungraded)
     optical: float = 1.0       # share of the optical corrections (draw.OPTICAL): 1 measured optics, 0 the watch's own drawing
     view_cap: float = 0.0      # the cap height text is read at (0: cap); a set drawn smaller keeps its font's
 
@@ -65,6 +66,8 @@ class Params:
         that places strokes and the strokes themselves agree."""
         strokes = ('sv', 'sh', 'sd', 'ss')
         kw.setdefault('unlit', None)                      # a set derived from lightened parameters is not their weight's
+        if 'pregrade' not in kw and any(f in kw for f in (*strokes, 'c')):
+            kw['pregrade'] = None                         # restroked: no longer that grade of those strokes
         if 'cap' in kw and 'view_cap' not in kw:          # a set drawn at another size is still read at the font's
             kw['view_cap'] = self.view_cap or self.cap
         before = dict(zip(strokes, self.raw)) if self.raw else {f: getattr(self, f) for f in strokes}
@@ -82,6 +85,25 @@ class Params:
             p = replace(p, **before)
         return p
 
+    def same(self, other: 'Params') -> bool:
+        """Whether these are the other's parameters, to the last bits of
+        the arithmetic: a set scaled and scaled back (a grade's ungraded
+        self: strokes times k, over k) is the set it came from. Read exactly,
+        it was not (sd one unit in the last place off at SemiBold, grade
+        -100), and nothing that asks whose parameters these are (draw._cut)
+        knew it for a font's own."""
+        for f in fields(self):
+            if not f.compare:
+                continue
+            a, b = getattr(self, f.name), getattr(other, f.name)
+            if a == b:
+                continue
+            xs, ys = (a, b) if isinstance(a, tuple) and isinstance(b, tuple) and len(a) == len(b) else ((a,), (b,))
+            if not all(isinstance(x, float) and isinstance(y, (float, int)) and math.isclose(x, y, rel_tol=1e-9, abs_tol=1e-9)
+                       for x, y in zip(xs, ys)):
+                return False
+        return True
+
     def dot(self) -> float:
         """A dot's size (a period, a tittle, a dieresis, a comma's head): the
         stem's square, but never less than twice the stroke floor, so dots
@@ -96,14 +118,25 @@ class Params:
         return s
 
     def scaled(self, k: float) -> 'Params':
-        keep = ('mono', 'narrow', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw', 'light', 'unlit')
+        keep = ('mono', 'narrow', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw', 'light', 'unlit', 'pregrade')
         out = Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})
-        return replace(out, raw=tuple(v * k for v in self.raw) if self.raw else None)
+        return replace(out, raw=tuple(v * k for v in self.raw) if self.raw else None,
+                       pregrade=tuple(v * k for v in self.pregrade) if self.pregrade else None)
 
     def ungraded(self) -> 'Params':
         k = self.grade_k
+        if self.pregrade:
+            # the strokes the grade was made from, themselves: times k and
+            # over k again is not the same number (sd one unit in the last
+            # place off at SemiBold, grade -100), and a drawing that turns
+            # on a threshold there took another width (⇿ 85 units)
+            sv, sh, sd, ss, c = self.pregrade
+            return self.with_(sv=sv, sh=sh, sd=sd, ss=ss, c=c, grade_k=1.0, grad=0.0, pregrade=None)
         if k == 1.0:
-            return self
+            # a grade that leaves the strokes as they are (a positive grade at
+            # Black: instances.GRAD_TAPER) is still a grade: the lighter
+            # weights of its cut are graded (draw._lighter reads grad)
+            return self.with_(grad=0.0) if self.grad else self
         sv, sh, sd, ss = self.raw if self.raw else (self.sv, self.sh, self.sd, self.ss)
         return self.with_(sv=sv / k, sh=sh / k, sd=sd / k, ss=ss / k, c=self.c / k, grade_k=1.0, grad=0.0)
 

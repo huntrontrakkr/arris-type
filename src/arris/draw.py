@@ -1203,7 +1203,7 @@ def _cut(p):
         # the watch's own proportions)
         for watch in sorted({round(1.0 - p.optical, 6), 1.0}):
             try:
-                if make(watch)(w) == p:
+                if make(watch)(w).same(p):
                     out = (w, make(watch))
                     break
             except Exception:  # noqa: BLE001
