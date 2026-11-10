@@ -101,7 +101,7 @@ section 3). At 11 arcminutes, SemiBold:
 | Pair | before | after | change |
 |---|---|---|---|
 | l/I | 0.29 | 0.57 | the l's tail (the t's foot) |
-| v/u | 0.43 | 0.72 | the v's 2:1 arms |
+| v/u | 0.43 | 0.72 | the v's 2:1 arms (the upright v went back to the gable in 1.017, at the owner's word: 0.36 at Regular) |
 | B/8 | 0.25 | 0.29 | the B's narrower upper bowl |
 | c/o | 0.36 | 0.42 | the c's shortest beaks |
 | G/B | 0.39 | 0.49 | the G's lower bar |

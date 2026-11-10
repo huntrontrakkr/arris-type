@@ -62,12 +62,19 @@ letters redrawn.
   it), 205 units at Bold, 230 at ExtraBold, 250 at Black, the font's
   descent (`params.descender_line`). Brackets, signs and marks keep their
   own depth (`Params.under`).
-- The hooks of g and y are as heavy as the letters' other strokes. They
-  were thinner from Light up (57 units to the bowl's 79 at Regular, about
-  three quarters), and it read as a mistake: a reader on r/typography
-  circled it. The hook measured its white past the inner leg of its own
-  corner, not from bar to bar, and thinned before it made room. On the
-  weight's descender line it keeps its weight at every weight.
+- The g's hook is as heavy as the letter's other strokes. It was thinner
+  from Light up (57 units to the bowl's 79 at Regular, about three
+  quarters), and it read as a mistake: a reader on r/typography circled
+  it. The hook measured its white past the inner leg of its own corner,
+  not from bar to bar, and thinned before it made room. On the weight's
+  descender line it keeps its weight at every weight.
+- The g's hook ends in a beak. It ran left and stopped flat. It now turns
+  up at its end through a cut corner into a short terminal, as the c's
+  arms end, so the swoop is cut at both ends as the top of the 8 is (the
+  owner: "a nice kind of bracketed curve to it"). The terminal's tip, a
+  short end and not a bar, keeps three quarters of the least white under
+  the bowl's cut corner (`lower.BEAK_WHITE`). The italic's hooks are as
+  they were.
 - A letter with one stem keeps its share of the line. Stems alone added
   width, so from Regular to Black the H grew a fifth and the E, K, L, T,
   Z, f, k, t and z not at all: each lost a fifth of its share (0.80 to
@@ -116,10 +123,29 @@ letters redrawn.
     the bowl (it was two thirds, under a bare bar).
   - e and s: their open ends turn through a cut corner into the same
     beak, so a, c, e and s end alike; the e's bar stands above the middle.
-  - y: a bowl open at the top, its left corner cut all the way across,
-    and the g's hook. The arm lands on the baseline as the g's and p's
-    bowls do and the stem runs on into the hook as one line; it had run
-    into the stem as a diagonal, a lump from Bold.
+  - y: the v's body, high walls over 45 degrees, its right arm run on
+    through the point and down to the descender line as a tail, ended
+    square to its own line (the owner: the way Turret Road's is shaped).
+    It had been a bowl open at the top over the g's hook, its arm run
+    into the stem as a diagonal, a lump from Bold. The italic keeps its
+    own.
+  - v: high walls over a 45-degree point, the capital's drawing in the
+    x-height (the owner: "it needs to have the 45 degrees with the high
+    walls"). Its arms were at 2:1, the 7's slope, and the italic's still
+    are. **It reads closer to the u than it did**: by the measure that
+    set the 2:1 arms in the first place (`tools/letter_confusion.py`, cap
+    height 11 arcminutes) v/u is 0.36 at Regular for 0.77, where other
+    families run 0.58 (Turret Road, the same drawing) to 0.88, and it is
+    now the closest pair in the lowercase after v/y (0.33, in the range
+    of every face whose y is a v with a tail). A module wider it would
+    measure 0.50. The w keeps its 2:1 arms.
+  - u: the n turned half round. Its bowl leaves the right stem as the
+    n's arch leaves the left, at 45 degrees and with the notch, here at
+    the foot (the owner: "add a little notch into both the u and the
+    lower part of the a, like if you took the letter n and flipped it
+    upside down"); as in the n, the notch closes by Black. The a's bowl
+    comes into its stem the same way, rising no more than six tenths of
+    the bowl's white. Both ran square into the stem on the baseline.
   - x: the X's drawing in the x-height. Both step at the crossing at the
     light weights and lose the step as they grow; the x had crossed plain.
   - 1: a stem whose top left corner is cut and run out into a flag that

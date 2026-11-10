@@ -91,7 +91,7 @@ it reuses moves the figures already make:
 | the 4's clip / the 1's notched flag | 4 1 | the comma's tail, r's shoulder |
 | beaks | 2 3 5 | C G J S c j ? |
 | gables (verticals bending at 45°) | (the Draft 5×7 caps) | A V W X Y M v w x y |
-| straight 2:1 stroke | 7 | N, v, w, slashes, fraction slash |
+| straight 2:1 stroke | 7 | N, w, the italic v, slashes, fraction slash |
 | the 1's foot | 1 | J's top bar |
 | the 1's notched flag, turned | 1 | the shoulders of n, m, h and r, the l's top |
 | the t's foot | t | the l's tail |
@@ -127,6 +127,13 @@ changed:
 (SemiBold, cap height 11 arcminutes: a small label.) The capital V keeps its
 45-degree gable, from the watch's own capitals: at cap height it has
 diagonal enough, and V/U measures 0.52.
+
+In 1.017 the upright v went back to the gable, high walls over a
+45-degree point, at the owner's word (the italic and the w keep the 2:1
+arms), and the u took the n's notch at its foot. v/u is 0.36 at Regular
+by the same measure, the closest pair in the lowercase but for v/y: the
+look was chosen over the number, which is recorded here so that the
+choice can be seen for what it was.
 
 **Cyrillic in the Latin rhythm.** Small-capital forms (в, к, н, п, ы, я...)
 draw their capitals in the x-height with the white scaled four modules for
@@ -199,8 +206,8 @@ slash, the ¢'s bar) thins instead.
 **A feature weight would swallow adapts.** The openings rule is one case
 of a general one. Toward Black a stroke's growth reaches the whites around
 it, and where a white is part of what the letter is (the slot under the
-t's crossbar that holds the ŧ's bar, the white between a g's or a y's hook
-and its body), the drawing gives way by the least that keeps the feature,
+t's crossbar that holds the ŧ's bar, the white between a g's hook and its
+bowl), the drawing gives way by the least that keeps the feature,
 in this order: the stroke moves toward the open side; it thins, down to
 the stack minimum of a bar (0.7 of the weight's own); its neighbourhood
 grows (a hook deepens into the font's descent, by up to 70 units); and
@@ -210,7 +217,7 @@ past the t's right edge). A hook does not thin: every descender of a
 weight stands on one line, set for the g's hook at its full weight under
 its bowl (a horizontal and the least white over it: three modules to
 SemiBold, 250 units, the font's descent, at Black;
-`params.descender_line`), and the y's hook and the p's, q's and j's
+`params.descender_line`), and the y's tail and the p's, q's and j's
 descenders stand on it too. Until 1.017 the hook thinned first (three
 quarters of the bowl's strokes at Regular) and went deeper alone from
 Bold: a stroke out of weight in a letter, and two descender lines in a

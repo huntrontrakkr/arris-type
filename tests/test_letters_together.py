@@ -121,7 +121,7 @@ def test_the_open_storey_of_a_and_e(w):
     thirds, the a's the tighter)."""
     p = params(w)
     r = OPTICAL['counters']
-    bowl, upper = _whites('a', p)
+    bowl, upper = _whites('a', p, at=0.42)                  # left of where its bowl rises into the stem, right of its beak
     assert upper / bowl == pytest.approx(r, abs=0.08)
     lower, bowl = _whites('e', p)
     assert bowl / lower == pytest.approx(r, abs=0.08)
@@ -366,6 +366,58 @@ def test_f_and_t_keep_their_hooks_at_every_weight(w):
         bar = ink.intersection(LineString([(-1e4, bar_y), (1e4, bar_y)])).bounds
         assert ink.bounds[2] >= bar[2] + 0.3 * p.sv, ch                     # past the crossbar's end
     assert REGISTRY['t'].width(p) == pytest.approx(REGISTRY['f'].width(p))
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 800, 900])
+def test_the_u_is_the_n_turned(w):
+    """Half round: its bowl leaves the right stem as the n's arch leaves the
+    left, at 45 degrees with the notch, here at the foot (the owner: "add a
+    little notch into both the u and the lower part of the a, like if you
+    took the letter n and flipped it upside down")."""
+    from shapely import affinity
+    p = params(w).with_(optical=0.0)                    # the drawings themselves: the raised optical centre is not turned with them
+    u, n = draw('u', p), draw('n', p)
+    assert u.W == pytest.approx(n.W)
+    turned = affinity.rotate(rings_to_shapely(n.rings()), 180, origin=(n.W / 2, p.xh / 2))
+    assert rings_to_shapely(u.rings()).symmetric_difference(turned).area < 1.0
+
+
+@pytest.mark.parametrize('w', [300, 400, 600, 700, 900])
+def test_the_as_bowl_meets_its_stem_as_the_us(w):
+    """Along the baseline the a and the u are two pieces, the bowl's foot
+    and the stem's, with the notch between them, wherever the n keeps its
+    own (to Bold; at Black all three are square)."""
+    p = params(w)
+    def feet(ch):
+        cut = _ink(ch, p).intersection(LineString([(-1e4, 0.4 * p.c), (1e4, 0.4 * p.c)]))
+        return len([s for s in getattr(cut, 'geoms', [cut]) if s.length > 1])
+    def heads(ch):
+        cut = _ink(ch, p).intersection(LineString([(-1e4, p.xh - 0.4 * p.c), (1e4, p.xh - 0.4 * p.c)]))
+        return len([s for s in getattr(cut, 'geoms', [cut]) if s.length > 1])
+    assert feet('u') == heads('n') == (1 if w == 900 else 2)
+    assert feet('a') == feet('u')
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_the_v_has_high_walls_over_45_degrees(w):
+    """The capital's drawing in the x-height (the owner: "it needs to have
+    the 45 degrees with the high walls"): two upright walls more than half
+    the x-height tall, a 45-degree point under them, no other slope
+    (within the few degrees the raised optical centre turns a diagonal)."""
+    import math
+    p = params(w)
+    g = draw('v', p)
+    for ring in g.rings():
+        for a, b in zip(ring, ring[1:] + ring[:1]):
+            if math.dist(a, b) > 1.0:
+                turn = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])) % 45
+                assert min(turn, 45 - turn) < 3.0, (a, b)
+    cut = _ink('v', p).intersection(LineString([(-1e4, 0.7 * p.xh), (1e4, 0.7 * p.xh)]))
+    walls = sorted(s.bounds for s in cut.geoms)
+    assert len(walls) == 2 and all(b[2] - b[0] == pytest.approx(p.sv, abs=0.5) for b in walls)
+    assert walls[0][0] == pytest.approx(0.0, abs=0.5) and walls[1][2] == pytest.approx(g.W, abs=0.5)
+    foot = min(y for r in g.rings() for x, y in r if x < 0.5)          # where the left wall ends
+    assert foot <= 0.45 * p.xh
 
 
 @pytest.mark.parametrize('w', [100, 200, 300, 400, 450, 500, 700])

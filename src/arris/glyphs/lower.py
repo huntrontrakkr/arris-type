@@ -2,8 +2,9 @@
 
 Module coordinates: x-height 9, ascender 13, descender -3 (see letterframe).
 The same moves as the capitals and figures: beaks on c and j, the 2's notch
-in z, a notched shoulder on r (the 1's flag, turned), arches that meet in a
-V on m, gables on v and w.
+in z, a notched shoulder on r (the 1's flag, turned) which the u and the a
+carry turned over, arches that meet in a V on m, a gable under high walls
+on v and y, 2:1 points on w.
 """
 from __future__ import annotations
 
@@ -15,6 +16,19 @@ from .letterframe import ARM, Frame, k_arms, least_white, letter_width, share_wi
 
 def low(char, wm, stems, width=None, openings=(), arm=ARM):
     return glyph(char, char, width or letter_width(wm, stems, arm), kind='lower', openings=openings)
+
+
+def turned(W, H, pts):
+    """A drawing's points turned half round in a body ``W`` wide and ``H``
+    tall: the u is the n turned, and the a's bowl meets its stem as the n's
+    arch leaves its own, turned."""
+    out = []
+    for q in pts:
+        if q[0] == 'bowl':
+            out.append(('bowl', W - q[1], H - q[2]) + tuple(q[3:]))
+        else:
+            out.append((W - q[0], H - q[1]) + tuple(q[2:]))
+    return out
 
 
 def bars3(g):
@@ -37,6 +51,9 @@ def beak(g, w):
     the cut (the shortest beak: an open mouth tells c from o, a from d, e
     from o)."""
     return outer_leg(g.p, sh=w) + g.p.c
+
+
+A_RISE = 0.6    # the most the a's bowl rises into its stem, as a share of the bowl's white
 
 
 @low('a', 8, 2)
@@ -62,7 +79,14 @@ def a(g):
     yb = foot + low + inner / 2
     g.defaults_used.update(arm=ya, bowl=yb)
     g.stroke((f.X(1), p.xh - beak(g, arm)), B(f.X(1), ya, None, arm), B(f.X(7), ya), f.P(7, 0))
-    g.stroke((f.X(7), yb, inner), B(f.X(1), yb), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    # The bowl's foot comes into the stem as the u's does, the n's shoulder
+    # turned half round: at 45 degrees, with its notch at the foot of the
+    # stem (the owner, 2026-11-10). It rises no more than A_RISE of the
+    # bowl's white, so the counter keeps its wall under the bar. Until
+    # 1.017 the bowl ran square into the stem on the baseline.
+    drop = min(2.0, A_RISE * low / (f.Y(8) - f.Y(7)))
+    arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=drop)
+    g.stroke((f.X(7), yb, inner), B(f.X(1), yb), *reversed(turned(f.W, p.xh, arch)), end=cut)
 
 
 @low('b', 8, 2)
@@ -209,7 +233,10 @@ def hook_fit(p, sh, white=None):
     return w, extra
 
 
-def hook(g, f, x_stem=7, x_end=1, white=None):
+BEAK_WHITE = 0.75   # the white a hook's beak keeps under the bowl, as a share of the least white (hook)
+
+
+def hook(g, f, x_stem=7, x_end=1, white=None, turn=True):
     """The descending hook of g, y and the italic y: the stem down from the
     body into a bowl corner and a horizontal back under it, as thick as the
     letter's other horizontals (hook_fit), on the weight's descender line.
@@ -221,7 +248,26 @@ def hook(g, f, x_stem=7, x_end=1, white=None):
     if extra:
         x0, y0, x1, y1 = g.clip
         g.clip = (x0, min(y0, -(p.desc + extra)), x1, y1)
-    g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), (f.X(x_end), yh))
+    if p.slant or not turn:
+        g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), (f.X(x_end), yh))
+        return
+    # The hook ends as the c's arms do, in a beak: a cut corner and a short
+    # terminal turned up, so the swoop is cut at both ends, as the top of
+    # the 8 is (the owner, 2026-11-10: "a nice kind of bracketed curve to
+    # it, like the top part of the eight"). The beak's tip, a short end and
+    # not a bar, keeps BEAK_WHITE of the least white under the bowl's cut
+    # corner over it; where even that leaves no room to turn, the hook ends
+    # flat as before.
+    bottom = -(p.desc + extra)
+    over = max(0.0, outer_leg(p, sh=g.sh) - p.sv)           # the bowl's cut corner, over the beak's inner edge
+    d = min(beak(g, w), over - bottom - BEAK_WHITE * (least_white(p) if white is None else white))
+    # the corner's cut ends an edge break under the beak's end, as the c's
+    # does (beak), so the rule turns that flank into a point at every weight
+    leg = min(p.leg, d - p.c - (p.sv + w) / 2 + p.sd / 2 ** 0.5)
+    if leg < p.c:
+        g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), (f.X(x_end), yh))
+        return
+    g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), B(f.X(x_end), yh, leg), (f.X(x_end), bottom + d))
 
 
 def g_strokes(g, white=None):
@@ -553,12 +599,21 @@ def t(g):
 
 @low('u', 8, 2)
 def u(g):
+    """The n turned half round: its bowl leaves the right stem as the n's
+    arch leaves the left, at 45 degrees and with the notch (shoulder), here
+    at the foot (the owner, 2026-11-10: "add a little notch into both the u
+    and the lower part of the a, like if you took the letter n and flipped
+    it upside down"). Until 1.017 its bowl ran square into the stem on the
+    baseline."""
     f = Frame(g, 8, 'lower')
-    g.stroke(f.P(1, 9), B(*f.P(1, 1)), f.P(7, 1))
-    g.stroke(f.P(7, 0), f.P(7, 9))
+    turn = lambda pts: turned(f.W, f.p.xh, pts)
+    g.stroke(*turn([f.P(1, 0), f.P(1, 9)]))
+    arch, cut = shoulder(g, f, f.X(1), f.X(7))
+    g.stroke(*turn([*arch, f.P(7, 0)]), start=cut)
 
 
 V_HANG = 1.0    # how far a lowercase point (v w) hangs under the baseline, in edge breaks
+V_FLAT = 1.5    # the width of the upright v's point where it is cut, in edge breaks (the 2:1 point's, by its slope)
 
 
 def _vee(f):
@@ -575,15 +630,28 @@ def _vee(f):
     return -p.c + f.k, -V_HANG * p.c
 
 
+def _point(f):
+    """Centreline height of a 45-degree point (the upright v, the y's
+    join) and the line it is cut on: it hangs an edge break under the
+    baseline as the 2:1 point does (_vee) and is as wide there, V_FLAT
+    breaks. (Its outer point lies f.k under the centre line's.)"""
+    p = f.p
+    return -(V_HANG + V_FLAT / 2) * p.c + f.k, -V_HANG * p.c
+
+
 @low('v', 8, 2)
 def v(g):
     f = Frame(g, 8, 'lower')
     p, W = f.p, f.W
     xl, xr = f.X(1), f.X(7)
-    ya, cut = _vee(f)
-    # 2:1 arms (the 7's slope): a 45-degree gable in an x-height leaves too
-    # little diagonal, and the v reads as a u (docs/research/legibility.md)
-    yt = min(ya + 2 * (W / 2 - xl), p.xh)
+    ya, cut = _vee(f) if p.slant else _point(f)
+    # High walls over a 45-degree point, the capital's drawing in the
+    # x-height (the owner, 2026-11-10: "it needs to have the 45 degrees
+    # with the high walls"); the italic keeps its 2:1 arms, the 7's slope,
+    # which he loves in the cursive. Until 1.017 the upright's were 2:1 as
+    # well, for fear a 45-degree gable would read as a u; the u now carries
+    # the n's notch at its foot and its stem stands to the baseline.
+    yt = min(ya + 2 * (W / 2 - xl), p.xh) if p.slant else ya + (W / 2 - xl)
     g.stroke((xl, p.xh), (xl, yt), (W / 2, ya), (xr, yt), (xr, p.xh))
     g.clip = (0, cut, W, p.xh)
     g.butt += (('y', cut),)                                  # the point's end is the cut itself, flat
@@ -599,7 +667,7 @@ def w(g):
     xl, xm, xr = f.X(1), W / 2, f.X(13)
     q1, q3 = (xl + xm) / 2, (xm + xr) / 2
     ya, cut = _vee(f)
-    yt = min(ya + 2 * (q1 - xl), p.xh)                      # 2:1, as the v
+    yt = min(ya + 2 * (q1 - xl), p.xh)                      # 2:1, the 7's slope (the upright v's until 1.017, the italic's still)
     g.stroke((xl, p.xh), (xl, yt), (q1, ya), (xm, yt), (q3, ya), (xr, yt), (xr, p.xh))
     # the middle stroke stands in the peak, down to the sixth module, and
     # never over it: where the peak is lower than that (Thin to Regular) it
@@ -638,30 +706,30 @@ def x(g):
     x_strokes(g, f.X(1), f.X(7), f.W, f.p.xh)
 
 
-Y_FLAT = 1.0     # modules: the flat the y's arm lands on before the stem
-
-
 @low('y', 8, 2)
 def y(g):
-    """The y: a bowl open at the top whose left corner is cut all the way
-    across, and the g's hook. The arm comes down the left stem, turns at 45
-    degrees and lands flat on the baseline, a module short of the stem: it
-    meets the stem as the p's bowl meets its own and the g's its own, a
-    horizontal on the baseline, and the stem runs on down into the hook as
-    one line.
+    """The y: the v's body, high walls over 45 degrees, its right arm run
+    on through the point and down to the descender line as a tail (the
+    owner, 2026-11-10: the way Turret Road's is shaped). The tail ends
+    square to its own line, as Turret Road's does, its lower corner on the
+    line every descender stands on; so ended it stays inside the body at
+    every weight (cut level it ran out of the left side from Regular, and
+    the side cut it to a face of a few units at Medium).
 
-    Until 1.017 the arm ran straight into the stem, its lower edge an edge
-    break above the baseline: a diagonal entering a vertical takes a stem
-    and a fifth of the stem's height to do it (252 units at Black), with
-    the hook's corner straight under it, and from Bold the three made one
-    lump at the foot of the letter."""
+    The italic has its own (italic_forms). Until 1.017 the y was a bowl
+    open at the top over the g's hook: its arm came down the left stem,
+    turned at 45 degrees and landed flat on the baseline a module short of
+    the right stem, which ran on down into the hook."""
     f = Frame(g, 8, 'lower')
-    p = f.p
+    p, W = f.p, f.W
     xl, xr = f.X(1), f.X(7)
-    leg = max(p.leg, (xr - p.sv / 2) - Y_FLAT * p.m - xl)
-    g.stroke((xl, p.xh), B(xl, f.Y(1), leg), (xr, f.Y(1)))
-    hook(g, f)
-    g.butt += crotch_butt(g, f.Y(1))
+    ya, _ = _point(f)
+    yt = ya + (W / 2 - xl)
+    g.stroke((xl, p.xh), (xl, yt), (W / 2, ya))
+    ye = -p.desc + f.k / 2                                  # the end's centre: its lower corner half a diagonal's half-width under it
+    xe = W / 2 - (ya - ye)
+    back = max(0.0, f.k / 2 - xe)                           # its upper corner never leaves the body: the end comes back up its line
+    g.stroke((xr, p.xh), (xr, yt), (xe + back, ye + back))  # (three units at Thin, nothing from ExtraLight)
 
 
 @low('z', 8, 1)
