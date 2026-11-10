@@ -151,7 +151,8 @@ def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Pa
     p = _params(wght, optics, base)
     if grad:
         k = grade_k(wght, grad)
-        p = p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, grade_k=k, grad=grad)
+        p = p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, grade_k=k, grad=grad,
+                    pregrade=(p.sv, p.sh, p.sd, p.ss, p.c))
     return p.with_(floor=stroke_floor(base), optical=optical)
 
 

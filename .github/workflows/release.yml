@@ -152,6 +152,8 @@ jobs:
         run: ARRIS_VF_WORKERS=2 uv run python tools/vf_compare.py "build/${{ matrix.font }}" "build/${{ matrix.font }}" --all
       - name: Form switches (the second forms of $ and ¢ under rlig, swapped either side of each threshold)
         run: uv run python tools/vf_switch_check.py "build/${{ matrix.font }}"
+      - name: Grade (no glyph's advance moves with it)
+        run: uv run python tools/grade_advance_check.py "build/${{ matrix.font }}"
       - name: Interpolatable (fontTools' heuristics; the report an artifact, not yet a gate)
         run: |
           uv run fonttools varLib.interpolatable --json "build/${{ matrix.font }}" > "build/interpolatable-${{ matrix.name }}.json" || true
