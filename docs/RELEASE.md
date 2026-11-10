@@ -167,6 +167,26 @@ letters redrawn.
   bar and runs square to the diagonal until it meets it
   (`geom._stepped_crotches`): 23 glyphs move at Regular, 147 at Black, by a
   few units each, none in the italic.
+- Letters that interlock are kerned as hand kerning leaves them. A pair
+  closed only when its narrowest gap passed a standard gap (the white
+  between two H's) and a quarter, and then by four fifths of the excess,
+  so every such pair was left 1.3 to 1.45 gaps apart: L and Y 240 units
+  for the H's 177, L and T 230, T and A 239, and the capitals read loose
+  wherever an L, a T or a Y stood. Measured in seven kerned faces of this
+  kind (Chakra Petch, Oxanium, Exo 2, Tomorrow; Regular and heavy), the
+  facing ends of such pairs stand one standard gap apart (LY 1.06, LT
+  0.96, TA 1.02, TJ 1.03), and where the approach is on a slant the inks
+  come to three quarters of one or a little more (LV 0.86, LW 0.74, To
+  0.87, Ta 0.78, Tr 0.75). Two letters now close to a standard gap and
+  never nearer than three quarters of one in any direction: at Regular LY
+  -130 (it was -70), LT -75 (-25), LV -120 (-65), LW -45 (0), TA -105
+  (-55), To -115 (-60). A pair with a mark of punctuation in it keeps the
+  air it had, and a period or a comma is pulled in by no more than 0.45
+  of a gap, which is what those faces do after any letter that overhangs
+  it (P. 0.47, T. 0.46, Y. 0.47, r. 0.38): it had gone under the P's bowl
+  by 255 units at Regular and 280 at Black. Still open: at the heavy
+  weights a bowl stands nearer an arm than in those faces (R and Y, P and
+  A, V and a); `kerning.py` has the measurements.
 - No letter keeps a crumb. Scanned at fifteen weights from Thin to Black
   for edges shorter than half an edge break, twenty-two of the sixty-two
   letters and figures had one somewhere, of three kinds. A counter a
