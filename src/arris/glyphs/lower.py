@@ -125,16 +125,25 @@ def e(g):
     g.stroke((f.X(1), yb), B(f.X(1), y1, None, arm), B(f.X(7), y1), (f.X(7), beak(g, arm)))
 
 
-@low('f', 7, 1)
+# The letters with one stem and an arm (f t l j) are a module narrower than
+# their masters: against the n they stood wider than any face of this kind
+# sets them (the l 0.65 of the n's advance for 0.40 to 0.51, the j 0.65 for
+# 0.41 to 0.49, the t 0.79 for 0.53 to 0.69, the f 0.72 for 0.48 to 0.66:
+# review/widths, 2026-11-10), and a line with several of them (little,
+# filter, jilt) lost the rhythm its stems set.
+NARROW = 6      # the f's and the t's frame, in modules (their masters' seven, less one)
+
+
+@low('f', NARROW, 1)
 def f_(g):
     if g.p.mono:
         f = Frame(g, 9, 'asc')
         g.stroke(f.P(3.5, 0), B(*f.P(3.5, 12)), f.P(9, 12))
         g.stroke(f.P(0.5, 8), f.P(8, 8))
         return
-    f = Frame(g, 7, 'asc')
-    g.stroke(f.P(2, 0), B(*f.P(2, 12), f_leg(g, f)), f.P(7, 12))
-    g.stroke(f.P(0, 8), f.P(6, 8))
+    f = Frame(g, NARROW, 'asc')
+    g.stroke(f.P(2, 0), B(*f.P(2, 12), f_leg(g, f)), f.P(NARROW, 12))
+    g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
 
 
 def f_leg(g, f):
@@ -338,7 +347,10 @@ def i(g):
     _dot(g, f, f.X(1))
 
 
-@low('j', 6, 1)
+J_FRAME = 5     # the j's frame, in modules: its hook three modules of white across, room for its two corners
+
+
+@low('j', J_FRAME, 1)
 def j(g):
     if g.p.mono:
         f = Frame(g, 9, 'asc', top=g.p.asc + g.p.sv)
@@ -347,10 +359,11 @@ def j(g):
         g.stroke((x - 3 * u, f.Y(8)), (x, f.Y(8)), B(x, f.Y(-2)), B(f.X(1), f.Y(-2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
         _dot(g, f, x)
         return
-    f = Frame(g, 6, 'asc', top=g.p.asc + g.p.sv)
+    f = Frame(g, J_FRAME, 'asc', top=g.p.asc + g.p.sv)
     p = f.p
-    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
-    _dot(g, f, f.X(5))
+    xs = f.X(J_FRAME - 1)
+    g.stroke((xs, f.Y(9)), B(xs, f.Y(-2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
+    _dot(g, f, xs)
 
 
 @low('k', 8, 1)
@@ -362,7 +375,10 @@ def k(g):
     g.clip = (0, -f.p.desc, f.W, f.p.asc)
 
 
-@low('l', 6, 1)
+L_TAIL = 1.5    # modules of white the l's tail runs past its stem
+
+
+@low('l', 2 + L_TAIL, 1)
 def l(g):
     if g.p.mono:
         f = Frame(g, 9, 'asc')
@@ -371,11 +387,19 @@ def l(g):
         g.stroke((x - 3 * u, f.Y(12)), (x, f.Y(12)), (x, 0))
         _mono_foot(g, f, x - u / 2, u)
         return
-    # The 1's flag at the top and the t's foot at the bottom: a tail that
-    # tells l from I, i and 1 (docs/research/legibility.md).
-    f = Frame(g, 6, 'asc')
-    g.defaults_used['stem'] = f.X(2)
-    g.stroke(f.P(0, 12), f.P(2, 12), B(*f.P(2, 1)), f.P(6, 1))
+    # A stem and the t's foot: the tail tells l from I, i and 1
+    # (docs/research/legibility.md). Until 1.017 it also carried the 1's
+    # flag at the top, a module to the left of the stem: over the x-height,
+    # where spacing lets a part hang into its neighbour's room, the flag
+    # stood 12 units from the body's edge at Regular for a stem's 88 and 21
+    # outside it at Black, and whatever stood before an l with ink that high
+    # was crowded (F E T K and the l 0.3 of the white between two stems,
+    # 0.55 to 0.85 in faces of this kind; i d H and the l a third at Black,
+    # theirs 0.84 to 1.0). No longer than it was thick, it read as a bump on
+    # the stem, and three modules of tail made the l the widest of its kind.
+    f = Frame(g, 2 + L_TAIL, 'asc')
+    g.defaults_used['stem'] = f.X(1)
+    g.stroke(f.P(1, 13), B(*f.P(1, 1)), f.P(2 + L_TAIL, 1))
 
 
 @low('m', 12, 3, width=letter_width(13, 3))
@@ -470,16 +494,16 @@ def s(g):
              B(f.X(7), ym), B(f.X(7), y1, None, foot), B(f.X(1), y1), (f.X(1), beak(g, foot)))
 
 
-@low('t', 7, 1)
+@low('t', NARROW, 1)
 def t(g):
     if g.p.mono:
         f = Frame(g, 9, 'asc')
         g.stroke(f.P(3, 11), B(*f.P(3, 1)), f.P(8.5, 1))
         g.stroke(f.P(0.5, 8), f.P(8, 8))
         return
-    f = Frame(g, 7, 'asc')
-    g.stroke(f.P(2, 11), B(*f.P(2, 1)), f.P(7, 1))
-    g.stroke(f.P(0, 8), f.P(6, 8))
+    f = Frame(g, NARROW, 'asc')
+    g.stroke(f.P(2, 11), B(*f.P(2, 1)), f.P(NARROW, 1))
+    g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
 
 
 @low('u', 8, 2)
@@ -617,8 +641,9 @@ def dotlessi(g):
     g.stroke(f.P(1, 0), f.P(1, 9))
 
 
-@glyph('uni0237', '\u0237', letter_width(6, 1), kind='lower')
+@glyph('uni0237', '\u0237', letter_width(J_FRAME, 1), kind='lower')
 def dotlessj(g):
-    f = Frame(g, 6, 'lower')
+    f = Frame(g, J_FRAME, 'lower')
     p = f.p
-    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
+    xs = f.X(J_FRAME - 1)
+    g.stroke((xs, f.Y(9)), B(xs, f.Y(-2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))

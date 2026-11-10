@@ -52,6 +52,41 @@ def test_the_r_is_two_thirds_of_the_h(w):
     assert _width('r', p) <= 0.9 * _width('n', p)
 
 
+@pytest.mark.parametrize('w', [100, 300, 400, 700, 900])
+def test_the_narrow_letters_are_narrow(w):
+    """Advances against the n's, inside what chamfered and squared faces
+    give a letter with one stem and an arm (Chakra Petch, Oxanium,
+    Rajdhani, Exo 2, Tomorrow, Share Tech, Regular and their heaviest): the
+    l 0.40 to 0.56, the t 0.53 to 0.74, the f 0.48 to 0.72. On their
+    masters' module widths the l stood at 0.65 at Regular, the t at 0.79
+    and the f at 0.72, and a line with several of them lost its rhythm.
+    The j's hook turns through two corners and needs their room: 0.54 for
+    those faces' 0.41 to 0.51 (it was 0.65)."""
+    p = params(w)
+    adv = lambda ch: place(CMAP[ch], p)[1]
+    assert 0.40 <= adv('l') / adv('n') <= 0.61
+    assert 0.53 <= adv('t') / adv('n') <= 0.75
+    assert 0.48 <= adv('f') / adv('n') <= 0.73
+    assert 0.41 <= adv('j') / adv('n') <= 0.68
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_l_is_a_stem_and_a_tail(w):
+    """Over the x-height the l is its stem and nothing else, and its stem
+    stands where an i's does: the flag it carried there (the 1's) hung
+    into the room of whatever stood before it, 12 units from the body's
+    edge at Regular for a stem's 88, and outside it at Black."""
+    p = params(w)
+    rings, _ = place('l', p)
+    ink = rings_to_shapely(rings)
+    x0, _, x1, _ = ink.intersection(LineString([(-1e4, p.xh + p.m), (1e4, p.xh + p.m)])).bounds
+    top = ink.intersection(LineString([(-1e4, p.asc - p.c - 1), (1e4, p.asc - p.c - 1)])).bounds
+    assert x1 - x0 == pytest.approx(p.sv, abs=1.0)
+    assert top[0] == pytest.approx(x0, abs=1.0) and top[2] == pytest.approx(x1, abs=1.0)
+    i_left = min(x for r in place('i', p)[0] for x, _ in r)
+    assert 0.8 * i_left <= x0 <= i_left + 1.0               # (a little nearer: its foot's corner lets light in below)
+
+
 @pytest.mark.parametrize('w', [300, 400, 700, 900])
 def test_v_and_w_hang_a_break_under_the_line(w):
     """Their points hang one edge break under the baseline and end blunt,

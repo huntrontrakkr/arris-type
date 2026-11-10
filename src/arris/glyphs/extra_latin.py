@@ -13,7 +13,7 @@ from ..geom import rings_to_shapely
 from ..params import SQRT2
 from .caps import big
 from .figures import STACK_MIN, beak_depth
-from .lower import shoulder
+from .lower import NARROW, shoulder
 from .letterframe import Frame, k_arms, letter_width
 
 
@@ -160,7 +160,7 @@ def _slot(g, w, x1):
     p = g.p
     rings, _ = draw('t', p).outline(record=False)
     ink = rings_to_shapely([[tuple(q[:2]) for q in r] for r in rings])
-    col, wm = (3, 9) if p.mono else (2, 7)                     # the t's stem column in its frame (lower.t)
+    col, wm = (3, 9) if p.mono else (2, NARROW)                # the t's stem column in its frame (lower.t)
     xs = p.sv / 2 + (w - p.sv) * (col - 1) / (wm - 2) + p.sv / 2 + p.c
     top, foot = p.xh, 0.0
     for k in range(6):
@@ -321,10 +321,10 @@ def kgreenlandic(g):
         g.stroke(*pts, start=a, end=b)
 
 
-@glyph('longs', 'ſ', letter_width(7, 1), kind='lower')
+@glyph('longs', 'ſ', letter_width(NARROW, 1), kind='lower')
 def longs(g):
-    f = Frame(g, 7, 'asc')
-    g.stroke(f.P(2, 0), B(*f.P(2, 12)), f.P(7, 12))
+    f = Frame(g, NARROW, 'asc')                             # the f without its bar (lower.f_)
+    g.stroke(f.P(2, 0), B(*f.P(2, 12)), f.P(NARROW, 12))
 
 
 @glyph('eng', 'ŋ', letter_width(8, 2), kind='lower')
