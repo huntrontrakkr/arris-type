@@ -164,25 +164,21 @@ letters redrawn.
   faces sets it, its advance 0.65 of the n's (theirs 0.41 to 0.49): its
   hook is three modules of white across for four, the room its two
   corners need (0.54). Arris Mono's and the italic's are as they were.
-- The l, the f and the t end in one cut to SemiBold and in a hook from
-  Bold. Each stem's end, the l's and the t's foot and the f's top, was a
-  corner and an arm at every weight: the f's and the t's a module past
-  the crossbar's end, the l's three modules of tail. At the lighter
-  weights the arm is now nothing: the stem turns through the corner's one
-  cut, runs on to the line it stands on and ends upright, two edge breaks
-  tall (the owner: "only one single notch", no flat foot and no crook;
-  from Bold all three look better with the hook). The f and the t are the
-  stem and the crossbar there (0.61 of the n's advance; they were 0.72
-  and 0.79, in those faces 0.48 to 0.69), the l its stem and its cut
-  (0.46 to 0.49; it was 0.65, theirs 0.40 to 0.51), and the t is the f
-  turned over. Between SemiBold and Bold the cut grows into the hook
-  (`lower.end_reach`): the arm is born with a top one break long, as
-  nothing in the face is drawn smaller, and lengthens and thickens
-  together, the corner's cut on one line throughout. From Bold the f's
-  hook and the t's foot are six modules for their masters' seven, the
-  l's tail two for three. The ſ follows the f. The italic t keeps its
-  foot at every weight, its turn being the italic's curve; the italic's
-  own f and l and Arris Mono's are as they were.
+- The l ends in one cut. Its foot was a corner and three modules of
+  tail. The tail is now nothing: the stem turns through the corner's one
+  cut, runs on to the baseline and ends upright, two edge breaks tall
+  (the owner: "only one single notch", no flat foot). It is its stem and
+  its cut at every weight (0.46 to 0.49 of the n's advance; it was 0.65,
+  in those faces 0.40 to 0.51).
+- The f and the t are a module narrower, six for their masters' seven:
+  hook, foot and crossbar each a module shorter (0.61 and 0.69 of the n's
+  advance at Regular; they were 0.72 and 0.79, in those faces 0.48 to
+  0.69), and a line with several of them (little, filter) keeps the
+  rhythm its stems set. They keep their hooks: the l's cut was tried on
+  the f's top and the t's foot, and the owner kept it for the l alone
+  ("keep the hooks for the f and the t, and the l stays without a
+  hook"). The ſ follows the f. Arris Mono's and the italic's own f and l
+  are as they were.
 - The l has no flag. It carried the 1's at the top, a module to the left
   of the stem. Over the x-height spacing lets a part hang into its
   neighbour's room (it is meant for a j's hook under the line): the

@@ -43,7 +43,7 @@ def test_an_l_and_a_y_stand_a_standard_gap_apart(w):
     1.05, TJ 0.88 to 1.18). Until 1.017, 1.30 to 1.47."""
     pair = _kerned(w)
     for a, b in ('LY', 'LT', 'TJ'):
-        k, row, near = pair(a, b)
+        k, row, _ = pair(a, b)
         assert k < 0 and row == pytest.approx(1.0, abs=0.06), (a + b, round(row, 2))
     assert pair('H', 'H')[0] == 0 and pair('H', 'H')[1] == pytest.approx(1.0, abs=0.06)
 
@@ -68,7 +68,7 @@ def test_a_period_is_pulled_in_by_half_a_gap_at_most(w):
     went under the P's bowl by 1.4 gaps at Regular and 2.2 at Black."""
     pair = _kerned(w)
     for a in 'PFTYr':
-        k, row, near = pair(a, '.')
+        k, _, near = pair(a, '.')
         assert -0.5 <= k <= -0.25, (a, round(k, 2))
         assert near >= 1.15, (a, round(near, 2))
 

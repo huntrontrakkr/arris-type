@@ -134,118 +134,21 @@ def e(g):
 NARROW = 6      # the f's and the t's frame, in modules (their masters' seven, less one)
 
 
-HOOK_FROM = 120.0   # the stem (SemiBold's) up to which the l's and the t's foot and the f's top are one cut,
-HOOK_FULL = 140.0   # and the stem (Bold's) from which they are a hook: between, the cut grows into it
-
-
-def hooked(p) -> float:
-    """How much of a hook the end of the l's, the t's and the f's stem is:
-    0 one cut, the corner alone, to SemiBold; 1 the hook from Bold, the
-    corner and its arm. (The owner, 2026-11-10: "only one single notch"
-    looks right at the lighter weights, no flat foot and no crook; from
-    Bold all three look better with the hook.) By the weight's own stem,
-    whatever the grade."""
-    from ..draw import _unlightened
-    sv = _unlightened(p).ungraded().sv                      # (not a drawing's lightened strokes: draw._lightened)
-    return min(max((sv - HOOK_FROM) / (HOOK_FULL - HOOK_FROM), 0.0), 1.0)
-
-
-def _toe(p, sh):
-    """The thickness a stem's cut is drawn at, where it has no arm: three
-    edge breaks (the weight's bar, where that is less). Its end's own break
-    then takes up all of its top, so the corner's cut runs straight into
-    the end's face, two breaks up."""
-    return min(3 * p.c, sh)
-
-
-def kick_reach(p, sh, leg=None):
-    """From a stem's centre to the end of its cut: a stem's end turned
-    through the one cut a corner takes (``leg``: the bowl's unless given)
-    and stopped there, where the end stands an edge break tall over its
-    own break."""
-    leg = p.leg if leg is None else leg
-    return sh / 2 + leg + p.sd / 2 ** 0.5 - _toe(p, sh) + p.c
-
-
-ARM_MIN = 1.1   # the least top an arm is born with, in edge breaks: a flat shorter than a break between two cuts is no flat (geom.JOG)
-
-
-def end_reach(p, sh, full, leg=None):
-    """(the arm's thickness, from the stem's centre to the arm's end) of a
-    stem's end turned to the right, for a hook that reaches ``full`` from
-    the stem's centre. At ``hooked`` 0 the arm is nothing: the corner's cut
-    runs on to the line and ends upright two breaks tall (kick_reach). Past
-    it the arm is born with a top one break long, as nothing in the face is
-    drawn smaller, and lengthens and thickens together to the hook's at 1;
-    the corner's cut lies on one line throughout (stem_end's leg takes up
-    what the arm's thickness gives)."""
-    leg = p.leg if leg is None else leg
-    t = hooked(p)
-    h0 = _toe(p, sh)
-    cut = kick_reach(p, sh, leg)
-    if t <= 0.0:
-        return h0, cut
-    h = h0 + t * (sh - h0)
-    top = max(t * (full - cut) + (h - h0), min(ARM_MIN * p.c, full - cut + sh - h0))
-    return h, cut + (h0 - h) + top
-
-
-def stem_end(g, xs, x_full, leg=None):
-    """A stem's end, turned to the right (end_reach): (the corner's leg,
-    the arm's end x, the arm's thickness), for a stroke stem, corner, arm
-    drawn on a line half that thickness inside the line the letter stands
-    on.
-
-    (Drawn two breaks thick at its end, as the cut measures, and grown
-    from nothing, the arm's top was shorter than its end's break while it
-    grew: the corner rule and the cleanup after it ate the face, and at one
-    weight in three the end crossed itself.)"""
-    p = g.p
-    leg = p.leg if leg is None else leg
-    h, reach = end_reach(p, g.sh, x_full - xs, leg)
-    return leg + (g.sh - h) / 2, xs + reach, h
-
-
-def f_width(p):
-    """The f's and the t's body: the stem and the crossbar where the stem's
-    end is one cut, half a stem more for the hook's arm past the
-    crossbar's end (hooked)."""
-    return letter_width(NARROW, 1)(p) - (1 - hooked(p)) * p.sv / 2
-
-
-def _ft_frame(g):
-    """(frame, stem x, full width, crossbar's end) of the f and the t: the
-    t's master frame, whatever the body the stem's end leaves them."""
-    p = g.p
-    from ..draw import _unlightened
-    full = g.W + (1 - hooked(p)) * _unlightened(p).ungraded().sv / 2     # the body with its hook
-    f = Frame(g, NARROW, 'asc')
-    return f, p.sv / 2 + (full - p.sv) / (NARROW - 2), full, full - p.sv / 2
-
-
-def f_stem(g):
-    """The f's stem, on the t's stem, and its top: one cut to the right to
-    SemiBold, the hook's corner ended upright; from Bold the hook, the
-    corner and an arm a module past the crossbar's end (stem_end). Returns
-    (frame, crossbar's end). Until 1.017 the hook at every weight: over the
-    x-height it hung into the room of whatever followed (an f and a 5 or a
-    7 0.06 to 0.16 of the white between two stems apart at Regular)."""
-    p = g.p
-    f, xs, full, x_bar = _ft_frame(g)
-    leg, xe, h = stem_end(g, xs, full, f_leg(g, f))
-    g.stroke((xs, 0), B(xs, p.asc - h / 2, leg, h), (xe, p.asc - h / 2))
-    return f, x_bar
-
-
-@low('f', NARROW, 1, width=f_width)
+@low('f', NARROW, 1)
 def f_(g):
+    """A stem, its hook and a crossbar. The hook at every weight: the top
+    as one cut with no arm, tried to SemiBold in 1.017's making with the
+    t's foot, was the l's end, and the owner kept it for the l alone
+    (2026-11-10: "keep the hooks for the f and the t, and the l stays
+    without a hook")."""
     if g.p.mono:
         f = Frame(g, 9, 'asc')
         g.stroke(f.P(3.5, 0), B(*f.P(3.5, 12)), f.P(9, 12))
         g.stroke(f.P(0.5, 8), f.P(8, 8))
         return
-    f, x_bar = f_stem(g)
-    g.stroke((0, f.Y(8)), (x_bar, f.Y(8)))
+    f = Frame(g, NARROW, 'asc')
+    g.stroke(f.P(2, 0), B(*f.P(2, 12), f_leg(g, f)), f.P(NARROW, 12))
+    g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
 
 
 def f_leg(g, f):
@@ -477,13 +380,24 @@ def k(g):
     g.clip = (0, -f.p.desc, f.W, f.p.asc)
 
 
-L_TAIL = 2.0    # modules of white the l's tail runs past its stem, where it has one (from Bold)
+def _toe(p, sh):
+    """The thickness the l's cut is drawn at: three edge breaks (the
+    weight's bar, where that is less). Its end's own break then takes up
+    all of its top, so the corner's cut runs straight into the end's face,
+    two breaks up."""
+    return min(3 * p.c, sh)
+
+
+def kick_reach(p, sh):
+    """From the l's stem's centre to the end of its cut: the stem's end
+    turned through the one cut a corner takes and stopped there, where the
+    end stands an edge break tall over its own break."""
+    return sh / 2 + p.leg + p.sd / 2 ** 0.5 - _toe(p, sh) + p.c
 
 
 def l_width(p):
-    """The l's body: its stem and its foot, a cut to SemiBold and a tail of
-    L_TAIL modules from Bold (end_reach)."""
-    return p.sv / 2 + end_reach(p, p.sh * p.low, letter_width(2 + L_TAIL, 1)(p) - p.sv / 2)[1]
+    """The l's body: its stem and its cut (kick_reach), at every weight."""
+    return p.sv / 2 + kick_reach(p, p.sh * p.low)
 
 
 @low('l', 3, 1, width=l_width)
@@ -495,27 +409,30 @@ def l(g):
         g.stroke((x - 3 * u, f.Y(12)), (x, f.Y(12)), (x, 0))
         _mono_foot(g, f, x - u / 2, u)
         return
-    # A stem and its foot, the t's: to SemiBold one cut, the corner the foot
-    # turns through run on to the baseline and ended upright with no foot
-    # after it; from Bold the foot, a tail two modules past the stem
-    # (stem_end). Cut or tail tells l from I, i and 1
-    # (docs/research/legibility.md).
+    # A stem and one cut at its foot, at every weight: the corner the t's
+    # foot turns through, run on to the baseline and ended upright with no
+    # foot after it (the owner, 2026-11-10: "only one single notch", and
+    # "the l stays without a hook"; the f and the t keep theirs). The cut
+    # tells l from I, i and 1 (docs/research/legibility.md). The corner is
+    # drawn on a line half its end's thickness (_toe) over the baseline, its
+    # leg longer by what that thickness is short of the bar's, so the cut
+    # lies where a foot's would.
     #
     # Until 1.017 the l carried the 1's flag at the top, a module to the
-    # left of the stem, and three modules of tail at every weight: over the
-    # x-height, where spacing lets a part hang into its neighbour's room,
-    # the flag stood 12 units from the body's edge at Regular for a stem's
-    # 88 and 21 outside it at Black, and whatever stood before an l with ink
-    # that high was crowded (F E T K and the l 0.3 of the white between two
-    # stems, 0.55 to 0.85 in faces of this kind; i d H and the l a third at
-    # Black, theirs 0.84 to 1.0); the tail made the l the widest of its kind
-    # (0.65 of the n's advance for their 0.40 to 0.51).
+    # left of the stem, and three modules of tail: over the x-height, where
+    # spacing lets a part hang into its neighbour's room, the flag stood 12
+    # units from the body's edge at Regular for a stem's 88 and 21 outside
+    # it at Black, and whatever stood before an l with ink that high was
+    # crowded (F E T K and the l 0.3 of the white between two stems, 0.55
+    # to 0.85 in faces of this kind; i d H and the l a third at Black,
+    # theirs 0.84 to 1.0); the tail made the l the widest of its kind (0.65
+    # of the n's advance for their 0.40 to 0.51).
     f = Frame(g, 3, 'asc')
     p = f.p
     xs = p.sv / 2
     g.defaults_used['stem'] = xs
-    leg, xe, h = stem_end(g, xs, g.W)
-    g.stroke((xs, p.asc), B(xs, h / 2, leg, h), (g.W, h / 2))
+    h = _toe(p, g.sh)
+    g.stroke((xs, p.asc), B(xs, h / 2, p.leg + (g.sh - h) / 2, h), (g.W, h / 2))
     g.clip = (0, 0, g.W, p.asc)
 
 
@@ -618,38 +535,20 @@ def s(g):
              B(f.X(7), ym), B(f.X(7), y1, None, foot), B(f.X(1), y1), (f.X(1), beak(g, foot)))
 
 
-def t_width(p):
-    """The t's body: the f's (the stem and the crossbar to SemiBold, with
-    its foot from Bold); the italic's always with its foot, whose turn is
-    the italic's curve."""
-    return letter_width(NARROW, 1)(p) if p.slant else f_width(p)
-
-
-@low('t', NARROW, 1, width=t_width)
+@low('t', NARROW, 1)
 def t(g):
-    """A stem, a crossbar and its foot: the f turned over. To SemiBold the
-    foot is one cut, the corner run on to the baseline and ended upright,
-    short of the crossbar's end, as the l's; from Bold the foot, a module
-    past the crossbar (stem_end). Until 1.017 the foot at every weight."""
-    p = g.p
-    if p.mono:
+    """A stem, a crossbar and its foot, a module past the crossbar's end,
+    at every weight (the f turned over: see f_)."""
+    if g.p.mono:
         f = Frame(g, 9, 'asc')
         g.defaults_used['stem'] = f.X(3)
         g.stroke(f.P(3, 11), B(*f.P(3, 1)), f.P(8.5, 1))
         g.stroke(f.P(0.5, 8), f.P(8, 8))
         return
-    if p.slant:
-        f = Frame(g, NARROW, 'asc')
-        g.defaults_used['stem'] = f.X(2)
-        g.stroke(f.P(2, 11), B(*f.P(2, 1)), f.P(NARROW, 1))
-        g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
-        return
-    f, xs, full, x_bar = _ft_frame(g)
-    g.defaults_used['stem'] = xs
-    leg, xe, h = stem_end(g, xs, full)
-    g.stroke((xs, f.Y(11)), B(xs, h / 2, leg, h), (xe, h / 2))
-    g.stroke((0, f.Y(8)), (x_bar, f.Y(8)))
-    g.clip = (0, 0, g.W, p.asc)
+    f = Frame(g, NARROW, 'asc')
+    g.defaults_used['stem'] = f.X(2)                        # (extra_latin._slot reads it for the ŧ's bar)
+    g.stroke(f.P(2, 11), B(*f.P(2, 1)), f.P(NARROW, 1))
+    g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
 
 
 @low('u', 8, 2)

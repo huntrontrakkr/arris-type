@@ -9,7 +9,7 @@ from shapely import affinity
 
 import arris.glyphs  # noqa: F401  (the registry)
 from arris import kerning as K
-from arris.draw import PROPORTIONAL_FIGS, REGISTRY
+from arris.draw import PROPORTIONAL_FIGS
 from arris.font import light, place
 from arris.geom import rings_to_shapely
 from arris.glyphs.features import FIGS, fea
@@ -65,7 +65,7 @@ def test_figures_are_kerned_with_the_marks(w):
 def test_the_tabular_twins_are_the_same_figures_on_one_cell(w):
     p = params(w)
     for n in PROPORTIONAL_FIGS:
-        rings, adv = place(n, p)
+        rings, _ = place(n, p)
         twin, cell = place(n + '.tnum', p)
         assert cell == pytest.approx(p.fig_adv)
         a, b = rings_to_shapely(rings), rings_to_shapely(twin)
