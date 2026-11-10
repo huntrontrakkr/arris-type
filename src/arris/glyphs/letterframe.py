@@ -38,6 +38,12 @@ def _interp(anchors, t):
     return fa + (fb - fa) * (t - a) / (b - a) if b != a else fa
 
 
+def share_width(wm: float):
+    """A body that keeps its master's share of the H's width at every
+    weight: ``wm`` ninths of it (the H is nine modules)."""
+    return lambda p: wm / 9 * (2 * p.sv + 5 * p.m * white_scale(p))
+
+
 def white_scale(p) -> float:
     """How much a letter's white widens (light) or narrows (heavy)."""
     r = p.sv / (2 * p.m)          # stem relative to the watch's two-module stem

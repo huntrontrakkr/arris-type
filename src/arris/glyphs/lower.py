@@ -10,57 +10,63 @@ from __future__ import annotations
 from ..draw import B, Opening, glyph
 from ..params import outer_leg
 from .figures import STACK_MIN, beak_depth, jog
-from .letterframe import ARM, Frame, k_arms, least_white, letter_width
+from .letterframe import ARM, Frame, k_arms, least_white, letter_width, share_width
 
 
 def low(char, wm, stems, width=None, openings=(), arm=ARM):
     return glyph(char, char, width or letter_width(wm, stems, arm), kind='lower', openings=openings)
 
 
-def _a_gap(g):
-    """White between the a's arm and the top of its bowl."""
-    return g.defaults_used['arm'] - g.defaults_used['bowl'] - g.sh
+A_STOREYS = 0.9   # the a's upper white over its bowl's: the open storey a little under the closed one
+E_STOREYS = 1.1   # the e's lower white over its bowl's: the open storey a little over the closed one
 
 
-A_WHITE = 1.0     # the white between the a's flag and its bowl's cut corner, in least whites
+def bars3(g):
+    """(outer, inner, outer): the three horizontals of a letter that stacks
+    three in the x-height (a e s). Where three no longer fit at the zone's
+    weight (g.stack), the bar at the open end keeps that weight, the one
+    at the closed end takes the stack's, and the inner bar gives what the
+    two need, as the inner bars of hand-drawn faces do (the a's 0.82, 0.72,
+    0.78 of a stem in Chakra Petch Bold, the e's bar 0.54 to the top's 0.70
+    in Inter Black; tools/stroke_roles.py). Until 1.017 all three thinned
+    alike."""
+    stacked = g.sh
+    lead = g.sh0
+    return lead, max(STACK_MIN * g.sh0, 2 * stacked - lead), stacked
 
 
-def a_flag(g, ya, yb):
-    """Where the a's flag leaves its roof (x), and where it ends: the flag
-    lies over the bowl's cut corner, parallel to it, the least white of a
-    letter between the two, and ends where its point reaches the body's
-    edge."""
-    p = g.p
-    k = p.sd / 2 ** 0.5
-    cut = outer_leg(p, sh=g.sh)                              # the bowl's cut corner: x - y = cut - top
-    xa = cut - (yb + g.sh / 2) + ya - k - A_WHITE * least_white(p) * 2 ** 0.5
-    return xa, k
+def beak(g, w):
+    """How far the c's beak reaches from the line its bar lies on, for a
+    bar ``w`` thick: the corner's outer flank alone, an edge break under
+    the cut (the shortest beak: an open mouth tells c from o, a from d, e
+    from o)."""
+    return outer_leg(g.p, sh=w) + g.p.c
 
 
-@low('a', 8, 2, openings=[Opening(_a_gap, 'bowl', lambda p: p.xh * 0.4, max_ratio=0.4)])
+@low('a', 8, 2)
 def a(g):
-    """The a: the 1's flag and roof over a bowl. Its arm starts in a flag
-    at the left, a 45-degree stroke ending on a horizontal as the 1's does,
-    runs along the x-height and comes into the stem through a bowl's
-    corner. The flag lies over the bowl's cut corner, the two parallel, and
-    is as long as the white between them allows: long at Light, a point at
-    Black.
+    """The a: an arch over a bowl. The arm starts in the c's beak at the
+    left, a short terminal hanging from a cut corner, runs along the
+    x-height and comes into the stem through a bowl's corner; under it the
+    bowl stands low enough that the open storey is nine tenths of the
+    closed one (A_STOREYS), as in the chamfered faces this follows (Chakra
+    Petch 0.89, Oxanium 0.89).
 
-    Until 1.017 the upper storey was a bare bar: square at its left end and
-    all but square at the stem (the pixel master's one-step corner), the
-    one letter whose top had none of the font's corners."""
+    Until 1.017 the upper storey was a bare bar on a tall bowl: square at
+    its left end, all but square at the stem (the pixel master's one-step
+    corner), over a white two thirds of the bowl's (0.65), thinned with the
+    other bars from Bold. It had none of the font's corners, and no room."""
     g.stack(3, g.p.xh, ratio=0.75)
     f = Frame(g, 8, 'lower')
-    ya = f.Y(8)
-    yb = g.free('bowl', f.Y(5))                             # heavy weights lower the bowl
+    p = g.p
+    arm, inner, foot = bars3(g)
+    white = p.xh - arm - inner - foot
+    low = white / (1 + A_STOREYS)                           # the bowl's white
+    ya = p.xh - arm / 2
+    yb = foot + low + inner / 2
     g.defaults_used.update(arm=ya, bowl=yb)
-    xa, x0 = a_flag(g, ya, yb)
-    xa = min(xa, f.X(7) - g.p.leg - g.p.sv / 2)             # (the roof keeps a flat before its corner)
-    if xa > x0:
-        g.stroke((x0, ya - (xa - x0)), (xa, ya), B(f.X(7), ya), f.P(7, 0), start='h')
-    else:
-        g.stroke((x0, ya), B(f.X(7), ya), f.P(7, 0))
-    g.stroke((f.X(7), yb), B(f.X(1), yb), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    g.stroke((f.X(1), p.xh - beak(g, arm)), B(f.X(1), ya, None, arm), B(f.X(7), ya), f.P(7, 0))
+    g.stroke((f.X(7), yb, inner), B(f.X(1), yb), B(*f.P(1, 1)), f.P(7, 1), closed=True)
 
 
 @low('b', 8, 2)
@@ -94,18 +100,33 @@ def d(g):
 
 
 def _e_gap(g):
-    """White between the e's bar and its lower arm."""
+    """White between a bar and the arm under it (the Abkhasian che's, an e
+    in its drawing: cyrillic_ext; the e itself sets its storeys by rule)."""
     return g.defaults_used['bar'] - g.defaults_used['arm'] - g.sh
 
 
-@low('e', 8, 2, openings=[Opening(_e_gap, 'bar', lambda p: p.xh * 0.6, max_ratio=0.4)])
+@low('e', 8, 2)
 def e(g):
+    """The e: a bowl over an arm that ends in the c's beak. Its lower arm
+    turns up at the right through a cut corner into a short terminal, the
+    a's turned over, and the bar stands high enough that the open storey
+    is a tenth more than the closed one (E_STOREYS; Chakra Petch 1.14).
+
+    Until 1.017 the arm ended square and the bar stood below the middle
+    (the open storey 0.64 of the closed one), raised only as the weight
+    closed it."""
     g.stack(3, g.p.xh, ratio=0.75)
     f = Frame(g, 8, 'lower')
-    yb = g.free('bar', f.Y(4))                              # heavy weights raise the bar
-    g.defaults_used.update(bar=yb, arm=f.Y(1))
-    g.stroke((f.X(1), yb), (f.X(7), yb), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
-    g.stroke((f.X(1), yb), B(*f.P(1, 1)), f.P(7, 1))
+    p = g.p
+    arm, bar, top = bars3(g)
+    white = p.xh - arm - bar - top
+    open_ = white * E_STOREYS / (1 + E_STOREYS)             # the white over the arm
+    y1 = arm / 2
+    yb = arm + open_ + bar / 2
+    yt = p.xh - top / 2
+    g.defaults_used.update(bar=yb, arm=y1)
+    g.stroke((f.X(1), yb, bar), (f.X(7), yb), B(f.X(7), yt), B(f.X(1), yt), closed=True)
+    g.stroke((f.X(1), yb), B(f.X(1), y1, None, arm), B(f.X(7), y1), (f.X(7), beak(g, arm)))
 
 
 @low('f', 7, 1)
@@ -340,7 +361,13 @@ def q(g):
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
 
 
-@low('r', 8, 1, arm=0.5)      # its arm is the longest at Regular already (the r is wider than the n)
+# The r keeps its master's share of the line at every weight: eight ninths
+# of the H's width, the n's eight modules. With one stem and six modules of
+# white it had grown as the white of a letter does toward Thin while the n,
+# with two stems, lost them: a third wider than the n at Thin (1.37), a
+# tenth at Regular (1.09), its arm long for the letter (the owner,
+# 2026-11-10: trim it back at the lighter weights); now 1.08 and 1.02.
+@low('r', 8, 1, width=share_width(8))
 def r(g):
     f = Frame(g, 8, 'lower')
     p = g.p
@@ -361,9 +388,22 @@ def r(g):
 
 @low('s', 8, 2)
 def s(g):
+    """The s: three bars and two beaks. Each end turns through a cut
+    corner into the c's short terminal, the upper one down over the spine's
+    right corner and the lower one up under its left, as the capital's do;
+    the two whites are alike, and the spine, the inner bar, is the one that
+    thins (bars3).
+
+    Until 1.017 both ends were square and the upper white was two thirds
+    of the lower (the spine on the fifth module)."""
     g.stack(3, g.p.xh, ratio=0.75)
     f = Frame(g, 8, 'lower')
-    g.stroke(f.P(8, 8), B(*f.P(1, 8)), B(*f.P(1, 5)), B(*f.P(7, 5), g.p.m / 2), B(*f.P(7, 1)), f.P(0, 1))
+    p = g.p
+    top, mid, foot = bars3(g)
+    white = (p.xh - top - mid - foot) / 2
+    y1, ym, yt = foot / 2, foot + white + mid / 2, p.xh - top / 2
+    g.stroke((f.X(7), p.xh - beak(g, top)), B(f.X(7), yt, None, top), B(f.X(1), yt), B(f.X(1), ym, None, mid),
+             B(f.X(7), ym), B(f.X(7), y1, None, foot), B(f.X(1), y1), (f.X(1), beak(g, foot)))
 
 
 @low('t', 7, 1)

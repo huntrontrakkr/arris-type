@@ -181,7 +181,7 @@ def _params(wght, optics, base):
     low = low_share(sv)
     return base.with_(fig_w=fig_w, fig_adv=fig_w + (base.fig_adv - base.fig_w), sv=sv, sh=sh, sd=sv * optics.d_ratio(sv),
                       ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=optics.leg, low=low,
-                      desc=descender_line(base, sv, sh * low))
+                      desc=descender_line(base, sv, sh))
 
 
 

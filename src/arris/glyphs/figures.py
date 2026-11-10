@@ -182,38 +182,38 @@ def _notch_white(g):
     return g.white_left(g.defaults_used['yf'] + 1e-3 * p.m, x1 - p.sv / 2)
 
 
-ONE_FREE = 1.3    # the 1's flag stands free of the stem by this many of its own thicknesses, at least
+ONE_FLAG = 3.0    # modules: how far left of the stem the 1's flag ends, at every weight (Chakra Petch's: 2.1 stems at Regular, 1.1 at Bold)
 
 
 @glyph('one', '1', 'fig_w', openings=[Opening(_notch_white, 'yf', lambda p: p.cap / 3, max_ratio=0.5)])
 def one(g):
-    """The 1: one stroke, the A's roof on a single stem. The flag rises at
-    45 degrees, ending on a horizontal as the watch's does, turns along the
-    cap for a short roof and comes down into the stem through a bowl corner,
-    so its top is chamfered on both sides like the A's and the 0's. The
-    flag stands free of the stem by more than its own thickness at every
-    weight (ONE_FREE), so it stays a stroke; nothing stands under it, and
-    the stem stands right of the middle by what centres the two. In Arris
-    Mono, whose cell it must fill beside l and I, it keeps a foot: the slab
-    of Mono's I.
+    """The 1: a stem, its top left corner cut and the cut run out into a
+    flag. The flag is a 45-degree stroke whose upper edge continues the
+    stem's cut corner; it ends plumb, as the flags of the chamfered faces
+    do (Chakra Petch's, whose 1 this follows: a stem, a flag, no foot), and
+    stands free of the stem by more than its own thickness at every weight
+    (ONE_FREE), so it stays a stroke. The stem stands right of the middle
+    by what centres the two. In Arris Mono, whose cell it must fill beside
+    l and I, it keeps a foot: the slab of Mono's I.
 
-    Until 1.017 it was the watch's 1 in every cut: a flag hung from a
-    stem's square top, on a foot six modules wide, half the figure's ink,
-    the corner rule filling in on both sides of the stem; from Bold the
+    Until 1.017 it was the watch's 1 in every cut: on a foot six modules
+    wide, half the figure's ink, the corner rule filling in on both sides
+    of the stem, its flag ending on a horizontal, in a point; from Bold the
     flag, the fills and the foot were three lumps. (The owner, 2026-11-10:
-    redesign it, chamfer it, and the watch's cut with it.)"""
+    redesign it, and the watch's cut with it.)"""
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
+    top = H + g.ot
     k = p.sd / SQRT2
-    reach = max(4 * v, p.sv / 2 + (ONE_FREE + 1) * k)       # how far down the flag ends: the watch's four modules
-    x1 = W / 2 + (u / 2 if p.mono else min(1.5 * u, (reach + k) / 2 - p.sv / 4))
+    free = ONE_FLAG * u                                     # the flag's run left of the stem, to its plumb end
+    x1 = W / 2 + (u / 2 if p.mono else min(1.5 * u, free / 2))
     g.defaults_used['x1'] = x1
     if p.mono:
         g.stroke((x1 - 3 * u, yb), (x1 + 3 * u, yb))        # foot
-    yf = g.free('yf', H - reach)                            # (lower when heavy strokes would close the notch over a foot)
+    g.stroke((x1, yb if p.mono else 0), (x1, top))          # stem
+    a = x1 - p.sv / 2 + p.c - top + k                       # the flag's centreline: x - y = a
+    yf = g.free('yf', x1 - p.sv / 2 - free - a)             # (lower when heavy strokes would close the notch over a foot)
     g.defaults_used['yf'] = yf
-    leg = min(p.leg, 0.75 * p.sv)                           # the corner into the stem: a bowl's, as far as a stem's width allows
-    xa = x1 - leg - p.sv / 2                                # where the flag meets the roof
-    g.stroke((xa - (yt - yf), yf), (xa, yt), B(x1, yt, leg), (x1, yb if p.mono else 0), start='h')
+    g.stroke((x1, x1 - a, p.sd), (yf + a, yf), start='v', end='v')
 
 
 @glyph('two', '2', 'fig_w')

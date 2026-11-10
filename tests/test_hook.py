@@ -43,8 +43,9 @@ def test_the_ys_hook_is_the_gs(w):
 def test_the_hook_keeps_its_weight_on_the_descender_line():
     for w in range(100, 901, 50):
         p = params(w)
-        thick, extra = hook_fit(p, p.sh * p.low)
-        assert thick == pytest.approx(p.sh * p.low) and extra == 0, w
+        for sh in (p.sh, p.sh * p.low):                 # the italic's horizontals, and the upright lowercase's
+            thick, extra = hook_fit(p, sh)
+            assert extra == 0 and (thick == pytest.approx(sh) or p.desc == p.deep), w
 
 
 def _lowest(name, p):

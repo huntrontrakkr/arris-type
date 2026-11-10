@@ -546,8 +546,8 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
     g.width_arg = width                     # (a body the caller set: a composite's base is drawn in it)
     g.sh_auto = overrides.get('sh_auto', 1.0)
     g.defaults['sh_auto'] = 1.0
-    if spec.kind == 'lower':
-        g.zone_k = p.low
+    if spec.kind == 'lower' and not p.slant:
+        g.zone_k = p.low                    # (the italic keeps its own strokes: its letters are drawn for them)
     if cell and p.mono and _DEPTH[0] == 0 and _cell_kind(spec):
         # Mono: no ink past the cell (the body sits centred in it). A letter
         # is fitted into it (_cell_fit); anything else that would run on is
