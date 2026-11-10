@@ -167,6 +167,21 @@ letters redrawn.
   bar and runs square to the diagonal until it meets it
   (`geom._stepped_crotches`): 23 glyphs move at Regular, 147 at Black, by a
   few units each, none in the italic.
+- No letter keeps a crumb. Scanned at fifteen weights from Thin to Black
+  for edges shorter than half an edge break, twenty-two of the sixty-two
+  letters and figures had one somewhere, of three kinds. A counter a
+  little taller than its two corners' cuts kept a wall of a few units
+  between them as it closed with the weight (a e s B G 3 5 6 8 9: the
+  a's bowl 13 units at SemiBold, the G's pocket 20 at Black): such a wall
+  under half a break now closes, the cuts running on to meet in a point
+  (`geom._polish`, `FACET`). Under the stub of a bar across a stem (f t l,
+  the 4) the end's break and the fill into the stem are two chords of one
+  length with a flat between, 10 units at Medium and none at Bold: a flat
+  under half a break closes, and the two are one plane
+  (`geom._close_jogs`). And the X's step left a flat of 6 units in its
+  crotches at Regular, which goes with the first. The italic and the
+  watch's drawing are finished as they were. At the named weights no edge
+  of a letter is now under 0.45 of a break (the v's flank at Black, 0.48).
 - Ends at Black. The f's top corner is cut down to the t's, so bar and
   corner make one plane; the Q's tail gives as the bowl grows; v and w
   stand on blunt points on the baseline; the 4 keeps a module of white

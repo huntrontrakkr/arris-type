@@ -1,6 +1,7 @@
 """Ink widths against the H's (capitals) and the n's (lowercase), light to heavy: which letters keep their share of width as weight is added."""
 import sys
-sys.path.insert(0, '/tmp/claude-0/-home-user/ecf24825-f4d4-5f2b-8341-ec7661a2b47b/scratchpad')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
 CAPS = 'ABCDEFGKLMNOPRSTUVWXYZ'; LOW = 'abcdefgkoprstuvwxyz'
 def table(get, label):
     out = {}
@@ -9,7 +10,7 @@ def table(get, label):
         for c in chars: out[c] = get(c) / r
     return out
 def ref(path):
-    from calib import shape
+    from refshape import shape
     from fontTools.ttLib import TTFont
     font = TTFont(path)
     def get(c):

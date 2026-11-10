@@ -139,6 +139,17 @@ def crotch_fill(p) -> float:
     return 2.0 - p.optical
 
 
+def facet_close(p) -> float | None:
+    """How short a wall of white between two cuts closes to a point, in
+    breaks (geom.FACET, geom._polish): half a break in Arris; in the
+    watch's own drawing and the italic, only the slivers every outline
+    loses."""
+    from .geom import FACET, POLISH
+    if p.slant:
+        return None
+    return POLISH + (FACET - POLISH) * p.optical
+
+
 @dataclass
 class Glyph:
     p: Params
@@ -362,7 +373,7 @@ class Glyph:
                                                  and src[1].p == p for src in self.extra_src)]
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished,
-                    overlay=self.overlay, crotch=crotch_fill(p))
+                    overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p))
         rec = (rec or []) + self.extra_chamfers if record else []
         if record and getattr(self, 'square', False):
             # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)

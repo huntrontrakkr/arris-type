@@ -463,7 +463,8 @@ def _stepped_crotches(pts, kinds, turns, c, crotch) -> dict:
 
 
 def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=(),
-        tags: list | None = None, extra_edges=(), finished=(), overlay=(), crotch: float = 2.0):
+        tags: list | None = None, extra_edges=(), finished=(), overlay=(), crotch: float = 2.0,
+        facet: float | None = None):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
 
@@ -515,6 +516,7 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     rings = []
     min_hole = (MIN_COUNTER * thick.v) ** 2
     moved: dict = {}
+    even = facet * c if facet is not None and facet > POLISH + 1e-9 else None   # Arris's own finish, not the watch's or the italic's
     # finished ink (a stamped glyph) standing apart from the strokes is kept
     # as it was finished: the corner rule, polish and jog closing are not
     # idempotent, and run again they changed a stamped C by a jog where an
@@ -534,11 +536,11 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
                 if r is poly.exterior or Polygon(r).area >= min_hole:
                     rings.append(pts)
             continue
-        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch), POLISH * c, moved), JOG * c, moved))
+        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch), POLISH * c, moved), JOG * c, moved))
+            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
     if overlay:
         rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, crotch)
     if rec is not None and moved:
@@ -713,6 +715,7 @@ MIN_COUNTER = 0.2   # pinholes (under a fifth of a stem, squared) fill in
 JOG = 1.0           # a step between parallel edges shorter than this share of the chamfer leg is closed (_close_jogs)
 STRAY = 3.0         # degrees: a vertex bending less than this between two long edges goes (_close_jogs)
 POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
+FACET = 0.5         # a wall of white between two cuts shorter than this share of the chamfer leg closes to a point (_polish)
 SLIT = 0.35         # white narrower than twice this share of the chamfer leg, and long, is a slit
 JOIN_SLIVER = 1.5   # font units: an edge shorter than this, where an overlay joins the letter, is a point (_lay_over); over the topology check's TINY with the italic's shear to spare
 
@@ -770,7 +773,7 @@ def _line_meet(p1, d1, p2, d2):
     return _add(p1, _mul(d1, t))
 
 
-def _close_jogs(pts, eps, moved):
+def _close_jogs(pts, eps, moved, even=None):
     """Steps left where strokes that should share a line miss it, larger
     than _polish's slivers but still far smaller than a drawn step (a pixel
     step is a module; this is at most a corner break): a short edge between
@@ -782,7 +785,16 @@ def _close_jogs(pts, eps, moved):
     module more is not made (the step is a feature, not a miss). A vertex
     bending less than STRAY degrees between two long edges also goes.
     Choices are made by geometry alone, so a symmetric drawing stays
-    symmetric."""
+    symmetric.
+
+    ``even``: a step shorter than this between two edges of the same
+    length closes too, each edge moving half the step onto the line
+    between them. Without it such a step stands (there is no shorter side
+    to move), and two cuts of one leg are exactly that: under the stub of a
+    bar that crosses a stem (f t l, the 4) its end's break and the fill
+    into the stem are both a break's chord, and as the stub shortens with
+    the weight the flat between them went 40 units, 10, 8, none: at Medium
+    and SemiBold a crumb, where at Bold the two were one plane."""
     pts = list(pts)
     # vertices on a straight line (a stroke's end inside another's edge):
     # no corner there, and they hide the jogs beside them
@@ -820,10 +832,28 @@ def _close_jogs(pts, eps, moved):
         u_in, u_out, u_s = _unit(e_in), _unit(e_out), _unit(step)
         parallel = _dot(u_in, u_out) > math.cos(math.radians(10))
         stepping = abs(_cross(u_in, u_s)) > math.sin(math.radians(30))
-        if not (parallel and stepping) or abs(_len(e_in) - _len(e_out)) < 1e-6:
+        if not (parallel and stepping):
             skip.add((a, b))
             continue
         limit = _len(step) + eps
+        if abs(_len(e_in) - _len(e_out)) < 1e-6:           # no shorter side: both move, half the step each (``even``)
+            mid = _mul(_add(a, b), 0.5)
+            close = even is not None and _len(step) < even
+            q1 = _line_meet(pp, _sub(prev, pp), mid, u_in) if close else None
+            q2 = _line_meet(nn, _sub(nxt, nn), mid, u_in) if close else None
+            if q1 is None or q2 is None or max(_len(_sub(q1, prev)), _len(_sub(q2, nxt))) > limit \
+                    or len({hh, h, i, j, k, kk}) < 6:
+                skip.add((a, b))
+                continue
+            moved[prev] = q1
+            moved[nxt] = q2
+            moved[a] = mid
+            moved[b] = mid
+            pts[h] = q1
+            pts[k] = q2
+            for idx in sorted((i, j), reverse=True):
+                del pts[idx]
+            continue
         if _len(e_in) < _len(e_out):                       # the incoming edge moves onto the outgoing's line
             q = _line_meet(pp, _sub(prev, pp), b, u_out)
             if q is None or _len(_sub(q, prev)) > limit or len({hh, h, i, j}) < 4:
@@ -866,7 +896,7 @@ def _close_jogs(pts, eps, moved):
     return pts
 
 
-def _polish(pts, eps, moved):
+def _polish(pts, eps, moved, facet=None):
     """Slivers out of a finished ring: what stroke unions and clips leave
     behind, much shorter than any cut the design makes (a chamfer is at
     least 1.4 legs, a pixel step a module), and visible only as sloppiness
@@ -878,6 +908,15 @@ def _polish(pts, eps, moved):
       longer edge keeps its line;
     * a short edge where the edges either side turn a corner (a micro-flat
       in place of a point): the two edges meet at their intersection.
+
+    ``facet``: a longer reach for the second kind where both turns are into
+    the ink, the facet a wall of white between two cuts (FACET: a counter a
+    little taller than its two corners' cuts keeps a wall of a few units
+    between them, as it closes with the weight: the a's bowl 13 units at
+    SemiBold, its upper storey 17 at Bold, the G's pocket 20 at Black).
+    Such a wall under half a break is no wall: the cuts run on and meet in
+    a point, in the white's own corner, and the outline's reach is as it
+    was.
 
     A spike (edges either side running back on each other) is left as it
     is. ``moved`` collects old point -> new point for the chamfer record.
@@ -896,7 +935,8 @@ def _polish(pts, eps, moved):
         for i in range(n):
             a, b = pts[i], pts[(i + 1) % n]
             L = _len(_sub(b, a))
-            if L < eps and (a, b) not in skip:
+            if (a, b) not in skip and (L < eps or (facet is not None and L < facet
+                                                   and _white_facet(pts[i - 1], a, b, pts[(i + 2) % n]))):
                 key = (round(L, 6), round((a[1] + b[1]) / 2, 6), round(abs((a[0] + b[0]) / 2 - cx), 6))
                 if best is None or key < best[0]:
                     best = (key, i)
@@ -927,7 +967,7 @@ def _polish(pts, eps, moved):
                 del pts[j]
         elif turn < 165:                                      # a micro-flat at a corner
             q = _meet_pts(prev, a, b, nxt)
-            if q is None or _len(_sub(q, _mul(_add(a, b), 0.5))) > 2 * eps:
+            if q is None or _len(_sub(q, _mul(_add(a, b), 0.5))) > 2 * max(eps, facet or 0.0):
                 skip.add((a, b))
                 continue
             moved[a] = q
@@ -937,6 +977,16 @@ def _polish(pts, eps, moved):
         else:
             skip.add((a, b))
     return pts
+
+
+def _white_facet(prev, a, b, nxt) -> bool:
+    """Whether the edge a-b is a wall of white between two cuts: the ring
+    (ink on its left) turns right at both its ends, by 30 to 60 degrees
+    each, a quarter turn in all."""
+    u0, u1, u2 = _unit(_sub(a, prev)), _unit(_sub(b, a)), _unit(_sub(nxt, b))
+    t1 = math.degrees(math.atan2(_cross(u0, u1), _dot(u0, u1)))
+    t2 = math.degrees(math.atan2(_cross(u1, u2), _dot(u1, u2)))
+    return -60 < t1 < -30 and -60 < t2 < -30
 
 
 def _meet_pts(p0, p1, q0, q1):

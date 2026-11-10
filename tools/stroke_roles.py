@@ -1,7 +1,8 @@
 """Stroke thicknesses by role in hand-drawn sans faces, as shares of the H's stem."""
 import sys, math
-sys.path.insert(0, '/tmp/claude-0/-home-user/ecf24825-f4d4-5f2b-8341-ec7661a2b47b/scratchpad')
-from calib import shape
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+from refshape import shape
 from fontTools.ttLib import TTFont
 from shapely.geometry import LineString
 

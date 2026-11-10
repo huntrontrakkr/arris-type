@@ -272,3 +272,55 @@ def test_wide_and_narrow_letters_stand_where_such_faces_put_them(w):
     assert 1.12 <= adv('M') / adv('H') <= 1.33
     assert 1.07 <= adv('W') / adv('H') <= 1.42
     assert 0.76 <= adv('T') / adv('H') <= 0.86
+
+
+LATIN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+
+
+@pytest.mark.parametrize('w', [300, 400, 500, 600, 700, 800, 900])
+def test_no_letter_keeps_a_crumb(w):
+    """No edge of a letter or figure is shorter than half an edge break, at
+    any named weight (0.45 of one: the v's flank at Black is 0.48). Until
+    1.017 twenty-two of the sixty-two kept one at some weight: the wall of
+    a counter between its corners' cuts (a e s B G 3 5 6 8 9), the flat
+    under a bar's stub between its two cuts (f t l 4), the flat the X's
+    step left in its crotches at Regular (6 units)."""
+    import math
+    p = params(w)
+    for ch in LATIN:
+        for ring in draw(CMAP[ch], p).rings():
+            pts = [(q[0], q[1]) for q in ring]
+            short = [round(math.hypot(b[0] - a[0], b[1] - a[1]), 1) for a, b in zip(pts, pts[1:] + pts[:1])
+                     if 0.5 < math.hypot(b[0] - a[0], b[1] - a[1]) < 0.45 * p.c]
+            assert not short, (ch, w, short)
+
+
+def test_a_wall_between_two_cuts_closes_to_a_point():
+    """geom._polish: a facet under half a break between two cuts that turn
+    into the ink is closed where the cuts meet; one as long stays, and so
+    does a short flat on an outside corner (the outline's reach is kept)."""
+    from arris.geom import _polish
+
+    def pocket(wall):                                       # ink on the left: a notch into a block's right side,
+        y0, y1 = 200 - wall / 2, 200 + wall / 2             # cut top and bottom at 45 degrees, a wall between
+        return [(0, 0), (300, 0), (300, y0 - 60), (240, y0), (240, y1), (300, y1 + 60), (300, 400), (0, 400)]
+
+    out = _polish(pocket(12), 10, {}, 20)
+    assert (240, 194) not in out and any(abs(x - 234) < 1e-6 and abs(y - 200) < 1e-6 for x, y in out)
+    assert _polish(pocket(24), 10, {}, 20) == pocket(24)
+    assert _polish(pocket(12), 10, {}) == pocket(12)        # the watch's finish: slivers only
+    bump = [(0, 0), (300, 0), (300, 140), (360, 194), (360, 206), (300, 260), (300, 400), (0, 400)]
+    assert _polish(bump, 10, {}, 20) == bump
+
+
+def test_a_step_between_two_equal_cuts_closes_evenly():
+    """geom._close_jogs: under a bar's stub the end's break and the fill
+    into the stem are chords of one length with a flat between; in Arris's
+    own finish they become one plane through the flat's middle."""
+    from arris.geom import _close_jogs
+    stub = [(0, 100), (40, 60), (52, 60), (92, 20), (92, -200), (300, -200), (300, 300), (0, 300)]
+    out = _close_jogs(stub, 40, {}, even=20)
+    assert (40, 60) not in out and (52, 60) not in out
+    assert any(abs(x) < 1e-6 and abs(y - 106) < 1e-6 for x, y in out) and any(abs(x - 92) < 1e-6 and abs(y - 14) < 1e-6 for x, y in out)
+    assert _close_jogs(stub, 40, {}) == stub
+    assert _close_jogs(stub, 40, {}, even=10) == stub      # a flat of half a break or more is a flat
