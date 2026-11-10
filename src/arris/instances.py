@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .params import SQRT2, Params
+from .params import SQRT2, Params, descender_line
 
 # Vertical stem (font units, 1000 UPM, cap height 720) at the named weights.
 # Stem / cap: Regular 0.125, SemiBold 0.167 (the watch's figures), Bold 0.194,
@@ -162,8 +162,10 @@ def _params(wght, optics, base):
     # strokes do not eat the counters whole; the watch weight keeps 540.
     d = stem(wght) - 120.0
     fig_w = base.fig_w + (FIG_GROWTH if d > 0 else FIG_GROWTH / 2) * d
-    return base.with_(fig_w=fig_w, fig_adv=fig_w + (base.fig_adv - base.fig_w), sv=sv, sh=sv * optics.h_ratio(sv), sd=sv * optics.d_ratio(sv),
-                      ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=optics.leg)
+    sh = sv * optics.h_ratio(sv)
+    return base.with_(fig_w=fig_w, fig_adv=fig_w + (base.fig_adv - base.fig_w), sv=sv, sh=sh, sd=sv * optics.d_ratio(sv),
+                      ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=optics.leg,
+                      desc=descender_line(base, sv, sh))
 
 
 

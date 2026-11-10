@@ -34,7 +34,8 @@ class Params:
     cap: float = 720.0         # cap and figure height (12 modules)
     xh: float = 540.0          # x-height (9 modules)
     asc: float = 780.0         # ascender of b d h k l (13 modules, a module above the caps)
-    desc: float = 180.0        # descender depth of g j p q y (3 modules)
+    desc: float = 180.0        # descender depth of g j p q y: 3 modules, deeper from Bold (descender_line)
+    deep: float = 250.0        # the font's descent (font.Metrics.desc): the deepest a letter draws
     sv: float = 120.0          # vertical stem
     sh: float = 120.0          # horizontal stroke
     sd: float = 120.0 / SQRT2  # 45-degree stroke, measured perpendicular
@@ -141,6 +142,22 @@ class Params:
         return self.with_(sv=sv / k, sh=sh / k, sd=sd / k, ss=ss / k, c=self.c / k, grade_k=1.0, grad=0.0)
 
 
+def white_floor(m: float, sv: float) -> float:
+    """The least white between two parts of a letter: a module, or 0.6 of
+    a stem toward Black (letterframe.least_white)."""
+    return max(m, 0.6 * sv)
+
+
+def descender_line(base: Params, sv: float, sh: float) -> float:
+    """How deep a weight's descenders go, all of them: three modules, or
+    what the g's hook needs under its bowl, a horizontal and the least
+    white over it, down to the font's descent. One line a weight: the g
+    and y had gone deeper alone from Bold (their hooks making room, 205
+    units at Bold and 250 at Black) and left p q j at 180, so a line of
+    text stood on two descender lines."""
+    return min(base.deep, max(base.desc, sh + white_floor(base.m, sv)))
+
+
 def outer_leg(p: Params, sv: float | None = None, sh: float | None = None) -> float:
     """Outer chamfer leg of a bowl corner between a vertical and a horizontal."""
     sv = p.sv if sv is None else sv
@@ -156,6 +173,6 @@ def inner_leg(p: Params, sh: float | None = None) -> float:
 # The watch figures, in modules: two-module strokes; every diagonal as wide
 # across as a stem (so 45-degree strokes are only 1/sqrt2 of it), 1.5-module
 # bowl legs, half-module edge breaks.
-HERITAGE = Params(m=1, cap=12, xh=9, asc=13, desc=3, sv=2, sh=2, sd=SQRT2,
+HERITAGE = Params(m=1, cap=12, xh=9, asc=13, desc=3, deep=250 / 60, sv=2, sh=2, sd=SQRT2,
                   ss=4 / math.sqrt(5), leg=1.5, c=0.5, fig_w=9, fig_adv=10, optical=0.0)
 HERITAGE_UNITS = HERITAGE.scaled(60)

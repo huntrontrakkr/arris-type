@@ -142,7 +142,7 @@ def _layout(names, p, zone):
     """[(name, params, x offset)], total width: letters side by side, tight."""
     from ..font import light
     from ..spacing import bearings
-    from ..font import DEPTH
+    DEPTH = 0.2          # of the zone: letters packed inside a sign count their white deeper than text does (font.DEPTH)
     y0, y1 = zone
     lt = TIGHT * light(p)
     out, x, prev = [], 0.0, None

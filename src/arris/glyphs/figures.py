@@ -175,30 +175,34 @@ def zero_dot(g):
     g.stroke((W / 2, H / 2 - h / 2, s), (W / 2, H / 2 + h / 2))
 
 
-def _notch_white(g):
-    """White under the 1's flag, between its foot and the stem."""
-    p = g.p
-    x1 = g.W / 2 + g.W / 18
-    return g.white_left(g.defaults_used['yf'] + 1e-3 * p.m, x1 - p.sv / 2)
+ONE_FLAG = 3.5    # modules: how far down from the cap the 1's flag ends, at Regular and lighter
+ONE_FREE = 1.3    # the flag's free length past the stem, in its own thicknesses, at least
 
 
-@glyph('one', '1', 'fig_w', openings=[Opening(_notch_white, 'yf', lambda p: p.cap / 3, max_ratio=0.5)])
+@glyph('one', '1', 'fig_w')
 def one(g):
+    """The 1: a stem and a flag, one line. The flag is a 45-degree stroke
+    from the stem's top, its upper edge leaving the stem's cut top left
+    corner; it ends square, and stands free of the stem by more than its
+    own thickness at every weight (ONE_FREE), so it stays a stroke. Nothing
+    stands under it. In Arris Mono, whose cell it must fill and where it
+    stands beside l and I, it keeps a foot: the slab of Mono's I.
+
+    Until 1.017 it stood on a foot six modules wide in every cut, half its
+    ink, the corner rule filling in on both sides of the stem, and its flag
+    ended on a horizontal, in a point, four modules down at every weight:
+    from Bold the flag, the fills and the foot were three lumps on a stem."""
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
-    x1 = W / 2 + u / 2
     top = H + g.ot
-    g.stroke((x1 - 3 * u, yb), (x1 + 3 * u, yb))            # foot
-    g.stroke((x1, yb), (x1, top))                           # stem
-    # Flag: 45 degrees, its upper edge continuing the stem's cut top-left
-    # corner (x - y = x1 - sv/2 + c - top); the centreline lies k inside. It
-    # ends square on a horizontal four modules down (lower when heavy strokes
-    # would close the notch), and the corner rule fills the crotch above it.
-    fd = p.sd
-    k = fd / SQRT2
-    a = x1 - p.sv / 2 + p.c - top + k                       # centreline: x - y = a
-    yf = g.free('yf', H - 4 * v)
-    g.defaults_used['yf'] = yf
-    g.stroke((x1, x1 - a, fd), (yf + a, yf), start='v', end='h')
+    k = p.sd / SQRT2
+    reach = max(ONE_FLAG * v, p.sv / 2 + ONE_FREE * p.sd / SQRT2 + k)
+    x1 = W / 2 + (u / 2 if p.mono else min(1.5 * u, (reach + k) / 2 - p.sv / 4))   # the ink centred, to a module and a half
+    if p.mono:
+        g.stroke((x1 - 3 * u, yb), (x1 + 3 * u, yb))        # foot
+    g.stroke((x1, yb if p.mono else 0), (x1, top))          # stem
+    a = x1 - p.sv / 2 + p.c - top + k                       # the flag's centreline: x - y = a
+    yf = top - reach
+    g.stroke((x1, x1 - a, p.sd), (yf + a, yf), start='v')
 
 
 @glyph('two', '2', 'fig_w')

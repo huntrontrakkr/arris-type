@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import math
 
-from ..params import SQRT2
+from ..params import SQRT2, white_floor
 
 STEEP = (1 / math.sqrt(5), 2 / math.sqrt(5))
 
@@ -55,7 +55,7 @@ def least_white(p) -> float:
     """The least white across a closed counter or between two parts of a
     sign: a module, or 0.6 of a stem toward Black (white narrower than half
     a stroke is no white at all: draw.white_features)."""
-    return max(p.m, 0.6 * p.sv)
+    return white_floor(p.m, p.sv)
 
 
 def heft(p) -> float:

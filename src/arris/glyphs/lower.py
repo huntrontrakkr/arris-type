@@ -8,7 +8,7 @@ V on m, gables on v and w.
 from __future__ import annotations
 
 from ..draw import B, Opening, glyph
-from ..params import SQRT2, inner_leg, outer_leg
+from ..params import outer_leg
 from .figures import STACK_MIN, beak_depth, jog
 from .letterframe import Frame, k_arms, least_white, letter_width
 
@@ -109,23 +109,41 @@ def crotch_butt(g, y):
     return (('y', y - _thickness(g.p, g.sh)((1.0, 0.0)) / 2),)
 
 
-HOOK_ROOM = 70.0   # units below the drawing's descender that the font's descent (250) allows a hook to deepen into
+def hook_room(p) -> float:
+    """How far below its descender line a hook may still deepen: down to
+    the font's descent."""
+    return max(0.0, p.deep - p.desc)
 
 
-def hook(g, f, x_stem=7, x_end=1):
+def hook_fit(p, sh, white=None):
+    """(the hook's thickness, how far it deepens past the descender line)
+    for horizontals ``sh`` thick: the white between the hook and what stands
+    over it (the g's bowl) stays ``white`` tall (least_white). The weight's
+    descender line is set for exactly that (params.descender_line), so the
+    g's and y's hooks stand on it at their full weight, with p q and j;
+    a hook that keeps more white (ǥ's, for its bar) makes room first,
+    deepening toward the font's descent, and only where that is spent
+    (Black) does a hook thin, never under the stack minimum of a bar.
+
+    Until 1.016 it thinned first, and measured its white past the corner's
+    inner leg, not from bar to bar: the hook was 0.73 of the letter's other
+    horizontals at Regular (57 units to the bowl's 79) and 0.7 from Medium
+    up, with 123 units of white over it, a stem and a third. It read as a
+    mistake (and the j's hook, with nothing over it, kept its weight)."""
+    white = least_white(p) if white is None else white
+    extra = min(hook_room(p), max(0.0, sh + white - p.desc))
+    w = min(sh, max(STACK_MIN * sh, p.desc + extra - white))
+    return w, extra
+
+
+def hook(g, f, x_stem=7, x_end=1, white=None):
     """The descending hook of g, y and the italic y: the stem down from the
-    body into a bowl corner and a horizontal back under it. The slot above
-    the horizontal (under the g's bowl, the y's arm) is the descender less
-    the horizontal and the corner's inner leg: at Black it closed, and the
-    hook was a blob. It adapts, by the least that keeps the slot: the
-    horizontal thins to the stack minimum of a bar as far as the slot asks,
-    then the hook deepens into the font's descent (HOOK_ROOM) as far as
-    still needed. (The owner's rule: a feature weight would swallow grows
-    or makes room by the smallest change that keeps it.)"""
+    body into a bowl corner and a horizontal back under it, as thick as the
+    letter's other horizontals (hook_fit), on the weight's descender line.
+    (The owner's rule: a feature weight would swallow grows or makes room
+    by the smallest change that keeps it.)"""
     p = g.p
-    w = min(g.sh, max(STACK_MIN * g.sh, p.desc - inner_leg(p) - least_white(p)))
-    slot = p.desc - w - inner_leg(p)
-    extra = min(HOOK_ROOM, max(0.0, least_white(p) - slot))
+    w, extra = hook_fit(p, g.sh, white)
     yh = -(p.desc + extra) + w / 2
     if extra:
         x0, y0, x1, y1 = g.clip
@@ -133,12 +151,18 @@ def hook(g, f, x_stem=7, x_end=1):
     g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), (f.X(x_end), yh))
 
 
-@low('g', 8, 2)
-def g_(g):
+def g_strokes(g, white=None):
+    """The g: its bowl and its hook (``white``: the room the hook leaves
+    under the bowl, for a g that carries something there: ǥ's bar)."""
     f = Frame(g, 8, 'lower')
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    hook(g, f)
+    hook(g, f, white=white)
     g.butt += crotch_butt(g, f.Y(1))
+
+
+@low('g', 8, 2)
+def g_(g):
+    g_strokes(g)
 
 
 def shoulder(g, f, xs, x_right, top=8, drop=2, notch=True):
@@ -362,27 +386,54 @@ def w(g):
     g.stroke((xm, yt), (xm, f.Y(6)))
 
 
+def x_strokes(g, xl, xr, W, H):
+    """The X and the x: two 45-degree strokes between vertical stubs, each
+    stepping sideways by a jog where they cross (the 2's notch, twice):
+    upper halves pass the centre a half jog early, lower halves a half jog
+    late. The step is the watch's pixel; as the strokes grow past it the
+    crossing takes it up and the kinks go."""
+    p = g.p
+    J = jog(p)
+    step = min(J, g.sh)
+    up, lo = (W + H - J) / 2, (W + H + J) / 2                # x + y on the falling stroke
+    g.stroke((xl, H), (xl, up - xl), (up - H / 2, H / 2, step), (lo - H / 2, H / 2), (xr, lo - xr), (xr, 0))
+    # the rising stroke, mirrored: x -> W - x
+    g.stroke((xr, H), (xr, up - xl), (W - (up - H / 2), H / 2, step), (W - (lo - H / 2), H / 2),
+             (xl, lo - xr), (xl, 0))
+
+
 @low('x', 8, 2)
 def x(g):
+    """The capital's drawing in the x-height (until 1.017 the x crossed
+    plain at every weight, and the X stepped)."""
     f = Frame(g, 8, 'lower')
-    p = f.p
-    xl, xr = f.X(1), f.X(7)
-    half = (xr - xl) / 2
-    yu, yl = p.xh / 2 + half, p.xh / 2 - half
-    g.stroke((xl, p.xh), (xl, yu), (xr, yl), (xr, 0))
-    g.stroke((xr, p.xh), (xr, yu), (xl, yl), (xl, 0))
+    x_strokes(g, f.X(1), f.X(7), f.W, f.p.xh)
+
+
+Y_FLAT = 1.0     # modules: the flat the y's arm lands on before the stem
 
 
 @low('y', 8, 2)
 def y(g):
+    """The y: a bowl open at the top whose left corner is cut all the way
+    across, and the g's hook. The arm comes down the left stem, turns at 45
+    degrees and lands flat on the baseline, a module short of the stem: it
+    meets the stem as the p's bowl meets its own and the g's its own, a
+    horizontal on the baseline, and the stem runs on down into the hook as
+    one line.
+
+    Until 1.017 the arm ran straight into the stem, its lower edge an edge
+    break above the baseline: a diagonal entering a vertical takes a stem
+    and a fifth of the stem's height to do it (252 units at Black), with
+    the hook's corner straight under it, and from Bold the three made one
+    lump at the foot of the letter."""
     f = Frame(g, 8, 'lower')
-    p, k_ = f.p, f.k
+    p = f.p
     xl, xr = f.X(1), f.X(7)
-    # The left arm bends at 45 degrees into the right stem, its lower edge
-    # meeting the stem one edge break above the baseline.
-    a = (xr - p.sv / 2) + p.c - k_                          # x + y = a
-    g.stroke((xl, p.xh), (xl, a - xl), (xr, a - xr))
+    leg = max(p.leg, (xr - p.sv / 2) - Y_FLAT * p.m - xl)
+    g.stroke((xl, p.xh), B(xl, f.Y(1), leg), (xr, f.Y(1)))
     hook(g, f)
+    g.butt += crotch_butt(g, f.Y(1))
 
 
 @low('z', 8, 1)

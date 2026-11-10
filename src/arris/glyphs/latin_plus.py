@@ -329,14 +329,19 @@ def Gstroke(g):
     g.stroke((xs - 1.5 * p.m - p.sv / 2, 0.27 * p.cap), (xs + 1.5 * p.m + p.sv / 2, 0.27 * p.cap))
 
 
+def _gstroke_white(p):
+    """The room ǥ's g keeps under its bowl: its bar, and about a third of
+    the least white on each side of it."""
+    from ..draw import bar_held
+    from .letterframe import least_white
+    return bar_held(p) + 0.72 * least_white(p)
+
+
 def _g_room(p):
-    """The room under the g's bowl, down to its hook's top edge, as
-    lower.hook draws it (the hook deepening as it must)."""
-    from ..params import inner_leg
-    from .figures import STACK_MIN
-    from .lower import HOOK_ROOM, least_white
-    tail = min(p.sh, max(STACK_MIN * p.sh, p.desc - inner_leg(p) - least_white(p)))
-    extra = min(HOOK_ROOM, max(0.0, least_white(p) - (p.desc - tail - inner_leg(p))))
+    """The room under ǥ's bowl, down to its hook's top edge, as lower.hook
+    draws it for that white (the hook deepening as it must)."""
+    from .lower import hook_fit
+    tail, extra = hook_fit(p, p.sh, _gstroke_white(p))
     return p.desc + extra - tail
 
 
@@ -351,16 +356,22 @@ def _gstroke_run(p):
 @glyph('uni01E5', 'ǥ', lambda p: REGISTRY['g'].width(p) + _gstroke_run(p), kind='lower')
 def gstroke(g):
     """g with a bar across its descender's stem, centred in the room under
-    the bowl (122 units to the hook at Regular, 146 at Black, the g's hook
-    deepening as it must: lower.hook). Like every added stroke it keeps the
+    the bowl. Its g is drawn here, not stamped: the g's own hook leaves the
+    least white under the bowl, and the bar needs its own height and white
+    beside it more (122 units at Regular, 146 at Black: _gstroke_white), so
+    this g's hook goes deeper, and thins sooner. Like every added stroke it keeps the
     Regular's thickness at the heavier weights, laid over the finished g
     (draw.lay_bar), and runs out further the thinner it is than the stem
     (_gstroke_run): nothing fills in where it crosses the stem as the g
     grows on (the owner, 2026-11-06)."""
     from ..draw import lay_bar
     p = g.p
+    from .lower import g_strokes
     run = _gstroke_run(p)
-    w = stamp(g, 'g', width=g.W - run)
+    W = g.W
+    g.W = w = W - run                    # the g in its own width, the bar running out past it
+    g_strokes(g, white=_gstroke_white(p))
+    g.W = W
     xs = w - p.sv / 2
     y = -_g_room(p) / 2
     lay_bar(g, lambda t, own: ((xs - run - p.sv / 2, y), (xs + run + p.sv / 2, y)))

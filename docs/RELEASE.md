@@ -70,6 +70,22 @@ before a commercial distribution if wanted.
   are held from are graded. Now a grade carries the strokes it was made
   from, and its ungraded self is the plain master exactly.
   The static fonts are ungraded and do not change.
+- The hooks of g and y are as heavy as the letters' other strokes. They
+  were thinner from Light up: 57 units to the bowl's 79 at Regular, 85 to
+  121 at Bold, about three quarters, and it read as a mistake (a reader
+  on r/typography circled it; the j's hook, with nothing over it, kept its
+  weight). The hook gives way to keep white between it and the bowl, and
+  it gave way too soon and the wrong way round: it measured that white
+  past the inner leg of its own corner, not from bar to bar, where there
+  was a stem and a third of it at Regular; and it thinned before it
+  deepened. Now the white is measured where it is seen, and the hook
+  keeps its weight and deepens first: full weight from Thin to ExtraBold,
+  97 in 100 at Black, at the descender's own depth to SemiBold, 25 units
+  under it at Bold (it was 34), 50 at ExtraBold and 70 at Black as before.
+  Every letter made from them follows (ğ ġ ý ÿ ỳ ỵ and the rest); ǥ's g,
+  which needs room under its bowl for the bar, is drawn for that room.
+  Among the 1,358 letters and figures no other stroke is drawn under its
+  weight between Light and Bold but an accent's.
 - `tools/grade_advance_check.py`: each variable font is checked as it is
   built; a glyph whose advance moves with the grade fails the release.
 

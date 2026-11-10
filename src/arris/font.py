@@ -63,9 +63,19 @@ def glyph_contours(name: str, p: Params, tune=None):
 
 
 # Optical spacing: the H's sidebearing as a fraction of its counter, and how
-# deep into a side's white the eye counts it (fraction of the zone height).
+# deep into a side's white the eye counts it: an eighth of the x-height, in
+# the capitals' zone and the lowercase's alike. That depth is measured: the
+# area model fitted to the side bearings of ten hand-spaced sans faces (Inter
+# Light to Black, Liberation Sans, DejaVu Sans, Carlito, FreeSans; tools/
+# spacing_depth.py) explains them best at 0.07 to 0.17 of the x-height, the
+# same for both zones (median 0.12), within a tenth of a stem's bearing.
+# Until 1.017 the white counted a fifth of its zone deep (0.27 of the
+# x-height for capitals, 0.2 for lowercase), twice what those faces count,
+# so every open side (C K L T E F, c r f t k) took most of its light from
+# inside the letter and stood against its neighbour: in DOCK the C stood 79
+# units from the K and 141 from the O.
 SPACE = 0.27
-DEPTH = 0.2
+DEPTH = 0.125
 PUNCT_SIDE = 0.9   # punctuation bearings, as a share of the letters' light
 
 
@@ -222,7 +232,7 @@ def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: li
                 adv = tab
     else:
         zone = (0.0, p.xh) if spec.kind == 'lower' else (0.0, p.cap)
-        lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * (zone[1] - zone[0]),
+        lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * p.xh,
                                         floor=-0.25 * p.m)
         # Parts outside the zone (a j's hook, a descender's tail) may hang
         # into the neighbour's space, but by no more than half its light.

@@ -205,7 +205,14 @@ the stack minimum of a bar (0.7 of the weight's own); its neighbourhood
 grows (a hook deepens into the font's descent, by up to 70 units); and
 only where no white can remain does the feature close whole, in one piece
 without a sliver, leaving a bump to say it was there (the ŧ's bar runs on
-past the t's right edge). Each move is measured on the drawing itself, the
+past the t's right edge). A hook takes the order's last move first: the g's
+and the y's keep the weight of the letter's other horizontals and deepen
+into the font's descent for the white over them (a module, or 0.6 of a
+stem, from the hook to the bowl), and thin only where that room is spent,
+at Black, by 3 in 100 (`lower.hook_fit`). Thinned first, as it was until
+1.016, the hook was three quarters of the bowl's strokes at Regular: a
+stroke out of weight in a letter is read before a descender 25 units
+deeper than the p's is. Each move is measured on the drawing itself, the
 white read off the ink along the feature, so it follows every axis, not
 the weight alone; and a fill the corner rule adds at a stroke's end is
 kept half a break clear of a parallel chamfer, or the two leave a step

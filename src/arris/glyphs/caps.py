@@ -72,7 +72,7 @@ def c_shape(g, foot_leg=None):
 def D(g):
     f = Frame(g, 9)
     p = f.p
-    g.stroke(f.P(1, 1), B(*f.P(8, 1), big(p)), B(*f.P(8, 11), big(p)), f.P(1, 11), closed=True)
+    g.stroke(f.P(1, 1), B(*f.P(8, 1)), B(*f.P(8, 11)), f.P(1, 11), closed=True)
 
 
 @cap('E', 8, 1)
@@ -309,19 +309,9 @@ def W_(g):
 
 @cap('X', 10, 2)
 def X(g):
+    from .lower import x_strokes
     f = Frame(g, 10)
-    p, H, W = f.p, f.p.cap, f.W
-    xl, xr = f.X(1), f.X(9)
-    # Each stroke steps sideways by a jog where they cross: the 2's notch,
-    # twice. Upper halves pass the centre a half jog early, lower halves a
-    # half jog late.
-    J = jog(p)
-    step = min(J, g.sh)
-    up, lo = (W + H - J) / 2, (W + H + J) / 2                # x + y on the falling stroke
-    g.stroke((xl, H), (xl, up - xl), (up - H / 2, H / 2, step), (lo - H / 2, H / 2), (xr, lo - xr), (xr, 0))
-    # the rising stroke, mirrored: x -> W - x
-    g.stroke((xr, H), (xr, up - xl), (W - (up - H / 2), H / 2, step), (W - (lo - H / 2), H / 2),
-             (xl, lo - xr), (xl, 0))
+    x_strokes(g, f.X(1), f.X(9), f.W, f.p.cap)
 
 
 @cap('Y', 10, 2)

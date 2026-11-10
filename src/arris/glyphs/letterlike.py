@@ -23,7 +23,7 @@ from ..draw import B, REGISTRY, draw, glyph
 from ..params import SQRT2, outer_leg
 from .figures import beak_depth, jog
 from .letterframe import STEEP, Frame, close_slit, heft, least_white, letter_width
-from .lower import HOOK_ROOM
+from .lower import hook_room
 from .symkit import MIRROR, TURN, across, fit_inner, set_tight, sign, small_all, stamp_t, tight
 
 ALIASES = {0x212A: 'K', 0x212B: 'Aring'}
@@ -382,7 +382,7 @@ def weierstrass(g):
     # into one line; from 550 the step hovered about a break (closed at
     # some weights, kept at others: a flicker). The hook deepens into the
     # font's descent by what keeps the step a break and a half
-    drop = min(HOOK_ROOM, max(0.0, 2.5 * p.c - (p.desc - outer_leg(p))))
+    drop = min(hook_room(p), max(0.0, 2.5 * p.c - (p.desc - outer_leg(p))))
     yh = f.Y(-2) - drop
     g.clip = (-g.W, -p.desc - drop, 2 * g.W, p.xh)
     g.stroke((xs, p.xh), B(xs, yh), B(p.sv / 2, yh), (p.sv / 2, f.Y(-2) + g.sh / 2 + beak_depth(p)))
