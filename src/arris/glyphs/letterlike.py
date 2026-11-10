@@ -432,14 +432,14 @@ def _rx(p):
     wr = REGISTRY['R'].width(p)
     k = p.sd / SQRT2
     a = wr + p.c - k                                        # the R's leg: x + y = a (caps.R)
-    yc = -p.desc / 3
+    yc = -p.under / 3
     e = 1.5 * p.m + p.sv / 2
     return wr, a, yc, e
 
 
 def _rx_width(p):
     wr, a, yc, e = _rx(p)
-    return max(a + 0.9 * p.desc, a - yc + e) + p.sd
+    return max(a + 0.9 * p.under, a - yc + e) + p.sd
 
 
 @sign('prescription', '\u211e', _rx_width, kind='cap')
@@ -449,7 +449,7 @@ def prescription(g):
     p = g.p
     wr, a, yc, e = _rx(p)
     stamp(g, 'R', width=wr)
-    bot = -0.9 * p.desc
+    bot = -0.9 * p.under
     g.stroke((a - p.sv / 2, p.sv / 2), (a - bot, bot), start='flat', end='h')   # (overlapping the leg)
     xc = a - yc
     g.stroke((xc - e, yc - e), (xc + e, yc + e), start='v', end='v')

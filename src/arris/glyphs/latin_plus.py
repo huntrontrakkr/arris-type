@@ -45,7 +45,7 @@ from .marks import ABOVE, ATTACHED, BELOW, BESIDE, gap, size
 def room_below(p):
     """The depth a mark below may take: from a gap under the baseline to a
     little past the descender (as far as its chamfer), as the comma below."""
-    return 1.15 * p.desc - gap(p)
+    return 1.15 * p.under - gap(p)
 
 
 def below_dot(p):
@@ -381,7 +381,7 @@ def gstroke(g):
 # --- Click letters ------------------------------------------------------------
 
 def _click_span(p):
-    return -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m           # the bar's (|)
+    return -p.under + 0.5 * p.m, p.cap + 0.5 * p.m          # the bar's (|)
 
 
 @glyph('uni01C0', 'ǀ', lambda p: p.sv, kind='lower')
@@ -546,7 +546,7 @@ def ogonek_mark(g, x):
     """The ogonek alone: from a foot at x on the baseline, turning right underneath."""
     from .italic_forms import tail_run
     p = g.p
-    yb = -p.desc + g.sh / 2 + 0.25 * p.m
+    yb = -p.under + g.sh / 2 + 0.25 * p.m
     g.stroke((x, g.sh / 2), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))
 
 
