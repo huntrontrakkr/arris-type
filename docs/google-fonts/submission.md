@@ -104,7 +104,7 @@ masters, the outlines from each glyph's own. To fix in `arris.vf`.
 
 fontbakery `check-googlefonts` on the 1.015 two-axis fonts (2026-11-10):
 no ERROR, no FAIL, 24 warnings (12 kinds, each on both fonts), 239 passes.
-The warnings: `alt_caron`, `contour_count`-style design notes and
+The warnings: `alt_caron` and
 `math_signs_width` (see docs/TODO.md); `file_size`; `interpolation_issues`
 and `overlapping_path_segments` (reports); `mandatory_avar_table` (no avar:
 the weight axis is linear); `unreachable_glyphs` (the form switches'
