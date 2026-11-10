@@ -378,8 +378,12 @@ def l(g):
     g.stroke(f.P(0, 12), f.P(2, 12), B(*f.P(2, 1)), f.P(6, 1))
 
 
-@low('m', 12, 3)
+@low('m', 12, 3, width=letter_width(13, 3))
 def m(g):
+    # Its counters are seven eighths of the n's (the master's twelve modules
+    # made them three quarters, and the m the darkest of the arch letters:
+    # its advance 1.36 of the n's, where faces of this kind give it 1.44 to
+    # 1.59; tools/letter_colour.py)
     f = Frame(g, 12, 'lower')
     g.stroke(f.P(1, 0), f.P(1, 9))
     for xs, xr in ((f.X(1), f.X(6)), (f.X(6), f.X(11))):
@@ -427,7 +431,7 @@ def q(g):
 # with two stems, lost them: a third wider than the n at Thin (1.37), a
 # tenth at Regular (1.09), its arm long for the letter (the owner,
 # 2026-11-10: trim it back at the lighter weights); now 1.08 and 1.02.
-@low('r', 8, 1, width=share_width(8))
+@low('r', 8, 1, width=share_width(7))
 def r(g):
     f = Frame(g, 8, 'lower')
     p = g.p
@@ -511,8 +515,11 @@ def v(g):
     g.clip = (0, 0, W, p.xh)
 
 
-@low('w', 14, 3)
+@low('w', 14, 3, width=letter_width(12.6, 3))
 def w(g):
+    # A tenth narrower than its master's fourteen modules: at 1.46 of the
+    # n's advance it was wider than any face of its kind draws it (1.24 to
+    # 1.42) and the lightest letter of the alphabet after the r
     f = Frame(g, 14, 'lower')
     p, W = f.p, f.W
     xl, xm, xr = f.X(1), W / 2, f.X(13)

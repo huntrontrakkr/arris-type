@@ -41,12 +41,14 @@ def test_a_one_stem_lowercase_letter_keeps_its_share(ch):
 
 
 @pytest.mark.parametrize('w', [100, 300, 400, 600, 900])
-def test_the_r_is_eight_ninths_of_the_h(w):
-    """Its master's share at every weight: at Thin it was a third wider
-    than the n."""
+def test_the_r_is_seven_ninths_of_the_h(w):
+    """One share of the H at every weight: at Thin it was a third wider
+    than the n, and at eight ninths still the lightest letter of the
+    alphabet, its advance 0.94 of the n's where faces of this kind give
+    the r 0.62 to 0.72."""
     p = params(w)
-    assert REGISTRY['r'].width(p) == pytest.approx(8 / 9 * REGISTRY['H'].width(p))
-    assert _width('r', p) <= 1.12 * _width('n', p)
+    assert REGISTRY['r'].width(p) == pytest.approx(7 / 9 * REGISTRY['H'].width(p))
+    assert _width('r', p) <= _width('n', p)
 
 
 def _whites(ch, p, at=0.5):
@@ -253,3 +255,20 @@ def test_the_zs_foot_is_broken_a_full_break(w):
     ring = max(g.rings(), key=len)
     on_bar = [x for x, y, *_ in ring if abs(y - g.sh) < 1 and x < g.W / 2]     # where the foot's inner corner starts on the bar
     assert max(on_bar) - p.sv == pytest.approx(p.c, abs=1.5)                   # a break from the foot's own side
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_wide_and_narrow_letters_stand_where_such_faces_put_them(w):
+    """Advances against the n's and the H's, inside what chamfered and
+    squared faces give them (Chakra Petch, Oxanium, Rajdhani, Exo 2,
+    Tomorrow, Share Tech at Regular and at their heaviest): the m 1.44 to
+    1.59 of the n (it was 1.36, the darkest arch letter), the w 1.23 to
+    1.54 (1.46 at Regular, wider than any), the M 1.14 to 1.33 and the W
+    1.07 to 1.42 of the H, the T 0.79 to 0.84 (0.98)."""
+    p = params(w)
+    adv = lambda ch: place(CMAP[ch], p)[1]
+    assert 1.42 <= adv('m') / adv('n') <= 1.59
+    assert 1.23 <= adv('w') / adv('n') <= 1.42
+    assert 1.12 <= adv('M') / adv('H') <= 1.33
+    assert 1.07 <= adv('W') / adv('H') <= 1.42
+    assert 0.76 <= adv('T') / adv('H') <= 0.86

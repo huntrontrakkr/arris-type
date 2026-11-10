@@ -482,6 +482,8 @@ LETTER_KINDS = ('cap', 'lower')
 
 _WIDE: dict = {}
 WIDE_MODULES = 11.0   # Mono Narrow: a letter this many modules wide or more at the Regular is wide by nature
+WIDE_ROOTS = ('M',)   # and what is made from these: the M is two stems and a V between them at any width (10.7 modules
+                      # since 1.017, among Ђ Ъ Ѣ, which are one stem and a bowl)
 # Mono Narrow's arch letters, a little wider than its body: in 7.8 modules the
 # shoulder's 45-degree diagonal and the arch's corner left the n, h and r
 # almost no flat top, and at Bold the diagonal ran out of room and its notch
@@ -503,14 +505,14 @@ def _root(spec):
 
 def _wide(spec) -> bool:
     """Whether a letter is wide by nature: its own width at the Regular
-    (proportional, ungraded) is WIDE_MODULES or more (m 11.1, M 11.8, W and w
-    13.3; T at 10.3 and the rest are not). Decided once, at the Regular, so
-    a letter is wide at every weight or at none."""
+    (proportional, ungraded) is WIDE_MODULES or more (m and W 12.2, w 11.8;
+    the rest are not), or it is made from the M (WIDE_ROOTS). Decided once,
+    at the Regular, so a letter is wide at every weight or at none."""
     if spec.name not in _WIDE:
         from .instances import params as _params
         ref = _params(400)
         try:
-            _WIDE[spec.name] = spec.width(ref) >= WIDE_MODULES * ref.m
+            _WIDE[spec.name] = spec.width(ref) >= WIDE_MODULES * ref.m or _root(spec) in WIDE_ROOTS
         except Exception:
             _WIDE[spec.name] = False
     return _WIDE[spec.name]

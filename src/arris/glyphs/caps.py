@@ -160,8 +160,11 @@ def L(g):
     g.stroke(f.P(1, 12), f.P(1, 1), f.P(8, 1))
 
 
-@cap('M', 12, 2)
+@cap('M', 12, 2, width=letter_width(11, 2))
 def M(g):
+    # Eleven modules for its master's twelve: 1.2 of the H's advance, the
+    # middle of what faces of its kind give it (1.15 to 1.31; it stood at
+    # the top of that, with less ink than any of theirs)
     f = Frame(g, 12)
     p, W, H, k = f.p, f.W, f.p.cap, f.k
     xl, xr = f.X(1), f.X(11)
@@ -293,11 +296,14 @@ def S(g):
              B(*f.P(1, 1)), (f.X(1), d))
 
 
-@cap('T', 10, 1)
+@cap('T', 8, 1)
 def T(g):
-    f = Frame(g, 10)
-    g.stroke(f.P(0, 11), f.P(10, 11))
-    g.stroke(f.P(5, 11), f.P(5, 0))
+    # Eight modules, the E's: a module wider than the H it was 0.98 of the
+    # H's advance, where faces of this kind give the T 0.79 to 0.84, and
+    # stood in more white than any capital but the Y
+    f = Frame(g, 8)
+    g.stroke(f.P(0, 11), f.P(8, 11))
+    g.stroke(f.P(4, 11), f.P(4, 0))
 
 
 @cap('U', 9, 2)
@@ -324,8 +330,10 @@ def V(g):
     g.stroke((xl, H), (xl, yt), (W / 2, ya), (xr, yt), (xr, H))
 
 
-@cap('W', 14, 3)
+@cap('W', 14, 3, width=letter_width(13, 3))
 def W_(g):
+    # Thirteen modules for its master's fourteen (1.28 of the H's advance;
+    # faces of its kind 1.07 to 1.42, 1.26 between them)
     f = Frame(g, 14)
     H, W = f.p.cap, f.W
     xl, xm, xr = f.X(1), W / 2, f.X(13)

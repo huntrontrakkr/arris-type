@@ -147,6 +147,26 @@ letters redrawn.
   Black, as the m is from SemiBold. The m's middle stem stands up to its
   second arch (the first arch's corner had bitten a wedge out of it at
   the heavy weights, and that counter's corner was all but sharp).
+- Six letters stand where faces of this kind put them. Measured on six
+  (Chakra Petch, Oxanium, Rajdhani, Exo 2, Tomorrow, Share Tech: each
+  letter's ink and advance against the n's or the H's), the masters'
+  module widths left the m cramped and five letters in too much white.
+  The m's counters are seven eighths of the n's (three quarters before:
+  its advance 1.36 of the n's, now 1.47; those faces 1.44 to 1.59). The w
+  is a tenth narrower (1.46 of the n to 1.33; 1.24 to 1.42), the M eleven
+  modules for twelve (1.29 of the H to 1.19; 1.15 to 1.31), the W thirteen
+  for fourteen (1.37 to 1.28), the T the E's eight for ten (0.98 to 0.79;
+  0.79 to 0.84), and the r seven ninths of the H for eight (its advance
+  was 0.94 of the n's, where every one of those faces has it under 0.72;
+  it keeps its notch and its arm). In Arris Mono every letter fills the
+  cell as before.
+- A crotch with a step in it is broken as any crotch. Where a diagonal
+  lands on a short edge square to the bar it runs into (the Z's foot),
+  the corner was filled as a right angle, no further than that short
+  edge: 35 units at Bold, 9 at Black. The chord now keeps its leg on the
+  bar and runs square to the diagonal until it meets it
+  (`geom._stepped_crotches`): 23 glyphs move at Regular, 147 at Black, by a
+  few units each, none in the italic.
 - Ends at Black. The f's top corner is cut down to the t's, so bar and
   corner make one plane; the Q's tail gives as the bowl grows; v and w
   stand on blunt points on the baseline; the 4 keeps a module of white
