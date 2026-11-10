@@ -106,15 +106,25 @@ def breve(g, x, y, case):
              B(xr, y + g.sh / 2, p.m / 2, t), (xr, y + h + g.sh / 2))
 
 
+RING = 1.5          # the ring's counter across, in modules
+RING_STROKE = 1.25  # the most its stroke grows to, in modules
+
+
 def ring(g, x, y, case):
-    """A small chamfered square ring. Its counter is fixed in modules, but
-    never narrower than its stroke (at heavy weights a module-wide counter
-    in a two-module ring is a pinhole); its stroke follows the weight's up
-    to the watch's two modules and no further, as accents lighten at heavy
-    weights, so a heavy Å stays inside the line."""
+    """A small chamfered square ring: its stroke 0.7 of the stem, up to a
+    module and a quarter and no further (accents lighten at heavy weights),
+    its counter a module and a half across. Three tenths of the cap height
+    at Regular and a third from Bold, as faces of this kind draw it (Chakra
+    Petch, Oxanium, Exo 2, Rajdhani: 0.26 to 0.31 of it, the stroke 0.56 to
+    0.70 of the stem; at their heaviest 0.26 to 0.36 and 0.41 to 0.59).
+
+    Until 1.017 it was drawn in the full stem up to two modules, round a
+    counter of two: 0.38 of the cap height at Regular and half of it from
+    Bold, twice any other accent, and Å stood 1.47 to 1.60 cap heights tall
+    (those faces 1.34 to 1.40), into the line above."""
     p = g.p
-    t = min(p.sv, 2 * p.m)                                  # the stroke
-    inner = max((2.0 if case == 'lc' else 1.6) * p.m, t)    # the counter, across
+    t = min(max(0.7 * p.sv, p.floor), RING_STROKE * p.m)    # the stroke
+    inner = max(RING * p.m, t)                              # the counter, across
     r = (inner + t) / 2                                     # centreline half-size
     leg = p.m / 2
     yc = y + r + t / 2

@@ -216,6 +216,31 @@ letters redrawn.
   unchanged: every figure on the cell. **Anyone who set a clock, a table
   or a counter in Arris and relied on the default now needs
   `font-variant-numeric: tabular-nums` (`tnum`).**
+- The ring is three tenths of the cap height. It was drawn in the full
+  stem up to two modules, round a counter of two: 0.38 of the cap height
+  at Regular and half of it from Bold, twice any other accent, and Å
+  stood 1.47 to 1.60 cap heights tall (1.34 to 1.40 in those faces), into
+  the descenders of the line above. Its stroke is 0.7 of the stem up to a
+  module and a quarter, its counter a module and a half (0.30 of the cap
+  height, 0.33 from Bold; theirs 0.26 to 0.36).
+- A comma stands where a period does. Its side was measured from the tip
+  of its tail, so after any letter its head stood half a dot further off
+  than a period's dot: a quarter of the white between two stems at
+  Regular, 0.7 of it at Black (T and a comma 2.3 gaps apart for a
+  period's 1.7). Its head now stands on the period's dot and its tail
+  hangs into the white before it; the semicolon and the low quotes with
+  it.
+- No two inks nearer than the collision floor, in any direction. Only
+  gaps on a shared row were counted, and a j's hook under an l's, a t's
+  or an L's foot shares none: 0.18 to 0.20 of a gap at Regular (0.43 to
+  0.97 in those faces), now 0.35.
+- An arm keeps six tenths of a gap from a side. The capitals whose arms
+  stand upright for half their height (A V W Y) take the bearing their
+  open half earns, and beside a bowl or another arm that left two upright
+  edges all but touching at the heavy weights: R and Y 0.38 of a gap at
+  Black, P and A 0.47, two Ys 0.23 (0.63 to 0.74 and 0.62 to 0.85 in
+  those faces). They open to 0.6: 7 pairs at Regular, 33 at Black. Bars'
+  ends still close to the floor.
 - A crotch with a step in it is broken as any crotch. Where a diagonal
   lands on a short edge square to the bar it runs into (the Z's foot),
   the corner was filled as a right angle, no further than that short

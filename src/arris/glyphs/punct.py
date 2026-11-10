@@ -58,7 +58,20 @@ def _comma(g, f, x, y_top, stub=None, s=None):
     g.stroke((x, y_top, s), (x, y_turn, s * p.sd / p.sv), (x - 0.75 * s, y_turn - 0.75 * s), end='h')
 
 
-@punct('comma', ',', 3, width=dot_w(1.5))
+def comma_sides(p):
+    """A comma's sides: its head stands where a period's dot does, and its
+    tail, half a dot to the left of the head, hangs into the white before
+    it. Until 1.017 the side was measured from the tail's tip, so after
+    any letter a comma's head stood half a dot further off than a period
+    (a quarter of the white between two stems at Regular, 0.7 of it at
+    Black: T and a comma 2.3 gaps apart for a period's 1.7, where faces of
+    this kind set the two alike)."""
+    from ..font import PUNCT_SIDE, light
+    side = PUNCT_SIDE * light(p)
+    return (side - 0.5 * p.dot(), side)
+
+
+@glyph('comma', ',', dot_w(1.5), kind=('punct', comma_sides))
 def comma(g):
     f = Frame(g, 3, 'lower')
     _comma(g, f, g.W - g.p.dot() / 2, g.p.dot())
@@ -71,7 +84,7 @@ def colon(g):
     dot(g, f.X(1), g.p.xh - g.p.dot())
 
 
-@punct('semicolon', ';', 3, width=dot_w(1.5))
+@glyph('semicolon', ';', dot_w(1.5), kind=('punct', comma_sides))
 def semicolon(g):
     f = Frame(g, 3, 'lower')
     x = g.W - g.p.dot() / 2
@@ -201,13 +214,13 @@ def quotedblleft(g):
         g.stroke((x, y_bot, s), (x, y_turn, s * p.sd / p.sv), (x + 0.75 * s, y_turn + 0.75 * s), end='h')
 
 
-@punct('quotesinglbase', '‚', 3, width=dot_w(1.5))
+@glyph('quotesinglbase', '‚', dot_w(1.5), kind=('punct', comma_sides))
 def quotesinglbase(g):
     f = Frame(g, 3, 'lower')
     _comma(g, f, g.W - g.p.dot() / 2, g.p.dot())
 
 
-@punct('quotedblbase', '„', 7, width=dot_w(3.5))
+@glyph('quotedblbase', '„', dot_w(3.5), kind=('punct', comma_sides))
 def quotedblbase(g):
     f = Frame(g, 7, 'lower')
     s = g.p.dot()

@@ -222,9 +222,10 @@ def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: li
     elif isinstance(spec.kind, tuple) and spec.kind[0] == 'punct':
         xs = [x for r in rings for x, _ in r] or [0.0, g.W]
         k = spec.kind[1]
-        side = k(p) if callable(k) else PUNCT_SIDE * light(p) * k      # a glyph may set its own side
-        dx = side - min(xs)
-        adv = side + (max(xs) - min(xs)) + side
+        side = k(p) if callable(k) else PUNCT_SIDE * light(p) * k      # a glyph may set its own side,
+        left, right = side if isinstance(side, tuple) else (side, side)  # or its two sides (the comma's)
+        dx = left - min(xs)
+        adv = left + (max(xs) - min(xs)) + right
         if name in TAB_MATH and name != 'plus':                          # math on one advance, at least
             tab = _place('plus', p)[2]
             if adv < tab:

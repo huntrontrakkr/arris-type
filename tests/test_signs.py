@@ -77,3 +77,18 @@ def test_a_straight_quote_is_a_third_of_the_cap_height(w):
     assert len(two) == 2
     a, b = sorted(two, key=lambda q: q.bounds[0])
     assert 0.55 * p.sv <= b.bounds[0] - a.bounds[2] <= 1.2 * max(p.sv, 1.5 * p.m)
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_ring_is_a_third_of_the_cap_height_at_most(w):
+    """0.25 of it at Light, 0.30 at Regular, 0.33 from Bold (faces of this kind: 0.26 to
+    0.36), its stroke 0.7 of the stem at most; and Å no taller than a cap
+    height and a half (it stood 1.47 to 1.60, into the line above)."""
+    p = params(w)
+    parts = sorted(_ink('Aring', p).geoms, key=lambda q: q.bounds[1])
+    ring = parts[-1]
+    x0, y0, x1, y1 = ring.bounds
+    assert 0.24 * p.cap <= y1 - y0 <= 0.36 * p.cap and x1 - x0 == pytest.approx(y1 - y0, abs=2.0)
+    (hole,) = ring.interiors
+    assert (x1 - x0 - (hole.bounds[2] - hole.bounds[0])) / 2 <= 0.72 * p.sv
+    assert y1 <= 1.45 * p.cap and len(parts) == 2

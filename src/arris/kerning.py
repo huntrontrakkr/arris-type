@@ -31,13 +31,23 @@ standard gaps (two sidebearings: the white between two H's).
   in by after any letter that overhangs it (P. 0.47, F. 0.42, T. 0.46,
   Y. 0.47, V. 0.37, r. 0.38, f. 0.33). Until 1.017 a period went under a
   P's bowl by 1.4 gaps at Regular and 2.2 at Black, 255 and 280 units.
-* A pair narrower than a collision floor (an accent on a capital against
-  a T's bar) opens. Everything else is left to spacing. (Still to do: a
-  bowl standing against an arm over a long run is nearer than in those
-  faces at the heavy weights, R and Y 0.38 gaps for their 0.63 to 0.74, P
-  and A 0.47 for 0.62 to 0.85; tip to tip, as K and Y, they let letters
-  all but touch, 0.05 to 0.46. A floor on the white averaged over a run a
-  gap tall opened 277 pairs at Black, most of them bar ends: too blunt.)
+* No two inks come nearer than a collision floor, whichever way they
+  approach: an accent on a capital against a T's bar on its own row, a
+  j's hook under an l's foot on none (until 1.017 only gaps on a shared
+  row counted: L and j, l and j, t and j stood 0.18 to 0.20 of a gap
+  apart at Regular, where those faces keep 0.43 to 0.97).
+* Two capitals side to side, one of them a letter whose arms stand
+  upright for half its height (A V W Y), keep six tenths of a gap where
+  they come nearest. Spacing gives such a letter the bearing its open
+  half earns, and beside a bowl or another arm that left two upright
+  edges nearly touching at the heavy weights (R and Y 0.38 of a gap at
+  Black, P and A 0.47, two Ys 0.23: those faces 0.63 to 0.74 and 0.62 to
+  0.85). A side is told from a bar's end by how tall it is where the two
+  come nearest (``_tall``): bars' ends still close to the floor, as they
+  do in those faces (T and T 0.18 to 0.38). Everything else is left to
+  spacing. (Two rules tried first, a floor on the white averaged over a
+  run and the side rule for every letter, each opened hundreds of
+  ordinary pairs at Black, bar ends and lowercase diagonals with them.)
 
 A mark floating high kerns as if its sides ran down to half the x-height
 (``_shadow``), so it never slides over a lowercase body. No pair is kerned
@@ -61,7 +71,11 @@ MARK_CLOSE = 0.8        # ... by this share of the excess
 MARK_CLEAR = 0.5        # its inks this far apart in any direction
 LOW_CLEAR = 1.2         # and a mark lying low (a period, a comma) this far from any ink,
 LOW_PULL = 0.45         # pulled in by no more than this share of a standard gap
-FLOOR = 0.35        # a pair opens when its narrowest gap is under this share of a standard gap
+FLOOR = 0.35        # a pair opens when its inks come nearer than this share of a standard gap, in any direction
+ARMS = 'AVWY'       # capitals whose arms stand upright for half their height: beside another capital, where the
+SIDE = 1.2          # two come nearest, each a part this many stems tall or more (a side, not a bar's end:
+SIDE_DEPTH = 0.5    # as tall as it stays within this share of a stem of its nearest row),
+FACE = 0.6          # they keep this share of a standard gap between them
 MIN_KERN = 10
 
 
@@ -141,6 +155,12 @@ def kerns(placed: dict, p, light: float, left_names=None, right_names=None):
     mark = {n: _mark(n) for n in placed}
     low = {n: mark[n] and _lies_low(raw[n], ys, p.xh) for n in placed}
     rmark, rlow = np.array([mark[n] for n in rnames]), np.array([low[n] for n in rnames])
+    cap = {n: _capital(n) for n in placed}
+    arm = {n: cap[n] and _arm(n) for n in placed}
+    rcap, rarm = np.array([cap[n] for n in rnames]), np.array([arm[n] for n in rnames])
+    depth = SIDE_DEPTH * p.sv
+    tall_r = {n: _tall(placed[n][1] - prof[n][1], ys, depth) for n in lnames}
+    tall_l = np.array([_tall(prof[n][0], ys, depth) for n in rnames])
     R = np.array([placed[n][1] - prof[n][1] for n in lnames])      # white to the right of each left glyph
     L = np.array([prof[n][0] for n in rnames])                      # white to the left of each right glyph
     for i, a in enumerate(lnames):
@@ -165,12 +185,58 @@ def kerns(placed: dict, p, light: float, left_names=None, right_names=None):
             ks[idx] = np.maximum(ks[idx], np.minimum(0.0, _clearance(R[i], L[idx], ys, d)))
         lows = closing[(rlow | low[a])[closing]]
         ks[lows] = np.maximum(ks[lows], -LOW_PULL * std)
+        # no two inks nearer than the floor, whichever way they approach (a
+        # j's hook under an l's foot shares no row with it)
+        ks = np.where(has, np.maximum(ks, _clearance(R[i], L, ys, FLOOR * std)), ks)
+        # two capitals side to side, one of them an arm's (a bowl against an
+        # arm, R and Y; two arms, V and Y): where they come nearest, each is a
+        # side if it stays near that row over more than a bar's end does
+        if cap[a]:
+            at = np.where(both, gap, np.inf).argmin(axis=1)
+            tall = np.minimum(tall_r[a][at], tall_l[np.arange(len(rnames)), at])
+            facing = has & rcap & (rarm | arm[a]) & (tall >= SIDE * p.sv)
+            ks = np.where(facing, np.maximum(ks, FACE * std - g), ks)
         sa = scripts(a)
         for j in np.nonzero(has)[0]:
             k = 5 * round(ks[j] / 5)
             if abs(k) >= MIN_KERN and (not sa or not rscript[j] or sa & rscript[j]):
                 out[(a, rnames[j])] = int(k)
     return out
+
+
+def _tall(white, ys, depth):
+    """Per row, how tall the part of a side is that stands there: the run
+    of rows about it whose white is within ``depth`` of that row's (0 where
+    the row has no ink). A bar's end is as tall as the bar is thick; a
+    bowl, an arm or a stem is taller (in stems, at half a stem's depth: T E
+    F L r f t 0.73 to 0.88, the C's beak 1.05; the Y's arm 1.37 at Black
+    and 2.2 at Regular, R and P 1.7 and 2.7, O 3.4 and 6.4)."""
+    v = np.where(np.isnan(white), np.inf, white)
+    dy = ys[1] - ys[0]
+    out = np.zeros(len(v))
+    for i in np.nonzero(np.isfinite(v))[0]:
+        near = v <= v[i] + depth
+        lo = hi = i
+        while lo > 0 and near[lo - 1]:
+            lo -= 1
+        while hi < len(v) - 1 and near[hi + 1]:
+            hi += 1
+        out[i] = (hi - lo + 1) * dy
+    return out
+
+
+def _capital(name: str) -> bool:
+    from .draw import REGISTRY
+    spec = REGISTRY.get(name)
+    return spec is not None and spec.kind == 'cap'
+
+
+def _arm(name: str) -> bool:
+    """Whether a capital is one of those with upright arms (ARMS), by the
+    letter it is made from (Ý is a Y)."""
+    from .draw import REGISTRY, _root
+    spec = REGISTRY.get(name)
+    return spec is not None and _root(spec) in ARMS
 
 
 def _mark(name: str) -> bool:

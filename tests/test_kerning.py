@@ -13,7 +13,7 @@ from arris.font import light, place
 from arris.instances import params
 
 CMAP = {chr(s.unicode): n for n, s in REGISTRY.items() if s.unicode}
-CHARS = 'AHJLOPTVWYFaoryf.'
+CHARS = 'AHJLOPRTVWYFaoryfjlt.,'
 
 
 def _kerned(w):
@@ -71,3 +71,41 @@ def test_a_period_is_pulled_in_by_half_a_gap_at_most(w):
         k, row, near = pair(a, '.')
         assert -0.5 <= k <= -0.25, (a, round(k, 2))
         assert near >= 1.15, (a, round(near, 2))
+
+
+@pytest.mark.parametrize('w', [400, 700, 900])
+def test_no_two_letters_come_nearer_than_the_floor(w):
+    """In any direction: a j's hook under an l's or a t's foot shares no
+    row with it, and stood 0.18 to 0.20 of a gap from it at Regular (faces
+    of this kind: 0.43 to 0.97)."""
+    pair = _kerned(w)
+    for a, b in ('lj', 'tj', 'Lj', 'fT', 'fY'):
+        assert pair(a, b)[2] >= K.FLOOR - 0.03, (a + b, round(pair(a, b)[2], 2))
+
+
+@pytest.mark.parametrize('w', [400, 700, 900])
+def test_an_arm_keeps_six_tenths_of_a_gap_from_a_side(w):
+    """R and Y, P and A, two Ys: capitals side to side, one of them with
+    upright arms (those faces: R and Y 0.63 to 0.74, P and A 0.62 to 0.85;
+    at Black they stood 0.38, 0.47 and 0.23). Bars' ends still close to the
+    floor: T and T, as in those faces (0.18 to 0.38)."""
+    pair = _kerned(w)
+    for a, b in ('RY', 'PA', 'YY', 'VY', 'PY'):
+        assert pair(a, b)[1] >= K.FACE - 0.04, (a + b, round(pair(a, b)[1], 2))
+    assert pair('T', 'T')[1] <= 0.45
+    assert pair('O', 'O')[0] == 0 and pair('H', 'H')[0] == 0
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_a_comma_stands_where_a_period_does(w):
+    """Its head on the period's dot, its tail hanging before it: after a
+    letter the two are set alike (until 1.017 the comma's head stood half
+    a dot further off, 0.7 of a gap at Black)."""
+    p = params(w)
+    dot, comma = place('period', p), place('comma', p)
+    assert comma[1] == pytest.approx(dot[1], abs=1.0)
+    head = min(x for r in comma[0] for x, y in r if y > 0.3 * p.dot())
+    assert head == pytest.approx(min(x for r in dot[0] for x, _ in r), abs=1.5)
+    pair = _kerned(w)
+    for a in 'TYPr':
+        assert pair(a, ',')[0] == pytest.approx(pair(a, '.')[0], abs=0.08), a
