@@ -133,8 +133,21 @@ def f_(g):
         g.stroke(f.P(0.5, 8), f.P(8, 8))
         return
     f = Frame(g, 7, 'asc')
-    g.stroke(f.P(2, 0), B(*f.P(2, 12)), f.P(7, 12))
+    g.stroke(f.P(2, 0), B(*f.P(2, 12), f_leg(g, f)), f.P(7, 12))
     g.stroke(f.P(0, 8), f.P(6, 8))
+
+
+def f_leg(g, f):
+    """The leg of the f's corner: its cut comes down the stem as far as the
+    cut of the t's top does (an edge break under the t's top, f.Y(11)), so
+    the f's and the t's left sides are one drawing from the crossbar up to
+    there, and where the t's cut and its crossbar's meet in one flat plane
+    (Black) the f's do too. With the bowl's own leg the f's cut stopped 67
+    units above the crossbar's at Black, over a break: two planes and a
+    step where the t has one."""
+    p = g.p
+    cut = p.asc - (f.Y(11) - p.c)                           # from the ascender down to where the t's cut ends
+    return max(p.leg, cut - (p.sv + g.sh) / 2 + p.sd / 2 ** 0.5)
 
 
 def crotch_butt(g, y):
