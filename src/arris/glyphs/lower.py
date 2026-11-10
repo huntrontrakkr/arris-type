@@ -435,9 +435,16 @@ def u(g):
 
 
 def _vee(f):
+    """Centreline height of a lowercase point (v w), its arms at 2:1: the
+    outer edges stand two edge breaks apart on the baseline, where the body
+    cuts the point flat, as it cuts the capitals' (A V W, caps._vee).
+
+    Until 1.017 the point ran on under the baseline, 38 units at Regular
+    and 73 at Black, to a flat one break wide: half the capitals', the
+    sharpest end in the alphabet, and the only letters hanging under the
+    line that were not descenders."""
     p = f.p
-    ya = -p.c + f.k
-    return ya
+    return p.ss * 5 ** 0.5 / 2 - 2 * p.c
 
 
 @low('v', 8, 2)
@@ -450,6 +457,7 @@ def v(g):
     # little diagonal, and the v reads as a u (docs/research/legibility.md)
     yt = min(ya + 2 * (W / 2 - xl), p.xh)
     g.stroke((xl, p.xh), (xl, yt), (W / 2, ya), (xr, yt), (xr, p.xh))
+    g.clip = (0, 0, W, p.xh)
 
 
 @low('w', 14, 3)
@@ -462,6 +470,7 @@ def w(g):
     yt = min(ya + 2 * (q1 - xl), p.xh)                      # 2:1, as the v
     g.stroke((xl, p.xh), (xl, yt), (q1, ya), (xm, yt), (q3, ya), (xr, yt), (xr, p.xh))
     g.stroke((xm, yt), (xm, f.Y(6)))
+    g.clip = (0, 0, W, p.xh)
 
 
 def x_strokes(g, xl, xr, W, H):

@@ -290,7 +290,11 @@ def four(g):
     J = g.free('jog', jog(p))
     a_lo = k - (yc + p.sh / 2 + p.c)
     a_up = a_lo - J
-    xc = 4 * u
+    # the clip stands a module of white from the stem, as the watch drew it
+    # (its column 4, the stem's 7, two-module strokes); where the strokes
+    # are heavier than the watch's it moves left to keep that module (at
+    # Black it had 33 units, a fifth of a stem: a slit)
+    xc = min(4 * u, xs - p.sv - u)
     g.stroke((yc + a_lo, yc, fd), (xc, xc - a_lo, p.sv), (xc, xc - a_up, fd), (top + a_up, top),
              start='h', end='h', part='diagonal')
 

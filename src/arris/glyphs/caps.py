@@ -17,7 +17,7 @@ import math
 
 from ..draw import B, Opening, _thickness, glyph
 from .figures import beak_depth, jog
-from .letterframe import STEEP, Frame, heft, k_arms, letter_width
+from .letterframe import STEEP, Frame, heft, k_arms, least_white, letter_width
 
 
 def cap(char, wm, stems, width=None, openings=()):
@@ -93,8 +93,11 @@ def F(g):
 def G(g):
     f = Frame(g, 9)
     p, H, d = f.p, f.p.cap, beak_depth(f.p)
-    # the bar below the middle and deep into the bowl, clear of the S and B
-    g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)), f.P(8, 5), f.P(4, 5))
+    # the bar below the middle and deep into the bowl, clear of the S and B;
+    # never nearer the bowl's foot than the least white (at Black the white
+    # under it was 79 units, half a stroke: a slit)
+    yb = max(f.Y(5), f.Y(1) + g.sh + least_white(p))
+    g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)), (f.X(8), yb), (f.X(4), yb))
 
 
 @cap('H', 9, 2)
