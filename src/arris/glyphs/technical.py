@@ -32,7 +32,7 @@ from ..draw import B, REGISTRY, _lightened, glyph
 from ..params import SQRT2
 from .arrows import chev, kb_of, reach, stack_k, Ctx, Turn
 from .figures import beak_depth
-from .letterframe import STEEP, growing_width, heft, letter_width
+from .letterframe import STEEP, growing_width, heft, plain_width as letter_width
 from .extra_latin import _split_counters
 from .operators import OPW, cdot, eq_gap, int_span, integral, kd, u
 from .punct import _ring, axis
@@ -178,7 +178,7 @@ def wavyline(g):
     """A wave stood on end, the brackets' height: two periods of the tilde's
     step."""
     p = g.p
-    bot, top = -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    bot, top = -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
     n = 2
     # the wave's step: the body's, unless two periods of it and their
     # verticals (half a stem at least) would run past the brackets' height;
@@ -210,7 +210,7 @@ def _ceil_floor(g, top, mirror):
     from .punct import _bracket
     p = g.p
     W = g.W
-    bot_, top_ = -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    bot_, top_ = -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
     y = top_ - g.sh / 2 if top else bot_ + g.sh / 2
     yo = bot_ if top else top_
     pts = [(W, y), (p.sv / 2, y), (p.sv / 2, yo)]
@@ -484,7 +484,7 @@ def _int_piece(g, top_hook):
         yt = top - g.sh / 2
         g.stroke((x + reach_, top - d), B(x + reach_, yt), B(x, yt), (x, desc))
     else:
-        bot = -p.desc
+        bot = -p.under
         yb = bot + g.sh / 2
         g.stroke((x, asc), B(x, yb), B(x - reach_, yb), (x - reach_, bot + d))
 
@@ -516,7 +516,7 @@ def _paren_piece(g, part, mirror):
     asc, desc = line_top(p)
     xs = p.sv / 2
     reach_ = W - xs
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
     if part == 'upper':
         g.stroke(T(xs + reach_, top), T(xs, top - reach_), T(xs, desc), start='h', end='h')
@@ -530,7 +530,7 @@ def _bracket_piece(g, part, mirror):
     p = g.p
     W = g.W
     asc, desc = line_top(p)
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
     yt, yb = top - g.sh / 2, bot + g.sh / 2
     if part == 'upper':
@@ -547,7 +547,7 @@ def _brace_piece(g, part, mirror):
     p = g.p
     W = g.W
     asc, desc = line_top(p)
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     xs = W / 2                                              # the brace's spine
     reach_ = max(xs - p.sv / 2, p.sd + 0.5 * p.sv)          # never too short for its stroke
     xp = xs - reach_
@@ -733,7 +733,7 @@ for _cp, _k in ((0x23BA, 1), (0x23BB, 3), (0x23BC, 7), (0x23BD, 9)):
 # the italic as the brackets are.
 
 def _hb_width(p):
-    return p.cap + p.desc                                   # the upright brackets' height (cap + half a module to the foot)
+    return p.cap + p.under                                   # the upright brackets' height (cap + half a module to the foot)
 
 
 def _hb_fit(g):
@@ -1075,7 +1075,7 @@ def watch(g):
              closed=True)
     # straps: solid, narrower than the case, out to the brackets' height
     sw = 1.1 * rx
-    bot, top = -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    bot, top = -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
     top, bot = max(top, a + ry + p.sv), min(bot, a - ry - p.sv)
     g.stroke((c, a + ry, sw), (c, top))
     g.stroke((c, bot, sw), (c, a - ry))
@@ -1166,7 +1166,7 @@ def timerclock(g):
 def _hg(p):
     """An hourglass's measures: (top, bottom, glass half width at the bars,
     the slope's height, the neck's half white, a 2:1 stroke's width)."""
-    bot, top = -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    bot, top = -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
     sh = p.sh
     hgt = (top - bot) - sh
     w = p.ss / STEEP[1]

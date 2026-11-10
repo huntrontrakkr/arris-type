@@ -46,9 +46,32 @@ def white_scale(p) -> float:
     return 1 + 0.4 * (1 - r)
 
 
-def letter_width(wm: float, stems: float):
-    """Body width for a master ``wm`` modules wide with ``stems`` stems across."""
+def plain_width(wm: float, stems: float):
+    """Body width for a master ``wm`` modules wide with ``stems`` stems
+    across: its stems and its white."""
     return lambda p: stems * p.sv + (wm - 2 * stems) * p.m * white_scale(p)
+
+
+ARM = 1.0     # what a one-stem letter's open side widens by, for each unit its stem grows past Regular
+
+
+def letter_width(wm: float, stems: float, arm: float = ARM):
+    """A letter's body. A letter with one stem (E F K L T Z, f k r t z)
+    makes room on its open side as its arms and diagonals thicken: past
+    Regular it widens by ``arm`` times what the stem has grown, as a letter
+    with two stems widens by its second.
+
+    Until 1.017 it did not: stems alone added width, so from Regular to
+    Black the H grew a fifth and the E, the K and the r not at all, and
+    each lost a fifth of its share of the line (K 0.82, T 0.80, r 0.80, z
+    0.80 of what it had at Regular; in hand-drawn faces every letter keeps
+    its share, 0.93 to 1.08: tools/letter_shares.py). Their arms, thicker
+    in a body no wider, were stubs (f t r), and the K's and k's diagonals
+    rooted in one block along the stem."""
+    base = plain_width(wm, stems)
+    if stems != 1 or not arm:
+        return base
+    return lambda p: base(p) + arm * heft(p)
 
 
 def least_white(p) -> float:
@@ -68,7 +91,7 @@ def growing_width(wm: float, stems: float, k: float):
     """A symbol's body: a letter's, plus k units for every unit its stem has
     grown past Regular, so the white between its parts grows with its
     strokes instead of being eaten by them."""
-    base = letter_width(wm, stems)
+    base = plain_width(wm, stems)
     return lambda p: base(p) + k * heft(p)
 
 

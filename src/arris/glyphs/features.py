@@ -182,7 +182,7 @@ _fraction('threequarters', '¾', 'three', 'four')
 def _ordinal(name, ch, letter):
     def fn(g):
         p = g.p
-        ps = small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.desc)
+        ps = small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.under)
         sub = draw(letter, ps)
         dy = p.cap - ps.xh
         g.add_glyph(sub, 0, dy)
@@ -206,7 +206,7 @@ CASE = ['hyphen', 'endash', 'emdash', 'guilsinglleft', 'guilsinglright', 'guille
 
 def _case_shift(p, name):
     if name.startswith(('paren', 'bracket', 'brace')):
-        return p.desc / 2 - 0.25 * p.m
+        return p.under / 2 - 0.25 * p.m
     if name == 'colon':
         return 0.0
     return (p.cap - p.xh) / 2

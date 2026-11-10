@@ -139,6 +139,7 @@ class Glyph:
     W: float = 0.0    # body width
     sh_k: float = 1.0  # horizontal thickness factor (tight stacks of bars)
     sh_auto: float = 1.0  # further thinning that keeps closed counters open (see draw)
+    zone_k: float = 1.0   # the zone's share of the weight's horizontals: the lowercase's are thinner toward Black (Params.low)
     clip: tuple[float, float, float, float] | None = None   # keep ink inside (x0, y0, x1, y1)
     butt: tuple = ()   # lines ('x' or 'y', value) the ink meets flush: no edge breaks there (geom.ink)
     overrides: dict = field(default_factory=dict)
@@ -415,14 +416,19 @@ class Glyph:
         return out
 
     @property
+    def sh0(self) -> float:
+        """The horizontals of the glyph's zone, before the glyph thins its own."""
+        return self.p.sh * self.zone_k
+
+    @property
     def sh(self) -> float:
-        return max(self.p.sh * self.sh_k * self.sh_auto, self.p.floor)
+        return max(self.sh0 * self.sh_k * self.sh_auto, self.p.floor)
 
     def stack(self, n: int, height: float, ratio: float = 0.9):
         """Thin the horizontals where n bars share ``height`` so that each
         counter between them stays at least ``ratio`` times a bar."""
         fit = height / (n + (n - 1) * ratio)
-        self.sh_k = min(1.0, fit / self.p.sh)
+        self.sh_k = min(1.0, fit / self.sh0)
         return self.sh
 
 
@@ -540,6 +546,8 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
     g.width_arg = width                     # (a body the caller set: a composite's base is drawn in it)
     g.sh_auto = overrides.get('sh_auto', 1.0)
     g.defaults['sh_auto'] = 1.0
+    if spec.kind == 'lower':
+        g.zone_k = p.low
     if cell and p.mono and _DEPTH[0] == 0 and _cell_kind(spec):
         # Mono: no ink past the cell (the body sits centred in it). A letter
         # is fitted into it (_cell_fit); anything else that would run on is

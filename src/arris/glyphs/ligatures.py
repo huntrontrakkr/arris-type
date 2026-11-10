@@ -398,7 +398,7 @@ def _slash_line(g, i):
     from .letterframe import STEEP
     p = g.p
     sub, x0 = _stamp(g, 'slash', i)
-    bot = -p.desc + 0.5 * p.m
+    bot = -p.under + 0.5 * p.m
     w = p.ss / STEEP[1]
     return lambda y: x0 + w / 2 + (y - bot) / 2
 
@@ -943,7 +943,7 @@ def _hash_join(g, bracket, after=False):
     xh = _at(g, hs, 1 if after else 0)
     dy = 0.0
     if bracket == 'braceleft':
-        top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+        top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
         dy = (top + bot) / 2 - (bars[0][0] + bars[-1][0]) / 2
     g.add_glyph(hs, xh, dy)
     tuck = 0.5 * min(p.sv, g.sh)
@@ -998,7 +998,7 @@ def hash_underscore_paren(g):
     x0, x1 = stems[0]
     xc, w = xh + (x0 + x1) / 2, x1 - x0
     yu, t = (iu.bounds[1] + iu.bounds[3]) / 2, iu.bounds[3] - iu.bounds[1]
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m       # punct._paren
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m       # punct._paren
     xs = xp + p.sv / 2
     reach = pr.W - p.sv / 2
     xj = xs + (bot + reach - yu)                            # the paren's lower diagonal, down to the underscore's line
@@ -1350,7 +1350,7 @@ def _brace_dot(g, right):
     p = g.p
     _stamp(g, 'braceright' if right else 'braceleft', 1 if right else 0)
     s = p.dot()
-    mid = (p.cap + 0.5 * p.m - p.desc + 0.5 * p.m) / 2      # punct._brace
+    mid = (p.cap + 0.5 * p.m - p.under + 0.5 * p.m) / 2      # punct._brace
     dot(g, cell(g, 0 if right else 1)[1], mid - s / 2)
 
 

@@ -16,7 +16,7 @@ import math
 from ..draw import B, Squint, glyph
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
-from .letterframe import STEEP, Frame, growing_width, least_white, letter_width, white_scale
+from .letterframe import STEEP, Frame, growing_width, least_white, plain_width as letter_width, white_scale
 
 
 def punct(name, char, wm, stems=1, width=None, sides=1.0):
@@ -203,7 +203,7 @@ def _paren(g, f, mirror=False):
     p = g.p
     W = g.W
     k = p.sd / SQRT2
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     xs = p.sv / 2
     reach = W - xs                                          # 45 degrees in, then down
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
@@ -234,7 +234,7 @@ def bracket_width(p):
 def _bracket(g, mirror=False):
     p = g.p
     W = g.W
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
     yt, yb = top - g.sh / 2, bot + g.sh / 2
     g.stroke(T(W, yt), T(p.sv / 2, yt), T(p.sv / 2, yb), T(W, yb))
@@ -277,7 +277,7 @@ def _brace(g, mirror=False):
     and point, from < by its spine."""
     p = g.p
     W = g.W
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     mid = (top + bot) / 2
     hook, d, tip = _brace_parts(p, g.sh)
     xs = max(W - hook, tip + d)                             # the spine (the arm gives way in a narrow cell)
@@ -306,7 +306,7 @@ def braceright(g):
 
 def _slash(g, mirror=False):
     p = g.p
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     w = p.ss / STEEP[1]
     W = g.W
     x_at = lambda y: w / 2 + (y - bot) / 2
@@ -318,7 +318,7 @@ def _slash(g, mirror=False):
 
 
 def slash_width(p):
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     return p.ss / STEEP[1] + (top - bot) / 2
 
 
@@ -335,7 +335,7 @@ def backslash(g):
 @punct('bar', '|', 2, width=stem_w())
 def bar(g):
     p = g.p
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     g.stroke((p.sv / 2, bot), (p.sv / 2, top))
     g.clip = (0, bot, g.W, top)
 
@@ -816,9 +816,9 @@ def dagger_bar(p):
 @punct('dagger', '†', 6, 1, width=growing_width(6, 1, 2.0))
 def dagger(g):
     p, W = g.p, g.W
-    g.stroke((W / 2, -p.desc + p.m), (W / 2, p.cap))
+    g.stroke((W / 2, -p.under + p.m), (W / 2, p.cap))
     g.stroke((0, dagger_bar(p)), (W, dagger_bar(p)))
-    g.clip = (0, -p.desc, W, p.cap)
+    g.clip = (0, -p.under, W, p.cap)
 
 
 @punct('minute', '′', 3, 1)

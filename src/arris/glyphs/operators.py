@@ -31,7 +31,7 @@ from __future__ import annotations
 from ..draw import TAB_MATH, B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
-from .letterframe import STEEP, growing_width, letter_width
+from .letterframe import STEEP, growing_width, plain_width as letter_width
 from .punct import _ring, axis, dot
 
 ALIASES = {}
@@ -78,7 +78,7 @@ def kd(p):
 
 def span(p):
     """The brackets' height: big operators span it."""
-    return -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    return -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
 
 
 # --- Components: a height and a drawing centred at yc ---------------------------
@@ -1792,7 +1792,7 @@ def int_step(p):
 
 
 def int_span(p):
-    return -p.desc, p.asc
+    return -p.under, p.asc
 
 
 @op('integral', '∫', width=int_w())

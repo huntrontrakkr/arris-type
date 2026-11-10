@@ -36,8 +36,10 @@ class Params:
     asc: float = 780.0         # ascender of b d h k l (13 modules, a module above the caps)
     desc: float = 180.0        # descender depth of g j p q y: 3 modules, deeper from Bold (descender_line)
     deep: float = 250.0        # the font's descent (font.Metrics.desc): the deepest a letter draws
+    under: float = 180.0       # three modules under the baseline: where brackets, signs and marks reach (the letters' line is desc)
     sv: float = 120.0          # vertical stem
     sh: float = 120.0          # horizontal stroke
+    low: float = 1.0           # the lowercase's horizontals, as a share of sh (instances.low_share)
     sd: float = 120.0 / SQRT2  # 45-degree stroke, measured perpendicular
     ss: float = 120.0 * 2 / math.sqrt(5)  # 2:1 stroke, measured perpendicular
     leg: float = 90.0          # bowl corner: centreline chamfer leg
@@ -119,7 +121,7 @@ class Params:
         return s
 
     def scaled(self, k: float) -> 'Params':
-        keep = ('mono', 'narrow', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw', 'light', 'unlit', 'pregrade')
+        keep = ('mono', 'narrow', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw', 'light', 'unlit', 'pregrade', 'low')
         out = Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})
         return replace(out, raw=tuple(v * k for v in self.raw) if self.raw else None,
                        pregrade=tuple(v * k for v in self.pregrade) if self.pregrade else None)
@@ -173,6 +175,6 @@ def inner_leg(p: Params, sh: float | None = None) -> float:
 # The watch figures, in modules: two-module strokes; every diagonal as wide
 # across as a stem (so 45-degree strokes are only 1/sqrt2 of it), 1.5-module
 # bowl legs, half-module edge breaks.
-HERITAGE = Params(m=1, cap=12, xh=9, asc=13, desc=3, deep=250 / 60, sv=2, sh=2, sd=SQRT2,
+HERITAGE = Params(m=1, cap=12, xh=9, asc=13, desc=3, deep=250 / 60, under=3, sv=2, sh=2, sd=SQRT2,
                   ss=4 / math.sqrt(5), leg=1.5, c=0.5, fig_w=9, fig_adv=10, optical=0.0)
 HERITAGE_UNITS = HERITAGE.scaled(60)

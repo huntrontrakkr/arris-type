@@ -18,7 +18,7 @@ from ..params import SQRT2
 from . import marks
 from .symkit import sign
 from .cyrillic import sc
-from .letterframe import STEEP, Frame, growing_width, least_white, letter_width
+from .letterframe import STEEP, Frame, growing_width, least_white, plain_width as letter_width
 from .punct import _ring, axis, dot, punct
 
 ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyphen', 0x2011: 'hyphen'}
@@ -150,7 +150,7 @@ def currency(g):
 @glyph('brokenbar', '¦', lambda p: p.sv, kind=('punct', 1.0))
 def brokenbar(g):
     p = g.p
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     mid = (top + bot) / 2
     gap = max(p.m, 0.6 * p.sv) / 2
     g.stroke((p.sv / 2, bot), (p.sv / 2, mid - gap))
@@ -281,12 +281,12 @@ def daggerdbl(g):
     longer than a stem is thick."""
     from .punct import dagger_bar
     p, W = g.p, g.W
-    g.stroke((W / 2, -p.desc + p.m), (W / 2, p.cap))
+    g.stroke((W / 2, -p.under + p.m), (W / 2, p.cap))
     yt = dagger_bar(p)
-    yb = -p.desc + p.m + (p.cap - yt)
+    yb = -p.under + p.m + (p.cap - yt)
     g.stroke((0, yt), (W, yt))
     g.stroke((0, yb), (W, yb))
-    g.clip = (0, -p.desc, W, p.cap)
+    g.clip = (0, -p.under, W, p.cap)
 
 
 @sign('numero', '№', lambda p: REGISTRY['N'].width(p) + 5 * p.m, kind='cap')
@@ -428,6 +428,6 @@ def cedilla(g):
 def ogonek(g):
     from .italic_forms import tail_run
     p = g.p
-    yb = -p.desc + g.sh / 2 + 0.25 * p.m
+    yb = -p.under + g.sh / 2 + 0.25 * p.m
     x = p.sv / 2
     g.stroke((x, g.sh), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))

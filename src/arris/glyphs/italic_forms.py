@@ -25,7 +25,7 @@ from __future__ import annotations
 from ..draw import AUTO_SHARE, REGISTRY, B, Opening, _counter_white, glyph
 from ..params import SQRT2, inner_leg, outer_leg
 from .figures import jog
-from .letterframe import Frame, letter_width, white_scale
+from .letterframe import Frame, plain_width as letter_width, white_scale
 from .lower import _dot, crotch_butt, hook, shoulder
 
 TAIL = 1.75      # modules of white an exit tail reaches past its stem

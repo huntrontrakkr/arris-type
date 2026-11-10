@@ -24,7 +24,7 @@ from ..draw import B, NUDGE, REGISTRY, draw, glyph, held_at, held_c, white_featu
 from ..params import SQRT2
 from .caps import big
 from .figures import STACK_MIN, beak_depth, heaviness, jog
-from .letterframe import STEEP, Frame, close_slit, growing_width, letter_width
+from .letterframe import STEEP, Frame, close_slit, growing_width, plain_width as letter_width
 from .symkit import _condensed, across, set_tight, sign, tight_width
 
 
@@ -324,10 +324,10 @@ def _under_bar(g, name, width=None):
     strokes leave too little white between them."""
     p = g.p
     t = g.held()
-    lift = max(0.0, t + wmin(p) - p.desc)
+    lift = max(0.0, t + wmin(p) - p.under)
     sub = stamp(g, name, 0, lift, width=width)
     xs = [x for r in sub.rings() for x, _ in r]
-    y = -p.desc + t / 2
+    y = -p.under + t / 2
     g.lay((min(xs), y, t), (max(xs), y), c=held_c(p))
 
 
@@ -742,7 +742,7 @@ def pfennig(g):
     back (the italic f's descender)."""
     f = Frame(g, 8, 'asc')
     p = f.p
-    g.clip = (0, -p.desc, f.W, p.asc)
+    g.clip = (0, -p.under, f.W, p.asc)
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
     beak = max(f.Y(12) - beak_depth(p) + g.sh / 2, p.xh + max(p.m, 0.6 * p.sv))   # clear of the bowl
     # In the italic the bowl's curved corner reaches down to a tail that

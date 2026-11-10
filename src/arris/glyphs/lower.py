@@ -10,11 +10,11 @@ from __future__ import annotations
 from ..draw import B, Opening, glyph
 from ..params import outer_leg
 from .figures import STACK_MIN, beak_depth, jog
-from .letterframe import Frame, k_arms, least_white, letter_width
+from .letterframe import ARM, Frame, k_arms, least_white, letter_width
 
 
-def low(char, wm, stems, width=None, openings=()):
-    return glyph(char, char, width or letter_width(wm, stems), kind='lower', openings=openings)
+def low(char, wm, stems, width=None, openings=(), arm=ARM):
+    return glyph(char, char, width or letter_width(wm, stems, arm), kind='lower', openings=openings)
 
 
 def _a_gap(g):
@@ -311,7 +311,7 @@ def q(g):
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
 
 
-@low('r', 8, 1)
+@low('r', 8, 1, arm=0.5)      # its arm is the longest at Regular already (the r is wider than the n)
 def r(g):
     f = Frame(g, 8, 'lower')
     p = g.p

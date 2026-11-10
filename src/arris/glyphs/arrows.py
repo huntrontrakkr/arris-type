@@ -41,7 +41,7 @@ from ..draw import B, REGISTRY, _lightened, _thickness, glyph
 from ..geom import Node, Stroke, stroke_polygon
 from ..params import SQRT2
 from .figures import heaviness
-from .letterframe import STEEP, letter_width
+from .letterframe import STEEP, plain_width as letter_width
 from .punct import axis
 
 HEAD = 0.35          # a barb's reach, of the cap height: the Mono ligatures' head, scaled to one cell as Fira Code's

@@ -156,6 +156,21 @@ def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Pa
     return p.with_(floor=stroke_floor(base), optical=optical)
 
 
+# The lowercase's horizontals thin a little more than the capitals' toward
+# Black: its bars stand in three quarters of the height, and one thickness
+# for both closes the lowercase's counters first. Measured in hand-drawn
+# faces (the o's top against the H's bar: tools/stroke_roles.py): 0.97 at
+# Regular, 0.80 to 0.93 at Bold, 0.91 at Black. Here the whole of it to
+# Regular, easing to LOW_HEAVY at Black (0.92 at Bold).
+LOW_HEAVY = 0.87
+
+
+def low_share(sv: float) -> float:
+    """The lowercase's horizontals as a share of the weight's own."""
+    t = min(max((sv - STEMS[400]) / (STEMS[900] - STEMS[400]), 0.0), 1.0)
+    return 1.0 - (1.0 - LOW_HEAVY) * t
+
+
 def _params(wght, optics, base):
     sv = stem(wght)
     # Figures stay tabular within a weight but widen with it, so heavier
@@ -163,9 +178,10 @@ def _params(wght, optics, base):
     d = stem(wght) - 120.0
     fig_w = base.fig_w + (FIG_GROWTH if d > 0 else FIG_GROWTH / 2) * d
     sh = sv * optics.h_ratio(sv)
+    low = low_share(sv)
     return base.with_(fig_w=fig_w, fig_adv=fig_w + (base.fig_adv - base.fig_w), sv=sv, sh=sh, sd=sv * optics.d_ratio(sv),
-                      ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=optics.leg,
-                      desc=descender_line(base, sv, sh))
+                      ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=optics.leg, low=low,
+                      desc=descender_line(base, sv, sh * low))
 
 
 

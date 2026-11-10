@@ -135,7 +135,7 @@ def _cap(g, kind, cap, right):
     from .letterframe import STEEP  # slash2: `//` as its repeat sets it
     placed = _run(g, ['slash', 'slash'])
     _, x0 = placed[0] if right else placed[-1]
-    bot, w = -p.desc + 0.5 * p.m, p.ss / STEEP[1]
+    bot, w = -p.under + 0.5 * p.m, p.ss / STEEP[1]
     return lambda y: x0 + w / 2 + (y - bot) / 2
 
 

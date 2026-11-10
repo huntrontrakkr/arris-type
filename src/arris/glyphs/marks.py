@@ -136,7 +136,7 @@ def commabelow(g, x, y, case):
     lightens, as heavy faces draw their accents."""
     from .punct import _comma
     p = g.p
-    room = 1.15 * p.desc - gap(p)
+    room = 1.15 * p.under - gap(p)
     s = min(p.sv, room / (1 / 3 + 0.75))
     stub = min(1.5 * s, room - 0.75 * s)
     _comma(g, None, x + 0.25 * s, -gap(p), stub=stub, s=s)
@@ -173,11 +173,11 @@ def cedilla(g, x, y, case):
     p = g.p
     th = _thickness(p, g.sh)
     wv, wh = th((0.0, 1.0)), th((1.0, 0.0))
-    room = CEDILLA_ROOM * p.desc
+    room = CEDILLA_ROOM * p.under
     tall = gap(p)                                            # the notch's height, at least
     k = min(1.0, (room - tall) / wh)                         # the hook's strokes, lightened only past the room
     wv, wh = k * wv, k * wh
-    foot = max(min(-p.desc + 0.25 * p.m, -tall - wh), -room)  # the foot's underside: as drawn, or lower
+    foot = max(min(-p.under + 0.25 * p.m, -tall - wh), -room)  # the foot's underside: as drawn, or lower
     yb = foot + wh / 2
     reach = max(1.5 * p.m, gap(p) + 2 * p.c)                 # the notch's width past the stem, both its ends broken
     g.stroke((x, g.sh / 2, wv), (x, yb, wh), (x - wv / 2 - reach, yb))
@@ -198,7 +198,7 @@ def ogonek(g, x, y, case):
     """Hangs from the base's rightmost ink on the baseline (a stem's foot or
     a bar's end, whichever the letter has), turning right underneath."""
     p = g.p
-    yb = -p.desc + g.sh / 2 + 0.25 * p.m
+    yb = -p.under + g.sh / 2 + 0.25 * p.m
     from shapely.geometry import LineString
     base = g.extra[0]
     cut = base.intersection(LineString([(-1e4, 0.3 * g.sh), (1e4, 0.3 * g.sh)]))

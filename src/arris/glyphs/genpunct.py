@@ -20,7 +20,7 @@ from shapely.geometry import Polygon
 
 from ..draw import B, REGISTRY, draw, glyph
 from ..params import SQRT2
-from .letterframe import STEEP, Frame, growing_width, letter_width
+from .letterframe import STEEP, Frame, growing_width, plain_width as letter_width
 from .punct import _bracket, axis, dot, dot_w, punct, stem_w
 from .symkit import MIRROR, sign, stamp_t
 
@@ -63,7 +63,7 @@ def _double_gap(p):
 def dblverticalbar(g):
     """Two bars, never closer than three quarters of a stem."""
     p = g.p
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     for x in (p.sv / 2, g.W - p.sv / 2):
         g.stroke((x, bot), (x, top))
     g.clip = (0, bot, g.W, top)
@@ -74,10 +74,10 @@ def underscoredbl(g):
     """Two low lines: the lower where the underscore is, the upper a stroke
     above it; at heavy weights they thin (to 0.7) before they rise far."""
     p = g.p
-    g.stack(2, p.desc + 0.5 * p.m, ratio=0.9)
+    g.stack(2, p.under + 0.5 * p.m, ratio=0.9)
     g.sh_k = max(g.sh_k, 0.7)
     sh = g.sh
-    y1 = -p.desc + sh / 2
+    y1 = -p.under + sh / 2
     y2 = y1 + sh + max(0.9 * sh, 0.5 * p.m)
     for y in (y1, y2):
         g.stroke((0, y), (g.W, y))
@@ -480,7 +480,7 @@ def caret(g):
     """The caret: a gable hanging below the baseline, its point just above."""
     p = g.p
     k = p.sd / SQRT2
-    foot = -0.5 * p.desc
+    foot = -0.5 * p.under
     h = _caret(g, g.W, foot)
     g.clip = (0, foot - p.sv, g.W, foot + h + k)
 
@@ -490,7 +490,7 @@ def caretinsertion(g):
     """A long 45-degree stroke rising to the right, a short one leaving its
     middle down to the baseline: the caret with one arm drawn on."""
     p, W = g.p, g.W
-    bot = -0.5 * p.desc
+    bot = -0.5 * p.under
     g.stroke((0, bot), (W, bot + W), start='h', end='h')
     g.stroke((W / 2, bot + W / 2), (W, bot), start='flat', end='h')
     g.clip = (0, bot, W, bot + W)
@@ -501,7 +501,7 @@ def caretinsertion(g):
 def _quill(g, mirror):
     p, W = g.p, g.W
     _bracket(g, mirror)
-    mid = (p.cap + 0.5 * p.m + (-p.desc + 0.5 * p.m)) / 2
+    mid = (p.cap + 0.5 * p.m + (-p.under + 0.5 * p.m)) / 2
     x0, x1 = p.sv / 2, 0.65 * W
     if mirror:
         x0, x1 = W - x0, W - x1
@@ -534,7 +534,7 @@ def _tray(g, y_bar, up, x0=None, x1=None):
 @sign('uni203F', '‿', letter_width(10, 2))
 def undertie(g):
     p = g.p
-    _tray(g, -p.desc + g.sh / 2, True)
+    _tray(g, -p.under + g.sh / 2, True)
 
 
 @sign('uni2040', '⁀', letter_width(10, 2))
@@ -546,7 +546,7 @@ def chartie(g):
 @sign('uni2054', '⁔', letter_width(10, 2))
 def invertedundertie(g):
     p = g.p
-    _tray(g, -p.desc + 1.5 * p.m + g.sh / 2, False)
+    _tray(g, -p.under + 1.5 * p.m + g.sh / 2, False)
 
 
 @sign('uni2050', '⁐', letter_width(8, 2))
@@ -646,7 +646,7 @@ def _case(name, how):
 
     def fn(g):
         p = g.p
-        dy = p.desc / 2 - 0.25 * p.m if how == 'bracket' else (p.cap - p.xh) / 2
+        dy = p.under / 2 - 0.25 * p.m if how == 'bracket' else (p.cap - p.xh) / 2
         g.add_glyph(draw(name, p), 0, dy)
     glyph(f'{name}.case', None, spec.width, kind=spec.kind, solid=spec.solid)(fn)
 

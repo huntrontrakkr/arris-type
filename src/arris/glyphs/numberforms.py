@@ -23,7 +23,7 @@ from __future__ import annotations
 from ..draw import B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .features import small
-from .letterframe import Frame, growing_width, heft, letter_width
+from .letterframe import Frame, growing_width, heft, plain_width as letter_width
 from .symkit import MIRROR, TURN, set_tight, sign, stamp_t, tight
 
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -191,9 +191,9 @@ def sixlate(g):
     from .figures import beak_depth
     f = Frame(g, 9)
     p, H = f.p, f.p.cap
-    g.clip = (0, -p.desc, f.W, H)
+    g.clip = (0, -p.under, f.W, H)
     g.stroke((f.X(8), H - beak_depth(p)), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)),
-             (f.X(8), -p.desc))
+             (f.X(8), -p.under))
 
 
 def _arrow_w(p):
