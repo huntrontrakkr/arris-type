@@ -8,7 +8,7 @@ V on m, gables on v and w.
 from __future__ import annotations
 
 from ..draw import B, Opening, glyph
-from ..params import outer_leg
+from ..params import inner_leg, outer_leg
 from .figures import STACK_MIN, beak_depth, jog
 from .letterframe import ARM, Frame, k_arms, least_white, letter_width, share_width
 
@@ -83,7 +83,7 @@ def c_shape(g, foot_leg=None):
     f = Frame(g, 8, 'lower')
     # The shortest beaks (the outer flank alone): an open mouth tells c from o.
     p = f.p
-    d = outer_leg(p) + p.c
+    d = beak(g, g.sh)                                       # by the zone's own bar (thinner than the capitals' from Bold)
     g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 1), foot_leg), B(*f.P(7, 1), foot_leg),
              (f.X(7), d))
 
@@ -224,7 +224,7 @@ def g_(g):
     g_strokes(g)
 
 
-def shoulder(g, f, xs, x_right, top=8, drop=2, notch=True):
+def shoulder(g, f, xs, x_right, top=8, drop=2, notch=True, joined=False):
     """An arch's shoulder, as the r's: it leaves the stem at 45 degrees
     ``drop`` modules below the arch (two; the italic's branch lower), an
     edge break into the stem, and leaves a notch
@@ -235,6 +235,24 @@ def shoulder(g, f, xs, x_right, top=8, drop=2, notch=True):
     monospaced m, the heaviest weights) it rises less and starts further
     into the stem, down to the plain square join, so the arch keeps its
     counter and the drawing changes continuously with weight.
+
+    The room is the arch's own underside: past the shoulder it keeps a flat
+    an edge break long before the right corner's cut (shoulder_room). And
+    nothing of the shoulder is drawn smaller than an edge break: where the
+    step under it would be, the diagonal is cut along the arch's underside
+    and the counter's top is the arch's alone; where the notch over it
+    would be (the diagonal's top entering the stem less than a break and a
+    half under the arch's: SHOULDER_NOTCH), the arch leaves the stem
+    square. So the shoulder goes as the X's step does: the n keeps both to
+    Bold, the notch alone at ExtraBold, and is square at Black, as the m is
+    from SemiBold. ``joined``: the stem is another arch's (the m's second),
+    and the notch is the V the two meet in, kept at every weight.
+
+    Until 1.017 the room was measured to the corner's outside, on the
+    diagonal's centre line: from Medium the diagonal's edge ran into the
+    corner's cut and the counter came to a point under the arch, at Black a
+    spike 39 units tall beside a flat of 106, the arch a third thicker over
+    the flat than its bar.
 
     ``notch`` False: the notch filled, the diagonal's underside running
     straight into the stem (the italic k at its heavy weights, k_ital).
@@ -248,13 +266,40 @@ def shoulder(g, f, xs, x_right, top=8, drop=2, notch=True):
     full = f.Y(top) - f.Y(top - drop)
     x_full = xs + p.sv / 2 + k - p.c
     room = x_right - p.leg - p.c - x_full                  # the diagonal ends clear of the corner
+    upright = notch and not p.slant                        # the italic keeps its own branch (italic_forms)
+    if upright:
+        room = min(room, shoulder_room(g, xs, x_right, full))
     rise = min(full, max(room, 0.0))
+    plain = [(xs, y_top), B(x_right, y_top)], 'flat'
     if rise < 1e-3 * p.m:
-        return [(xs, y_top), B(x_right, y_top)], 'flat'
-    x0 = xs + rise / full * (x_full - xs)
+        return plain
+    r = rise / full
+    x0 = xs + r * (x_full - xs)
     if not notch:
         return [(xs, y_top - rise - (x0 - xs)), (x0 + rise, y_top), B(x_right, y_top)], 'v'
+    step = rise - g.sh / 2                                  # the diagonal's cut, below the arch's underside
+    if upright and step < p.c:
+        over = g.sh / 2 + rise - (1 - r) * (p.sv / 2 + k) - r * p.c   # the diagonal's top at the stem's side, below the arch's
+        if not joined and over < SHOULDER_NOTCH * p.c:
+            return plain
+        return [(x0 + step, y_top - g.sh / 2), (x0 + rise, y_top), B(x_right, y_top)], 'h'
     return [(x0, y_top - rise), (x0 + rise, y_top), B(x_right, y_top)], 'h'
+
+
+SHOULDER_NOTCH = 1.5    # the least notch over a shoulder, in edge breaks down the stem's side: a break deep where the stem
+                        # stops at the arch (n), and where it goes on (h) a break of it is the corner's own fill
+
+
+def shoulder_room(g, xs, x_right, full):
+    """The most a shoulder between stems at xs and x_right can rise and
+    leave the arch's underside a flat of an edge break: across the counter
+    lie the shoulder's cut, its rise, that flat and the right corner's
+    inner cut. (The shoulder starts rise/full of its way out of the stem,
+    so the rise it has room for is its own share of what is left.)"""
+    p = g.p
+    k = p.sd / 2 ** 0.5
+    counter = (x_right - p.sv / 2 - inner_leg(p, g.sh)) - (xs + p.sv / 2)
+    return (counter - p.c - k + p.sv / 2 + g.sh / 2) / (1 + (p.sv / 2 + k - p.c) / full)
 
 
 @low('h', 8, 2)
@@ -299,12 +344,12 @@ def j(g):
         f = Frame(g, 9, 'asc', top=g.p.asc + g.p.sv)
         p, u = f.p, g.W / 9
         x = g.W / 2 + 1.5 * u
-        g.stroke((x - 3 * u, f.Y(8)), (x, f.Y(8)), B(x, f.Y(-2)), B(f.X(1), f.Y(-2)), (f.X(1), -p.desc + beak_depth(p)))
+        g.stroke((x - 3 * u, f.Y(8)), (x, f.Y(8)), B(x, f.Y(-2)), B(f.X(1), f.Y(-2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
         _dot(g, f, x)
         return
     f = Frame(g, 6, 'asc', top=g.p.asc + g.p.sv)
     p = f.p
-    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
     _dot(g, f, f.X(5))
 
 
@@ -338,7 +383,13 @@ def m(g):
     f = Frame(g, 12, 'lower')
     g.stroke(f.P(1, 0), f.P(1, 9))
     for xs, xr in ((f.X(1), f.X(6)), (f.X(6), f.X(11))):
-        arch, cut = shoulder(g, f, xs, xr)
+        arch, cut = shoulder(g, f, xs, xr, joined=xs > f.X(1))
+        if xs > f.X(1):
+            # the middle stem stands up to where its own arch leaves it: the
+            # first arch's corner is cut deeper than the bar is thick at the
+            # heavy weights, and took a wedge out of the stem under the
+            # second (its counter's corner broken 9 units for the first's 44)
+            g.stroke((xs, f.Y(4)), (xs, min(arch[0][1], f.Y(8) - g.sh / 2)))
         g.stroke(*arch, (xr, 0), start=cut)
 
 
@@ -554,4 +605,4 @@ def dotlessi(g):
 def dotlessj(g):
     f = Frame(g, 6, 'lower')
     p = f.p
-    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))

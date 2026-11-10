@@ -127,6 +127,32 @@ letters redrawn.
     was the watch's 1 on a foot six modules wide; the watch's cut takes
     the new figure too.
   - D: the O's corners. They were a module larger.
+  - J: one stroke, an arm along the cap height that turns down into the
+    stem and the stem into the U's hook. It wore the 1's foot on top, a
+    bar three modules either side of the stem: two short ends, each
+    broken at both corners and filled into the stem, at Black a six-sided
+    lump. The arm stands to one side and is never shorter than a stem
+    past the stem; the hook's white is seven tenths of the U's at every
+    weight (0.57 at Black before).
+- An arch's shoulder (n h m) is never drawn smaller than an edge break.
+  Its room was measured to the outside of the arch's far corner, so from
+  Medium the shoulder's edge ran into that corner's cut and the counter
+  came to a point under the arch: at Black a spike 39 units tall beside a
+  flat of 106, with the arch a third thicker over the flat than its bar.
+  The room is now the arch's own underside, which keeps a flat past the
+  shoulder; a step under the shoulder shorter than a break is not drawn
+  (the counter's top is then the arch's alone), nor a notch over it
+  shallower than a break. So the shoulder goes as the X's step does: the
+  n keeps both to Bold, the notch alone at ExtraBold, and is square at
+  Black, as the m is from SemiBold. The m's middle stem stands up to its
+  second arch (the first arch's corner had bitten a wedge out of it at
+  the heavy weights, and that counter's corner was all but sharp).
+- Ends at Black. The f's top corner is cut down to the t's, so bar and
+  corner make one plane; the Q's tail gives as the bowl grows; v and w
+  stand on blunt points on the baseline; the 4 keeps a module of white
+  beside its stem and the G's bar a least white over its foot; the beaks
+  of c and j are measured by the lowercase's own bar (they had kept the
+  capitals', and the j's beak a 19-unit step).
 - The italic keeps its own letters: its a, e, f, k, r, s, t, y and z are
   drawn as they were (the r is the same outline at every weight); it takes
   the descender line, the capitals' widths, the K, the D, the x and the 1.

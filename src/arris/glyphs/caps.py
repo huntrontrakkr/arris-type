@@ -121,12 +121,29 @@ def I(g):
     g.stroke(f.P(1, 0), f.P(1, 12))
 
 
-@cap('J', 9, 1)
+J_ARM = 3.0    # where the J's top arm starts, in its 7.5 modules: three and a half short of the stem
+
+
+@cap('J', 7.5, 2)
 def J(g):
-    f = Frame(g, 9)
+    """The J: one stroke. An arm along the cap height turns down through a
+    square corner into the stem, and the stem turns through the U's hook
+    into the c's beak. Two strokes across and three and a half modules of
+    white between them, seven tenths of the U's at every weight (it was
+    drawn as a letter of one stem, in a body that did not widen for the
+    beak: 0.70 of the U's white at Regular, 0.57 at Black).
+
+    Until 1.017 it wore the 1's foot on top, a bar three modules either
+    side of the stem: two short ends, each broken at both corners and
+    filled into the stem underneath, at Black a six-sided lump a stem and a
+    half wide with no flat left under it. The arm stands to one side, past
+    the stem by its share of the body and never by less than a stem (from
+    SemiBold), so under it there is always its end's break, a flat and the
+    fill into the stem; the stem's other side is the letter's own."""
+    f = Frame(g, 7.5)
     p = f.p
-    g.stroke(f.P(3, 11), f.P(9, 11))                        # the 1's foot, on top
-    g.stroke(f.P(6, 11), B(*f.P(6, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p)))
+    x_arm = min(f.X(J_ARM), f.X(6.5) - 1.5 * p.sv)          # past the stem by a stem at least
+    g.stroke((x_arm, f.Y(11)), f.P(6.5, 11), B(*f.P(6.5, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p)))
 
 
 @cap('K', 9, 1)

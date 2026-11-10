@@ -171,3 +171,50 @@ def test_no_join_is_thicker_than_a_crossing(w):
         assert bloat(ch) <= 1.52, (ch, round(bloat(ch), 2))
     for ch in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789':
         assert bloat(ch) <= 1.75, (ch, round(bloat(ch), 2))
+
+
+@pytest.mark.parametrize('w', [800, 900])
+def test_the_arch_of_n_is_its_bar(w):
+    """The n's counter ends under the arch's own bar, flat from corner to
+    corner: until 1.017 the shoulder's cut hung under it (the arch a third
+    thicker over half the counter) and the counter came to a point beside
+    it."""
+    p = params(w)
+    g = draw('n', p)
+    ink = rings_to_shapely(g.rings())
+    x0, x1 = p.sv + 1.6 * p.c, g.W - p.sv - 1.6 * p.c      # the counter, inside its corners' breaks
+    for at in (0.0, 0.25, 0.5, 0.75, 1.0):
+        x = x0 + at * (x1 - x0)
+        cut = ink.intersection(LineString([(x, -10), (x, p.xh + 10)]))
+        assert cut.bounds[1] == pytest.approx(p.xh - g.sh, abs=1.5), (w, at)
+
+
+@pytest.mark.parametrize('w', [400, 600, 700, 900])
+def test_the_m_stands_on_three_whole_stems(w):
+    """Each of the m's counters is broken alike at its two top corners:
+    the second's, on the middle stem, was a 9-unit facet at Black."""
+    p = params(w)
+    ink = rings_to_shapely(draw('m', p).rings())
+    x0, _, x1, _ = ink.bounds
+    stems = sorted({round(s.bounds[0]) for s in ink.intersection(LineString([(x0 - 5, p.xh / 3), (x1 + 5, p.xh / 3)])).geoms})
+    whites = []
+    for xs in stems[:2]:                                    # just inside each counter's left corner
+        x = xs + p.sv + 0.5 * p.c
+        whites.append(ink.intersection(LineString([(x, 1), (x, p.xh + 10)])).bounds[1])
+    assert whites[0] == pytest.approx(whites[1], abs=1.5)
+
+
+@pytest.mark.parametrize('w', [100, 400, 700, 900])
+def test_the_j_is_an_arm_a_stem_and_a_hook(w):
+    """One stroke: nothing right of the stem, an arm left of it at the cap
+    height at least a stem long from SemiBold, and between arm and hook the
+    bare stem."""
+    p = params(w)
+    ink = rings_to_shapely(draw('J', p).rings())
+    x0, y0, x1, y1 = ink.bounds
+    across = lambda y: ink.intersection(LineString([(x0 - 10, y), (x1 + 10, y)]))
+    assert across(p.cap / 2).length == pytest.approx(p.sv, abs=1)
+    assert across(p.cap / 2).bounds[2] == pytest.approx(x1, abs=1)        # the stem is the letter's right side
+    arm = across(p.cap - p.sh / 2)
+    assert arm.bounds[2] == pytest.approx(x1, abs=1)
+    assert arm.length - p.sv >= min(p.sv, 0.3 * (x1 - x0)) - 1
