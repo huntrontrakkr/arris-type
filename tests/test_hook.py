@@ -1,7 +1,7 @@
 """The g's hook: as heavy as the letter's other horizontals, with a module
 of white (or 0.6 of a stem) between hook and bowl, on the weight's
-descender line with p q j and the y's tail (params.descender_line,
-lower.hook_fit), and ended in a beak. Until 1.016 it thinned first, and
+descender line with p q and j (params.descender_line, lower.hook_fit),
+ended in a beak, and the y's too. Until 1.016 it thinned first, and
 from Light up it was about three quarters of the bowl's strokes; and it
 went deeper alone from Bold."""
 from __future__ import annotations
@@ -55,29 +55,27 @@ def test_the_gs_hook_ends_in_a_beak(w):
         assert runs[1][0] - runs[0][1] >= BEAK_WHITE * least_white(p) - 1.0, (x, runs)
 
 
-@pytest.mark.parametrize('w', [200, 300, 400, 500, 600, 700, 800, 900])
-def test_the_ys_tail_is_its_right_arm_run_on(w):
-    """The v's body, and its right arm run on at 45 degrees to the
-    descender line, ended square to its own line and inside the body: one
-    piece, every edge upright, level or at 45 degrees (within the few
-    degrees the raised optical centre turns a diagonal)."""
-    import math
-
-    from shapely.geometry import box
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_y_stands_on_the_gs_hook(w):
+    """The same hook, bar for bar (the owner: "make a g like it is
+    today")."""
     p = params(w)
-    flat = p.with_(optical=0.0)                         # the drawings themselves, before the optical centre is raised
-    yi, vi = (rings_to_shapely(draw(ch, flat).rings()) for ch in 'yv')
-    over = box(-10, p.sv, 5000, 5000)
-    assert yi.intersection(over).symmetric_difference(vi.intersection(over)).area < 2.0
-    y = draw('y', p)
-    yi = rings_to_shapely(y.rings())
-    assert len(y.rings()) == 1
-    assert yi.bounds[0] >= -0.5 and yi.bounds[1] == pytest.approx(-p.desc, abs=0.5)
-    for ring in y.rings():
-        for a, b in zip(ring, ring[1:] + ring[:1]):
-            if math.dist(a, b) > 1.0:
-                turn = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])) % 45
-                assert min(turn, 45 - turn) < 3.0, (a, b)
+    assert _bars('y', p)[0] == pytest.approx(_bars('g', p)[0], abs=0.5)
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 500, 600, 700])
+def test_the_ys_foot_is_as_long_as_the_top_of_the_ms_arch(w):
+    """The flat between its arm and its join, along the baseline, against
+    the flat on top of the m's last arch, along the x-height (the owner:
+    "measuring the top of the m and making the flat part that long")."""
+    p = params(w)
+
+    def runs(name, y):
+        ink = rings_to_shapely(draw(name, p).rings())
+        cut = ink.intersection(LineString([(-1e4, y), (1e4, y)]))
+        return sorted((s.bounds[0], s.bounds[2]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+    m, foot = runs('m', p.xh - 0.5)[-1], runs('y', 0.5)[0]
+    assert foot[1] - foot[0] == pytest.approx(m[1] - m[0], abs=1.5)
 
 
 def test_the_hook_keeps_its_weight_on_the_descender_line():

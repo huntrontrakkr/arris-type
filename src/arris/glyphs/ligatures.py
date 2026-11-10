@@ -816,21 +816,27 @@ def www(g):
     the cells."""
     from ..draw import Glyph
     from .letterframe import Frame
-    from .lower import _vee
+    from .lower import W_POST, _point, _vee
     p = g.p
     ws = _sub('w', p)
     f = Frame(Glyph(p, 'w', W=ws.W), 14, 'lower')
     xl, xm, xr = f.X(1), ws.W / 2, f.X(13)
     q1, q3 = (xl + xm) / 2, (xm + xr) / 2
-    ya, cut = _vee(f)
-    yt = min(ya + 2 * (q1 - xl), p.xh)                      # the w's 2:1
+    if p.slant:
+        ya, cut = _vee(f)
+        yt = min(ya + 2 * (q1 - xl), p.xh)                  # the italic w's 2:1
+    else:
+        ya, cut = _point(f)
+        yt = ya + (q1 - xl)                                 # the w's 45 degrees under its walls
     step = xr - xl
     o = g.W / 2 - (xl + 1.5 * step)
     pts = [(o + xl, p.xh), (o + xl, yt)]
     for k in range(3):
         b = o + k * step
         pts += [(b + q1, ya), (b + xm, yt), (b + q3, ya), (b + xr, yt)]
-        if yt > f.Y(6):                                     # the w's middle, never over its peak (lower.w)
+        if not p.slant:                                     # the w's middle, standing on its peak (lower.w)
+            g.stroke((b + xm, yt), (b + xm, f.Y(W_POST)))
+        elif yt > f.Y(6):                                   # the italic's, never over its peak
             g.stroke((b + xm, yt), (b + xm, f.Y(6)))
     g.stroke(*pts, (o + xl + 3 * step, p.xh))
     for k in (1, 2):

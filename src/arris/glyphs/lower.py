@@ -2,11 +2,13 @@
 
 Module coordinates: x-height 9, ascender 13, descender -3 (see letterframe).
 The same moves as the capitals and figures: beaks on c and j, the 2's notch
-in z, a notched shoulder on r (the 1's flag, turned) which the u and the a
-carry turned over, arches that meet in a V on m, a gable under high walls
-on v and y, 2:1 points on w.
+in z, a notched shoulder on r (the 1's flag, turned) which every arch
+carries, and every bowl half as deep where it meets its stem, arches that
+meet in a V on m, gables under high walls on v, w and y.
 """
 from __future__ import annotations
+
+import functools
 
 from ..draw import B, Opening, glyph
 from ..params import inner_leg, outer_leg
@@ -18,17 +20,46 @@ def low(char, wm, stems, width=None, openings=(), arm=ARM):
     return glyph(char, char, width or letter_width(wm, stems, arm), kind='lower', openings=openings)
 
 
-def turned(W, H, pts):
-    """A drawing's points turned half round in a body ``W`` wide and ``H``
-    tall: the u is the n turned, and the a's bowl meets its stem as the n's
-    arch leaves its own, turned."""
+def placed(W, H, pts, mirror=False, flip=False):
+    """A drawing's points mirrored left to right and/or flipped top to
+    bottom in a body ``W`` wide and ``H`` tall (both: turned half round)."""
+    X = (lambda x: W - x) if mirror else (lambda x: x)
+    Y = (lambda y: H - y) if flip else (lambda y: y)
     out = []
     for q in pts:
         if q[0] == 'bowl':
-            out.append(('bowl', W - q[1], H - q[2]) + tuple(q[3:]))
+            out.append(('bowl', X(q[1]), Y(q[2])) + tuple(q[3:]))
         else:
-            out.append((W - q[0], H - q[1]) + tuple(q[2:]))
+            out.append((X(q[0]), Y(q[1])) + tuple(q[2:]))
     return out
+
+
+def turned(W, H, pts):
+    """A drawing's points turned half round: the u is the n turned."""
+    return placed(W, H, pts, mirror=True, flip=True)
+
+
+def bowl_join(g, f, stem_left, at_top):
+    """A bowl on a stem, joined to it as the n's arch is to its own: at 45
+    degrees and with the notch (shoulder) at one join, square at the
+    other. The n's arch and right side, closed along the far line, and
+    placed: ``stem_left`` False mirrors it, ``at_top`` False flips it.
+
+    The notch stands where the stem runs on past the bowl: at the top of
+    the b and the d, under their ascenders, as the h's; at the foot of the
+    p, the q and the g, over their descenders. (The a and the u, whose
+    stems stop on both lines, have it at the foot: the n turned.)
+
+    The owner, 2026-11-10: the notch came to the u and the a first, "like
+    if you took the letter n and flipped it upside down"; then "if we're
+    going to do it on the a and the u, then we need to do it on all the
+    bowls". Tried at the stem's end first, where Chakra Petch, Tomorrow
+    and Turret Road put theirs; he had it flipped, and a bowl's join made
+    half as deep as an arch's (BOWL_DROP). Until 1.017 every bowl was a
+    closed octagon laid square against its stem."""
+    arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=BOWL_DROP)
+    pts = [*arch, B(*f.P(7, 1)), f.P(1, 1)]
+    g.stroke(*placed(f.W, f.p.xh, pts, mirror=not stem_left, flip=not at_top), start=cut)
 
 
 def bars3(g):
@@ -84,7 +115,7 @@ def a(g):
     # stem (the owner, 2026-11-10). It rises no more than A_RISE of the
     # bowl's white, so the counter keeps its wall under the bar. Until
     # 1.017 the bowl ran square into the stem on the baseline.
-    drop = min(2.0, A_RISE * low / (f.Y(8) - f.Y(7)))
+    drop = min(BOWL_DROP, A_RISE * low / (f.Y(8) - f.Y(7)))
     arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=drop)
     g.stroke((f.X(7), yb, inner), B(f.X(1), yb), *reversed(turned(f.W, p.xh, arch)), end=cut)
 
@@ -93,7 +124,7 @@ def a(g):
 def b(g):
     f = Frame(g, 8, 'asc')
     g.stroke(f.P(1, 0), f.P(1, 13))
-    g.stroke(f.P(1, 8), B(*f.P(7, 8)), B(*f.P(7, 1)), f.P(1, 1), closed=True)
+    bowl_join(g, f, stem_left=True, at_top=True)
 
 
 @low('c', 8, 2)
@@ -116,7 +147,7 @@ def c_shape(g, foot_leg=None):
 def d(g):
     f = Frame(g, 8, 'asc')
     g.stroke(f.P(7, 0), f.P(7, 13))
-    g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    bowl_join(g, f, stem_left=False, at_top=True)
 
 
 def _e_gap(g):
@@ -274,7 +305,10 @@ def g_strokes(g, white=None):
     """The g: its bowl and its hook (``white``: the room the hook leaves
     under the bowl, for a g that carries something there: ǥ's bar)."""
     f = Frame(g, 8, 'lower')
-    g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    if g.p.slant:                                           # the italic's is the upright's as it was
+        g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    else:
+        bowl_join(g, f, stem_left=False, at_top=False)
     hook(g, f, white=white)
     g.butt += crotch_butt(g, f.Y(1))
 
@@ -284,11 +318,11 @@ def g_(g):
     g_strokes(g)
 
 
-def shoulder(g, f, xs, x_right, top=8, drop=2, notch=True, joined=False):
+def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     """An arch's shoulder, as the r's: it leaves the stem at 45 degrees
-    ``drop`` modules below the arch (two; the italic's branch lower), an
-    edge break into the stem, and leaves a notch
-    under it (the 1's flag, turned). Returns the arch's points up to its
+    ``drop`` modules below the arch (SHOULDER_DROP, two; a bowl's join half
+    that, BOWL_DROP; the italic's branch lower), an edge break into the
+    stem, and leaves a notch under it (the 1's flag, turned). Returns the arch's points up to its
     right corner, and how the stroke's start is cut.
 
     The diagonal needs room between the stems. Where there is less (the
@@ -321,6 +355,7 @@ def shoulder(g, f, xs, x_right, top=8, drop=2, notch=True, joined=False):
     at Black, and far into the stem its left corner comes out of the
     stem's back (a nub of three points)."""
     p = g.p
+    drop = SHOULDER_DROP if drop is None else drop
     k = p.sd / 2 ** 0.5
     y_top = f.Y(top)
     full = f.Y(top) - f.Y(top - drop)
@@ -346,6 +381,13 @@ def shoulder(g, f, xs, x_right, top=8, drop=2, notch=True, joined=False):
     return [(x0, y_top - rise), (x0 + rise, y_top), B(x_right, y_top)], 'h'
 
 
+# Two rule sets (the owner, 2026-11-10: "you shouldn't be changing the m's and the n's and the r's ... it's
+# just a different rule set"). The arches (n h m r) leave their stems two modules under the arch, as they
+# always have. A bowl's join (bowl_join, the a, the u, the y) is half as deep: at two modules, at the light
+# weights, the bowl stood a long way off its stem and read as a stroke of its own; shown it at two, one and
+# 0.6, he chose one.
+SHOULDER_DROP = 2.0     # modules below the arch where an arch's shoulder leaves its stem
+BOWL_DROP = 1.0         # the same for a bowl's join to its stem
 SHOULDER_NOTCH = 1.5    # the least notch over a shoulder, in edge breaks down the stem's side: a break deep where the stem
                         # stops at the arch (n), and where it goes on (h) a break of it is the corner's own fill
 
@@ -519,14 +561,17 @@ def o(g):
 def p_(g):
     f = Frame(g, 8, 'lower')
     g.stroke(f.P(1, -3), f.P(1, 9))
-    g.stroke(f.P(1, 8), B(*f.P(7, 8)), B(*f.P(7, 1)), f.P(1, 1), closed=True)
+    bowl_join(g, f, stem_left=True, at_top=False)
 
 
 @low('q', 8, 2)
 def q(g):
     f = Frame(g, 8, 'lower')
     g.stroke(f.P(7, -3), f.P(7, 9))
-    g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+    if g.p.slant:                                           # the italic's is the upright's as it was (it has no q of its own)
+        g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
+        return
+    bowl_join(g, f, stem_left=False, at_top=False)
 
 
 # The r keeps its master's share of the line at every weight: eight ninths
@@ -546,7 +591,7 @@ def r(g):
     # The shoulder: a 45-degree stroke from the stem to the arm, leaving a
     # notch under the arm (the 1's flag, turned).
     k = p.sd / 2 ** 0.5
-    y8, y6 = f.Y(8), f.Y(6)
+    y8, y6 = f.Y(8), f.Y(8 - SHOULDER_DROP)
     x6 = xs + p.sv / 2 + k - p.c                             # starts an edge break into the stem
     rise = y8 - y6
     if p.mono:
@@ -608,7 +653,7 @@ def u(g):
     f = Frame(g, 8, 'lower')
     turn = lambda pts: turned(f.W, f.p.xh, pts)
     g.stroke(*turn([f.P(1, 0), f.P(1, 9)]))
-    arch, cut = shoulder(g, f, f.X(1), f.X(7))
+    arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=BOWL_DROP)
     g.stroke(*turn([*arch, f.P(7, 0)]), start=cut)
 
 
@@ -639,7 +684,32 @@ def _point(f):
     return -(V_HANG + V_FLAT / 2) * p.c + f.k, -V_HANG * p.c
 
 
-@low('v', 8, 2)
+def _w_width(p):
+    return letter_width(12.6, 3)(p)
+
+
+def gable_run(p, cell=None):
+    """A lowercase gable's arm on the centre line, from its wall to its
+    point: the w's, a quarter of the white between its walls. The walls of
+    v, w and y all turn into their 45-degree arms this far above the point
+    (the owner, 2026-11-10: "where the crook occurs needs to be
+    consistent"). ``cell``: the body in Arris Mono, where every letter is
+    one width."""
+    return ((cell if p.mono and cell else _w_width(p)) / 2 - p.sv / 2) / 2
+
+
+def v_width(p):
+    """The v: as wide as its two arms. Its walls bend where the w's do and
+    its arms still meet in a point, so it is narrower than the eight
+    modules it had (0.8 of the n; the owner chose it over a flat foot, over
+    longer arms on the w and over two heights). The italic's keeps its
+    master's width, and Arris Mono's the cell."""
+    if p.slant or p.mono:
+        return letter_width(8, 2)(p)
+    return p.sv + 2 * gable_run(p)
+
+
+@low('v', 8, 2, width=v_width)
 def v(g):
     f = Frame(g, 8, 'lower')
     p, W = f.p, f.W
@@ -649,12 +719,15 @@ def v(g):
     # x-height (the owner, 2026-11-10: "it needs to have the 45 degrees
     # with the high walls"); the italic keeps its 2:1 arms, the 7's slope,
     # which he loves in the cursive. Until 1.017 the upright's were 2:1 as
-    # well, for fear a 45-degree gable would read as a u; the u now carries
-    # the n's notch at its foot and its stem stands to the baseline.
+    # well, because a 45-degree gable reads closer to the u (the measure is
+    # in docs/DESIGN.md).
     yt = min(ya + 2 * (W / 2 - xl), p.xh) if p.slant else ya + (W / 2 - xl)
     g.stroke((xl, p.xh), (xl, yt), (W / 2, ya), (xr, yt), (xr, p.xh))
     g.clip = (0, cut, W, p.xh)
     g.butt += (('y', cut),)                                  # the point's end is the cut itself, flat
+
+
+W_POST = 5.25   # modules: how high the w's middle stroke stands (the capital's seven of twelve, in the x-height)
 
 
 @low('w', 14, 3, width=letter_width(12.6, 3))
@@ -666,18 +739,27 @@ def w(g):
     p, W = f.p, f.W
     xl, xm, xr = f.X(1), W / 2, f.X(13)
     q1, q3 = (xl + xm) / 2, (xm + xr) / 2
-    ya, cut = _vee(f)
-    yt = min(ya + 2 * (q1 - xl), p.xh)                      # 2:1, the 7's slope (the upright v's until 1.017, the italic's still)
-    g.stroke((xl, p.xh), (xl, yt), (q1, ya), (xm, yt), (q3, ya), (xr, yt), (xr, p.xh))
-    # the middle stroke stands in the peak, down to the sixth module, and
-    # never over it: where the peak is lower than that (Thin to Regular) it
-    # was a post on the peak, 65 units at Thin, a stub at Light and at
-    # Regular a spearhead 43 units tall with a barb of 11 each side
-    if yt > f.Y(6):
-        g.stroke((xm, yt), (xm, f.Y(6)))
-    # the middle peak ends as the corner rule ends a point, a break's chord
-    # across it; from ExtraBold it reaches the x-height, and cut there first
-    # it was left a flat of a few units that the rule made two crumbs of
+    if p.slant:
+        # the italic's: 2:1 arms, the 7's slope, and the middle stroke in
+        # the peak down to the sixth module, never over it (where the peak
+        # is lower than that it was a post on the peak, a stub, a spearhead)
+        ya, cut = _vee(f)
+        yt = min(ya + 2 * (q1 - xl), p.xh)
+        g.stroke((xl, p.xh), (xl, yt), (q1, ya), (xm, yt), (q3, ya), (xr, yt), (xr, p.xh))
+        if yt > f.Y(6):
+            g.stroke((xm, yt), (xm, f.Y(6)))
+    else:
+        # the capital's build in the x-height: high walls, 45-degree
+        # valleys, and its middle stroke standing on the peak (the owner,
+        # 2026-11-10: "if we're going to modify the v and the y then we
+        # should definitely do the w"). Until 1.017 its arms were at 2:1.
+        ya, cut = _point(f)
+        yt = ya + (q1 - xl)
+        g.stroke((xl, p.xh), (xl, yt), (q1, ya), (xm, yt), (q3, ya), (xr, yt), (xr, p.xh))
+        g.stroke((xm, yt), (xm, f.Y(W_POST)))
+    # the points end as the corner rule ends a point, a break's chord
+    # across each; cut first on the x-height the middle was left a flat of
+    # a few units that the rule made two crumbs of
     g.clip = (0, cut, W, p.xh + p.c)
     g.butt += (('y', cut),)                                  # the point's end is the cut itself, flat
 
@@ -706,30 +788,69 @@ def x(g):
     x_strokes(g, f.X(1), f.X(7), f.W, f.p.xh)
 
 
-@low('y', 8, 2)
-def y(g):
-    """The y: the v's body, high walls over 45 degrees, its right arm run
-    on through the point and down to the descender line as a tail (the
-    owner, 2026-11-10: the way Turret Road's is shaped). The tail ends
-    square to its own line, as Turret Road's does, its lower corner on the
-    line every descender stands on; so ended it stays inside the body at
-    every weight (cut level it ran out of the left side from Regular, and
-    the side cut it to a face of a few units at Medium).
+def _line_runs(name, p, y, width=None):
+    """The ink a glyph lays along the level line at ``y``, left to right."""
+    from shapely.geometry import LineString
 
-    The italic has its own (italic_forms). Until 1.017 the y was a bowl
-    open at the top over the g's hook: its arm came down the left stem,
-    turned at 45 degrees and landed flat on the baseline a module short of
-    the right stem, which ran on down into the hook."""
+    from ..draw import draw
+    from ..geom import rings_to_shapely
+    cut = rings_to_shapely(draw(name, p, width=width).rings()).intersection(LineString([(-1e4, y), (1e4, y)]))
+    return sorted((s.bounds[0], s.bounds[2]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+
+
+_measuring = []    # set while the y is being measured for its own width: a drawing made meanwhile takes its master's
+
+
+def y_width(p):
+    """The y: as wide as leaves its foot, the flat between its arm and its
+    join, as long as the flat on top of the m's arch (the owner,
+    2026-11-10: "measuring the top of the m and making the flat part that
+    long"). Read off the two drawings: the m's last arch along the
+    x-height, the y in its master's width along the baseline; what the y's
+    flat has over the m's comes off its width. The italic's and Arris
+    Mono's keep their master's."""
+    if p.slant or p.mono or p.m < 2 or _measuring:          # (the watch's own drawing, in modules, too)
+        return letter_width(8, 2)(p)
+    return _y_width(p)
+
+
+@functools.lru_cache(maxsize=None)
+def _y_width(p):
+    w0 = letter_width(8, 2)(p)
+    _measuring.append(p)
+    try:
+        a, b = _line_runs('m', p, p.xh - 0.5)[-1]
+        foot = _line_runs('y', p, 0.5, width=w0)
+    finally:
+        _measuring.pop()
+    flat = foot[0][1] - foot[0][0] - (p.sv if len(foot) == 1 else 0.0)   # (one piece where the join is square: less the stem)
+    return w0 - (flat - (b - a))
+
+
+@low('y', 8, 2, width=y_width)
+def y(g):
+    """The y: the v's left arm, a wall and 45 degrees, come into a stem as
+    a bowl comes into its own, with the bowls' notch at the foot
+    (BOWL_DROP), and the stem run on down into the g's hook. Its wall bends
+    where the v's and the w's do (gable_run) and its foot is as long as
+    the top of the m's arch (y_width).
+
+    The owner, 2026-11-10: "make a g like it is today and ... take a v and
+    then join it such that it has a little bit of a notch to it like the
+    bowls". In 1.017's making it was first the v's body with its right arm
+    run on as a tail, after Turret Road's ("the y does not have chamfering
+    on its lower portion"); until 1.017 a bowl open at the top, its left
+    corner cut all the way across to a flat a module short of the stem."""
     f = Frame(g, 8, 'lower')
-    p, W = f.p, f.W
-    xl, xr = f.X(1), f.X(7)
+    p = f.p
+    xl, y1 = f.X(1), f.Y(1)
     ya, _ = _point(f)
-    yt = ya + (W / 2 - xl)
-    g.stroke((xl, p.xh), (xl, yt), (W / 2, ya))
-    ye = -p.desc + f.k / 2                                  # the end's centre: its lower corner half a diagonal's half-width under it
-    xe = W / 2 - (ya - ye)
-    back = max(0.0, f.k / 2 - xe)                           # its upper corner never leaves the body: the end comes back up its line
-    g.stroke((xr, p.xh), (xr, yt), (xe + back, ye + back))  # (three units at Thin, nothing from ExtraLight)
+    arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=BOWL_DROP)
+    join = turned(f.W, p.xh, arch)[:-1]                     # (the notch's cut,) where the foot leaves the flat
+    d = min(ya + gable_run(p, g.W) - y1, join[-1][0] - xl - p.c)
+    g.stroke((xl, p.xh), (xl, y1 + d), (xl + d, y1), *reversed(join), end=cut)
+    hook(g, f)
+    g.butt += crotch_butt(g, f.Y(1))
 
 
 @low('z', 8, 1)

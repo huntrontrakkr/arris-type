@@ -320,7 +320,7 @@ def test_wide_and_narrow_letters_stand_where_such_faces_put_them(w):
     p = params(w)
     adv = lambda ch: place(CMAP[ch], p)[1]
     assert 1.42 <= adv('m') / adv('n') <= 1.59
-    assert 1.23 <= adv('w') / adv('n') <= 1.42
+    assert 1.23 <= adv('w') / adv('n') <= 1.44                       # (with its walls it stands 1.37 to 1.43: the owner's build)
     assert 1.12 <= adv('M') / adv('H') <= 1.33
     assert 1.07 <= adv('W') / adv('H') <= 1.42
     assert 0.76 <= adv('T') / adv('H') <= 0.86
@@ -368,34 +368,65 @@ def test_f_and_t_keep_their_hooks_at_every_weight(w):
     assert REGISTRY['t'].width(p) == pytest.approx(REGISTRY['f'].width(p))
 
 
+def _pieces(ch, p, y):
+    cut = _ink(ch, p).intersection(LineString([(-1e4, y), (1e4, y)]))
+    return len([s for s in getattr(cut, 'geoms', [cut]) if s.length > 1])
+
+
 @pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 800, 900])
-def test_the_u_is_the_n_turned(w):
-    """Half round: its bowl leaves the right stem as the n's arch leaves the
-    left, at 45 degrees with the notch, here at the foot (the owner: "add a
-    little notch into both the u and the lower part of the a, like if you
-    took the letter n and flipped it upside down")."""
-    from shapely import affinity
-    p = params(w).with_(optical=0.0)                    # the drawings themselves: the raised optical centre is not turned with them
-    u, n = draw('u', p), draw('n', p)
-    assert u.W == pytest.approx(n.W)
-    turned = affinity.rotate(rings_to_shapely(n.rings()), 180, origin=(n.W / 2, p.xh / 2))
-    assert rings_to_shapely(u.rings()).symmetric_difference(turned).area < 1.0
-
-
-@pytest.mark.parametrize('w', [300, 400, 600, 700, 900])
-def test_the_as_bowl_meets_its_stem_as_the_us(w):
-    """Along the baseline the a and the u are two pieces, the bowl's foot
-    and the stem's, with the notch between them, wherever the n keeps its
-    own (to Bold; at Black all three are square)."""
+def test_every_bowl_meets_its_stem_through_a_notch(w):
+    """One notch a bowl, to ExtraBold, and square at Black as the n is:
+    under the ascender on b and d (where the h has its own), over the
+    descender on p, q and g, at the foot on a, u and y; the other join
+    square. (The owner: "if we're going to do it on the a and the u, then
+    we need to do it on all the bowls", flipped to where the stem runs
+    on.)"""
     p = params(w)
-    def feet(ch):
-        cut = _ink(ch, p).intersection(LineString([(-1e4, 0.4 * p.c), (1e4, 0.4 * p.c)]))
-        return len([s for s in getattr(cut, 'geoms', [cut]) if s.length > 1])
-    def heads(ch):
-        cut = _ink(ch, p).intersection(LineString([(-1e4, p.xh - 0.4 * p.c), (1e4, p.xh - 0.4 * p.c)]))
-        return len([s for s in getattr(cut, 'geoms', [cut]) if s.length > 1])
-    assert feet('u') == heads('n') == (1 if w == 900 else 2)
-    assert feet('a') == feet('u')
+    top, foot = p.xh - 0.4 * p.c, 0.4 * p.c
+    notched = 1 if w == 900 else 2
+    assert _pieces('n', p, top) == notched
+    for ch in 'bd':
+        assert (_pieces(ch, p, top), _pieces(ch, p, foot)) == (notched, 1), ch
+    for ch in 'pqg':
+        assert (_pieces(ch, p, foot), _pieces(ch, p, top)) == (notched, 1), ch
+    for ch in 'auy':
+        assert _pieces(ch, p, foot) == notched, ch
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_b_and_d_and_p_and_q_are_mirrors(w):
+    from shapely import affinity
+    p = params(w).with_(optical=0.0)                    # the drawings themselves, before the optical centre is raised
+    for a, b in ('bd', 'pq'):
+        ga, gb = draw(a, p), draw(b, p)
+        assert ga.W == pytest.approx(gb.W)
+        mirrored = affinity.scale(rings_to_shapely(gb.rings()), xfact=-1, origin=(gb.W / 2, 0))
+        assert rings_to_shapely(ga.rings()).symmetric_difference(mirrored).area < 1.0, a + b
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 500])
+def test_arches_and_bowls_each_have_their_own_depth_of_notch(w):
+    """Two rule sets (the owner: "you shouldn't be changing the m's and the
+    n's and the r's ... it's just a different rule set"): the arches leave
+    their stems two modules under the arch, as they always have; a bowl's
+    join is one module, half as deep, the same on every bowl."""
+    from arris.glyphs.lower import BOWL_DROP, SHOULDER_DROP
+    assert (SHOULDER_DROP, BOWL_DROP) == (2.0, 1.0)
+    p = params(w).with_(optical=0.0)
+
+    def reach(ch, right=False, foot=False):             # from the stem's centre to where the notch ends, along the line it opens on
+        g = draw(ch, p)
+        y = 0.5 if foot else p.xh - 0.5
+        cut = _ink(ch, p).intersection(LineString([(-1e4, y), (1e4, y)]))
+        xs = sorted((s.bounds[0], s.bounds[2]) for s in cut.geoms if s.length > 1)
+        return (g.W - p.sv / 2) - xs[-2][1] if right else xs[1][0] - p.sv / 2
+    arch = reach('n')                                   # (each arch's own, as far as it has room: unchanged, and tested where it was)
+    assert reach('h') == pytest.approx(arch, abs=1.0)
+    bowl = reach('b')
+    for ch, kw in (('d', {'right': True}), ('p', {'foot': True}), ('q', {'right': True, 'foot': True}),
+                   ('g', {'right': True, 'foot': True}), ('u', {'right': True, 'foot': True}), ('y', {'right': True, 'foot': True})):
+        assert reach(ch, **kw) == pytest.approx(bowl, abs=1.0), ch
+    assert bowl < arch - 0.4 * p.m                      # shallower than the n's by most of a module
 
 
 @pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
@@ -420,22 +451,46 @@ def test_the_v_has_high_walls_over_45_degrees(w):
     assert foot <= 0.45 * p.xh
 
 
-@pytest.mark.parametrize('w', [100, 200, 300, 400, 450, 500, 700])
-def test_the_ws_middle_peak_is_a_peak(w):
-    """It ends as a point ends, a chord a break wide at most, at every
-    weight: the middle stroke stands in the peak and never over it (it was
-    a post 65 units tall at Thin, a stub at Light, and at Regular a
-    spearhead with a barb of 11 units each side)."""
-    p = params(w)
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_the_w_is_the_capitals_build(w):
+    """High walls, 45-degree valleys, and its middle stroke a stem standing
+    on the peak (the owner: "if we're going to modify the v and the y then
+    we should definitely do the w"; until 1.017 its arms were at 2:1, and
+    the italic's still are)."""
+    import math
+
+    from arris.glyphs.lower import W_POST
+    p = params(w).with_(optical=0.0)
     g = draw('w', p)
-    xm = g.W / 2
-    near = [(x, y) for r in g.rings() for x, y in r if abs(x - xm) < 0.9 * p.sv and y > 0.45 * p.xh]
-    top = max(y for _, y in near)
-    crown = [x for x, y in near if y > top - 0.5]
-    assert max(crown) - min(crown) <= 1.6 * p.c + 1.0
-    below = [(x, y) for x, y in near if y <= top - 0.5 and y > top - 1.2 * p.sv]
-    assert all(abs(x - xm) > (max(crown) - min(crown)) / 2 - 0.5 for x, _ in below)       # nothing stands out beside the flat
-    assert len([q for q in near if q[1] > top - 2.0 * p.c]) <= 2 or w <= 300
+    for ring in g.rings():
+        for a, b in zip(ring, ring[1:] + ring[:1]):
+            if math.dist(a, b) > 1.0:
+                turn = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])) % 45
+                assert min(turn, 45 - turn) < 0.5, (a, b)
+    sh = p.sh * p.low
+    post = sh / 2 + (W_POST - 1) * (p.xh - sh) / 7                     # the height of module W_POST
+    cut = _ink('w', p).intersection(LineString([(-1e4, post - p.c - 1), (1e4, post - p.c - 1)]))
+    runs = sorted((s.bounds[0], s.bounds[2]) for s in cut.geoms if s.length > 1)
+    assert len(runs) == 3                                               # two walls and the middle stroke
+    assert runs[1][1] - runs[1][0] == pytest.approx(p.sv, abs=0.5)
+    assert (runs[1][0] + runs[1][1]) / 2 == pytest.approx(g.W / 2, abs=0.5)
+    assert _pieces('w', p, post + 1.0) == 2                             # and nothing of it over that
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_v_w_and_y_bend_at_one_height(w):
+    """Their walls turn into their 45-degree arms at one height (the owner:
+    "where the crook occurs needs to be consistent"); the v, still pointed,
+    is as wide as its two arms, narrower than the n."""
+    from arris.glyphs.lower import gable_run
+    p = params(w).with_(optical=0.0)
+    bend = {ch: min(y for r in draw(ch, p).rings() for x, y in r if x < 0.5 and y > 0) for ch in 'vwy'}
+    assert bend['v'] == pytest.approx(bend['w'], abs=0.5)
+    if w <= 700:                                                        # (heavier, the y's arm lands where its foot has room)
+        assert bend['y'] == pytest.approx(bend['v'] + (p.sh * p.low / 2 - (-(1.75) * p.c + p.sd / 2 ** 0.5)), abs=1.0) or \
+            bend['y'] == pytest.approx(bend['v'], abs=1.0)
+    assert REGISTRY['v'].width(p) == pytest.approx(p.sv + 2 * gable_run(p))
+    assert REGISTRY['v'].width(p) < REGISTRY['n'].width(p)
 
 
 @pytest.mark.parametrize('w', [300, 400, 500, 600, 700, 800, 900])

@@ -91,7 +91,7 @@ it reuses moves the figures already make:
 | the 4's clip / the 1's notched flag | 4 1 | the comma's tail, r's shoulder |
 | beaks | 2 3 5 | C G J S c j ? |
 | gables (verticals bending at 45°) | (the Draft 5×7 caps) | A V W X Y M v w x y |
-| straight 2:1 stroke | 7 | N, w, the italic v, slashes, fraction slash |
+| straight 2:1 stroke | 7 | N, the italic v and w, slashes, fraction slash |
 | the 1's foot | 1 | J's top bar |
 | the 1's notched flag, turned | 1 | the shoulders of n, m, h and r, the l's top |
 | the t's foot | t | the l's tail |
@@ -103,7 +103,13 @@ the pixels, and the rule's outlines beneath them.
 two modules below the arch, and leaves a notch under it: the 1's flag,
 turned. The n, m and h spring from their stems the same way, so the arches
 lean forward, the lowercase reads as one family, and the 1's flag runs
-through every line of text. Where the stems stand too close for the
+through every line of text. From 1.017 every bowl meets its stem through
+a shoulder of its own rule, half as deep (`lower.bowl_join`,
+`lower.BOWL_DROP`): under the ascender on b and d, over the descender on
+p, q and g, at the foot on a, u and y. At the arches' two modules, at the
+light weights, a bowl stood a long way off its stem and read as a stroke
+of its own.
+Where the stems stand too close for the
 diagonal (the monospaced m, the heaviest weights) the shoulder rises less,
 down to a plain square join, so the drawing changes continuously with
 weight. The u keeps its plain bowl: notched, it moved toward the v.
@@ -128,12 +134,11 @@ changed:
 45-degree gable, from the watch's own capitals: at cap height it has
 diagonal enough, and V/U measures 0.52.
 
-In 1.017 the upright v went back to the gable, high walls over a
-45-degree point, at the owner's word (the italic and the w keep the 2:1
-arms), and the u took the n's notch at its foot. v/u is 0.36 at Regular
-by the same measure, the closest pair in the lowercase but for v/y: the
-look was chosen over the number, which is recorded here so that the
-choice can be seen for what it was.
+In 1.017 the upright v and w went back to the gable, high walls over
+45-degree points, at the owner's word (the italic keeps the 2:1 arms).
+In eight modules that v measured 0.38 from the u. Its walls now bend
+where the w's do, which makes it as wide as its two arms, nine tenths of
+the n, and v/u is 0.46 at Regular by the same measure.
 
 **Cyrillic in the Latin rhythm.** Small-capital forms (в, к, н, п, ы, я...)
 draw their capitals in the x-height with the white scaled four modules for
