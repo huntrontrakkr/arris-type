@@ -182,7 +182,7 @@ _fraction('threequarters', '¾', 'three', 'four')
 def _ordinal(name, ch, letter):
     def fn(g):
         p = g.p
-        ps = small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.under)
+        ps = small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.under, under=SMALL * p.under, deep=SMALL * p.deep)
         sub = draw(letter, ps)
         dy = p.cap - ps.xh
         g.add_glyph(sub, 0, dy)

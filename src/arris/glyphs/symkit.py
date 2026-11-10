@@ -219,7 +219,7 @@ def tight_width(names, zone=None, case='cap'):
 def small_all(p):
     """Small figures' parameters with every vertical metric scaled."""
     from .features import SMALL, small
-    return small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.under)
+    return small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.under, under=SMALL * p.under, deep=SMALL * p.deep)
 
 
 SMALL_HEFT = 2.6    # the heaviest a small letter's stem may be, in its own modules
@@ -231,7 +231,7 @@ def small_letter(p, k, stroke=0.8):
     its own (smaller) module: a stem 2.9 modules wide is the Black's, and a
     small S or E drawn heavier than that closes its mouths and counters."""
     s = min(stroke, SMALL_HEFT * k * p.m / p.sv)
-    return p.with_(cap=k * p.cap, xh=k * p.xh, asc=k * p.asc, desc=k * p.under, m=k * p.m, leg=k * p.leg,
+    return p.with_(cap=k * p.cap, xh=k * p.xh, asc=k * p.asc, desc=k * p.under, under=k * p.under, deep=k * p.deep, m=k * p.m, leg=k * p.leg,
                    sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
 
 
@@ -248,7 +248,7 @@ K_MIN = 0.7         # the most a sign is condensed before it is drawn smaller in
 
 def _scaled(p, s):
     """Every dimension of the drawing (heights too) times s: a smaller sign."""
-    return _condensed(p, s).with_(cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.under)
+    return _condensed(p, s).with_(cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.under, under=s * p.under, deep=s * p.deep)
 
 
 def _body(width, p, kind):

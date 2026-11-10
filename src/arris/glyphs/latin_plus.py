@@ -461,7 +461,7 @@ def _digraph(name, ch, a, b, kind):
             p0 = p.with_(mono=False)
             gp = 1.0 * p.m
             s = min(1.0, g.W / (REGISTRY[a].width(p0) + REGISTRY[b].width(p0) + gp))
-            q = p0.with_(m=s * p.m, cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.desc, leg=s * p.leg,
+            q = p0.with_(m=s * p.m, cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.desc, under=s * p.under, deep=s * p.deep, leg=s * p.leg,
                          sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
             sa, sb = draw(a, q), draw(b, q)
             x0 = (g.W - (sa.W + s * gp + sb.W)) / 2
