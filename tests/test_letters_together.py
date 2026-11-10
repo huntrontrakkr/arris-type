@@ -57,16 +57,15 @@ def test_the_narrow_letters_are_narrow(w):
     """Advances against the n's, inside what chamfered and squared faces
     give a letter with one stem and an arm (Chakra Petch, Oxanium,
     Rajdhani, Exo 2, Tomorrow, Share Tech, Regular and their heaviest): the
-    l 0.40 to 0.56 (ours 0.54 at Regular: its tail needs two modules to
-    end on a flat), the t 0.53 to 0.74, the f 0.48 to 0.72. On their
+    l 0.40 to 0.56, the t 0.53 to 0.74, the f 0.48 to 0.72. On their
     masters' module widths the l stood at 0.65 at Regular, the t at 0.79
     and the f at 0.72, and a line with several of them lost its rhythm.
     The j's hook turns through two corners and needs their room: 0.54 for
     those faces' 0.41 to 0.51 (it was 0.65)."""
     p = params(w)
     adv = lambda ch: place(CMAP[ch], p)[1]
-    assert 0.40 <= adv('l') / adv('n') <= 0.65
-    assert 0.53 <= adv('t') / adv('n') <= 0.75
+    assert 0.40 <= adv('l') / adv('n') <= 0.65              # (with its tail from Bold: 0.60 to 0.64)
+    assert 0.53 <= adv('t') / adv('n') <= 0.76
     assert 0.48 <= adv('f') / adv('n') <= 0.73
     assert 0.41 <= adv('j') / adv('n') <= 0.68
 
@@ -328,20 +327,72 @@ def test_wide_and_narrow_letters_stand_where_such_faces_put_them(w):
 LATIN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 
 
-def test_the_ls_tail_ends_on_a_flat_at_every_weight():
-    """One outline from Thin to Black, nothing in it shorter than nine
-    tenths of a break: a tail a module and a half long left its corner no
-    flat to end on, and its end closed to a point about Medium (13 units
-    at 500) and opened again."""
+@pytest.mark.parametrize('w', [100, 300, 400, 500, 600])
+def test_to_semibold_l_f_and_t_end_in_one_cut(w):
+    """The stem turns through the corner its foot or its hook took and
+    stops, upright, an edge break tall over its own break: no flat foot on
+    the l or the t and no arm on the f, and nothing of the f or the t
+    stands further right than its crossbar. The t is the f turned over."""
+    from arris.glyphs.lower import hooked
+    p = params(w)
+    assert hooked(p) == 0.0
+    ring = max(draw('l', p).rings(), key=len)
+    x1 = max(x for x, _ in ring)
+    face = sorted(y for x, y in ring if x > x1 - 0.5)
+    assert face[0] == pytest.approx(p.c, abs=1.0) and face[-1] == pytest.approx(2 * p.c, abs=1.5)
+    on_line = [x for x, y in ring if abs(y) < 0.5]
+    assert max(on_line) - min(on_line) <= 0.7 * p.sv                       # it stands on half a stem of flat: no foot
+    bar_y = p.xh - 0.5 * p.sh * p.low
+    for ch, y_end, y_line in (('f', p.asc - 1.5 * p.c, p.asc - 0.5), ('t', 1.5 * p.c, 0.5)):
+        ink = _ink(ch, p)
+        x1 = ink.bounds[2]
+        bar = ink.intersection(LineString([(-1e4, bar_y), (1e4, bar_y)])).bounds
+        end = ink.intersection(LineString([(-1e4, y_end), (1e4, y_end)])).bounds
+        assert bar[2] == pytest.approx(x1, abs=1.0), ch
+        assert end[2] <= x1 - 0.1 * p.sv, ch
+        assert ink.intersection(LineString([(-1e4, y_line), (1e4, y_line)])).length <= 0.7 * p.sv, ch       # a cut's flat, not a foot or an arm
+    assert REGISTRY['t'].width(p) == pytest.approx(REGISTRY['f'].width(p))
+
+
+@pytest.mark.parametrize('w', [700, 800, 900])
+def test_from_bold_l_f_and_t_end_in_a_hook(w):
+    """The corner and its arm: the l's tail two modules past its stem, the
+    t's foot and the f's hook a module past the crossbar's end (the owner:
+    from Bold all three look better with the hook)."""
+    from arris.glyphs.lower import hooked
+    p = params(w)
+    assert hooked(p) == 1.0
+    bar_y = p.xh - 0.5 * p.sh * p.low
+    for ch, y_line in (('l', 0.5), ('t', 0.5), ('f', p.asc - 0.5)):
+        ink = _ink(ch, p)
+        flat = ink.intersection(LineString([(-1e4, y_line), (1e4, y_line)]))
+        assert flat.length >= 0.9 * p.sv, ch                                # a foot, an arm (a cut's flat is half a stem)
+        if ch != 'l':
+            bar = ink.intersection(LineString([(-1e4, bar_y), (1e4, bar_y)])).bounds
+            assert ink.bounds[2] >= bar[2] + 0.3 * p.sv, ch                 # past the crossbar's end
+
+
+def test_the_cut_grows_into_the_hook_without_a_break():
+    """From SemiBold to Bold, every five units of weight: one piece, no
+    edge under half a break (the arm is born with a top a break long, and
+    was eaten by the cleanup when it grew from nothing), no stroke
+    lightened to hold the topology, and each letter's body and its end's
+    reach never shrinking."""
     import math
-    counts = set()
-    for w in range(100, 901, 50):
-        p = params(w)
-        ring = max(draw('l', p).rings(), key=len)
-        counts.add(len(ring))
-        short = min(math.dist(a, b) for a, b in zip(ring, ring[1:] + ring[:1]) if math.dist(a, b) > 1e-6)
-        assert short >= 0.9 * p.c, w
-    assert len(counts) == 1
+    from arris.glyphs.lower import hooked
+    for ch in 'lft':
+        last_w, last_t = 0.0, -1.0
+        for w in range(600, 701, 5):
+            p = params(w)
+            g = draw(ch, p)
+            rings = g.rings()
+            ink = rings_to_shapely(rings)
+            assert g.p.light == 1.0, (ch, w)
+            assert len(getattr(ink, 'geoms', [ink])) == 1, (ch, w)
+            short = min(math.dist(a, b) for r in rings for a, b in zip(r, r[1:] + r[:1]) if math.dist(a, b) > 1e-6)
+            assert short >= 0.5 * p.c, (ch, w, round(short / p.c, 2))
+            assert g.W >= last_w - 0.5 and hooked(p) >= last_t, (ch, w)
+            last_w, last_t = g.W, hooked(p)
 
 
 @pytest.mark.parametrize('w', [100, 200, 300, 400, 450, 500, 700])

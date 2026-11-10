@@ -160,28 +160,38 @@ letters redrawn.
   advance was 0.94 of the n's, where every one of those faces has it under
   0.72; it keeps its notch and its arm). In Arris Mono every letter fills
   the cell as before.
-- The letters with one stem and an arm are a module narrower (f t l j).
-  Against the n they stood wider than any of those six faces sets them:
-  the l's advance 0.65 of the n's (theirs 0.40 to 0.51), the j 0.65 (0.41
-  to 0.49), the t 0.79 (0.53 to 0.69), the f 0.72 (0.48 to 0.66), and a
-  line with several of them (little, filter, jilt) lost the rhythm its
-  stems set. The f and the t are six modules for seven, hook, foot and
-  crossbar each a module shorter (0.61 and 0.69); the j's hook is three
-  modules of white across for four, the room its two corners need (0.54);
-  the l's tail runs two modules past its stem for three (0.54: a module
-  and a half left its corner no flat to end on, and from Regular to
-  Medium the tail's end closed to a point and opened again).
-  The ſ follows the f. Arris Mono's and the italic's own f, j and l are
-  as they were.
+- The j is narrower. Against the n it stood wider than any of those six
+  faces sets it, its advance 0.65 of the n's (theirs 0.41 to 0.49): its
+  hook is three modules of white across for four, the room its two
+  corners need (0.54). Arris Mono's and the italic's are as they were.
+- The l, the f and the t end in one cut to SemiBold and in a hook from
+  Bold. Each stem's end, the l's and the t's foot and the f's top, was a
+  corner and an arm at every weight: the f's and the t's a module past
+  the crossbar's end, the l's three modules of tail. At the lighter
+  weights the arm is now nothing: the stem turns through the corner's one
+  cut, runs on to the line it stands on and ends upright, two edge breaks
+  tall (the owner: "only one single notch", no flat foot and no crook;
+  from Bold all three look better with the hook). The f and the t are the
+  stem and the crossbar there (0.61 of the n's advance; they were 0.72
+  and 0.79, in those faces 0.48 to 0.69), the l its stem and its cut
+  (0.46 to 0.49; it was 0.65, theirs 0.40 to 0.51), and the t is the f
+  turned over. Between SemiBold and Bold the cut grows into the hook
+  (`lower.end_reach`): the arm is born with a top one break long, as
+  nothing in the face is drawn smaller, and lengthens and thickens
+  together, the corner's cut on one line throughout. From Bold the f's
+  hook and the t's foot are six modules for their masters' seven, the
+  l's tail two for three. The ſ follows the f. The italic t keeps its
+  foot at every weight, its turn being the italic's curve; the italic's
+  own f and l and Arris Mono's are as they were.
 - The l has no flag. It carried the 1's at the top, a module to the left
-  of the stem, and over the x-height spacing lets a part hang into its
+  of the stem. Over the x-height spacing lets a part hang into its
   neighbour's room (it is meant for a j's hook under the line): the
   flag's tip stood 12 units from the body's edge at Regular, where a stem
-  stands 88, and 21 outside it at Black. Whatever stood before an l with
-  ink that high was crowded: F E T K and the l 0.3 of the white between
-  two stems (0.55 to 0.85 in those faces), i d H and the l a third at
-  Black (0.84 to 1.0), "illicit" a comb. No longer than it was thick, it
-  read as a bump on the stem. The tail tells the l from I and 1 as before.
+  stands 88, and 21 outside it at Black, and whatever stood before an l
+  with ink that high was crowded: F E T K and the l 0.3 of the white
+  between two stems (0.55 to 0.85 in those faces), i d H and the l a
+  third at Black (0.84 to 1.0), "illicit" a comb. No longer than it was
+  thick, it read as a bump on the stem.
 - The percent sign is three pieces. Its rings were four and a half
   modules of counter in the full stem, in a body their two widths did not
   fit: each ran into the slash at every weight (50% read as 5096), and at
