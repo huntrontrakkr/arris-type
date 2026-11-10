@@ -40,6 +40,17 @@ def place_params(place: str):
     return italic(p) if it else p
 
 
+def heaviest(g):
+    """The heaviest stroke of a drawing, its stamped letters' strokes among
+    them: an accented letter is measured by its letter's stem, not by its
+    accent's strokes (which made every accented K, R and A read as a lump
+    two or three accents thick)."""
+    from arris.draw import _heaviest_stroke
+    own = [_heaviest_stroke(g, g.p)] if g.strokes else []
+    subs = [abs(m[0]) * heaviest(sub) for _, sub, _, m in g.extra_src]
+    return max(own + subs) if own or subs else _heaviest_stroke(g, g.p)
+
+
 def measure(args):
     name, place = args
     import arris.glyphs  # noqa: F401
@@ -57,7 +68,7 @@ def measure(args):
         return name, place, {'error': repr(e)[:80]}
     if ink.is_empty:
         return name, place, None
-    heavy = _heaviest_stroke(g, upright)
+    heavy = heaviest(g)
     best = (0.0, 0.0, 0.0)
     for part in getattr(ink, 'geoms', [ink]):
         if part.area < 1:
