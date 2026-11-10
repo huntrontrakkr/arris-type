@@ -42,16 +42,28 @@ def test_a_one_stem_lowercase_letter_keeps_its_share(ch):
     assert share(900) / share(400) >= 0.9, ch
 
 
-@pytest.mark.parametrize('w', [100, 300, 400, 600, 900])
-def test_the_r_is_two_thirds_of_the_h(w):
-    """One share of the H at every weight: at Thin it was a third wider
-    than the n, and at eight ninths still the lightest letter of the
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_the_r_is_two_thirds_of_the_h_and_grows_to_seven_ninths(w):
+    """Six ninths of the H's width to the Regular: at Thin it was a third
+    wider than the n, and at eight ninths still the lightest letter of the
     alphabet, its advance 0.94 of the n's where faces of this kind give
-    the r 0.62 to 0.72. Six ninths (the owner, twice: a module off the
-    arm)."""
+    the r 0.62 to 0.72 (the owner, twice: a module off the arm). Past the
+    Regular it grows to seven ninths at Black, as other families' r grows
+    against their n: at six its arm was a stub on the stem's corner (the
+    owner: "a little tiny clown nose"; of five widths shown he chose this
+    one, and of the r so drawn: "It looks great")."""
+    from arris.glyphs.letterframe import heft, share_width, zone
+    from arris.glyphs.lower import R_BLACK, R_SHARE
     p = params(w)
-    assert REGISTRY['r'].width(p) == pytest.approx(6 / 9 * REGISTRY['H'].width(p))
+    share = R_SHARE[0] + (R_SHARE[1] - R_SHARE[0]) * min(1.0, heft(p) / R_BLACK)
+    assert (share, R_SHARE) == ((6.0 if w <= 400 else 7.0 if w == 900 else share), (6.0, 7.0))
+    with zone('lower'):
+        assert REGISTRY['r'].width(p) == pytest.approx(share_width(share)(p))
+    if w <= 400:
+        assert REGISTRY['r'].width(p) == pytest.approx(6 / 9 * REGISTRY['H'].width(p))
     assert _width('r', p) <= 0.9 * _width('n', p)
+    of_n = lambda q: REGISTRY['r'].width(q) / REGISTRY['n'].width(q)
+    assert of_n(params(900)) > of_n(params(700)) > of_n(params(400))
 
 
 @pytest.mark.parametrize('w', [100, 300, 400, 700, 900])
@@ -483,8 +495,10 @@ def test_the_italics_q_g_and_y_take_the_bowls_notch_and_keep_their_tails_flat(w)
 def test_the_cursive_e_gives_only_its_top_and_bar_for_its_eye():
     """italic_forms._e_strokes: the foot is the alphabet's horizontal at
     every weight (the o's own), the exit stands over it, and the top and
-    the bar give way together, for the eye alone: by less than a tenth to
-    Black, and never thinner than at the weight before. Until 1.017 every
+    the bar give way together, for the eye alone: by less than a fifth to
+    Black (a tenth, before the letters gave white past the Regular: the eye
+    stands in a counter a quarter narrower there, and is held to as much
+    less, Opening.across), and never thinner than at the weight before. Until 1.017 every
     horizontal of the letter thinned for the eye, the foot too (0.70 of the
     o's from SemiBold), the top fell by a quarter between Medium and
     SemiBold and the bar by a quarter from Bold to Black."""
@@ -500,7 +514,7 @@ def test_the_cursive_e_gives_only_its_top_and_bar_for_its_eye():
         p = italic(params(w))
         g, o = draw('e', p), draw('o', p)
         k = g.free('eye', 1.0)
-        assert 0.9 <= k <= 1.0 and g.sh_auto == pytest.approx(1.0), (w, k)
+        assert 0.8 <= k <= 1.0 and g.sh_auto == pytest.approx(1.0), (w, k)
         assert p.sh * k >= last - 1e-6, w               # the top (and the bar with it) never loses weight
         last = p.sh * k
         x_exit = p.sv / 2 + (g.W - p.sv) * 5 / 6        # where the exit leaves the foot (the frame's sixth module)
@@ -641,6 +655,11 @@ def test_no_letter_keeps_a_crumb(w):
                 turn = lambda u, v: math.degrees(math.atan2(cross(u, v), u[0] * v[0] + u[1] * v[1]))
                 t_in, t_out = turn(e_in, e), turn(e, e_out)
                 inside = min(t_in, t_out) < -20 and max(t_in, t_out) < 5
+                if ch == 'r' and a[0] == b[0] == max(q[0] for q in pts):
+                    # the end of the r's arm, as its owner has it: past SemiBold the shoulder's underside runs
+                    # to the body's edge and leaves a face of 0.3 to 0.55 of a break (2026-11-10, shown the arm
+                    # with a flat kept under it instead: "It looks great ... don't fix the R")
+                    continue
                 if 0.5 < math.hypot(*e) < 0.45 * (fill_leg(p) if inside else p.c):
                     short.append(round(math.hypot(*e), 1))
             assert not short, (ch, w, short)

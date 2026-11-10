@@ -52,6 +52,8 @@ class Opening:
     hold: bool = False               # past the weight where it first acts, the counter it had there, shrinking (_engaged)
     own: bool = False                # the glyph thins the strokes round this counter itself, by ``free``: the thinning
                                      # of all its horizontals for its closed counters (draw) is off where it draws with it
+    across: bool = False             # the gap is as wide as the letter's counter: held to as much less of its share as
+                                     # the counter has given across past the Regular (given_across)
 
 
 @dataclass(frozen=True)
@@ -99,10 +101,36 @@ def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=Fal
             # a symbol keeps to its cell in the monospaced cut (symkit.mono_fitted)
             from .glyphs.symkit import mono_fitted
             f, w = mono_fitted(name, fn, w, kind)
-        REGISTRY[name] = Spec(name, ord(char) if char else None, f, w, kind, tuple(openings), solid, cell,
+        REGISTRY[name] = Spec(name, ord(char) if char else None, f, _zoned(w, kind), kind, tuple(openings), solid, cell,
                               tuple(squint), base)
         return fn
     return deco
+
+
+def given_across(spec, p) -> float:
+    """What is left of the white across a glyph's counters past the
+    Regular, as a share of what the watch's own rule gives its weight
+    (letterframe.white_scale): the measure an opening that is as wide as
+    its letter's counter is held to (Opening.across). Until 1.017's
+    narrowing the cursive e's eye was held to half a stem whatever its
+    counter: in a counter a quarter narrower at Black the rule took hold a
+    weight earlier and thinned the top and the bar to 0.70 of their own for
+    it, where they had given 0.92."""
+    from .glyphs.letterframe import white_scale, zone
+    from .params import white_own
+    with zone(spec.kind):
+        return white_scale(p) / white_own(p.sv / (2 * p.m))
+
+
+def _zoned(width, kind):
+    """A glyph's body width, measured as its own kind's: a lowercase
+    letter's white gives way to its stems faster than a capital's
+    (letterframe.white_scale, zone)."""
+    def measured(p):
+        from .glyphs.letterframe import zone
+        with zone(kind):
+            return width(p)
+    return measured
 
 
 def B(x, y, leg=None, w=None):
@@ -601,9 +629,11 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
 
 
 def _drawn(spec, g):
+    from .glyphs.letterframe import zone
     _DEPTH[0] += 1
     try:
-        spec.fn(g)
+        with zone(spec.kind):                               # (what the drawing measures in white is its own kind's)
+            spec.fn(g)
     finally:
         _DEPTH[0] -= 1
     return g
@@ -1437,13 +1467,14 @@ def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
         return None
     w, at = cut
     op = spec.openings[k]
+    across = (lambda q: given_across(spec, q)) if op.across else (lambda q: 1.0)
     key = (spec.name, k, ratio, at(400), tuple(sorted(overrides.items())))
     if key not in _ENGAGED:
         # read on the cut's own drawings, each in its own width (a graded weight is drawn in its
         # ungraded body: the reference is the cut's, whatever body p is drawn in)
         def short(w_):
             q = at(w_)
-            return op.measure(_build(spec, q, ot, ob, overrides, None)) < ratio * q.sv - 1e-6
+            return op.measure(_build(spec, q, ot, ob, overrides, None)) < ratio * q.sv * across(q) - 1e-6
         if short(400.0):
             we = 400.0
         elif not short(900.0):
@@ -1458,11 +1489,12 @@ def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
             _ENGAGED[key] = None
         else:
             q = at(we)
-            _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, None)), q.sv)
+            _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, None)), q.sv, across(q))
     found = _ENGAGED[key]
     if found is None or w < found[0]:
         return None
-    return found[1] * (found[2] / p.sv) ** HOLD_DECAY
+    # (a counter that gives across is as much smaller both ways: the eye over a 45-degree bar)
+    return found[1] * (found[2] / p.sv) ** HOLD_DECAY * (across(p) / found[3]) ** 2
 
 
 def _squint_monotone(spec, sq, p, ot, ob, overrides, width):
@@ -1566,7 +1598,7 @@ def _opened(spec, p, ot, ob, width, nest=True):
         ratio = _heritage_ratio(spec, k)
         if op.max_ratio is not None:
             ratio = min(ratio, op.max_ratio)
-        target = ratio * p.sv
+        target = ratio * p.sv * (given_across(spec, p) if op.across else 1.0)
         if op.free not in g.defaults:                       # this drawing does not use it (a cell's upright form)
             continue
         measure = op.measure

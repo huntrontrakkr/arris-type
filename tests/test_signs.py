@@ -59,7 +59,7 @@ def test_the_number_signs_ends_are_longer_than_its_strokes(w):
     th, tv = bars[0][1] - bars[0][0], stems[0][1] - stems[0][0]
     assert tv <= p.sv + 0.5
     assert bars[0][0] - y0 >= 1.45 * th and y1 - bars[1][1] >= 1.45 * th
-    assert stems[0][0] - x0 >= 1.3 * tv and x1 - stems[1][1] >= 1.3 * tv
+    assert stems[0][0] - x0 >= 1.25 * tv and x1 - stems[1][1] >= 1.25 * tv      # (1.28 at Bold; 1.34 before the signs gave white)
     assert hy1 - hy0 >= th - 0.5 and hx1 - hx0 >= tv - 0.5
 
 

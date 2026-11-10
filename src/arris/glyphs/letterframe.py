@@ -13,14 +13,15 @@ Diagonals cannot be mapped point by point (their slope must stay 45 degrees
 or 2:1), so constructions place them by an anchored edge instead.
 
 Widths: a letter is its stems plus its white. Stems take the weight's stem;
-white widens a little at light weights and narrows a little at heavy ones,
-so counters change far less than strokes.
+white widens a little at light weights, and past the Regular it gives way
+to the stems as the white of other families' letters does (white_scale).
 """
 from __future__ import annotations
 
+import contextlib
 import math
 
-from ..params import SQRT2, white_floor
+from ..params import SQRT2, white_floor, white_own
 
 STEEP = (1 / math.sqrt(5), 2 / math.sqrt(5))
 
@@ -44,12 +45,34 @@ def share_width(wm: float):
     return lambda p: wm / 9 * (2 * p.sv + 5 * p.m * white_scale(p))
 
 
-def white_scale(p) -> float:
-    """How much a letter's white widens (light) or narrows (heavy)."""
-    r = p.sv / (2 * p.m)          # stem relative to the watch's two-module stem
-    if r >= 1:
-        return 1 - 0.25 * (r - 1)
-    return 1 + 0.4 * (1 - r)
+_ZONE = ['cap']     # whose white is being asked for (zone)
+
+
+@contextlib.contextmanager
+def zone(kind):
+    """While a glyph's body is measured or drawn: whether its white is a
+    lowercase letter's (kind 'lower') or not (white_scale)."""
+    _ZONE.append('lower' if kind == 'lower' else 'cap')
+    try:
+        yield
+    finally:
+        _ZONE.pop()
+
+
+def white_scale(p, lower: bool | None = None) -> float:
+    """How much a letter's white widens (light) or narrows (heavy), against
+    its master's modules.
+
+    To the Regular the white widens a little as the stems thin, by the
+    watch's own rule (params.white_own). Past it the white gives way to the
+    stems as the white of other families' letters does, a lowercase
+    letter's faster than a capital's, a figure's or a sign's
+    (instances.white_given: what is left of it, carried in the parameters,
+    so a set drawn smaller inside a glyph gives as its font does).
+    ``lower``: whose white; by default the glyph's being measured or drawn
+    (zone)."""
+    low = _ZONE[-1] == 'lower' if lower is None else lower
+    return white_own(p.sv / (2 * p.m)) * (p.white_low if low else p.white_cap)
 
 
 def plain_width(wm: float, stems: float):
@@ -58,7 +81,24 @@ def plain_width(wm: float, stems: float):
     return lambda p: stems * p.sv + (wm - 2 * stems) * p.m * white_scale(p)
 
 
+def own_width(wm: float, stems: float):
+    """The body plain_width gives where no white has given way: by the
+    watch's own rule at every weight (params.white_own). What a letter
+    that narrows by a share of its body is measured in (letter_width,
+    lower.y_width)."""
+    return lambda p: stems * p.sv + (wm - 2 * stems) * p.m * white_own(p.sv / (2 * p.m))
+
+
 ARM = 1.0     # what a one-stem letter's open side widens by, for each unit its stem grows past Regular
+
+
+def narrowed(p) -> float:
+    """What is left, past the Regular, of the body of the letter the others
+    stand beside: the n's among lowercase letters (eight modules, two
+    stems), the H's among the rest (nine). 1 to the Regular, in Arris Mono
+    and in the watch's own drawing (white_scale)."""
+    white = (4 if _ZONE[-1] == 'lower' else 5) * p.m
+    return (2 * p.sv + white * white_scale(p)) / (2 * p.sv + white * white_own(p.sv / (2 * p.m)))
 
 
 def letter_width(wm: float, stems: float, arm: float = ARM):
@@ -73,11 +113,19 @@ def letter_width(wm: float, stems: float, arm: float = ARM):
     0.80 of what it had at Regular; in hand-drawn faces every letter keeps
     its share, 0.93 to 1.08: tools/letter_shares.py). Their arms, thicker
     in a body no wider, were stubs (f t r), and the K's and k's diagonals
-    rooted in one block along the stem."""
+    rooted in one block along the stem.
+
+    Where the white gives way past the Regular (white_scale) a one-stem
+    letter gives the share of its body the n (the H) gives of its own
+    (narrowed), not the white of its modules: its open side, six modules of
+    the k's eight where the n has four between its stems, holds an arm or a
+    diagonal as thick as a stem, and with all six giving the k, the z, the K
+    and the Z lost a tenth of their share again (0.90 and 0.93)."""
     base = plain_width(wm, stems)
     if stems != 1 or not arm:
         return base
-    return lambda p: base(p) + arm * heft(p)
+    own = own_width(wm, stems)
+    return lambda p: (own(p) + arm * heft(p)) * narrowed(p)
 
 
 def least_white(p) -> float:

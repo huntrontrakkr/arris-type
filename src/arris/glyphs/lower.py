@@ -11,9 +11,9 @@ from __future__ import annotations
 import functools
 
 from ..draw import B, Opening, glyph
-from ..params import inner_leg, outer_leg
+from ..params import inner_leg, outer_leg, white_own
 from .figures import STACK_MIN, beak_depth, jog
-from .letterframe import ARM, Frame, k_arms, least_white, letter_width, share_width
+from .letterframe import ARM, Frame, heft, k_arms, least_white, letter_width, narrowed, own_width, share_width, white_scale, zone
 
 
 def low(char, wm, stems, width=None, openings=(), arm=ARM):
@@ -194,7 +194,43 @@ def e(g):
 NARROW = 6      # the f's and the t's frame, in modules (their masters' seven, less one)
 
 
-@low('f', NARROW, 1)
+def narrow_frame(g):
+    """The f's and the t's frame: the stem on its second module, the
+    crossbar from the body's left edge to its fifth.
+
+    Past the Regular, where the body gives (letterframe.narrowed), the
+    stem stands where it stood in the body the watch's own white gives,
+    and the arm, the foot and the crossbar's right end take all that is
+    given. The crossbar's stub, left of the stem, is no longer than its
+    end's cut and the fill of its crotch need to meet in one plane (f_leg):
+    a quarter of what the body gave came off it, and at ExtraBold the two
+    came apart in a kink, at Black the bar's right end and the hook's cut
+    ran together in a wedge."""
+    f = Frame(g, NARROW, 'asc')
+    p = g.p
+    own = own_width(NARROW, 1)(p) + ARM * heft(p)
+    if own > g.W and not p.mono:
+        f.xa = [(0, 0.0), (2, p.sv / 2 + (own - p.sv) / 4), (NARROW - 1, g.W - p.sv / 2), (NARROW, g.W)]
+    return f
+
+
+ARM_STUB = 2.6  # edge breaks: the least the f's and the t's crossbar runs past the stem on the arm's side
+
+
+def narrow_width(p):
+    """The f's and the t's body: a one-stem letter's (letter_width), giving
+    past the Regular no more than leaves the crossbar ARM_STUB breaks past
+    the stem on the arm's side (narrow_frame: the stub on the other side
+    gives nothing). Shorter, its end's cut ran into the cut of the hook
+    over it (the t's foot under it), a wedge where the bar's end had been:
+    from 850, and at Black the two letters keep 19 units of the 41 the
+    rule would take."""
+    w = letter_width(NARROW, 1)(p)
+    own = own_width(NARROW, 1)(p) + ARM * heft(p)
+    return min(own, max(w, (own - p.sv) / 4 + 1.5 * p.sv + ARM_STUB * p.c))
+
+
+@low('f', NARROW, 1, width=narrow_width)
 def f_(g):
     """A stem, its hook and a crossbar. The hook at every weight: the top
     as one cut with no arm, tried to SemiBold in 1.017's making with the
@@ -206,7 +242,7 @@ def f_(g):
         g.stroke(f.P(3.5, 0), B(*f.P(3.5, 12)), f.P(9, 12))
         g.stroke(f.P(0.5, 8), f.P(8, 8))
         return
-    f = Frame(g, NARROW, 'asc')
+    f = narrow_frame(g)
     g.stroke(f.P(2, 0), B(*f.P(2, 12), f_leg(g, f)), f.P(NARROW, 12))
     g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
 
@@ -380,11 +416,28 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     y_top = f.Y(top)
     full = f.Y(top) - f.Y(top - drop)
     x_full = xs + p.sv / 2 + k - p.c                        # (its room and its rise: as drawn a break into the stem,
-    room = x_right - p.leg - p.c - x_full                  # so it goes square where it always did) the diagonal ends clear of the corner
     upright = notch and not p.slant                        # the italic keeps its own branch (italic_forms)
-    if upright:
-        room = min(room, shoulder_room(g, xs, x_right, full))
-    rise = min(full, max(room, 0.0))
+
+    def risen(x_right):
+        room = x_right - p.leg - p.c - x_full              # so it goes square where it always did) the diagonal ends clear of the corner
+        if upright:
+            room = min(room, shoulder_room(g, xs, x_right, full))
+        return min(full, max(room, 0.0))
+    rise = risen(x_right)
+    if upright and not _measuring and rise - g.sh / 2 < p.c:
+        # The kink over the shoulder, where the counter has given white
+        # (letterframe.white_scale): with no step drawn under the shoulder its
+        # diagonal lies inside the arch, cut along the arch's underside, and
+        # takes no room from the counter; it rises as far as it did in the
+        # counter the watch's own white gives, short of a step that would be
+        # drawn (KINK_STEP) and clear of the corner. (The owner, 2026-11-10,
+        # of the narrowed n, square from 725 where it had kept its notch to
+        # ExtraBold: "preserving the kink ... at later weights to a small
+        # degree so that it matches what we had".)
+        lost = (x_right - xs - p.sv) * (white_own(p.sv / (2 * p.m)) / white_scale(p) - 1.0)
+        if lost > 0:
+            clear = (x_right - p.leg - p.c - xs) / (1 + (x_full - xs) / full)
+            rise = max(rise, min(risen(x_right + lost), g.sh / 2 + KINK_STEP * p.c, clear))
     plain = [(xs, y_top), B(x_right, y_top)], 'flat'
     if rise < 1e-3 * p.m:
         return plain
@@ -418,6 +471,7 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
 # 0.6, he chose one.
 SHOULDER_DROP = 2.0     # modules below the arch where an arch's shoulder leaves its stem
 STEP_KEPT = 1.1         # edge breaks: the flat a shoulder's cut keeps past its fill (over geom.JOG, so the outline keeps the step)
+KINK_STEP = 0.999       # edge breaks: the most a shoulder kept for its kink alone rises past the arch's underside (under one: no step is drawn)
 BOWL_DROP = 1.0         # the same for a bowl's join to its stem
 SHOULDER_NOTCH = 1.5    # the least notch over a shoulder, in edge breaks down the stem's side: a break deep where the stem
                         # stops at the arch (n), and where it goes on (h) a break of it is the corner's own fill
@@ -472,9 +526,18 @@ def i(g):
 
 
 J_FRAME = 5     # the j's frame, in modules: its hook three modules of white across, room for its two corners
+J_SLOT = 1.0    # edge breaks: the least white between the j's stem and the end of its hook
 
 
-@low('j', J_FRAME, 1)
+def j_width(p):
+    """The j's body: a one-stem letter's (letter_width), giving past the
+    Regular no more than leaves J_SLOT breaks of white between its stem
+    and the end of its hook: narrower, the fill of that crotch shrank to a
+    chord of 4 units at Black, a crumb on the stem's side."""
+    return max(letter_width(J_FRAME, 1)(p), 2 * p.sv + J_SLOT * p.c)
+
+
+@low('j', J_FRAME, 1, width=j_width)
 def j(g):
     if g.p.mono:
         f = Frame(g, 9, 'asc', top=g.p.asc + g.p.sv)
@@ -555,7 +618,10 @@ def l(g):
     g.clip = (0, 0, g.W, p.asc)
 
 
-@low('m', 12, 3, width=letter_width(13, 3))
+M_BODY = 13             # modules: the m's body (its drawing's master is twelve)
+
+
+@low('m', 12, 3, width=letter_width(M_BODY, 3))
 def m(g):
     # Its counters are seven eighths of the n's (the master's twelve modules
     # made them three quarters, and the m the darkest of the arch letters:
@@ -602,13 +668,33 @@ def q(g):
     bowl_join(g, f, stem_left=False, at_top=False)          # (the italic's too: it has no q of its own)
 
 
-# The r keeps its master's share of the line at every weight: eight ninths
-# of the H's width, the n's eight modules. With one stem and six modules of
-# white it had grown as the white of a letter does toward Thin while the n,
-# with two stems, lost them: a third wider than the n at Thin (1.37), a
-# tenth at Regular (1.09), its arm long for the letter (the owner,
-# 2026-11-10: trim it back at the lighter weights); now 1.08 and 1.02.
-@low('r', 8, 1, width=share_width(6))
+# The r's share of the line: six ninths of the H's width to the Regular,
+# growing to seven at Black. With one stem and six modules of white it had
+# grown as the white of a letter does toward Thin while the n, with two
+# stems, lost them: a third wider than the n at Thin, a tenth at Regular,
+# its arm long for the letter, and the owner had it trimmed twice, a module
+# each time, to six ninths (2026-11-10). At one share for every weight the
+# arm then shrank as the stem grew: under the shoulder's diagonal, as thick
+# as a stem, nothing of the arm itself was left at Black, a stub on the
+# stem's corner (the owner: "a little tiny clown nose"). Other families'
+# r grows against their n as they get bolder (its advance 0.65 of the n's
+# at Regular, 0.69 at Black, across 60 families: tools/width_survey.py),
+# and so does this one now: 0.75 and 0.80, an arm of a stem and a half past
+# the stem at Black for 1.1. (Shown it at eight ninths, seven, six growing
+# to eight, six growing to seven and six, the owner chose this; and shown
+# the arm with a flat kept under it by a shorter shoulder, past SemiBold
+# where the shoulder's underside runs to the body's edge: "It looks great
+# ... don't fix the R".)
+R_SHARE = (6.0, 7.0)    # ninths of the H's width: to the Regular, at Black
+R_BLACK = 85.0          # units the stem gains from Regular to Black
+
+
+def r_width(p):
+    a, b = R_SHARE
+    return share_width(a + (b - a) * min(1.0, heft(p) / R_BLACK))(p)
+
+
+@low('r', 8, 1, width=r_width)
 def r(g):
     f = Frame(g, 8, 'lower')
     p = g.p
@@ -655,7 +741,7 @@ def s(g):
              B(f.X(7), ym), B(f.X(7), y1, None, foot), B(f.X(1), y1), (f.X(1), beak(g, foot)))
 
 
-@low('t', NARROW, 1)
+@low('t', NARROW, 1, width=narrow_width)
 def t(g):
     """A stem, a crossbar and its foot, a module past the crossbar's end,
     at every weight (the f turned over: see f_)."""
@@ -665,7 +751,7 @@ def t(g):
         g.stroke(f.P(3, 11), B(*f.P(3, 1)), f.P(8.5, 1))
         g.stroke(f.P(0.5, 8), f.P(8, 8))
         return
-    f = Frame(g, NARROW, 'asc')
+    f = narrow_frame(g)
     g.defaults_used['stem'] = f.X(2)                        # (extra_latin._slot reads it for the ŧ's bar)
     g.stroke(f.P(2, 11), B(*f.P(2, 1)), f.P(NARROW, 1))
     g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
@@ -724,7 +810,8 @@ def gable_run(p, cell=None):
     (the owner, 2026-11-10: "where the crook occurs needs to be
     consistent"). ``cell``: the body in Arris Mono, where every letter is
     one width."""
-    return ((cell if p.mono and cell else _w_width(p)) / 2 - p.sv / 2) / 2
+    with zone('lower'):                                     # (a lowercase letter's white, whoever asks)
+        return ((cell if p.mono and cell else _w_width(p)) / 2 - p.sv / 2) / 2
 
 
 def v_width(p):
@@ -837,18 +924,27 @@ def y_width(p):
     long"). Read off the two drawings: the m's last arch along the
     x-height, the y in its master's width along the baseline; what the y's
     flat has over the m's comes off its width. The italic's and Arris
-    Mono's keep their master's."""
+    Mono's keep their master's.
+
+    Past the Regular, where the white gives way (letterframe.white_scale),
+    the two are read in the bodies the watch's own white gives them, and
+    the y then gives the share of its body the n gives (narrowed), as a
+    one-stem letter does. The top of a narrower m's arch is no shorter (its
+    shoulder and the notch between its arches take the loss: 231 units at
+    Black for 216), and a y measured on it gave nothing: a ninth wider
+    than the n at Black, where it had stood a fortieth wider."""
     if p.slant or p.mono or p.m < 2 or _measuring:          # (the watch's own drawing, in modules, too)
         return letter_width(8, 2)(p)
-    return _y_width(p)
+    with zone('lower'):
+        return _y_width(p) * narrowed(p)
 
 
 @functools.lru_cache(maxsize=None)
 def _y_width(p):
-    w0 = letter_width(8, 2)(p)
+    w0 = own_width(8, 2)(p)
     _measuring.append(p)
     try:
-        a, b = _line_runs('m', p, p.xh - 0.5)[-1]
+        a, b = _line_runs('m', p, p.xh - 0.5, width=own_width(M_BODY, 3)(p))[-1]
         foot = _line_runs('y', p, 0.5, width=w0)
     finally:
         _measuring.pop()
@@ -909,7 +1005,7 @@ def dotlessi(g):
     g.stroke(f.P(1, 0), f.P(1, 9))
 
 
-@glyph('uni0237', '\u0237', letter_width(J_FRAME, 1), kind='lower')
+@glyph('uni0237', '\u0237', j_width, kind='lower')
 def dotlessj(g):
     f = Frame(g, J_FRAME, 'lower')
     p = f.p

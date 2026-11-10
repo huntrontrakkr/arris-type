@@ -194,8 +194,15 @@ slope stays 45° or 2:1. They are placed by an anchored edge instead: the
 cap height one edge break in.
 
 **Widths.** A letter is its stems plus its white. Stems take the weight's
-stem; white widens a little at light weights and narrows a little at heavy
-ones, so counters change far less than strokes. Figures are spaced as
+stem; white widens a little at light weights, and past the Regular it
+gives way to the stems at the rate the white of other families' letters
+does (`instances.white_given`, measured with `tools/width_survey.py`): a
+lowercase letter's faster than a capital's, so at Black the n's counter is
+0.62 of the Regular's and the H's 0.71, and a line sets a twentieth
+longer, not a ninth. A letter with one stem, and the y, give the share of
+their body the n or the H gives; the f, the t and the j give no more than
+their crossbar and hook can spare. The watch's own drawing keeps its
+modules and Arris Mono its cell. Figures are spaced as
 the letters are, each by its own white; their tabular twins (`tnum`)
 share one cell within a weight, and it widens with the weight.
 

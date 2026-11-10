@@ -22,7 +22,7 @@ def _bars(name, p):
     g = draw(name, p)
     ink = rings_to_shapely(g.rings())
     x0, y0, x1, y1 = ink.bounds
-    x = x0 + 0.42 * (x1 - x0)
+    x = x0 + 0.46 * (x1 - x0)                      # (clear of the counter's cut corners, in the narrowed Black too)
     cut = ink.intersection(LineString([(x, y0 - 10), (x, y1 + 10)]))
     return sorted((s.bounds[1], s.length) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
 
@@ -67,14 +67,29 @@ def test_the_y_stands_on_the_gs_hook(w):
 def test_the_ys_foot_is_as_long_as_the_top_of_the_ms_arch(w):
     """The flat between its arm and its join, along the baseline, against
     the flat on top of the m's last arch, along the x-height (the owner:
-    "measuring the top of the m and making the flat part that long")."""
+    "measuring the top of the m and making the flat part that long"). Past
+    the Regular, where the letters give white, the two are read in the
+    bodies the watch's own white gives them, and the y then gives the share
+    of its body the n gives (lower.y_width): narrowed with the n, not
+    measured on a narrowed m, whose top is no shorter."""
+    from arris.draw import REGISTRY
+    from arris.glyphs import lower
+    from arris.glyphs.letterframe import narrowed, own_width, zone
     p = params(w)
+    with zone('lower'):
+        given = narrowed(p)
+    assert (given == 1.0) == (w <= 400)
+    body = REGISTRY['y'].width(p) / given
 
-    def runs(name, y):
-        ink = rings_to_shapely(draw(name, p).rings())
+    def runs(name, y, width):
+        ink = rings_to_shapely(draw(name, p, width=width).rings())
         cut = ink.intersection(LineString([(-1e4, y), (1e4, y)]))
         return sorted((s.bounds[0], s.bounds[2]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
-    m, foot = runs('m', p.xh - 0.5)[-1], runs('y', 0.5)[0]
+    lower._measuring.append(p)                          # (as y_width reads them: bodies that have given nothing)
+    try:
+        m, foot = runs('m', p.xh - 0.5, own_width(lower.M_BODY, 3)(p))[-1], runs('y', 0.5, body)[0]
+    finally:
+        lower._measuring.pop()
     assert foot[1] - foot[0] == pytest.approx(m[1] - m[0], abs=1.5)
 
 

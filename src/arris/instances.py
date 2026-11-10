@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .params import SQRT2, Params, descender_line
+from .params import SQRT2, Params, descender_line, white_own
 
 # Vertical stem (font units, 1000 UPM, cap height 720) at the named weights.
 # Stem / cap: Regular 0.125, SemiBold 0.167 (the watch's figures), Bold 0.194,
@@ -88,7 +88,40 @@ def stem(wght: float) -> float:
     return STEMS[ks[-1]]
 
 
-FIG_GROWTH = 1.5  # figure width gained per unit of stem
+FIG_GROWTH = 1.5  # figure width gained per unit of stem, in the watch's own drawing (and half that below its weight)
+# Past the Regular a figure's body gains this much for each unit its stem gains. At the watch's rate, a
+# unit and a half past its own weight, the zero's counter was 19% narrower at Black than at Regular and
+# the figures' advance 10% wider, where 60 families measured at one boldness (tools/width_survey.py)
+# narrow the zero's counter 35% and widen the advance 4.7% (letterframe.white_scale: the letters' white).
+# At three quarters the zero's counter is 31% narrower: between theirs and the H's 29%, since Arris's
+# figures are as wide as its capitals and theirs are narrower; at 0.65, the families' own rate, the
+# figures fell to 0.97 of their share of the H (theirs keep 0.99).
+FIG_GIVEN = 0.75
+# Past the Regular a letter's white gives way to its stems at the rate the white of other families'
+# letters does. Across 60 grotesque, geometric and squared families read at one x-height and one
+# boldness (tools/width_survey.py), the n's counter is 38% narrower at Arris Black's boldness than at its
+# Regular's, the H's 29%, and a line of lowercase 3.9% longer. These are those two rates, in the white
+# of a module a letter loses for each watch stem (two modules) its stem gains past the Regular's: a
+# lowercase letter's white gives faster than a capital's, a figure's or a sign's.
+#
+# Until 1.017 the white gave a quarter of a module for each watch stem past the watch's own weight and
+# less before it: the n's counter was 20% narrower at Black than at Regular, almost every unit a stem
+# gained went outward, and a line of lowercase grew 6% to Bold and 11% to Black where the families grow
+# 2.4% and 3.9% (the owner, 2026-11-10: "this gets far too bold widthwise"). Arris Black set as long as a
+# geometric face with the ink of other families' ExtraBold.
+REGULAR_R = 0.75    # the Regular's stem, in watch stems
+LOWER_GIVEN = 0.59
+CAP_GIVEN = 0.45
+
+
+def white_given(sv: float, m: float, rate: float, optical: float = 1.0) -> float:
+    """What is left of a letter's white past the Regular, as a share of the
+    white the watch's own rule gives that stem (params.white_own): 1 to the
+    Regular. The watch's own drawing keeps its modules (``optical`` 0)."""
+    r = sv / (2 * m)
+    if r <= REGULAR_R or not optical:
+        return 1.0
+    return 1.0 + ((white_own(REGULAR_R) - rate * (r - REGULAR_R)) / white_own(r) - 1.0) * optical
 GRAD_SHARE = 0.002  # grade: GRAD 100 thickens strokes by a fifth, -100 thins them by a fifth
 # A positive grade fades out from SemiBold to Black: at Black it adds nothing,
 # so the heaviest stroke the font draws is Black's own. Past Black's stroke the
@@ -148,7 +181,7 @@ def params(wght: float = 600, grad: float = 0, optics: Optics = OPTICS, base: Pa
                         d_light=mix(a.d_light, b.d_light), d_heavy=mix(a.d_heavy, b.d_heavy),
                         s_light=mix(a.s_light, b.s_light), s_heavy=mix(a.s_heavy, b.s_heavy),
                         c_ratio=mix(a.c_ratio, b.c_ratio), leg=mix(a.leg, b.leg))
-    p = _params(wght, optics, base)
+    p = _params(wght, optics, base, optical)
     if grad:
         k = grade_k(wght, grad)
         p = p.with_(sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, grade_k=k, grad=grad,
@@ -171,15 +204,21 @@ def low_share(sv: float) -> float:
     return 1.0 - (1.0 - LOW_HEAVY) * t
 
 
-def _params(wght, optics, base):
+def _params(wght, optics, base, optical=1.0):
     sv = stem(wght)
     # Figures stay tabular within a weight but widen with it, so heavier
     # strokes do not eat the counters whole; the watch weight keeps 540.
     d = stem(wght) - 120.0
-    fig_w = base.fig_w + (FIG_GROWTH if d > 0 else FIG_GROWTH / 2) * d
+    fig_w = fig_own = base.fig_w + (FIG_GROWTH if d > 0 else FIG_GROWTH / 2) * d
+    if optical and sv > STEMS[400]:
+        # (past the Regular, as the measured families' figures widen: FIG_GIVEN; the watch's own drawing its own)
+        regular = base.fig_w + FIG_GROWTH / 2 * (STEMS[400] - 120.0)
+        fig_w += (regular + FIG_GIVEN * (sv - STEMS[400]) - fig_w) * optical
     sh = sv * optics.h_ratio(sv)
     low = low_share(sv)
-    return base.with_(fig_w=fig_w, fig_adv=fig_w + (base.fig_adv - base.fig_w), sv=sv, sh=sh, sd=sv * optics.d_ratio(sv),
+    return base.with_(fig_w=fig_w, fig_adv=fig_w + (base.fig_adv - base.fig_w), fig_own=fig_own,
+                      white_low=white_given(sv, base.m, LOWER_GIVEN, optical),
+                      white_cap=white_given(sv, base.m, CAP_GIVEN, optical), sv=sv, sh=sh, sd=sv * optics.d_ratio(sv),
                       ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=optics.leg, low=low,
                       desc=descender_line(base, sv, sh))
 

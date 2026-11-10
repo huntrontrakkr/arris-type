@@ -241,9 +241,26 @@ def P(g):
 
 
 Q_TAIL = 0.7     # the Q's tail at Black, as a share of the diagonal's own
+Q_OPEN = 0.85    # stems: the radius of the largest circle the Q's counter keeps over its tail
+Q_BOWL = 0.98    # or this share of half the bowl's own counter, where that is less
 
 
-@cap('Q', 10, 2, openings=[Opening(lambda g: g.counter_size(), 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=0.85)])
+def _q_open(g):
+    """How open the tail leaves the Q's counter: the largest circle in it,
+    in the measure its opening is held to (Q_OPEN stems). Where the bowl's
+    own counter is narrower than that circle, no tail can leave it: the
+    circle is held to the counter's width instead (Q_BOWL of it), by
+    counting what the bowl cannot give as given. Past the Regular the white
+    gives way to the stems (letterframe.white_scale), and at Black the
+    counter is 1.6 stems across for a circle of 1.7: the tail went to its
+    limit, a stub on the bowl's floor, the counter read worse under the
+    squint for it (0.33 for 0.54), and every horizontal of the letter
+    thinned to 0.7 after it."""
+    p = g.p
+    return g.counter_size() + max(0.0, Q_OPEN * p.sv - Q_BOWL * (g.W - 2 * p.sv) / 2)
+
+
+@cap('Q', 10, 2, openings=[Opening(_q_open, 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=Q_OPEN)])
 def Q(g):
     f = Frame(g, 10)
     p = f.p

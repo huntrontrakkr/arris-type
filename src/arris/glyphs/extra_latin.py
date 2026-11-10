@@ -13,7 +13,7 @@ from ..geom import rings_to_shapely
 from ..params import SQRT2
 from .caps import big
 from .figures import STACK_MIN, beak_depth
-from .lower import NARROW, shoulder
+from .lower import NARROW, narrow_frame, shoulder
 from .letterframe import Frame, k_arms, letter_width
 
 
@@ -323,7 +323,7 @@ def kgreenlandic(g):
 
 @glyph('longs', 'ſ', letter_width(NARROW, 1), kind='lower')
 def longs(g):
-    f = Frame(g, NARROW, 'asc')                             # the f without its bar (lower.f_)
+    f = narrow_frame(g)                                     # the f without its bar (lower.f_)
     g.stroke(f.P(2, 0), B(*f.P(2, 12)), f.P(NARROW, 12))
 
 

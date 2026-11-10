@@ -46,6 +46,9 @@ class Params:
     c: float = 30.0            # edge break on every right-angled corner
     fig_w: float = 540.0       # tabular figure body (9 modules)
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
+    fig_own: float = 0.0       # the figure body at the watch's own rate (instances.FIG_GROWTH; 0: fig_w): Arris Mono's
+    white_low: float = 1.0     # what is left of a lowercase letter's white past the Regular (instances.white_given)
+    white_cap: float = 1.0     # of a capital's, a figure's, a sign's
     mono: bool = False         # monospaced: every glyph on one cell (MONO_CELL), whatever the weight
     narrow: bool = False       # Arris Mono Narrow: the Mono's cell, its letters in MONO_NARROW modules
     wide: float = 1.0          # Mono Narrow: Arris Mono's body at this weight over the narrow one, a wide letter's (draw.body_width)
@@ -78,7 +81,10 @@ class Params:
         p = replace(self, **kw, raw=None)
         if kw.get('mono') and not self.mono:                # turning monospaced: Mono's one cell (MONO_CELL)
             lo, hi = MONO_BODY
-            p = replace(p, fig_adv=MONO_CELL * p.m, fig_w=min(max(p.fig_w, lo * p.m), hi * p.m))
+            # (Mono's letters fill one cell at every weight: their white is the cell's, and nothing of the
+            # proportional cut's narrowing past the Regular reaches them: white_low, white_cap, fig_own)
+            p = replace(p, fig_adv=MONO_CELL * p.m, fig_w=min(max(p.fig_own or p.fig_w, lo * p.m), hi * p.m),
+                        white_low=1.0, white_cap=1.0)
         if p.mono and p.narrow and not (self.mono and self.narrow):   # turning narrow: the narrow body,
             p = replace(p, wide=p.fig_w / (MONO_NARROW * p.m), fig_w=MONO_NARROW * p.m)   # the Mono's for the wide letters
         if p.floor and min(before.values()) < p.floor:
@@ -142,6 +148,14 @@ class Params:
             return self.with_(grad=0.0) if self.grad else self
         sv, sh, sd, ss = self.raw if self.raw else (self.sv, self.sh, self.sd, self.ss)
         return self.with_(sv=sv / k, sh=sh / k, sd=sd / k, ss=ss / k, c=self.c / k, grade_k=1.0, grad=0.0)
+
+
+def white_own(r: float) -> float:
+    """A letter's white against its master's modules at a stem of r watch
+    stems, by the watch's own rule: a little wider toward Thin, a quarter
+    of a module narrower for each watch stem past the watch's weight
+    (letterframe.white_scale)."""
+    return 1 - 0.25 * (r - 1) if r >= 1 else 1 + 0.4 * (1 - r)
 
 
 def white_floor(m: float, sv: float) -> float:

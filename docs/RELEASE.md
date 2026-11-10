@@ -51,9 +51,61 @@ before a commercial distribution if wanted.
 
 ## 1.017
 
-How the letters stand together. Five causes, each measured, and five
+How the letters stand together. Six causes, each measured, and five
 letters redrawn.
 
+- Past the Regular the letters give white to their stems, as the letters
+  of other families do. Arris got bolder outward: almost every unit a stem
+  gained went onto the letter's width. Read at one boldness and one
+  x-height against 60 grotesque, geometric and squared families
+  (`tools/width_survey.py`), its n's counter was 20% narrower at Black
+  than at Regular where theirs is 38%, and a line of lowercase 6% longer
+  at Bold and 11% at Black for their 2.4% and 3.9% (the owner: "this gets
+  far too bold widthwise"). At Regular it sets as they do (a letter of a
+  line 0.92 of the x-height, their median 0.92), so nothing changes there
+  or below. Past it a lowercase letter's white now gives 0.59 of a module
+  for each watch stem its stem gains, a capital's, a figure's and a
+  sign's 0.45 (`instances.white_given`, `letterframe.white_scale`): at
+  Black the n's counter is 38% narrower and the H's 29%, a line of
+  lowercase 4.5% longer and at Bold 2.5%, a line of capitals 3.7% and
+  2.2% (theirs 4.4% and 2.5%). Tabular figures widen three
+  quarters of a unit for each unit of stem (a unit and a half before:
+  `instances.FIG_GIVEN`; the zero's counter 31% narrower at Black for
+  19%). The italic gives as the upright does. The watch's own drawing
+  (WTCH 100) keeps its modules and Arris Mono its cell: neither changes.
+
+  What a narrower body could not hold as it was is kept by rule. A
+  one-stem letter (E F K L T Z, k z) gives the share of its body the H or
+  the n gives of its own, not the white of its modules
+  (`letterframe.narrowed`): its open side holds an arm or a diagonal, and
+  with all of it giving the k and the z stood at 0.90 of their share at
+  Black. The y, whose foot is measured on the m's arch, is measured in the
+  bodies before they gave and gives as the n does. The f and the t keep
+  their stem where it stood and give on the arm's side only, and no more
+  than leaves the crossbar 2.6 breaks past the stem there
+  (`lower.narrow_frame`, `lower.narrow_width`): narrower, the crossbar's
+  ends came to a kink at ExtraBold and a wedge at Black. The j keeps a
+  break of white in its hook. The kink where an arch or a bowl leaves its
+  stem is what it was, to ExtraBold (the owner: "preserving the kink ...
+  at later weights to a small degree so that it matches what we had"):
+  where no step is drawn under a shoulder its diagonal lies inside the
+  arch and needs none of the counter's room (`lower.shoulder`), and
+  without that the n was square from 725. The Q's tail is held to the
+  bowl's own width where that is less than its share of the stem, and the
+  cursive e's eye to as much less as its counter has given
+  (`Opening.across`): held to whites the narrower letters cannot have,
+  the Q's bars thinned to 0.7 of the O's at Black and the e's top and bar
+  to 0.70 (now none, and 0.82; the e's were 0.92).
+- The r grows against the n as it gets bolder. At six ninths of the H's
+  width for every weight (below) its arm shrank as the stem grew, and
+  from Bold nothing of it was left but the end of the shoulder's diagonal
+  on the stem's corner (the owner: "a little tiny clown nose"). Other
+  families' r gains on their n with weight: its advance 0.65 of the n's
+  at Regular and 0.69 at Black across the 60. Shown the r at eight
+  ninths, seven, six growing to eight, six growing to seven and six, the
+  owner chose six to the Regular growing to seven at Black
+  (`lower.r_width`): its advance 0.75 of the n's at Regular, 0.78 at Bold
+  and 0.80 at Black.
 - Inside corners stop growing at the Regular. One chord cut every corner
   that sticks out and filled every corner that points in, a quarter of
   the stem long. A cut takes ink off the outside of a letter; a fill puts
@@ -142,9 +194,9 @@ letters redrawn.
   stubs, and the K's and k's diagonals rooted in one block along the stem.
   Past Regular such a letter now widens by what its stem has grown
   (`letterframe.letter_width`); Regular and lighter are as they were. The
-  r keeps eight ninths of the H's width at every weight: it had been a
-  third wider than the n at Thin and a tenth at Regular, its arm long for
-  the letter.
+  r takes a share of the H's width instead: it had been a third wider
+  than the n at Thin and a tenth at Regular, its arm long for the letter
+  (six ninths to the Regular, below, growing to seven at Black, above).
 - Open sides are spaced as hand-spaced faces space them. The spacing
   counts the white beside a letter to a depth, and counted it a fifth of
   the zone deep: twice what ten hand-spaced sans faces count (fitted to
@@ -267,9 +319,9 @@ letters redrawn.
   is a tenth narrower (1.46 of the n to 1.33; 1.24 to 1.42), the M eleven
   modules for twelve (1.29 of the H to 1.19; 1.15 to 1.31), the W thirteen
   for fourteen (1.37 to 1.28), the T the E's eight for ten (0.98 to 0.79;
-  0.79 to 0.84), and the r two thirds of the H for eight ninths (its
-  advance was 0.94 of the n's, where every one of those faces has it under
-  0.72; it keeps its notch and its arm). In Arris Mono every letter fills
+  0.79 to 0.84), and the r two thirds of the H for eight ninths, to the
+  Regular (its advance was 0.94 of the n's, where every one of those
+  faces has it under 0.72; it keeps its notch and its arm). In Arris Mono every letter fills
   the cell as before.
 - The j is narrower. Against the n it stood wider than any of those six
   faces sets it, its advance 0.65 of the n's (theirs 0.41 to 0.49): its
