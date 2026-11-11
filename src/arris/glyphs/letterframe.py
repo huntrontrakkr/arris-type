@@ -51,8 +51,10 @@ _ZONE = ['cap']     # whose white is being asked for (zone)
 @contextlib.contextmanager
 def zone(kind):
     """While a glyph's body is measured or drawn: whether its white is a
-    lowercase letter's (kind 'lower') or not (white_scale)."""
-    _ZONE.append('lower' if kind == 'lower' else 'cap')
+    lowercase letter's ('lower'), the watch's own, which gives nothing
+    ('own': draw.white_of), or a capital's, a figure's, a sign's (anything
+    else) (white_scale)."""
+    _ZONE.append(kind if kind in ('lower', 'own') else 'cap')
     try:
         yield
     finally:
@@ -71,6 +73,8 @@ def white_scale(p, lower: bool | None = None) -> float:
     so a set drawn smaller inside a glyph gives as its font does).
     ``lower``: whose white; by default the glyph's being measured or drawn
     (zone)."""
+    if lower is None and _ZONE[-1] == 'own':
+        return white_own(p.sv / (2 * p.m))
     low = _ZONE[-1] == 'lower' if lower is None else lower
     return white_own(p.sv / (2 * p.m)) * (p.white_low if low else p.white_cap)
 
@@ -90,6 +94,17 @@ def own_width(wm: float, stems: float):
 
 
 ARM = 1.0     # what a one-stem letter's open side widens by, for each unit its stem grows past Regular
+
+
+def ungiving(wm: float, stems: float, arm: float = ARM):
+    """A letter's body that gives no white past the Regular: letter_width
+    as it was before the letters gave. For a letter whose drawing has no
+    counter to take it from: the florin's crossbar and hook (a wedge at
+    Black in the narrower body, as the f's were), the ϰ's two curls."""
+    own = own_width(wm, stems)
+    if stems != 1 or not arm:
+        return own
+    return lambda p: own(p) + arm * heft(p)
 
 
 def narrowed(p) -> float:

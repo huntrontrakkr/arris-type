@@ -90,6 +90,7 @@ class Spec:
     cell: bool = False                 # a terminal cell's drawing: stays upright in the italic (font.place)
     squint: tuple = ()                 # Squint rules
     base: str | None = None            # the letter it is made from (ñ's n, the Bulgarian п's n): its body in Mono Narrow
+    white: str = 'cap'                 # whose white its body and drawing measure (letterframe.zone, white_of)
 
 
 def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False, cell=False, squint=(),
@@ -101,8 +102,9 @@ def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=Fal
             # a symbol keeps to its cell in the monospaced cut (symkit.mono_fitted)
             from .glyphs.symkit import mono_fitted
             f, w = mono_fitted(name, fn, w, kind)
-        REGISTRY[name] = Spec(name, ord(char) if char else None, f, _zoned(w, kind), kind, tuple(openings), solid, cell,
-                              tuple(squint), base)
+        white = white_of(fn, kind)
+        REGISTRY[name] = Spec(name, ord(char) if char else None, f, _zoned(w, white), kind, tuple(openings), solid, cell,
+                              tuple(squint), base, white)
         return fn
     return deco
 
@@ -118,17 +120,36 @@ def given_across(spec, p) -> float:
     it, where they had given 0.92."""
     from .glyphs.letterframe import white_scale, zone
     from .params import white_own
-    with zone(spec.kind):
+    with zone(spec.white):
         return white_scale(p) / white_own(p.sv / (2 * p.m))
 
 
-def _zoned(width, kind):
-    """A glyph's body width, measured as its own kind's: a lowercase
-    letter's white gives way to its stems faster than a capital's
-    (letterframe.white_scale, zone)."""
+OWN_WHITE = ('operators', 'arrows', 'technical')    # glyph modules whose signs keep the watch's own white (white_of)
+
+
+def white_of(fn, kind) -> str:
+    """Whose white a glyph's body and drawing measure (letterframe.zone):
+    a lowercase letter's ('lower'), which gives way to the stems fastest
+    past the Regular; a capital's, a figure's or a sign's ('cap'); or the
+    watch's own ('own'), for the mathematical operators, the arrows and
+    the technical signs: figures of fixed geometry, bars a set white apart
+    and strokes at 45 degrees, that have no counter to give. Narrowed with
+    the letters, ⊦ lost its stem to a wedge at Black, ⊫ its two stems to a
+    slab, and the feet of ≎ ran out past its bars in points."""
+    if kind == 'lower':
+        return 'lower'
+    if (getattr(fn, '__module__', '') or '').rsplit('.', 1)[-1] in OWN_WHITE:
+        return 'own'
+    return 'cap'
+
+
+def _zoned(width, white):
+    """A glyph's body width, measured in its own white: a lowercase
+    letter's gives way to its stems faster than a capital's
+    (letterframe.white_scale, zone; white_of)."""
     def measured(p):
         from .glyphs.letterframe import zone
-        with zone(kind):
+        with zone(white):
             return width(p)
     return measured
 
@@ -632,7 +653,7 @@ def _drawn(spec, g):
     from .glyphs.letterframe import zone
     _DEPTH[0] += 1
     try:
-        with zone(spec.kind):                               # (what the drawing measures in white is its own kind's)
+        with zone(spec.white):                              # (what the drawing measures in white is its own kind's)
             spec.fn(g)
     finally:
         _DEPTH[0] -= 1

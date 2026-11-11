@@ -73,6 +73,12 @@ letters redrawn.
   `instances.FIG_GIVEN`; the zero's counter 31% narrower at Black for
   19%). The italic gives as the upright does. The watch's own drawing
   (WTCH 100) keeps its modules and Arris Mono its cell: neither changes.
+  The mathematical operators, the arrows and the technical signs keep
+  their widths (`draw.white_of`): bars a set white apart and strokes at
+  45 degrees have no counter to give, and narrowed with the letters ⊦ lost
+  its stem to a wedge at Black, ⊫ its two stems to a slab, and the feet of
+  ≎ ran out past its bars. Punctuation and currency give as the capitals
+  do.
 
   What a narrower body could not hold as it was is kept by rule. A
   one-stem letter (E F K L T Z, k z) gives the share of its body the H or
@@ -80,12 +86,10 @@ letters redrawn.
   (`letterframe.narrowed`): its open side holds an arm or a diagonal, and
   with all of it giving the k and the z stood at 0.90 of their share at
   Black. The y, whose foot is measured on the m's arch, is measured in the
-  bodies before they gave and gives as the n does. The f and the t keep
-  their stem where it stood and give on the arm's side only, and no more
-  than leaves the crossbar 2.6 breaks past the stem there
-  (`lower.narrow_frame`, `lower.narrow_width`): narrower, the crossbar's
-  ends came to a kink at ExtraBold and a wedge at Black. The j keeps a
-  break of white in its hook. The kink where an arch or a bowl leaves its
+  bodies before they gave and gives as the n does. The f and the t give
+  on the arm's side only, and no more than leaves the arm 1.1 stems past
+  the stem (`lower.narrow_frame`, `lower.narrow_width`; their crossing is
+  the next point). The j keeps a break of white in its hook. The kink where an arch or a bowl leaves its
   stem is what it was, to ExtraBold (the owner: "preserving the kink ...
   at later weights to a small degree so that it matches what we had"):
   where no step is drawn under a shoulder its diagonal lies inside the
@@ -95,7 +99,48 @@ letters redrawn.
   cursive e's eye to as much less as its counter has given
   (`Opening.across`): held to whites the narrower letters cannot have,
   the Q's bars thinned to 0.7 of the O's at Black and the e's top and bar
-  to 0.70 (now none, and 0.82; the e's were 0.92).
+  to 0.70 (now none, and 0.82; the e's were 0.92). The florin and the ϰ
+  keep their bodies (`letterframe.ungiving`): the florin's crossbar and
+  hook ran into a wedge at Black as the f's did, and the ϰ lost its curls.
+  Every glyph was compared with its drawing before the narrowing, at
+  eighteen places of the family (the Regular and lighter, Arris Mono and
+  the watch's own drawing unchanged, to the last point).
+- The f and the t keep the crossing they have at 650, to Black. The
+  crossbar's stub left of the stem is a quarter of the letter's white,
+  about 70 units at every weight, while the cuts on it double from Regular
+  to Black: at SemiBold its end still has a face between its two cuts, at
+  Bold they met in a point, and from ExtraBold the stub was one plane with
+  the cut of the t's top and the f's hook, a wedge on the stem's side (the
+  owner: "it just turns into this gnarled, ugly thing when it comes to the
+  way that everything joins ... especially for smaller ones, it just looks
+  like a big old knot"). And the crossbar ended half a stem short of the
+  arm, 45 units at Regular and 88 at Black ("they don't keep track of the
+  same length"). Shown the stub going into the stem between SemiBold and
+  Bold with the crossbar coming out to the arm's end as it went, the owner
+  chose the letter half way: "Look at how it is currently at weight 650
+  and make it the exact same shape throughout all the way to 900. It needs
+  to not move one bit. It needs to be exactly the same for both the
+  stems." To SemiBold the two letters are as they were. From 650 the stub
+  is a break and a seventeenth deep (two legs of its crotch's fill, at
+  Black), a face between two cuts that take its whole depth, the same
+  points on the f and on the t, at every weight (`lower.stub`,
+  `lower.narrow_stub`). The crossbar ends level with the arm and the foot
+  from 650 (`lower.bar_short`): at 650 it stood an edge break short of
+  them, and held so to Black it read as short ("they don't seem to be
+  sticking out in level with either the foot or the ascender,
+  respectively, with the cross"). The stem stands that much nearer the body's left
+  edge and the body is as much narrower: 356 units at 650 for 381 at
+  SemiBold, 413 at Black. The rule reads the font's weight past its
+  Regular (`Params.past`), so the watch's own drawing keeps its f and t.
+- The l lands as the k's leg does. Its cut ended upright, an edge break
+  of face over its own break; the k's leg, at the same angle and the same
+  thickness, ends in a flat on the baseline and one break up to a point
+  (the owner: "the L kind of descends and it lands ... the K has descender
+  at the same angle, but the way that it hits it is kind of different, the
+  way that the chamfering looks. The L should follow the form that K
+  sets"). The l's end is now the leg's at every weight, Thin to Black: the
+  same flat on the line, to a tenth of a unit, and the same point. Its
+  body is what it was; the cut stands a break lower on the stem.
 - The r grows against the n as it gets bolder. At six ninths of the H's
   width for every weight (below) its arm shrank as the stem grew, and
   from Bold nothing of it was left but the end of the shoulder's diagonal
@@ -105,7 +150,8 @@ letters redrawn.
   ninths, seven, six growing to eight, six growing to seven and six, the
   owner chose six to the Regular growing to seven at Black
   (`lower.r_width`): its advance 0.75 of the n's at Regular, 0.78 at Bold
-  and 0.80 at Black.
+  and 0.80 at Black. It grows by the font's weight past its Regular
+  (`Params.past`): the watch's own drawing keeps six ninths.
 - Inside corners stop growing at the Regular. One chord cut every corner
   that sticks out and filled every corner that points in, a quarter of
   the stem long. A cut takes ink off the outside of a letter; a fill puts
@@ -329,8 +375,9 @@ letters redrawn.
   corners need (0.54). Arris Mono's and the italic's are as they were.
 - The l ends in one cut. Its foot was a corner and three modules of
   tail. The tail is now nothing: the stem turns through the corner's one
-  cut, runs on to the baseline and ends upright, two edge breaks tall
-  (the owner: "only one single notch", no flat foot). It is its stem and
+  cut and runs on to the baseline (the owner: "only one single notch", no
+  flat foot; it ended upright there, two edge breaks tall, until it took
+  the k's leg's end, above). It is its stem and
   its cut at every weight (0.46 to 0.49 of the n's advance; it was 0.65,
   in those faces 0.40 to 0.51).
 - The f and the t are a module narrower, six for their masters' seven:

@@ -257,7 +257,9 @@ def _q_open(g):
     squint for it (0.33 for 0.54), and every horizontal of the letter
     thinned to 0.7 after it."""
     p = g.p
-    return g.counter_size() + max(0.0, Q_OPEN * p.sv - Q_BOWL * (g.W - 2 * p.sv) / 2)
+    half = Q_BOWL * (g.W - 2 * p.sv) / 2
+    # (no more than the bowl has given: Arris Mono's Q, narrow for its cell, keeps its tail as it was)
+    return g.counter_size() + min(max(0.0, Q_OPEN * p.sv - half), half * (1 / p.white_cap - 1))
 
 
 @cap('Q', 10, 2, openings=[Opening(_q_open, 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=Q_OPEN)])

@@ -38,7 +38,11 @@ def test_a_one_stem_capital_keeps_its_share_of_the_line(ch):
 
 @pytest.mark.parametrize('ch', list('fktz'))
 def test_a_one_stem_lowercase_letter_keeps_its_share(ch):
-    share = lambda w: _width(ch, params(w)) / _width('n', params(w))
+    """(The f and the t from their stem's left side: half of the crossbar's
+    stub beyond it goes into the stem by 650, lower.stub.)"""
+    from arris.glyphs.lower import stub as stub_
+    stub = lambda p: stub_(p) if ch in 'ft' else 0.0
+    share = lambda w: (_width(ch, params(w)) - stub(params(w))) / _width('n', params(w))
     assert share(900) / share(400) >= 0.9, ch
 
 
@@ -405,10 +409,12 @@ LATIN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 
 def test_the_l_ends_in_one_cut_at_every_weight():
     """One outline from Thin to Black: the stem turns through the corner a
-    foot would take, runs on to the baseline and ends upright, an edge
-    break tall over its own break, on half a stem of flat (the owner: "only
-    one single notch", and "the l stays without a hook"; the f and the t
-    keep theirs)."""
+    foot would take and runs on to the baseline, where it lands as the k's
+    leg does: a flat on the line as long as the leg's, and one break up to
+    a point where the cut's upper edge leaves (the owner: "only one single
+    notch", and "the l stays without a hook"; and of its end, which stood
+    upright a break tall over its own break: "The L should follow the form
+    that K sets")."""
     import math
     counts = set()
     for w in range(100, 901, 50):
@@ -418,20 +424,26 @@ def test_the_l_ends_in_one_cut_at_every_weight():
         short = min(math.dist(a, b) for a, b in zip(ring, ring[1:] + ring[:1]) if math.dist(a, b) > 1e-6)
         assert short >= 0.95 * p.c, w
         x1 = max(x for x, _ in ring)
-        face = sorted(y for x, y in ring if x > x1 - 0.5)
-        toe = min(3 * p.c, p.sh * p.low)                                    # the cut's own thickness (lower._toe)
-        assert face[0] == pytest.approx(p.c, abs=1.0) and face[-1] == pytest.approx(toe - p.c, abs=1.5), w
+        tip = [y for x, y in ring if x > x1 - 0.5]
+        assert len(tip) == 1 and tip[0] == pytest.approx(p.c, abs=0.5), w      # a point, a break over the line: no face
         on_line = [x for x, y in ring if abs(y) < 0.5]
-        assert max(on_line) - min(on_line) <= 0.7 * p.sv, w                # no foot
+        leg = [x for x, y in max(draw('k', p).rings(), key=len) if abs(y) < 0.5 and x > p.sv + 1]
+        assert max(on_line) - min(on_line) == pytest.approx(max(leg) - min(leg), abs=0.5), w   # the k's leg's flat
+        assert max(on_line) - min(on_line) < p.sv, w                        # no foot
     assert len(counts) == 1
 
 
 @pytest.mark.parametrize('w', [100, 300, 400, 500, 600, 700, 800, 900])
 def test_f_and_t_keep_their_hooks_at_every_weight(w):
-    """The corner and its arm, a module past the crossbar's end, the t
-    the f turned over (the owner, 2026-11-10: "keep the hooks for the f
-    and the t, and the l stays without a hook"; one cut with no arm, the
-    l's end, was tried on them to SemiBold)."""
+    """The corner and its arm, the t the f turned over (the owner,
+    2026-11-10: "keep the hooks for the f and the t, and the l stays
+    without a hook"; one cut with no arm, the l's end, was tried on them to
+    SemiBold). To SemiBold the arm runs half a stem past the crossbar's
+    end; from 650 the two end level, at every weight (the owner, of the
+    two at ExtraBold and Black: "they don't keep track of the same
+    length"; and at Black with the crossbar an edge break short: "they
+    don't seem to be sticking out in level with either the foot or the
+    ascender, respectively, with the cross")."""
     p = params(w)
     bar_y = p.xh - 0.5 * p.sh * p.low
     for ch, y_line in (('t', 0.5), ('f', p.asc - 0.5)):
@@ -439,8 +451,57 @@ def test_f_and_t_keep_their_hooks_at_every_weight(w):
         flat = ink.intersection(LineString([(-1e4, y_line), (1e4, y_line)]))
         assert flat.length >= 0.9 * p.sv, ch                                # a foot, an arm (a cut's flat is half a stem)
         bar = ink.intersection(LineString([(-1e4, bar_y), (1e4, bar_y)])).bounds
-        assert ink.bounds[2] >= bar[2] + 0.3 * p.sv, ch                     # past the crossbar's end
+        if w <= 600:
+            assert ink.bounds[2] >= bar[2] + 0.3 * p.sv, ch                 # past the crossbar's end, half a stem
+        else:
+            assert ink.bounds[2] == pytest.approx(bar[2], abs=0.5), ch      # from 650 level with it
     assert REGISTRY['t'].width(p) == pytest.approx(REGISTRY['f'].width(p))
+
+
+def test_f_and_t_hold_their_650():
+    """The crossing of the f and of the t is one shape from 650 to Black
+    (the owner, 2026-11-10, of the two at ExtraBold and Black: "it just
+    turns into this gnarled, ugly thing when it comes to the way that
+    everything joins ... a big old knot"; shown the stub going into the
+    stem between SemiBold and Bold: "Look at how it is currently at weight
+    650 and make it the exact same shape throughout all the way to 900. It
+    needs to not move one bit. It needs to be exactly the same for both
+    the stems"). Left of the stem the crossbar's stub is a bump of a break
+    and a seventeenth (two legs of its fill, at Black): a face between two
+    cuts that take its whole depth, the same points on both letters; right
+    of it the crossbar ends level with the arm and the foot ("they don't
+    seem to be sticking out in level with either the foot or the ascender,
+    respectively, with the cross": it stood an edge break short of them)."""
+    from arris.draw import fill_leg
+    from arris.glyphs.lower import stub
+    held = None
+    for w in (650, 700, 750, 800, 850, 900):
+        p = params(w)
+        d = stub(p)
+        assert d == pytest.approx(min(55 / 52 * p.c, 2 * fill_leg(p))), w
+        bumps = []
+        for ch in 'ft':
+            ring = max(draw(CMAP[ch], p).rings(), key=len)
+            bumps.append(sorted((round(x, 2), round(y, 2)) for x, y in ring if x < d + 0.5 and p.xh / 2 < y < p.xh + p.m))
+        assert bumps[0] == bumps[1], w                                      # the f's and the t's, point for point
+        xs = sorted({x for x, _ in bumps[0]})
+        assert xs == pytest.approx([0.0, d], abs=0.01), w                   # a face on the body's edge, and the stem's side
+        face = sorted(y for x, y in bumps[0] if x < 0.5)
+        side = sorted(y for x, y in bumps[0] if x > 0.5)
+        assert len(face) == 2 and len(side) == 2, w                         # two cuts, each one line from face to stem
+        for cut in (face[0] - side[0], side[1] - face[1]):
+            assert cut == pytest.approx(d, rel=0.08), w                     # (45 degrees, as the optical warp leaves them)
+        for ch in 'ft':                                                     # the crossbar's end, the arm's and the foot's
+            ink = _ink(ch, p)
+            bar = ink.intersection(LineString([(-1e4, p.xh - 0.5 * p.sh * p.low), (1e4, p.xh - 0.5 * p.sh * p.low)])).bounds
+            assert bar[2] == pytest.approx(ink.bounds[2], abs=0.5), (ch, w)
+        shape = (round(d / p.c, 2), len(max(draw('t', p).rings(), key=len)))
+        held = held or shape
+        assert shape[1] == held[1] and shape[0] == pytest.approx(held[0], abs=0.04), w   # (1.03 at Black: two legs of its fill)
+    # to SemiBold the stub is whole (a quarter of the white of the body that gave nothing), its end's two cuts apart
+    from arris.glyphs.letterframe import heft, own_width
+    p = params(600)
+    assert stub(p) == pytest.approx((own_width(6, 1)(p) + heft(p) - p.sv) / 4) and stub(p) > 2 * p.c
 
 
 def _pieces(ch, p, y):

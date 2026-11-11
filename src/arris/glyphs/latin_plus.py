@@ -36,7 +36,7 @@ from . import marks
 from .cyrillic import mirror
 from .extra_latin import stamp, width_of
 from .figures import beak_depth
-from .letterframe import Frame, growing_width, letter_width, white_scale
+from .letterframe import Frame, growing_width, letter_width, ungiving, white_scale
 from .marks import ABOVE, ATTACHED, BELOW, BESIDE, gap, size
 
 # --- Marks below --------------------------------------------------------------
@@ -281,7 +281,7 @@ def Eturned(g):
     mirror(g)
 
 
-@glyph('florin', 'ƒ', letter_width(7, 1), kind='lower')
+@glyph('florin', 'ƒ', ungiving(7, 1), kind='lower')
 def florin(g):
     """The italic f's stem, upright: a hook at the top, the stem running
     on below the baseline and turning back."""

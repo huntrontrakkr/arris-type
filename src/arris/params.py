@@ -49,6 +49,9 @@ class Params:
     fig_own: float = 0.0       # the figure body at the watch's own rate (instances.FIG_GROWTH; 0: fig_w): Arris Mono's
     white_low: float = 1.0     # what is left of a lowercase letter's white past the Regular (instances.white_given)
     white_cap: float = 1.0     # of a capital's, a figure's, a sign's
+    past: float = 0.0          # units the font's stem stands past its Regular's: 0 to the Regular, in the watch's own
+                               # drawing and in Arris Mono (what a rule that turns on the weight past the Regular reads:
+                               # a set drawn smaller inside a glyph carries its font's, whatever its own modules)
     mono: bool = False         # monospaced: every glyph on one cell (MONO_CELL), whatever the weight
     narrow: bool = False       # Arris Mono Narrow: the Mono's cell, its letters in MONO_NARROW modules
     wide: float = 1.0          # Mono Narrow: Arris Mono's body at this weight over the narrow one, a wide letter's (draw.body_width)
@@ -84,7 +87,7 @@ class Params:
             # (Mono's letters fill one cell at every weight: their white is the cell's, and nothing of the
             # proportional cut's narrowing past the Regular reaches them: white_low, white_cap, fig_own)
             p = replace(p, fig_adv=MONO_CELL * p.m, fig_w=min(max(p.fig_own or p.fig_w, lo * p.m), hi * p.m),
-                        white_low=1.0, white_cap=1.0)
+                        white_low=1.0, white_cap=1.0, past=0.0)
         if p.mono and p.narrow and not (self.mono and self.narrow):   # turning narrow: the narrow body,
             p = replace(p, wide=p.fig_w / (MONO_NARROW * p.m), fig_w=MONO_NARROW * p.m)   # the Mono's for the wide letters
         if p.floor and min(before.values()) < p.floor:

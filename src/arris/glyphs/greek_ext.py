@@ -21,7 +21,7 @@ from .cyrillic_ext import room
 from .cyrillic_locl import tall_ve
 from .figures import beak_depth
 from .greek import _tonos_width
-from .letterframe import Frame, close_slit, letter_width
+from .letterframe import Frame, close_slit, letter_width, ungiving
 
 ALIASES = {
     0x03D5: 'uni0444',      # phi symbol: the stroked phi
@@ -123,7 +123,7 @@ def _draws(g, pts):
     return ok
 
 
-@glow('uni03F0', 'ϰ', 10, 2)
+@glow('uni03F0', 'ϰ', 10, 2, width=ungiving(10, 2))
 def kappa_symbol(g):
     """An x whose falling stroke curls at both ends: it leaves a beak at
     the top left along a flat, and lands on a flat that turns up into a

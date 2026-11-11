@@ -18,6 +18,8 @@ from arris.glyphs.letterframe import heft, narrowed, own_width, zone
 from arris.instances import params
 from arris.italic import italic
 
+CMAP = {chr(s.unicode): n for n, s in REGISTRY.items() if s.unicode}
+
 
 def _counter(name, p, stems=2):
     return REGISTRY[name].width(p) - stems * p.sv
@@ -49,7 +51,7 @@ def test_counters_narrow_as_other_families_counters_do():
     # and a letter grows where it grew a quarter: the n 1.16 of its Regular's body at Black (1.27)
     assert REGISTRY['n'].width(black) / REGISTRY['n'].width(reg) == pytest.approx(1.157, abs=0.005)
     for a, b in zip(range(400, 900, 50), range(450, 901, 50)):          # and never narrower for a heavier stem
-        for name in 'nHkfrj':
+        for name in 'nHkrj':                                                # (the f and the t lose half their stub by 650)
             assert REGISTRY[name].width(params(b)) > REGISTRY[name].width(params(a)), (name, b)
 
 
@@ -84,6 +86,30 @@ def test_a_set_drawn_smaller_gives_as_its_font_does():
     assert heavy.with_(cap=heavy.xh, m=heavy.m * 0.8).white_low == heavy.white_low
 
 
+@pytest.mark.parametrize('w', [700, 900])
+def test_signs_of_fixed_geometry_and_two_letters_give_nothing(w):
+    """The mathematical operators, the arrows and the technical signs
+    measure the watch's own white (draw.white_of): bars a set white apart
+    and strokes at 45 degrees, with no counter to give. Narrowed with the
+    letters, ⊦ lost its stem to a wedge at Black, ⊫ its two stems to a
+    slab, and the feet of ≎ ran out past its bars. The florin and the ϰ
+    keep their bodies too (letterframe.ungiving): the one's crossbar and
+    hook, the other's two curls. Punctuation and currency give as the
+    capitals do."""
+    from dataclasses import replace
+    p = params(w)
+    own = replace(p, white_low=1.0, white_cap=1.0)
+    for ch in '⊦⊧⊫≎≏⊚∢→↔⌂':
+        spec = REGISTRY[CMAP[ch]]
+        assert spec.white == 'own' and spec.width(p) == pytest.approx(spec.width(own)), ch
+    for ch in 'ƒϰ':
+        assert REGISTRY[CMAP[ch]].width(p) == pytest.approx(REGISTRY[CMAP[ch]].width(own)), ch
+    for ch in '$&?':
+        spec = REGISTRY[CMAP[ch]]
+        assert spec.white == 'cap' and spec.width(p) < spec.width(own), ch
+    assert REGISTRY['n'].white == 'lower' and REGISTRY['H'].white == 'cap' and REGISTRY['zero'].white == 'cap'
+
+
 @pytest.mark.parametrize('ch,ref', [('k', 'n'), ('z', 'n'), ('E', 'H'), ('L', 'H'), ('K', 'H'), ('Z', 'H')])
 def test_a_one_stem_letter_gives_the_share_the_n_gives(ch, ref):
     """Its open side holds an arm or a diagonal as thick as a stem: with
@@ -96,22 +122,25 @@ def test_a_one_stem_letter_gives_the_share_the_n_gives(ch, ref):
         assert REGISTRY[ch].width(p) / REGISTRY[ref].width(p) == pytest.approx(own), (ch, w)
 
 
-@pytest.mark.parametrize('w', [700, 800, 850, 900])
-def test_f_and_t_give_no_more_than_their_crossbar_spares(w):
-    """The stem stands where it stood before the body gave (the stub left
-    of it is one cut long: lower.narrow_frame), and the crossbar keeps
-    ARM_STUB breaks past the stem on the arm's side: at Black 19 of the 41
-    units the rule would take stay."""
+@pytest.mark.parametrize('w', [400, 600, 650, 700, 800, 900])
+def test_f_and_t_give_on_the_arms_side(w):
+    """The stem stands a stub in from the body's left edge (lower.stub:
+    the stub of the body that gave nothing, to SemiBold; half of it by 650
+    and that shape from there), and what the body gives past the Regular
+    comes off the arm and the foot, down to ARM_LEAST stems past the stem:
+    a quarter of it came off the stub, which is no longer than its two
+    cuts, and at ExtraBold they came apart in a kink."""
     p = params(w)
     own = own_width(lower.NARROW, 1)(p) + heft(p)
+    whole = (own - p.sv) / 4
+    d = lower.stub(p)
+    assert d == pytest.approx(whole) if w <= 600 else d < 0.7 * whole
     body = REGISTRY['t'].width(p)
-    assert REGISTRY['f'].width(p) == body <= own
-    g = draw('t', p)
-    stem = g.defaults_used['stem']
-    assert stem == pytest.approx(p.sv / 2 + (own - p.sv) / 4)
-    assert (body - p.sv / 2) - (stem + p.sv / 2) >= lower.ARM_STUB * p.c - 1e-6
-    for name in 'ft':                                                    # the drawing of the body that gave nothing
-        assert sorted(len(r) for r in draw(name, p).rings()) == sorted(len(r) for r in draw(name, p, width=own).rings())
+    with zone('lower'):
+        arm = max(own * narrowed(p) - whole - p.sv, lower.ARM_LEAST * p.sv)   # as a one-stem letter gives, the stub aside
+    assert REGISTRY['f'].width(p) == body == pytest.approx(d + p.sv + arm)
+    assert draw('t', p).defaults_used['stem'] == pytest.approx(d + p.sv / 2)
+    assert REGISTRY['longs'].width(p) == body                           # (the f without its bar)
 
 
 @pytest.mark.parametrize('w', [800, 850, 900])

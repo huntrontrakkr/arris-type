@@ -13,7 +13,7 @@ import functools
 from ..draw import B, Opening, glyph
 from ..params import inner_leg, outer_leg, white_own
 from .figures import STACK_MIN, beak_depth, jog
-from .letterframe import ARM, Frame, heft, k_arms, least_white, letter_width, narrowed, own_width, share_width, white_scale, zone
+from .letterframe import ARM, Frame, k_arms, least_white, letter_width, narrowed, own_width, share_width, white_scale, zone
 
 
 def low(char, wm, stems, width=None, openings=(), arm=ARM):
@@ -194,40 +194,101 @@ def e(g):
 NARROW = 6      # the f's and the t's frame, in modules (their masters' seven, less one)
 
 
-def narrow_frame(g):
-    """The f's and the t's frame: the stem on its second module, the
-    crossbar from the body's left edge to its fifth.
+STUB_FADE = (30.0, 40.0)    # units of stem past the Regular's (SemiBold, 650): to where the f's and the t's crossbar keeps
+                            # its whole stub left of the stem, and from where stub and crossbar are held as they stand there
 
-    Past the Regular, where the body gives (letterframe.narrowed), the
-    stem stands where it stood in the body the watch's own white gives,
-    and the arm, the foot and the crossbar's right end take all that is
-    given. The crossbar's stub, left of the stem, is no longer than its
-    end's cut and the fill of its crotch need to meet in one plane (f_leg):
-    a quarter of what the body gave came off it, and at ExtraBold the two
-    came apart in a kink, at Black the bar's right end and the hook's cut
-    ran together in a wedge."""
+
+def narrow_stub(p) -> float:
+    """What of its stub the f's or the t's crossbar keeps, left of the
+    stem: all to SemiBold, half from 650 (STUB_FADE), and no less at any
+    heavier weight.
+
+    The stub is a quarter of the letter's white, about 70 units at every
+    weight, and the cuts on it double from Regular to Black: at SemiBold
+    its end still has a face between its two cuts, at Bold they met in a
+    point, and from ExtraBold the stub was one plane with the cut of the
+    t's top (the f's hook), a wedge on the stem's side (the owner,
+    2026-11-10: "it just turns into this gnarled, ugly thing when it comes
+    to the way that everything joins ... especially for smaller ones, it
+    just looks like a big old knot"). And the crossbar ended half a stem
+    short of the arm, more with every weight ("they don't keep track of the
+    same length"). Shown the stub going into the stem between SemiBold and
+    Bold, the crossbar coming out to the arm's end as it went, he chose
+    the letter half way: "Look at how it is currently at weight 650 and
+    make it the exact same shape throughout all the way to 900. It needs
+    to not move one bit. It needs to be exactly the same for both the
+    stems." """
+    a, b = STUB_FADE
+    return 1.0 - 0.5 * min(1.0, max(0.0, (p.past - a) / (b - a)))
+
+
+def _stub(p, sv=None) -> float:
+    """The stub's length in the body the watch's own white gives: a
+    quarter of the letter's white (the stem stands on the frame's second
+    module). ``sv``: at another stem of the same modules."""
+    sv = p.sv if sv is None else sv
+    return (4 * p.m * white_own(sv / (2 * p.m)) + ARM * max(0.0, sv - 1.5 * p.m)) / 4
+
+
+def stub(p) -> float:
+    """How far the f's and the t's crossbar stands out left of the stem:
+    narrow_stub of its whole stub to 650, and from there what it is at 650
+    in edge breaks, a break and a seventeenth, so the bump on the stem's
+    side is one shape at every heavier weight: a face between two cuts
+    that take its whole depth."""
+    from ..draw import fill_leg
+    k, held = narrow_stub(p), p.sv - p.past + STUB_FADE[1]  # (the font's stem at 650)
+    if p.past <= STUB_FADE[1]:
+        return k * _stub(p)
+    # (no deeper than two legs of its crotch's fill: half of it is its end's cut and half the fill, and
+    # past that the fill, which stops growing at the Regular, no longer runs on in the cut's line: a
+    # kink of a unit in the bump's side at Black)
+    return min(0.5 * _stub(p, held) / (held / 4) * p.c, 2 * fill_leg(p))
+
+
+def bar_short(p) -> float:
+    """How far the f's and the t's crossbar ends short of the arm and the
+    foot: half a stem to SemiBold, nothing from 650 (STUB_FADE), where the
+    three end level (the owner, of the two at Black with the crossbar an
+    edge break short, as it stood at 650: "they don't seem to be sticking
+    out in level with either the foot or the ascender, respectively, with
+    the cross")."""
+    a, b = STUB_FADE
+    return p.sv / 2 * (1.0 - min(1.0, max(0.0, (p.past - a) / (b - a))))
+
+
+def narrow_frame(g):
+    """The f's and the t's frame: the stem a stub in from the body's left
+    edge (stub), the arm and the foot out to its right edge, and the
+    crossbar with them from 650 (bar_short: half a stem short of them to
+    SemiBold).
+
+    Past the Regular, where the body gives (letterframe.narrowed), what is
+    given comes off the arm's side: the stub is as short as its two cuts
+    allow."""
     f = Frame(g, NARROW, 'asc')
     p = g.p
-    own = own_width(NARROW, 1)(p) + ARM * heft(p)
-    if own > g.W and not p.mono:
-        f.xa = [(0, 0.0), (2, p.sv / 2 + (own - p.sv) / 4), (NARROW - 1, g.W - p.sv / 2), (NARROW, g.W)]
+    if not p.mono:
+        f.xa = [(0, 0.0), (2, stub(p) + p.sv / 2), (NARROW - 1, g.W - bar_short(p)), (NARROW, g.W)]
     return f
 
 
-ARM_STUB = 2.6  # edge breaks: the least the f's and the t's crossbar runs past the stem on the arm's side
+ARM_LEAST = 1.1     # stems: the least the f's arm and the t's foot run past the stem (a flat of nine tenths of a stem on the arm)
 
 
 def narrow_width(p):
-    """The f's and the t's body: a one-stem letter's (letter_width), giving
-    past the Regular no more than leaves the crossbar ARM_STUB breaks past
-    the stem on the arm's side (narrow_frame: the stub on the other side
-    gives nothing). Shorter, its end's cut ran into the cut of the hook
-    over it (the t's foot under it), a wedge where the bar's end had been:
-    from 850, and at Black the two letters keep 19 units of the 41 the
-    rule would take."""
-    w = letter_width(NARROW, 1)(p)
-    own = own_width(NARROW, 1)(p) + ARM * heft(p)
-    return min(own, max(w, (own - p.sv) / 4 + 1.5 * p.sv + ARM_STUB * p.c))
+    """The f's and the t's body: a one-stem letter's (letter_width), less
+    what of the crossbar's stub has gone into the stem (stub): the arm and
+    the foot keep their length past the stem. Past the Regular the body
+    gives (letterframe.narrowed) no more than leaves the arm ARM_LEAST
+    stems past the stem: the hook stays an arm, not a cut."""
+    return stub(p) + max(letter_width(NARROW, 1)(p) - _stub(p), (1.0 + ARM_LEAST) * p.sv)
+
+
+def crossbar(g, f):
+    """The f's and the t's crossbar, from the body's left edge out to the
+    arm's and the foot's end (half a stem short of it, to SemiBold)."""
+    g.stroke((0.0, f.Y(8)), f.P(NARROW - 1, 8))
 
 
 @low('f', NARROW, 1, width=narrow_width)
@@ -236,7 +297,8 @@ def f_(g):
     as one cut with no arm, tried to SemiBold in 1.017's making with the
     t's foot, was the l's end, and the owner kept it for the l alone
     (2026-11-10: "keep the hooks for the f and the t, and the l stays
-    without a hook")."""
+    without a hook"). From 650 to Black its crossing is one shape, the
+    t's (narrow_stub)."""
     if g.p.mono:
         f = Frame(g, 9, 'asc')
         g.stroke(f.P(3.5, 0), B(*f.P(3.5, 12)), f.P(9, 12))
@@ -244,7 +306,7 @@ def f_(g):
         return
     f = narrow_frame(g)
     g.stroke(f.P(2, 0), B(*f.P(2, 12), f_leg(g, f)), f.P(NARROW, 12))
-    g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
+    crossbar(g, f)
 
 
 def f_leg(g, f):
@@ -252,7 +314,8 @@ def f_leg(g, f):
     cut of the t's top does (an edge break under the t's top, f.Y(11)), so
     the f's and the t's left sides are one drawing from the crossbar up to
     there, and where the t's cut and its crossbar's meet in one flat plane
-    (Black) the f's do too. With the bowl's own leg the f's cut stopped 67
+    (the watch's own drawing at Black: Arris holds the stub short of that
+    from 650, stub) the f's do too. With the bowl's own leg the f's cut stopped 67
     units above the crossbar's at Black, over a break: two planes and a
     step where the t has one."""
     p = g.p
@@ -563,17 +626,22 @@ def k(g):
 
 
 def _toe(p, sh):
-    """The thickness the l's cut is drawn at: three edge breaks (the
-    weight's bar, where that is less). Its end's own break then takes up
-    all of its top, so the corner's cut runs straight into the end's face,
-    two breaks up."""
+    """The thickness the l's body is measured for (kick_reach): three edge
+    breaks (the weight's bar, where that is less), what its cut was drawn
+    at until its end took the form of the k's leg's (END): its end's own
+    break then took up all of its top, and the corner's cut ran straight
+    into the end's face, two breaks up."""
     return min(3 * p.c, sh)
+
+
+END = 2.0       # edge breaks: how thick the l's cut is at its end, the k's leg's: its lower cut and its upper, a point between
 
 
 def kick_reach(p, sh):
     """From the l's stem's centre to the end of its cut: the stem's end
-    turned through the one cut a corner takes and stopped there, where the
-    end stands an edge break tall over its own break."""
+    turned through the one cut a corner takes and stopped there (measured
+    for an end an edge break tall over its own break, _toe: the body it
+    had before its end took the k's leg's form)."""
     return sh / 2 + p.leg + p.sd / 2 ** 0.5 - _toe(p, sh) + p.c
 
 
@@ -592,8 +660,8 @@ def l(g):
         _mono_foot(g, f, x - u / 2, u)
         return
     # A stem and one cut at its foot, at every weight: the corner the t's
-    # foot turns through, run on to the baseline and ended upright with no
-    # foot after it (the owner, 2026-11-10: "only one single notch", and
+    # foot turns through, run on to the baseline with no foot after it
+    # (the owner, 2026-11-10: "only one single notch", and
     # "the l stays without a hook"; the f and the t keep theirs). The cut
     # tells l from I, i and 1 (docs/research/legibility.md). The corner is
     # drawn on a line half its end's thickness (_toe) over the baseline, its
@@ -613,8 +681,22 @@ def l(g):
     p = f.p
     xs = p.sv / 2
     g.defaults_used['stem'] = xs
-    h = _toe(p, g.sh)
-    g.stroke((xs, p.asc), B(xs, h / 2, p.leg + (g.sh - h) / 2, h), (g.W, h / 2))
+    # The cut lands as the k's leg does (the owner, 2026-11-10: "the L kind
+    # of descends and it lands ... the K has descender at the same angle,
+    # but the way that it hits it is kind of different, the way that the
+    # chamfering looks. The L should follow the form that K sets"): a flat
+    # on the baseline as long as the leg's, and one break up to a point
+    # where the cut's upper edge leaves at 45 degrees. Its end is two breaks
+    # thick, all of it its two cuts (END), where it was three, a break of
+    # upright face between them; the corner's leg is shorter by half of
+    # that, so the body and the cut's thickness are what they were and the
+    # cut stands a break lower on the stem.
+    reach = _toe(p, g.sh)                                   # the thickness the body is measured for (kick_reach)
+    h = min(END * p.c, g.sh)
+    # (toward Thin two breaks are under the stroke floor: the end is drawn a floor thick with its top
+    # where it belongs, and the body's clip takes what hangs under the baseline, as it takes the k's leg)
+    t = max(h, p.floor)
+    g.stroke((xs, p.asc), B(xs, h - t / 2, p.leg + (g.sh - reach) / 2 - (reach - h) / 2 + (t - h) / 2, t), (g.W, h - t / 2))
     g.clip = (0, 0, g.W, p.asc)
 
 
@@ -690,8 +772,11 @@ R_BLACK = 85.0          # units the stem gains from Regular to Black
 
 
 def r_width(p):
+    """(By the font's weight past its Regular, Params.past: the watch's
+    own drawing keeps six ninths at every weight, and the small r inside a
+    sign, ₢, is its font's.)"""
     a, b = R_SHARE
-    return share_width(a + (b - a) * min(1.0, heft(p) / R_BLACK))(p)
+    return share_width(a + (b - a) * min(1.0, p.past / R_BLACK))(p)
 
 
 @low('r', 8, 1, width=r_width)
@@ -743,8 +828,9 @@ def s(g):
 
 @low('t', NARROW, 1, width=narrow_width)
 def t(g):
-    """A stem, a crossbar and its foot, a module past the crossbar's end,
-    at every weight (the f turned over: see f_)."""
+    """A stem, a crossbar and its foot, at every weight (the f turned
+    over: see f_; the crossbar half a stem short of the foot to SemiBold,
+    level with it from 650: bar_short)."""
     if g.p.mono:
         f = Frame(g, 9, 'asc')
         g.defaults_used['stem'] = f.X(3)
@@ -754,7 +840,7 @@ def t(g):
     f = narrow_frame(g)
     g.defaults_used['stem'] = f.X(2)                        # (extra_latin._slot reads it for the ŧ's bar)
     g.stroke(f.P(2, 11), B(*f.P(2, 1)), f.P(NARROW, 1))
-    g.stroke(f.P(0, 8), f.P(NARROW - 1, 8))
+    crossbar(g, f)
 
 
 @low('u', 8, 2)

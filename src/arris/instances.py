@@ -218,7 +218,8 @@ def _params(wght, optics, base, optical=1.0):
     low = low_share(sv)
     return base.with_(fig_w=fig_w, fig_adv=fig_w + (base.fig_adv - base.fig_w), fig_own=fig_own,
                       white_low=white_given(sv, base.m, LOWER_GIVEN, optical),
-                      white_cap=white_given(sv, base.m, CAP_GIVEN, optical), sv=sv, sh=sh, sd=sv * optics.d_ratio(sv),
+                      white_cap=white_given(sv, base.m, CAP_GIVEN, optical),
+                      past=max(0.0, sv - STEMS[400]) * optical, sv=sv, sh=sh, sd=sv * optics.d_ratio(sv),
                       ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=optics.leg, low=low,
                       desc=descender_line(base, sv, sh))
 
