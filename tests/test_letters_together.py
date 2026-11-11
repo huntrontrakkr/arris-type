@@ -22,6 +22,12 @@ def _ink(ch, p):
     return rings_to_shapely(draw(CMAP[ch], p).rings())
 
 
+def _ink_of(name, p):
+    """A glyph's ink as it stands in the font, by its name (what is built on another letter too)."""
+    rings, _ = place(name, p)
+    return rings_to_shapely([[(q[0], q[1]) for q in r] for r in rings])
+
+
 def _width(ch, p):
     x0, _, x1, _ = _ink(ch, p).bounds
     return x1 - x0
@@ -167,6 +173,61 @@ def test_a_c_e_s_end_in_one_terminal(w):
     c = reach('c', True, True)
     for ch, top, right in (('a', True, False), ('e', False, True), ('s', True, True), ('s', False, False)):
         assert reach(ch, top, right) == pytest.approx(c, abs=0.12 * c), (ch, top)
+
+
+def _throat(ink, sv):
+    """The least width of the passage into a letter's bay: a white open to
+    the outside through a way narrower than itself (the a's upper storey,
+    the s's two, the e's mouth). None: no bay, or none narrower at its
+    mouth than a third of a stem and a half."""
+    from shapely.geometry import Polygon
+    parts = list(getattr(ink, 'geoms', [ink]))
+    counters = [Polygon(h) for part in parts for h in part.interiors]
+    r = 1.0
+    while r <= 0.25 * sv:
+        grown = ink.buffer(r, 8)
+        for part in getattr(grown, 'geoms', [grown]):
+            for h in part.interiors:
+                hole = Polygon(h)
+                if hole.area > (0.15 * sv) ** 2 and not any(k.contains(hole.representative_point()) for k in counters):
+                    return 2 * r
+        r += 1.0
+    return None
+
+
+@pytest.mark.parametrize('w,watch', [(700, 0.0), (800, 0.0), (900, 0.0), (900, 1.0)])
+def test_a_beak_keeps_its_bay_open(w, watch):
+    """The beak of the a, the e and the s turns into a bay, the white
+    between its bar and the next, and keeps BAY_WHITE of the least white
+    off the bar it turns toward (lower.beak_in): 0.36 of a stem from Bold.
+    It was the c's beak at every weight, and the bay ran out under it as
+    the bars grew, to 37 units at Black, 0.23 of a stem: a slit between the
+    beak's flat end and the bar's flat top (the owner, 2026-11-11: "a weird
+    optical effect ... with the hooks ... the a's upper storey, the way it
+    meets it ... at the bolder weights ... where it meets the bottom storey
+    or where it does not meet"). The families of Arris's boldness keep
+    0.36 of a stem there at its Black, and none under 0.24. What is built
+    on the three letters takes the rule with them."""
+    from arris.glyphs.letterframe import least_white
+    from arris.glyphs.lower import BAY_WHITE
+    p = params(w, watch=watch)
+    least = BAY_WHITE * least_white(p)
+    assert least == pytest.approx(0.36 * p.sv)
+    for name in ('a', 's', 'e', 'ae', 'oe', 'uni04D9', 'scaron', 'aogonek'):
+        t = _throat(_ink_of(name, p), p.sv)
+        assert t is None or t >= least - 3.0, (name, t, round(least, 1))
+    # and it is still a beak: most of the c's reach, which has all its mouth for room
+    def reach(ch, top, right):
+        ink = _ink(ch, p)
+        x0, y0, x1, y1 = ink.bounds
+        x = x1 - 1 if right else x0 + 1
+        cut = ink.intersection(LineString([(x, y0 - 10), (x, y1 + 10)]))
+        runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+        lo, hi = runs[-1] if top else runs[0]
+        return hi - lo
+    c = reach('c', True, True)
+    for ch, top, right in (('a', True, False), ('e', False, True), ('s', True, True), ('s', False, False)):
+        assert 0.75 * c <= reach(ch, top, right) <= c + 1.0, (ch, top)
 
 
 @pytest.mark.parametrize('w', [400, 700, 900])

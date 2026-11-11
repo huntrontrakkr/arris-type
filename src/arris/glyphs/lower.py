@@ -89,6 +89,37 @@ def beak(g, w):
     return outer_leg(g.p, sh=w) + g.p.c
 
 
+BAY_WHITE = 0.6     # the white a beak keeps off the bar it turns toward, as a share of the least white (beak_in)
+
+
+def beak_in(g, w, room):
+    """(reach, corner's leg) of a beak that turns into a bay: the white
+    ``room`` tall between its bar, ``w`` thick, and the next (the a's upper
+    storey, the e's lower, the s's two). Its end keeps BAY_WHITE of the
+    least white off the bar it turns toward, 0.36 of a stem from Bold; the
+    corner it hangs from is cut that much shorter, its flank still ending
+    an edge break short of the beak's end (beak).
+
+    Until 1.017 the beak was the c's at every weight, and the bay's white
+    ran out under it as the bars grew: on the a 90 units at Regular, 57 at
+    Bold, 46 at ExtraBold and 37 at Black, 0.23 of a stem, a slit as long
+    as the beak is wide between its flat end and the bar's flat top (the
+    owner, 2026-11-11: "a weird optical effect ... with the hooks ... the
+    a's upper storey, the way it meets it ... at the bolder weights. If I
+    were to zoom out ... where it meets the bottom storey or where it does
+    not meet. That gap ..."). Measured the same way on 339 fonts of 60
+    families at Regular and heavier (the least width of the passage into
+    each bay, by the n's stem), those of Arris's boldness keep 0.54 of a
+    stem at its Bold (quartiles 0.37 and 0.62), 0.41 at its ExtraBold (0.35,
+    0.48) and 0.36 at its Black (0.30, 0.44; the least 0.24), and the
+    squared faces nearest it (Oxanium, Tomorrow, Exo 2, Saira) have no
+    beak there at all. The gap is 57 units at Bold, 52 at ExtraBold and 57
+    at Black now: it stops closing where the families' middle stands."""
+    p = g.p
+    d = min(beak(g, w), w + room - BAY_WHITE * least_white(p))
+    return d, min(p.leg, d - p.c - (p.sv + w) / 2 + p.sd / 2 ** 0.5)
+
+
 A_RISE = 0.6    # the most the a's bowl rises into its stem, as a share of the bowl's white
 
 
@@ -114,7 +145,8 @@ def a(g):
     ya = p.xh - arm / 2
     yb = foot + low + inner / 2
     g.defaults_used.update(arm=ya, bowl=yb)
-    g.stroke((f.X(1), p.xh - beak(g, arm)), B(f.X(1), ya, None, arm), B(f.X(7), ya), f.P(7, 0))
+    d, leg = beak_in(g, arm, low)
+    g.stroke((f.X(1), p.xh - d), B(f.X(1), ya, leg, arm), B(f.X(7), ya), f.P(7, 0))
     # The bowl's foot comes into the stem as the u's does, the n's shoulder
     # turned half round: at 45 degrees, with its notch at the foot of the
     # stem (the owner, 2026-11-10). It rises no more than A_RISE of the
@@ -182,7 +214,8 @@ def e(g):
     yt = p.xh - top / 2
     g.defaults_used.update(bar=yb, arm=y1)
     g.stroke((f.X(1), yb, bar), (f.X(7), yb), B(f.X(7), yt), B(f.X(1), yt), closed=True)
-    g.stroke((f.X(1), yb), B(f.X(1), y1, None, arm), B(f.X(7), y1), (f.X(7), beak(g, arm)))
+    d, leg = beak_in(g, arm, open_)
+    g.stroke((f.X(1), yb), B(f.X(1), y1, None, arm), B(f.X(7), y1, leg), (f.X(7), d))
 
 
 # The letters with one stem and an arm (f t j) are a module narrower than
@@ -890,8 +923,9 @@ def s(g):
     top, mid, foot = bars3(g)
     white = (p.xh - top - mid - foot) / 2
     y1, ym, yt = foot / 2, foot + white + mid / 2, p.xh - top / 2
-    g.stroke((f.X(7), p.xh - beak(g, top)), B(f.X(7), yt, None, top), B(f.X(1), yt), B(f.X(1), ym, None, mid),
-             B(f.X(7), ym), B(f.X(7), y1, None, foot), B(f.X(1), y1), (f.X(1), beak(g, foot)))
+    (dt, lt), (df, lf) = beak_in(g, top, white), beak_in(g, foot, white)
+    g.stroke((f.X(7), p.xh - dt), B(f.X(7), yt, lt, top), B(f.X(1), yt), B(f.X(1), ym, None, mid),
+             B(f.X(7), ym), B(f.X(7), y1, None, foot), B(f.X(1), y1, lf), (f.X(1), df))
 
 
 @low('t', NARROW, 1, width=narrow_width)

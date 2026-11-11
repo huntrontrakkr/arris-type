@@ -171,6 +171,24 @@ letters redrawn.
   Light to Bold: two counters of one shape, and one V over the middle
   stem that shrinks with the weight to a break and stays there (Mono: 81,
   54, 45, 36, 28, 32 units from Light to Bold).
+- The beak of the a, the e and the s keeps its bay open (the owner,
+  2026-11-11: "a weird optical effect ... with the hooks ... the a's upper
+  storey, the way it meets it ... at the bolder weights. If I were to
+  zoom out ... where it meets the bottom storey or where it does not
+  meet"). Each ended in the c's beak at every weight, and the white
+  between the beak's end and the bar it turns toward ran out as the bars
+  grew: on the a 90 units at Regular, 57 at Bold, 46 at ExtraBold, 37 at
+  Black, 0.23 of a stem, a slit as long as the beak is wide. Measured the
+  same way on 339 fonts of 60 families from Regular up (the least width
+  of the passage into each bay, by the n's stem), the families of
+  Arris's boldness keep 0.41 of a stem at its ExtraBold and 0.36 at its
+  Black, and none under 0.24; Arris stood below every one of them at
+  Black. A beak that turns into a bay now keeps 0.6 of the least white
+  off the next bar, 0.36 of a stem from Bold (`lower.beak_in`), its
+  corner cut that much shorter: the gap is 57 units at Bold, 52 at
+  ExtraBold, 57 at Black. Bold and lighter are as they were; æ, œ, ә and
+  the accented letters take the rule with their letters. The c, with its
+  whole mouth for room, keeps its beak.
 - A sign that could not be drawn at one width while its Mono body was
   being found stopped the build (℃ in Arris Mono Narrow SemiBold: its C,
   tried 59 units wide with a stem of 108, folded on itself and the union
