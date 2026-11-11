@@ -7,7 +7,7 @@ from __future__ import annotations
 from itertools import pairwise
 
 import pytest
-from shapely.geometry import LineString, box
+from shapely.geometry import LineString, Point, box
 
 import arris.glyphs  # noqa: F401  (the registry)
 from arris.draw import OPTICAL, REGISTRY, draw
@@ -769,3 +769,87 @@ def test_a_step_between_two_equal_cuts_closes_evenly():
     assert any(abs(x) < 1e-6 and abs(y - 106) < 1e-6 for x, y in out) and any(abs(x - 92) < 1e-6 and abs(y - 14) < 1e-6 for x, y in out)
     assert _close_jogs(stub, 40, {}) == stub
     assert _close_jogs(stub, 40, {}, even=10) == stub      # a flat of half a break or more is a flat
+
+
+def _under_the_arches(name, p):
+    """The whites between a letter's stems under their arches, as drawn
+    (before the curves and the slant); its stems at a third of the
+    x-height; the arches' underside."""
+    from arris.draw import _thickness
+    g = draw(name, p)
+    ink = rings_to_shapely(g.rings())
+    under = p.xh - _thickness(p, g.sh)((1.0, 0.0))
+    row = ink.intersection(LineString([(-1e4, p.xh / 3), (1e4, p.xh / 3)]))
+    stems = sorted((s.bounds[0], s.bounds[2]) for s in getattr(row, 'geoms', [row]) if s.length > 1)
+    counters = []
+    for a, b in pairwise(stems):
+        white = box(a[1] - p.m, p.xh / 2, b[0] + p.m, p.xh + 1).difference(ink)
+        inside = Point((a[1] + b[0]) / 2, p.xh / 2 + 1)
+        counters += [part for part in getattr(white, 'geoms', [white]) if part.buffer(0.01).contains(inside)]
+    return ink, counters, stems, under
+
+
+@pytest.mark.parametrize('w', [400, 500, 600, 700, 800, 900])
+def test_the_cursive_ms_two_counters_are_one_shape(w):
+    """Under each arch of the cursive m the counter has one top, at every
+    weight, and nothing of the white runs up into the arch. The italic's
+    branch was drawn whole however little of it showed: under a tenth of an
+    edge break below the arch at Bold, and from ExtraBold inside it, the
+    white beside it a pocket up into the arch; and the first arch's corner,
+    cut deeper than the bar is thick, took a wedge out of the middle stem
+    under the second, so the two counters differed (the owner, 2026-11-11:
+    "some funky stuff going on under the loops ... if we have some
+    consistency there that'd be really good"). A branch that would show
+    under a break is cut along the arch's underside, as the upright's is
+    (lower.shoulder), and the middle stem stands up to its own arch, as the
+    upright m's does."""
+    from shapely.affinity import translate
+
+    from arris.italic import italic
+    p = italic(params(w))
+    for name in ('m', 'uni0442', 'n', 'h', 'uni043F'):
+        _, counters, stems, under = _under_the_arches(name, p)
+        assert len(counters) == (2 if name in ('m', 'uni0442') else 1), name
+        for c in counters:
+            assert c.area > 0 and c.bounds[3] <= under + 0.05, (name, round(c.bounds[3] - under, 2))    # no white in the arch
+        if len(counters) == 2:
+            a, b = counters
+            assert translate(a, stems[1][1] - stems[0][1]).symmetric_difference(b).area < 2.0, name
+
+
+@pytest.mark.parametrize('w', [400, 450, 500, 600, 700])
+def test_arris_mono_italics_m_is_joined_one_way_at_every_weight(w):
+    """Arris Mono Italic's m is the upright's, drawn in a narrower body so
+    that its slanted ink fits the cell, and there its arches have no room
+    to rise. Its two counters are one shape, and the notch its arches meet
+    in is one V, both sides at 45 degrees, at every weight. They were not:
+    a pocket of white ran up into the second arch at Regular and Retina;
+    at Medium the second arch, with no room, began square on the stem's
+    centre and the V had an upright step in it; at Bold the middle stem
+    stopped 0.9 of a unit under its arch (drawn to the arch's underside by
+    its name; the italic's horizontals are cos(slant) thinner), its corner
+    was broken as a stroke's end is, and the second counter bit into the
+    stem where the first came to a point. An arch that joins another keeps
+    its cut at every weight (lower.shoulder, ``joined``), and the stem
+    stands to the underside as it is drawn (lower.bar_half)."""
+    from shapely.affinity import translate
+
+    from arris.italic import italic
+    p = italic(params(w).with_(mono=True))
+    ink, counters, stems, under = _under_the_arches('m', p)
+    assert len(counters) == 2
+    a, b = counters
+    assert a.bounds[3] <= under + 0.05 and b.bounds[3] <= under + 0.05
+    assert translate(a, stems[1][1] - stems[0][1]).symmetric_difference(b).area < 2.0
+    # the notch over the middle stem: one white, a triangle hanging from the arches' top
+    x0, x1 = ((l[1] + r[0]) / 2 for l, r in pairwise(stems))              # (between the counters' middles: the V is wider than its stem)
+    top = ink.intersection(LineString([(x1, 0), (x1, p.xh + 1)])).bounds[3]    # the arch's top
+    notch = box(x0, under, x1, top).difference(ink)
+    notch = [part for part in getattr(notch, 'geoms', [notch]) if part.area > 1.0]
+    assert len(notch) == 1
+    v = notch[0]
+    assert v.convex_hull.area - v.area < 1.0                              # no step in either side
+    low = min(v.exterior.coords, key=lambda q: q[1])
+    assert v.bounds[1] > under and top - low[1] > p.c / 2                 # (and deep enough to see: over half a break)
+    for x in (v.bounds[0], v.bounds[2]):                                  # each side at 45 degrees from its foot
+        assert abs(x - low[0]) == pytest.approx(top - low[1], abs=0.5)

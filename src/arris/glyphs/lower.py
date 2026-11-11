@@ -218,8 +218,29 @@ def narrow_stub(p) -> float:
     make it the exact same shape throughout all the way to 900. It needs
     to not move one bit. It needs to be exactly the same for both the
     stems." """
+    return 1.0 - 0.5 * _faded(p.past)
+
+
+def _faded(past) -> float:
     a, b = STUB_FADE
-    return 1.0 - 0.5 * min(1.0, max(0.0, (p.past - a) / (b - a)))
+    return min(1.0, max(0.0, (past - a) / (b - a)))
+
+
+def between(p, own, watchs: float) -> float:
+    """A rule of Arris's weights (``own``: of the units a stem is past its
+    Regular's) at a watch balance between Arris and the watch's own
+    drawing, which keeps ``watchs``: as far from the one as from the other,
+    as the variable font carries the watch axis from end to end. Read on
+    Arris's share of the stem alone (Params.past), a rule with a threshold
+    came on somewhere along the axis, later the heavier the weight: at
+    Black the f's stub was Arris's half way to the watch's drawing and the
+    watch's two thirds of the way, and shrank three units before it grew
+    (the owner, of the weights between the watch's and Arris's: "we treat
+    that as a gradient that you can go across")."""
+    o = p.optical
+    if o >= 1.0:
+        return own(p.past)
+    return watchs if o <= 0.0 else o * own(p.past / o) + (1.0 - o) * watchs
 
 
 def _stub(p, sv=None) -> float:
@@ -235,15 +256,19 @@ def stub(p) -> float:
     narrow_stub of its whole stub to 650, and from there what it is at 650
     in edge breaks, a break and a seventeenth, so the bump on the stem's
     side is one shape at every heavier weight: a face between two cuts
-    that take its whole depth."""
+    that take its whole depth. (Toward the watch's own drawing, which
+    keeps the whole stub: between.)"""
     from ..draw import fill_leg
-    k, held = narrow_stub(p), p.sv - p.past + STUB_FADE[1]  # (the font's stem at 650)
-    if p.past <= STUB_FADE[1]:
-        return k * _stub(p)
-    # (no deeper than two legs of its crotch's fill: half of it is its end's cut and half the fill, and
-    # past that the fill, which stops growing at the Regular, no longer runs on in the cut's line: a
-    # kink of a unit in the bump's side at Black)
-    return min(0.5 * _stub(p, held) / (held / 4) * p.c, 2 * fill_leg(p))
+
+    def own(past):
+        if past <= STUB_FADE[1]:
+            return (1.0 - 0.5 * _faded(past)) * _stub(p)
+        held = p.sv - past + STUB_FADE[1]                   # (the font's stem at 650)
+        # (no deeper than two legs of its crotch's fill: half of it is its end's cut and half the fill, and
+        # past that the fill, which stops growing at the Regular, no longer runs on in the cut's line: a
+        # kink of a unit in the bump's side at Black)
+        return min(0.5 * _stub(p, held) / (held / 4) * p.c, 2 * fill_leg(p))
+    return between(p, own, _stub(p))
 
 
 def bar_short(p) -> float:
@@ -253,8 +278,7 @@ def bar_short(p) -> float:
     edge break short, as it stood at 650: "they don't seem to be sticking
     out in level with either the foot or the ascender, respectively, with
     the cross")."""
-    a, b = STUB_FADE
-    return p.sv / 2 * (1.0 - min(1.0, max(0.0, (p.past - a) / (b - a))))
+    return between(p, lambda past: p.sv / 2 * (1.0 - _faded(past)), p.sv / 2)
 
 
 def narrow_frame(g):
@@ -459,7 +483,11 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     square. So the shoulder goes as the X's step does: the n keeps both to
     Bold, the notch alone at ExtraBold, and is square at Black, as the m is
     from SemiBold. ``joined``: the stem is another arch's (the m's second),
-    and the notch is the V the two meet in, kept at every weight.
+    and the notch is the V the two meet in, kept at every weight: with no
+    room to rise at all the arch still starts on its cut (in the narrower
+    body Arris Mono Italic's m is drawn in, from Medium, it began square on
+    the stem's centre, and the V had an upright side at Medium and was the
+    corner rule's own, twice as deep, from SemiBold).
 
     Until 1.017 the room was measured to the corner's outside, on the
     diagonal's centre line: from Medium the diagonal's edge ran into the
@@ -502,7 +530,7 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
             clear = (x_right - p.leg - p.c - xs) / (1 + (x_full - xs) / full)
             rise = max(rise, min(risen(x_right + lost), g.sh / 2 + KINK_STEP * p.c, clear))
     plain = [(xs, y_top), B(x_right, y_top)], 'flat'
-    if rise < 1e-3 * p.m:
+    if rise < 1e-3 * p.m and not joined:
         return plain
     r = rise / full
     x0 = xs + r * (x_full - xs)
@@ -524,6 +552,20 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
         if not joined and over < SHOULDER_NOTCH * p.c:
             return plain
         return [(x0 + step, y_top - g.sh / 2), (x0 + rise, y_top), B(x_right, y_top)], 'h'
+    if p.slant and drop >= SHOULDER_DROP:
+        # An arch in the italic too: the cursive's branch (deeper than the upright's shoulder,
+        # italic_forms.BRANCH) and the upright's own, slanted (Arris Mono Italic's n, m and h). A bowl's
+        # join, BOWL_DROP, keeps the little notch it was given. The italic's arch is not held to the
+        # upright's room; where its branch would show under an edge break below the arch it is cut
+        # along the arch's underside, and the counter's top is the arch's alone. Drawn whole, the
+        # cursive m's stood under a tenth of a break below its arches at Bold and inside them from ExtraBold,
+        # and the white ran up into the arch beside it in a pocket, another under each arch (the
+        # owner: "some funky stuff going on under the loops"); Arris Mono Italic's m had the pocket
+        # under its second arch at Regular. The underside is the arch's as the italic draws it, a
+        # horizontal cos(slant) thinner than its name (geom.Thickness).
+        half = bar_half(g)
+        if rise - half < p.c:
+            return [(x0 + rise - half, y_top - half), (x0 + rise, y_top), B(x_right, y_top)], 'h'
     return [(x0, y_top - rise), (x0 + rise, y_top), B(x_right, y_top)], 'h'
 
 
@@ -538,6 +580,14 @@ KINK_STEP = 0.999       # edge breaks: the most a shoulder kept for its kink alo
 BOWL_DROP = 1.0         # the same for a bowl's join to its stem
 SHOULDER_NOTCH = 1.5    # the least notch over a shoulder, in edge breaks down the stem's side: a break deep where the stem
                         # stops at the arch (n), and where it goes on (h) a break of it is the corner's own fill
+
+
+def bar_half(g) -> float:
+    """Half an arch's bar as it is drawn: in the italic a horizontal stroke
+    is cos(slant) thinner than its name (geom.Thickness), and its underside
+    that much higher."""
+    from ..draw import _thickness
+    return _thickness(g.p, g.sh)((1.0, 0.0)) / 2
 
 
 def shoulder_room(g, xs, x_right, full):
@@ -718,7 +768,10 @@ def m(g):
             # first arch's corner is cut deeper than the bar is thick at the
             # heavy weights, and took a wedge out of the stem under the
             # second (its counter's corner broken 9 units for the first's 44)
-            g.stroke((xs, f.Y(4)), (xs, min(arch[0][1], f.Y(8) - g.sh / 2)))
+            # (to the arch's underside as it is drawn, bar_half: in Arris Mono Italic, its arches square
+            # in the narrower body its slant leaves it, the stem stopped 0.9 of a unit under the arch
+            # at Bold, its corner there was broken as a stroke's end is, and the counter bit into it)
+            g.stroke((xs, f.Y(4)), (xs, min(arch[0][1], f.Y(8) - bar_half(g))))
         g.stroke(*arch, (xr, 0), start=cut)
 
 

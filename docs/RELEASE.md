@@ -88,6 +88,19 @@ letters redrawn.
   variable font goes from one stem to the other. A positive grade fades
   out to a cut's own Black.
 
+  Between the two ladders the watch axis is a slope, not a step. Along it
+  the stem goes straight from Arris's to the watch's, and everything a
+  rule reads off the stem goes one way with it: what of the stem is past
+  the Regular, the white the letters give, their bodies, the r's share of
+  the H (the owner: "we treat that as a gradient that you can go across").
+  The f's and the t's rule has a threshold, and read on Arris's share of
+  the stem it came on somewhere along the axis, later the heavier the
+  weight: at Black the stub was Arris's half way to the watch's drawing
+  and the watch's two thirds of the way, and shrank three units before it
+  grew. Between Arris and the watch's drawing it is now as far from the
+  one as from the other (`lower.between`), as the variable font carries
+  it; at either end it is what it was.
+
   With it the engine knows a font's own parameters at any weight
   (`draw._cut`); until now only at one round to a thousandth, and a rule
   that searches along the weights (an opening held from where it first
@@ -96,6 +109,42 @@ letters redrawn.
   and with it the thirty letters built on that e, by a tenth of a unit of
   advance at the heaviest weights, and nothing else.
 
+- Under each arch of the cursive m the counter has one top, the same in
+  both, at every weight (the owner, 2026-11-11: "some funky stuff going on
+  under the loops ... This was a problem before ... if we have some
+  consistency there that'd be really good"). An arch leaves its stem by a
+  branch, three modules under the arch in the italic, and in the m's
+  narrow counters the branch has little room: 0.8 of an edge break showed
+  under the arch at SemiBold, under a tenth at Bold, and from ExtraBold it
+  lay inside the arch, the white beside it running up into the arch in a
+  pocket. And the first arch's corner, cut deeper than the bar is thick,
+  took a wedge out of the middle stem under the second arch, so the
+  pocket there was another shape. The upright has had the rule since
+  1.017's first round: nothing of a shoulder is drawn smaller than an
+  edge break. The italic has it now (`lower.shoulder`): a branch that
+  would show under a break below its arch is cut along the arch's
+  underside, the counter's top the arch's alone; and the cursive m's
+  middle stem stands up to its own arch, as the upright m's does. The
+  Cyrillic т, the same letter, with it. The n and the h, with more room,
+  keep their branch to Bold (1.7 breaks under the arch there) and take
+  the rule from ExtraBold, where the upright n loses its step too.
+  Arris Mono Italic's m is the upright's, drawn in a narrower body so its
+  slanted ink fits the cell, and its arches have no room there. It had
+  the pocket under its second arch at Regular and Retina; at Medium the
+  second arch began square on the stem's centre and the notch the arches
+  meet in had an upright side; at Bold the middle stem stopped 0.9 of a
+  unit under its arch (the italic's horizontals are cos(slant) thinner
+  than their name) and the second counter bit into it. An arch that joins
+  another keeps its cut at every weight, the stem stands to the underside
+  as it is drawn (`lower.bar_half`), and the m is joined one way from
+  Regular to Bold: two counters of one shape, one V over the middle stem,
+  shallower than the corner rule made it from SemiBold (22 units at Bold
+  for 53).
+- A sign that could not be drawn at one width while its Mono body was
+  being found stopped the build (℃ in Arris Mono Narrow SemiBold: its C,
+  tried 59 units wide with a stem of 108, folded on itself and the union
+  of its strokes raised). `geom.ink` mends such an outline before the
+  union, and the fit goes on to a body it can be drawn in.
 - Past the Regular the letters give white to their stems, as the letters
   of other families do. Arris got bolder outward: almost every unit a stem
   gained went onto the letter's width. Read at one boldness and one

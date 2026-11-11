@@ -1033,7 +1033,8 @@ def tedesc_ital(g):
     entry(g, f, x1)
     arch, cut = shoulder(g, f, x1, x2, drop=BRANCH)
     g.stroke(*arch, (x2, 0), start=cut)
-    arch, cut = shoulder(g, f, x2, x3, drop=BRANCH)
+    arch, cut = shoulder(g, f, x2, x3, drop=BRANCH, joined=True)
+    g.stroke((x2, f.Y(4)), (x2, arch[0][1]))                # (the middle stem up to its own arch: italic_forms.m_ital)
     g.stroke(*arch, (x3, f.Y(1)), *_ctick(g, f, x3), start=cut)
 
 

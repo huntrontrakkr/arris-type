@@ -523,7 +523,14 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     polys += list(extra)
     if not polys and not overlay:
         return []
-    u = shapely.union_all(polys) if polys else MultiPolygon()
+    try:
+        u = shapely.union_all(polys) if polys else MultiPolygon()
+    except shapely.errors.GEOSException:
+        # A stamped outline that folds back on itself: a letter tried in no room at all, before its sign
+        # is drawn smaller to fit (symkit._mono_fit). ℃'s C in Arris Mono Narrow's cell is tried 59 units
+        # wide; at a stem of 108 its lower beak came out with a spike along its own side, and the union
+        # stopped the build on it. The fold taken out, the trial is measured and set aside as before.
+        u = shapely.union_all([q if q.is_valid else q.buffer(0) for q in polys])
     if clip is not None:
         u = u.intersection(clip)
     u = shapely.make_valid(u)

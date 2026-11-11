@@ -413,7 +413,11 @@ def m_ital(g):
     entry(g, f, x1)
     arch, cut = shoulder(g, f, x1, x2, drop=BRANCH)
     g.stroke(*arch, (x2, 0), start=cut)
-    arch, cut = shoulder(g, f, x2, x3, drop=BRANCH)
+    arch, cut = shoulder(g, f, x2, x3, drop=BRANCH, joined=True)
+    # the middle stem stands up to where its own arch leaves it, as the upright m's (lower.m): the first
+    # arch's corner is cut deeper than the bar is thick, and where the second arch's branch is short it
+    # took a wedge out of the stem under it, the second counter's corner a bite the first has not
+    g.stroke((x2, f.Y(4)), (x2, arch[0][1]))
     g.stroke(*arch, *tail(g, f, x3), start=cut)
 
 
