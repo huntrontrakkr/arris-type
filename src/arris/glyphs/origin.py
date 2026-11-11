@@ -25,7 +25,7 @@ FILL_THIN, FILL_BLACK, FILL_MAX = 0.6, 0.94, 0.96   # a pixel's side, as a share
 
 
 def _fill(p):
-    from ..instances import STEMS
+    from ..instances import WATCH_STEMS as STEMS
     sv = p.ungraded().sv
     t = min(max((sv - STEMS[100]) / (STEMS[900] - STEMS[100]), 0.0), 1.0)
     return min(FILL_MAX, (FILL_THIN + (FILL_BLACK - FILL_THIN) * t) * p.grade_k)

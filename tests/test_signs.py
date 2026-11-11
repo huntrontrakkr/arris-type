@@ -45,9 +45,11 @@ def test_the_percents_rings_stand_clear_of_its_slash(w):
 
 @pytest.mark.parametrize('w', [400, 700, 800, 900])
 def test_the_number_signs_ends_are_longer_than_its_strokes(w):
-    """A stroke and a half past the bars, each way, and the square between
-    them a stroke at least (at Black the ends were two thirds of a stroke:
-    a cross with a hole in it)."""
+    """A stroke and a half past the bars up and down, and the square
+    between them a stroke at least (at the watch's Black the ends were two
+    thirds of a stroke: a cross with a hole in it). Across, what the body
+    holds: a stroke and a half at Regular and at Black, least where the
+    sign's strokes begin to thin, 1.17 at Bold."""
     p = params(w)
     ink = _ink('numbersign', p)
     x0, y0, x1, y1 = ink.bounds
@@ -59,7 +61,7 @@ def test_the_number_signs_ends_are_longer_than_its_strokes(w):
     th, tv = bars[0][1] - bars[0][0], stems[0][1] - stems[0][0]
     assert tv <= p.sv + 0.5
     assert bars[0][0] - y0 >= 1.45 * th and y1 - bars[1][1] >= 1.45 * th
-    assert stems[0][0] - x0 >= 1.25 * tv and x1 - stems[1][1] >= 1.25 * tv      # (1.28 at Bold; 1.34 before the signs gave white)
+    assert stems[0][0] - x0 >= 1.15 * tv and x1 - stems[1][1] >= 1.15 * tv      # (1.17 at Bold, 1.32 at ExtraBold)
     assert hy1 - hy0 >= th - 0.5 and hx1 - hx0 >= tv - 0.5
 
 

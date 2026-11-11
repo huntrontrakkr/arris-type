@@ -1184,11 +1184,11 @@ def _cut_form(spec, sq, p):
     default form does not read there (vision.READS) and the other reads
     better, every weight of the cut takes the other. A sign keeps one form
     through its family."""
-    from .instances import params
+    from .instances import drawn
     from .vision import READS
     key = (spec.name, sq.free, p.mono)
     if key not in _FORMS:
-        heavy = params(900).with_(mono=p.mono)
+        heavy = drawn(900).with_(mono=p.mono)                   # (the watch's Black: the heaviest any cut draws)
         g0 = _build(spec, heavy, 0.0, 0.0, {})
         d0 = g0.defaults.get(sq.free)
         b = sq.limit(heavy)
@@ -1217,10 +1217,10 @@ def _thinning_reads(spec, sq, p) -> bool:
     glyph is left be at every weight. Decided once for the cut, so the
     weights and grades agree (and the variable font's masters with them):
     decided weight by weight, ¥'s bars went thin, thick, thin, thick."""
-    from .instances import params
+    from .instances import drawn
     key = (spec.name, sq.free, p.mono)
     if key not in _THINS:
-        heavy = params(900).with_(mono=p.mono)
+        heavy = drawn(900).with_(mono=p.mono)
         kinds = ('hole', 'slot')
         g0 = _build(spec, heavy, 0.0, 0.0, {})
         b = sq.limit(heavy)
@@ -1279,23 +1279,25 @@ def _cut(p):
     instances.params, Mono, Mono Narrow or neither, italic or not); else
     None (a set derived from one: small capitals, small figures). Mono
     Narrow's weight is the one it is drawn at (instances.narrow_weight).
+    The weights are the watch's (instances.WATCH_STEMS, drawn): the one
+    whose stem p has, whatever p's font calls it, so a rule that names a
+    weight (the Regular's, every hundred to p's own, the watch's Black)
+    reads the same stems in Arris, whose weights past the Regular are
+    lighter than their names on the watch's ladder, as in Arris Watch.
     Until 1.014 Narrow was not found here, so no rule that reads the cut
     held for it: its ligatures spaced at Bold as at their own Regular and
     spread a cell a character, its added strokes never stopped gaining."""
     if p not in _CANON:
-        from .instances import params, stem
+        from .instances import drawn, watch_weight
         out = None
         grad = p.grad
-        base_sv = p.sv / p.grade_k
-        lo, hi = 1.0, 1000.0
-        for _ in range(40):                                 # the weight whose stem p has
-            mid = (lo + hi) / 2
-            lo, hi = (mid, hi) if stem(mid) < base_sv else (lo, mid)
-        w = round((lo + hi) / 2, 3)
+        w = watch_weight(p.sv / p.grade_k)                  # the watch's weight whose stem p has
+        if abs(w - round(w, 3)) < 1e-9:
+            w = round(w, 3)
 
         def make(watch):
             def at(w_):
-                q = params(w_, grad, watch=watch).with_(mono=p.mono, narrow=p.narrow)
+                q = drawn(w_, grad, watch=watch).with_(mono=p.mono, narrow=p.narrow)
                 if p.cursive:
                     q = q.with_(cursive=True)
                 if p.slant:
@@ -1318,12 +1320,14 @@ def _cut(p):
 
 def _at_watch(p, watch):
     """p's weight and grade in its own cut at another watch balance, if p is
-    a font's own (_cut); else None."""
+    a font's own (_cut); else None. The font's weight (instances.weight_of),
+    as the variable font carries the watch axis: at one weight, from Arris's
+    stem to the watch's."""
     cut = _cut(p)
     if cut is None:
         return None
-    from .instances import params
-    q = params(cut[0], p.grad, watch=watch).with_(mono=p.mono)
+    from .instances import params, weight_of
+    q = params(weight_of(p.sv / p.grade_k, 1.0 - p.optical), p.grad, watch=watch).with_(mono=p.mono)
     if p.cursive:
         q = q.with_(cursive=True)
     if p.slant:

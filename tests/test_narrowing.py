@@ -15,7 +15,7 @@ import arris.glyphs  # noqa: F401  (the registry)
 from arris.draw import REGISTRY, draw
 from arris.glyphs import lower
 from arris.glyphs.letterframe import heft, narrowed, own_width, zone
-from arris.instances import params
+from arris.instances import drawn, params
 from arris.italic import italic
 
 CMAP = {chr(s.unicode): n for n, s in REGISTRY.items() if s.unicode}
@@ -37,19 +37,27 @@ def test_the_regular_and_lighter_give_nothing(w):
 
 
 def test_counters_narrow_as_other_families_counters_do():
-    """Regular to Black, at one boldness and one x-height: the n's counter
-    0.62 of what it was (0.80 before), the H's 0.72, the zero's 0.66; to
-    Bold 0.79, 0.84 and 0.80. Arris's own: the n 0.62 and 0.78, the H 0.71
-    and 0.83, the zero 0.69 and 0.81."""
-    reg, bold, black = params(400), params(700), params(900)
+    """Regular to the watch's Black, the boldness the families were read
+    at (a stem of 175; Bold 140), at one x-height: the n's counter 0.62 of
+    what it was (0.80 before), the H's 0.72, the zero's 0.66; to Bold 0.79,
+    0.84 and 0.80. Arris's own there: the n 0.62 and 0.78, the H 0.71 and
+    0.83, the zero 0.69 and 0.81. At its own Bold and Black, lighter than
+    those (instances.STEMS: 130 and 158), the n keeps 0.82 and 0.70 of its
+    counter, and at every weight a counter wider than its stems."""
+    reg, bold, black = params(400), drawn(700), drawn(900)
     for name, to_bold, to_black in (('n', 0.78, 0.62), ('H', 0.83, 0.71)):
         assert _counter(name, bold) / _counter(name, reg) == pytest.approx(to_bold, abs=0.01), name
         assert _counter(name, black) / _counter(name, reg) == pytest.approx(to_black, abs=0.01), name
     zero = lambda p: p.fig_w - 2 * p.sv
     assert zero(bold) / zero(reg) == pytest.approx(0.81, abs=0.01)
     assert zero(black) / zero(reg) == pytest.approx(0.69, abs=0.01)
-    # and a letter grows where it grew a quarter: the n 1.16 of its Regular's body at Black (1.27)
+    # and a letter grows where it grew a quarter: the n 1.16 of its Regular's body at the watch's Black (1.27)
     assert REGISTRY['n'].width(black) / REGISTRY['n'].width(reg) == pytest.approx(1.157, abs=0.005)
+    for w, left in ((700, 0.82), (900, 0.70)):                             # Arris's own Bold and Black
+        assert _counter('n', params(w)) / _counter('n', reg) == pytest.approx(left, abs=0.01), w
+    for w in range(400, 901, 50):
+        assert _counter('n', params(w)) > params(w).sv, w
+    assert _counter('n', black) < black.sv                                  # (what the watch's Black had not)
     for a, b in zip(range(400, 900, 50), range(450, 901, 50)):          # and never narrower for a heavier stem
         for name in 'nHkrj':                                                # (the f and the t lose half their stub by 650)
             assert REGISTRY[name].width(params(b)) > REGISTRY[name].width(params(a)), (name, b)
@@ -130,11 +138,13 @@ def test_f_and_t_give_on_the_arms_side(w):
     comes off the arm and the foot, down to ARM_LEAST stems past the stem:
     a quarter of it came off the stub, which is no longer than its two
     cuts, and at ExtraBold they came apart in a kink."""
-    p = params(w)
+    p = drawn(w)                                                        # (the watch's weights: its 650 is Arris's Bold)
     own = own_width(lower.NARROW, 1)(p) + heft(p)
     whole = (own - p.sv) / 4
     d = lower.stub(p)
     assert d == pytest.approx(whole) if w <= 600 else d < 0.7 * whole
+    assert lower.stub(params(600)) == pytest.approx((own_width(lower.NARROW, 1)(params(600)) + heft(params(600)) - params(600).sv) / 4)
+    assert drawn(650).same(params(700))
     body = REGISTRY['t'].width(p)
     with zone('lower'):
         arm = max(own * narrowed(p) - whole - p.sv, lower.ARM_LEAST * p.sv)   # as a one-stem letter gives, the stub aside
@@ -211,7 +221,7 @@ def test_the_kink_over_a_shoulder_is_what_it_was(w):
     from shapely.geometry import LineString
 
     from arris.geom import rings_to_shapely
-    p = params(w)
+    p = drawn(w)                                                        # (the watch's Bold, 750 and ExtraBold: stems of 140, 149 and 158)
 
     def notch(name, width=None):                                         # the white between stem and arch, under the x-height
         lower._measuring.append(p) if width else None

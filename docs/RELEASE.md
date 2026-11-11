@@ -54,6 +54,48 @@ before a commercial distribution if wanted.
 How the letters stand together. Six causes, each measured, and five
 letters redrawn.
 
+- Black draws a stem of 158 units, where it drew 175, and every weight
+  past the Regular is rescaled to it: each adds to the Regular's stem four
+  fifths of what it added (`instances.STEMS`: Medium 102, SemiBold 114,
+  Bold 130, ExtraBold 144, Black 158, for 105, 120, 140, 158 and 175). At
+  175, in the widths the letters now have past the Regular (next), the
+  n's counter was narrower than its stems, 164 units, and this round's
+  repairs gathered there: the j's hook shut, the k's loop all but, the
+  f's and the t's crossing a knot, a dot a speck. At 158 the counter is
+  184 units, and at every weight of Arris it is wider than the stems
+  beside it (the owner, 2026-11-11, to dropping that Black and making the
+  ExtraBold the heaviest: "we should do that but we need to rescale
+  everything after regular").
+
+  Nothing is drawn that was not. Black is the ExtraBold of before, Bold
+  the 650 the f's and the t's crossing was chosen at, and so each weight:
+  every glyph of each was compared with the drawing the old ladder has at
+  its stem, upright, italic and Mono. A rule of the engine that names a
+  weight (the measured optics' ends, the weight a cut's forms are chosen
+  at, the weights a heavier one is held against) still names the old
+  ones, whose stems the new have (`instances.drawn`, `WATCH_STEMS`). In
+  the notes below, written before this one, Black and the weights given
+  by number are those: Arris's Black is their 800, its Bold their 650.
+  Stem to cap height is now 0.18 at Bold and 0.22 at Black (measured
+  neutral faces' Bold 0.23, chamfered ones' 0.20:
+  `docs/research/reference-fonts.md`): a Bold lighter than most.
+
+  Arris Mono takes the same weights (its Bold 130 units). Arris Watch
+  and the watch's end of the variable font keep the watch's own (the
+  owner: "Watch cut keeps its weights"): its SemiBold is the watch's
+  figures pixel for pixel, as before, and at one name it is heavier than
+  Arris, 5% at SemiBold and 11% at Black; along the watch axis the
+  variable font goes from one stem to the other. A positive grade fades
+  out to a cut's own Black.
+
+  With it the engine knows a font's own parameters at any weight
+  (`draw._cut`); until now only at one round to a thousandth, and a rule
+  that searches along the weights (an opening held from where it first
+  falls short) read the drawings between as a derived set's, small
+  capitals', which are filled otherwise. It moves the cursive e's eye,
+  and with it the thirty letters built on that e, by a tenth of a unit of
+  advance at the heaviest weights, and nothing else.
+
 - Past the Regular the letters give white to their stems, as the letters
   of other families do. Arris got bolder outward: almost every unit a stem
   gained went onto the letter's width. Read at one boldness and one

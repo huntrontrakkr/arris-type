@@ -194,7 +194,7 @@ def e(g):
 NARROW = 6      # the f's and the t's frame, in modules (their masters' seven, less one)
 
 
-STUB_FADE = (30.0, 40.0)    # units of stem past the Regular's (SemiBold, 650): to where the f's and the t's crossbar keeps
+STUB_FADE = (30.0, 40.0)    # units of stem past the Regular's (the watch's SemiBold and 650; the second Arris's Bold): to where the f's and the t's crossbar keeps
                             # its whole stub left of the stem, and from where stub and crossbar are held as they stand there
 
 
@@ -767,8 +767,8 @@ def q(g):
 # the arm with a flat kept under it by a shorter shoulder, past SemiBold
 # where the shoulder's underside runs to the body's edge: "It looks great
 # ... don't fix the R".)
-R_SHARE = (6.0, 7.0)    # ninths of the H's width: to the Regular, at Black
-R_BLACK = 85.0          # units the stem gains from Regular to Black
+R_SHARE = (6.0, 7.0)    # ninths of the H's width: to the Regular, at the watch's Black (6.8 at Arris's: instances.STEMS)
+R_BLACK = 85.0          # units the stem gains from Regular to the watch's Black, the boldness the families were read at
 
 
 def r_width(p):

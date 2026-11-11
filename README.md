@@ -18,7 +18,7 @@ Specimen, and the fonts to download: **[arristype.com](https://arristype.com)**.
 | Family | What it is |
 |---|---|
 | **Arris** | Proportional letters and figures (the watch's tabular figures with `tnum`). Measured optics. Nine weights. |
-| **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem). |
+| **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem) and its own weights: SemiBold is the watch's figures, and past Regular each weight is a little heavier than Arris's of that name. |
 | **Arris Italic**, **Arris Mono Italic** | Slanted ten degrees, every chamfer a curve, every point the upright keeps sharp kept sharp; a single-storey a and a descending f. Nine weights; Mono Italic in Mono's six. |
 | **Arris Mono Narrow** | Arris Mono with narrower letters in the same cell: about a fifth of every cell white at every weight, twice Arris Mono's white between letters, and each weight from Regular up drawn a little lighter, for code and terminals where Arris Mono reads dense. Same six weights, each with its italic, every ligature and set. |
 | **Arris Mono** | Fira Code's six weights: Light, Regular, Retina (450), Medium, SemiBold and Bold. Every glyph on one 10-module cell, the same in all six (a Bold word keeps a Regular line's grid): slabbed I, footed i l r, dotted zero, and every programming ligature Fira Code sets by default (`->` `=>` `!=` `===` `<=` `:=` `|>` `</>` `<$>` `#{` `~@` `/*` …), each one gesture in Arris's strokes, plus runs of any length (`---->` `<====>` `|---|` `####`) and Fira Code's optional sets under its tags. |

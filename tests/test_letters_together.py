@@ -52,15 +52,18 @@ def test_the_r_is_two_thirds_of_the_h_and_grows_to_seven_ninths(w):
     wider than the n, and at eight ninths still the lightest letter of the
     alphabet, its advance 0.94 of the n's where faces of this kind give
     the r 0.62 to 0.72 (the owner, twice: a module off the arm). Past the
-    Regular it grows to seven ninths at Black, as other families' r grows
-    against their n: at six its arm was a stub on the stem's corner (the
-    owner: "a little tiny clown nose"; of five widths shown he chose this
-    one, and of the r so drawn: "It looks great")."""
+    Regular it grows with its stem, to seven ninths at the watch's Black
+    (6.8 at Arris's: instances.STEMS), as other families' r grows against
+    their n: at six its arm was a stub on the stem's corner (the owner: "a
+    little tiny clown nose"; of five widths shown he chose this one, and
+    of the r so drawn: "It looks great")."""
     from arris.glyphs.letterframe import heft, share_width, zone
     from arris.glyphs.lower import R_BLACK, R_SHARE
+    from arris.instances import drawn
     p = params(w)
     share = R_SHARE[0] + (R_SHARE[1] - R_SHARE[0]) * min(1.0, heft(p) / R_BLACK)
-    assert (share, R_SHARE) == ((6.0 if w <= 400 else 7.0 if w == 900 else share), (6.0, 7.0))
+    assert (share, R_SHARE) == ((6.0 if w <= 400 else pytest.approx(6.8) if w == 900 else share), (6.0, 7.0))
+    assert heft(drawn(900)) == R_BLACK
     with zone('lower'):
         assert REGISTRY['r'].width(p) == pytest.approx(share_width(share)(p))
     if w <= 400:
@@ -374,11 +377,13 @@ def test_a_shoulder_keeps_its_neck(w):
 
 @pytest.mark.parametrize('w', [850, 900])
 def test_a_bowls_inside_corner_is_what_its_strokes_make_of_it(w):
-    """geom._stroke_polygon: from ExtraBold a bowl's inside chamfer was
-    held at an edge break, more than its strokes leave it (the O's 44
-    units for 32 at Black); it follows them down to the fill's leg."""
+    """geom._stroke_polygon: from the watch's ExtraBold (Arris's Black) a
+    bowl's inside chamfer was held at an edge break, more than its strokes
+    leave it (the O's 44 units for 32 at the watch's Black); it follows
+    them down to the fill's leg."""
     from arris.draw import fill_leg
-    p = params(w)
+    from arris.instances import drawn
+    p = drawn(w)                                                        # (the watch's weights: stems of 166 and 175)
     g = draw('O', p)
     hole = min(g.rings(), key=lambda r: max(q[0] for q in r) - min(q[0] for q in r))
     legs = sorted(abs(b[0] - a[0]) for a, b in zip(hole, hole[1:] + hole[:1])           # (across: the optical centre moves heights)
@@ -459,7 +464,10 @@ def test_f_and_t_keep_their_hooks_at_every_weight(w):
 
 
 def test_f_and_t_hold_their_650():
-    """The crossing of the f and of the t is one shape from 650 to Black
+    """The crossing of the f and of the t is one shape from Bold to Black:
+    from a stem 40 units past the Regular's, which was 650 when the owner
+    chose it and is Bold on Arris's weights (instances.STEMS), to the
+    watch's Black
     (the owner, 2026-11-10, of the two at ExtraBold and Black: "it just
     turns into this gnarled, ugly thing when it comes to the way that
     everything joins ... a big old knot"; shown the stub going into the
@@ -474,9 +482,10 @@ def test_f_and_t_hold_their_650():
     respectively, with the cross": it stood an edge break short of them)."""
     from arris.draw import fill_leg
     from arris.glyphs.lower import stub
+    from arris.instances import drawn
     held = None
-    for w in (650, 700, 750, 800, 850, 900):
-        p = params(w)
+    for p in [params(w) for w in (700, 750, 800, 850, 900)] + [drawn(w) for w in (850, 900)]:
+        w = p.sv
         d = stub(p)
         assert d == pytest.approx(min(55 / 52 * p.c, 2 * fill_leg(p))), w
         bumps = []
@@ -511,15 +520,18 @@ def _pieces(ch, p, y):
 
 @pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 800, 900])
 def test_every_bowl_meets_its_stem_through_a_notch(w):
-    """One notch a bowl, to ExtraBold, and square at Black as the n is:
-    under the ascender on b and d (where the h has its own), over the
-    descender on p, q and g, at the foot on a, u and y; the other join
-    square. (The owner: "if we're going to do it on the a and the u, then
-    we need to do it on all the bowls", flipped to where the stem runs
-    on.)"""
+    """One notch a bowl, at every weight of Arris (and square at the
+    watch's Black, as the n is): under the ascender on b and d (where the
+    h has its own), over the descender on p, q and g, at the foot on a, u
+    and y; the other join square. (The owner: "if we're going to do it on
+    the a and the u, then we need to do it on all the bowls", flipped to
+    where the stem runs on.)"""
+    from arris.instances import drawn
     p = params(w)
     top, foot = p.xh - 0.4 * p.c, 0.4 * p.c
-    notched = 1 if w == 900 else 2
+    notched = 2
+    heavy = drawn(900)
+    assert _pieces('n', heavy, heavy.xh - 0.4 * heavy.c) == 1 and _pieces('b', heavy, heavy.xh - 0.4 * heavy.c) == 1
     assert _pieces('n', p, top) == notched
     for ch in 'bd':
         assert (_pieces(ch, p, top), _pieces(ch, p, foot)) == (notched, 1), ch

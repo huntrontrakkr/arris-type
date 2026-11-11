@@ -157,6 +157,23 @@ sides thin the same way so its cup stays open.
 The watch has one weight. Arris has nine, Thin to Black, and two stroke
 balances.
 
+**The weights.** The watch's stem is two modules, a sixth of the figure
+height: a SemiBold. The other weights were drawn around it, 24 units at
+Thin, 90 at Regular, 175 at Black (`instances.WATCH_STEMS`), and Arris
+Watch keeps them, its SemiBold the watch's figures. Arris and Arris Mono
+share them to the Regular. Past it each weight adds to the Regular's stem
+four fifths of what the watch's adds (`instances.STEMS`): 102, 114, 130,
+144 and 158 units from Medium to Black for the watch's 105, 120, 140, 158
+and 175. At 175, in the widths the letters have past the Regular (below),
+the n's counter was narrower than its stems, 164 units; at 158 it is 184,
+and at every weight of Arris a counter is wider than the stems beside it.
+No weight draws what the watch's ladder does not have: Black is its
+ExtraBold, Bold its 650, and a rule of the engine that names a weight (the
+measured optics' ends, the weight a cut's forms are chosen at, the weights
+a heavier one is held against) names the watch's, whose stem the font's
+weight has (`instances.drawn`). Along the watch axis the variable font goes
+from Arris's stem to the watch's.
+
 **Strokes, not pixels** (`arris.geom`). A glyph is drawn as centrelines. Each
 segment is offset by half its thickness, and the thickness depends only on
 direction: horizontal, vertical, 45° and 2:1 each have their own. A *bowl*
@@ -197,9 +214,10 @@ cap height one edge break in.
 stem; white widens a little at light weights, and past the Regular it
 gives way to the stems at the rate the white of other families' letters
 does (`instances.white_given`, measured with `tools/width_survey.py`): a
-lowercase letter's faster than a capital's, so at Black the n's counter is
-0.62 of the Regular's and the H's 0.71, and a line sets a twentieth
-longer, not a ninth. A letter with one stem, and the y, give the share of
+lowercase letter's faster than a capital's, so at the watch's Black, the
+boldness the families were read at, the n's counter is 0.62 of the
+Regular's and the H's 0.71, and a line sets a twentieth longer, not a
+ninth (at Arris's own Black 0.70 and 0.77, the line a twenty-fifth). A letter with one stem, and the y, give the share of
 their body the n or the H gives, the cursive's j, l, r and k among them;
 the f, the t and the j give no more than their crossbar and hook can
 spare, and the cursive f, a stem and a crossbar, gives nothing. The
@@ -367,7 +385,7 @@ watch balance is the watch.
 
 Past Bold the watch balance eases off: from 750 it takes a falling share
 of the watch's ratios, three quarters of them at Black
-(`instances.WATCH_TAPER`). Whole, it makes every horizontal as thick as a
+(`instances.WATCH_TAPER`; the watch's weights, which Arris Watch has). Whole, it makes every horizontal as thick as a
 stem, where the measured optics thin it to 0.85, and past Bold the drawings
 have no room for that: where bars stack against a bowl (э є ӭ ԙ ℡ ҕ ҙ) the
 white between them closed and the letter pooled into a blob at Black. Its
@@ -391,7 +409,7 @@ explains and which are typographers' practice.
 **Horizontals thinner than verticals.** A horizontal bar looks heavier than a
 vertical stem of the same thickness. The measured faces set horizontals at
 0.87–0.90 of the stem at Regular and 0.85–0.87 at Bold, chamfered faces
-included. Arris runs from 0.90 at Thin to 0.85 at Black. Measured
+included. Arris runs from 0.90 at Thin to 0.85 at the watch's Black (0.86 at its own). Measured
 illusions explain the direction and about half the size: verticals look
 6–7% longer than horizontals of the same length, and horizontal bars 3–5%
 thicker. The rest is practice, rightly taken from the fonts. In tight stacks
@@ -402,7 +420,7 @@ so that each counter stays at least ¾ of a bar.
 0.94–0.97 of the stem, and chamfered faces make a bowl's 45° corner about
 the mean of its side and top. That is where the watch's 71% sits furthest
 from practice, and where its light corners come from. Arris uses 0.94 at
-light weights, thinning to 0.84 at Black as heavy faces do, so that tight
+light weights, thinning to 0.84 at the watch's Black as heavy faces do, so that tight
 figures like the 4 keep their counters. The oblique effect (the eye's
 poorer acuity for 45° lines) is real only near threshold and at fine
 detail, so it is no reason to change a diagonal's weight at text or watch
@@ -518,8 +536,9 @@ thicken outward about their centre; everything else thickens inward from
 its edges.
 
 A positive grade fades out from SemiBold to Black (`instances.GRAD_TAPER`):
-at Black it adds nothing, so the heaviest stroke the fonts draw is Black's
-own. Past Black's stroke the drawings had no room. With a fifth more, some
+at Black it adds nothing, so the heaviest stroke a cut draws is its own
+Black's (158 units in Arris, 175 in Arris Watch). Past the watch's Black
+the drawings had no room. With a fifth more, some
 three hundred glyphs fused, kinked or lost a terminal between 750 and 900
 (the ? its hook's stub, the ‡ its bars, the $ its counters), and the
 variable font smeared each change across the weights between its masters.
@@ -895,7 +914,8 @@ plain zero.
 | ascender | 780 | 13 |
 | descender | -180 | -3 |
 | hhea / typo ascender / descender | 950 / -250 | |
-| stem at Regular / SemiBold (watch) / Black | 90 / 120 / 175 | 1.5 / 2 / 2.9 |
+| stem at Regular / Bold / Black | 90 / 130 / 158 | 1.5 / 2.2 / 2.6 |
+| Arris Watch: stem at SemiBold (the watch's) / Black | 120 / 175 | 2 / 2.9 |
 
 ## 10. Beyond the letters
 
