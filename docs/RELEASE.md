@@ -102,9 +102,35 @@ letters redrawn.
   to 0.70 (now none, and 0.82; the e's were 0.92). The florin and the ϰ
   keep their bodies (`letterframe.ungiving`): the florin's crossbar and
   hook ran into a wedge at Black as the f's did, and the ϰ lost its curls.
+  The cursive's one-stem letters (j l r k) give the n's share as the
+  upright's do, with no arm's room added (`italic_forms.letter_width`):
+  with all their white giving they stood a seventh narrower at Black,
+  where the n is a twelfth. The cursive j gives no more than leaves a
+  break of white inside its hook, or what its own body has there
+  (`italic_forms.j_width`): with the whole share given the hook held 4
+  units of white at Black for 37, a block under the line. The cursive f,
+  a stem and a crossbar, keeps
+  its body: what it gave came off the bar's two ends, 35 units each at
+  Black for 72, and the `ss10` ligatures fi and fj, which run that bar on
+  into the next letter, took the stem behind so short a bar for the bar
+  itself and came out one black block at ExtraBold and Black
+  (`ligatures._bar_on` now finds the bar however short its end is). The
+  turned f (ⅎ) takes the body of the f it turns (`letterlike._turned`,
+  `draw.drawn_spec`): in the italic it turned the cursive f in the
+  upright f's body, which from 650 is no wider than at Regular, and the
+  cursive's two hooks ended in spurs.
   Every glyph was compared with its drawing before the narrowing, at
   eighteen places of the family (the Regular and lighter, Arris Mono and
-  the watch's own drawing unchanged, to the last point).
+  the watch's own drawing unchanged, to the last point, but for the dot
+  below and the italic's turned f).
+- The dot in a lunate sigma (ͼ ͽ Ͼ Ͽ) is no speck. It stood half a stem
+  clear of the bowl's sides, which the counter of a heavy c has not got:
+  37 units at Black for a stem of 175, and in the counters the letters
+  have now a speck on the stroke's floor from ExtraBold. It keeps half a
+  stem clear, or a quarter of the counter where that is less
+  (`greek_ext._lunate`): 82 units at Black, and from SemiBold up in every
+  cut where half a stem did not fit (Mono Italic and Mono Narrow at Bold,
+  the watch's own drawing at Black).
 - The f and the t keep the crossing they have at 650, to Black. The
   crossbar's stub left of the stem is a quarter of the letter's white,
   about 70 units at every weight, while the cuts on it double from Regular

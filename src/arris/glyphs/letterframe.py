@@ -136,10 +136,10 @@ def letter_width(wm: float, stems: float, arm: float = ARM):
     the k's eight where the n has four between its stems, holds an arm or a
     diagonal as thick as a stem, and with all six giving the k, the z, the K
     and the Z lost a tenth of their share again (0.90 and 0.93)."""
-    base = plain_width(wm, stems)
-    if stems != 1 or not arm:
-        return base
+    if stems != 1:
+        return plain_width(wm, stems)
     own = own_width(wm, stems)
+    # (with no arm's room, the cursive's one-stem letters: the share all the same)
     return lambda p: (own(p) + arm * heft(p)) * narrowed(p)
 
 

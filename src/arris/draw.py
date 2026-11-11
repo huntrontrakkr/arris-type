@@ -1818,10 +1818,16 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
     return _draw(name, _mono_held(name, p, ot, ob, width), ot, ob, width)
 
 
+def drawn_spec(name: str, p: Params) -> Spec:
+    """The drawing ``name`` gets at ``p``: where the font slants and has an
+    italic drawing of it (n.ital), that one replaces the upright one."""
+    if p.slant and not p.plain and f'{name}.ital' in REGISTRY:
+        return REGISTRY[f'{name}.ital']
+    return REGISTRY[name]
+
+
 def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
-    spec = REGISTRY[name]
-    if p.slant and not p.plain and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
-        spec = REGISTRY[f'{name}.ital']
+    spec = drawn_spec(name, p)
     g, overrides = _opened(spec, p, ot, ob, width)
     nesting = _Nesting.at(name, g, p, ot, ob, width)
     auto = _auto_counters(spec)

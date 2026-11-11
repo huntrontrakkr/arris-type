@@ -165,10 +165,14 @@ def _lunate(name, ch, base, kind, rev, dot):
             mirror(g)
         if dot:
             # in the middle of the bowl, half a stem clear of its sides and
-            # beaks (a speck where a heavy grade leaves no room)
+            # beaks, or a quarter of the counter where that is less: held
+            # to half a stem in the counters the letters have past the
+            # Regular it was a speck from ExtraBold (a speck still where a
+            # heavy grade leaves no room)
             p = g.p
             top = p.cap if kind == 'cap' else p.xh
-            s_ = min(p.dot(), max(g.W - 3 * p.sv, p.floor))
+            counter = g.W - 2 * p.sv
+            s_ = min(p.dot(), max(counter - 2 * min(p.sv / 2, counter / 4), p.floor))
             g.stroke((g.W / 2, top / 2 - s_ / 2, s_), (g.W / 2, top / 2 + s_ / 2))
     glyph(name, ch, lambda p, b=base: REGISTRY[b].width(p), kind=kind)(fn)
 

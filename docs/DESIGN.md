@@ -200,8 +200,10 @@ does (`instances.white_given`, measured with `tools/width_survey.py`): a
 lowercase letter's faster than a capital's, so at Black the n's counter is
 0.62 of the Regular's and the H's 0.71, and a line sets a twentieth
 longer, not a ninth. A letter with one stem, and the y, give the share of
-their body the n or the H gives; the f, the t and the j give no more than
-their crossbar and hook can spare. The watch's own drawing keeps its
+their body the n or the H gives, the cursive's j, l, r and k among them;
+the f, the t and the j give no more than their crossbar and hook can
+spare, and the cursive f, a stem and a crossbar, gives nothing. The
+watch's own drawing keeps its
 modules and Arris Mono its cell. Figures are spaced as
 the letters are, each by its own white; their tabular twins (`tnum`)
 share one cell within a weight, and it widens with the weight.

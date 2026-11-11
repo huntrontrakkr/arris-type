@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from ..draw import B, REGISTRY, draw, glyph
+from ..draw import B, REGISTRY, draw, drawn_spec, glyph
 from ..params import SQRT2, outer_leg
 from .figures import beak_depth, jog
 from .letterframe import STEEP, Frame, close_slit, heft, least_white, letter_width
@@ -393,11 +393,15 @@ def weierstrass(g):
 # --- Turned and reversed ------------------------------------------------------------
 
 def _turned(name, ch, base, M=TURN, zone='cap', kind=None, solid=False):
+    """``base`` turned, in the body of the drawing it turns: in the italic
+    the cursive f's for ⅎ, not the upright f's, which from 650 is no wider
+    than at Regular (lower.stub): drawn in it the cursive's two hooks had
+    no arm left past their turn and ended in spurs."""
     def fn(g):
         p = g.p
         about = p.cap / 2 if zone == 'cap' else p.xh / 2
         stamp_t(g, base, M, width=g.W, about=about)
-    sign(name, ch, lambda p: REGISTRY[base].width(p), kind=kind or REGISTRY[base].kind, solid=solid)(fn)
+    sign(name, ch, lambda p: drawn_spec(base, p).width(p), kind=kind or REGISTRY[base].kind, solid=solid)(fn)
 
 
 _turned('uni2141', '⅁', 'G')

@@ -143,6 +143,57 @@ def test_f_and_t_give_on_the_arms_side(w):
     assert REGISTRY['longs'].width(p) == body                           # (the f without its bar)
 
 
+@pytest.mark.parametrize('w', [700, 800, 900])
+def test_the_cursives_one_stem_letters_give_the_ns_share(w):
+    """The cursive j, l, r and k: the share of their body the n gives, as
+    the upright's one-stem letters (with all their white giving they stood
+    a seventh narrower at Black, where the n is a twelfth); the j no more
+    than leaves white inside its hook. The cursive f,
+    a stem and a crossbar, gives nothing: what its body gave came off the
+    bar's two ends, 35 units each at Black for 72, and the ss10 ligatures
+    fi and fj, which run that bar on into the next letter, took the stem
+    behind so short a bar for it: a bar as thick as the stem was tall, the
+    ligature one black block at ExtraBold and Black."""
+    from arris.font import place
+    p = italic(params(w))
+    for name, wm in (('l', 6), ('r', 8), ('k', 8)):
+        share = REGISTRY[name + '.ital'].width(p) / REGISTRY['n'].width(p)
+        assert share == pytest.approx(own_width(wm, 1)(p) / own_width(8, 2)(p)), name
+    # the j too, down to a break of white inside its hook (or what its own body has there: 0.86 of one at Black)
+    own, j = own_width(6, 1)(p), REGISTRY['j.ital'].width(p)
+    given = own * REGISTRY['n'].width(p) / own_width(8, 2)(p)
+    assert j == pytest.approx(max(given, min(own, 2 * p.sv + lower.J_SLOT * p.c)))
+    assert j - 2 * p.sv >= min(0.85, lower.J_SLOT) * p.c
+    assert REGISTRY['f.ital'].width(p) == pytest.approx(own_width(7, 1)(p))
+    # and the turned f is the cursive f turned, in the cursive f's body (the upright f's is a seventh narrower)
+    assert REGISTRY['uni214E'].width(p) == REGISTRY['f.ital'].width(p) > 1.05 * REGISTRY['f'].width(p)
+    assert REGISTRY['uni214E'].width(params(w)) == REGISTRY['f'].width(params(w))
+    for lig in ('f_i.ss10', 'f_j.ss10'):
+        rings = place(lig, p)[0]
+        assert len(rings) == 2, lig                                         # the two letters joined, and the dot
+        xs = [q[0] for r in rings for q in r]
+        ys = [q[1] for r in rings for q in r]
+        from arris.geom import rings_to_shapely
+        assert rings_to_shapely(rings).area < 0.5 * (max(xs) - min(xs)) * (max(ys) - min(ys)), lig
+
+
+@pytest.mark.parametrize('w', [400, 700, 800, 900])
+def test_the_dot_in_a_lunate_sigma_is_no_speck(w):
+    """ͼ ͽ Ͼ Ͽ: the dot stands half a stem clear of the bowl's sides, or
+    a quarter of the counter where that is less. Held to half a stem in
+    the counters the letters have past the Regular, it was 65 units at
+    Bold for a stem of 140, and a speck on the stroke's floor from
+    ExtraBold (37 units at Black before the letters gave)."""
+    p = params(w)
+    for name in ('uni037C', 'uni03FE'):
+        g = draw(name, p)
+        box = lambda r: (max(q[0] for q in r) - min(q[0] for q in r), max(q[1] for q in r) - min(q[1] for q in r))
+        dot = min((box(r) for r in g.rings()), key=lambda b: b[0] * b[1])
+        counter = g.W - 2 * p.sv
+        assert dot[0] == pytest.approx(dot[1]) == pytest.approx(min(p.dot(), counter - 2 * min(p.sv / 2, counter / 4))), name
+        assert dot[0] == p.dot() if w == 400 else dot[0] >= 0.45 * p.sv, name
+
+
 @pytest.mark.parametrize('w', [800, 850, 900])
 def test_the_j_keeps_a_break_of_white_in_its_hook(w):
     p = params(w)

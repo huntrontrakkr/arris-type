@@ -1297,8 +1297,11 @@ def _bar_on(g, a, b, y):
     sb, xb = _stamp(g, b, 1)
     ia, ib = _ink_of(sa, xa), _ink_of(sb, xb)
     end = max(r[1] for r in _runs(ia, y=y))
-    x = end - p.c - 0.25 * p.sv                                 # the bar, clear of its end's chamfers
-    lo, hi = min(_runs(ia, x=x), key=lambda r: abs((r[0] + r[1]) / 2 - y))
+    for clear in (0.25, 0.12, 0.05, 0.0):                       # the bar, clear of its end's chamfers
+        x = end - p.c - clear * p.sv - (0.0 if clear else 1.0)
+        lo, hi = min(_runs(ia, x=x), key=lambda r: abs((r[0] + r[1]) / 2 - y))
+        if hi - lo <= 1.5 * g.sh:                               # (the bar, and not the stem behind a short one: nearer its
+            break                                               # end then. A bar as thick as its stem was tall filled the ligature)
     yc = (lo + hi) / 2
     hits = [r for r in _runs(ib, y=yc) if r[0] > end - 1]
     if hits:

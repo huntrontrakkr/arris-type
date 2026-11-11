@@ -25,7 +25,7 @@ from __future__ import annotations
 from ..draw import AUTO_SHARE, REGISTRY, B, Opening, _counter_white, glyph
 from ..params import SQRT2, inner_leg, outer_leg
 from .figures import jog
-from .letterframe import Frame, plain_width as letter_width, white_scale
+from .letterframe import Frame, letter_width as _letter_width, own_width, ungiving, white_scale
 from .lower import _dot, crotch_butt, hook, shoulder, shoulder_enter
 
 TAIL = 1.75      # modules of white an exit tail reaches past its stem
@@ -68,6 +68,16 @@ def _in_cell(g, fn):
     g.add_glyph(h, dx, 0.0)
     g.defaults.update(h.defaults)
     g.defaults_used.update({k: (v + dx if k == 'stem' else v) for k, v in h.defaults_used.items()})
+
+
+def letter_width(wm, stems):
+    """An italic letter's body: its master's stems and white, with no room
+    added for an arm (the cursive's one-stem letters end in tails and
+    flags). Past the Regular a one-stem letter gives the share of its body
+    the n gives, as the upright's do (letterframe.letter_width): with all
+    its white giving, the cursive r and k stood a seventh narrower at Black
+    where the n is a twelfth."""
+    return _letter_width(wm, stems, arm=0.0)
 
 
 def ital(name, wm, stems, width=None, openings=()):
@@ -354,7 +364,16 @@ def i_ital(g):
     _dot(g, f, f.X(1))
 
 
-@ital('j', 6, 1)
+def j_width(p):
+    """The cursive j's body: a one-stem letter's, giving past the Regular
+    no more than leaves lower.J_SLOT breaks of white inside its hook, or
+    what its own body has there: with the whole share given the hook held
+    4 units of white at Black for 37, a block under the line."""
+    from .lower import J_SLOT
+    return max(letter_width(6, 1)(p), min(own_width(6, 1)(p), 2 * p.sv + J_SLOT * p.c))
+
+
+@ital('j', 6, 1, width=j_width)
 def j_ital(g):
     from .figures import beak_depth
     f = Frame(g, 6, 'asc', top=g.p.asc + g.p.sv)
@@ -474,10 +493,12 @@ def p_ital(g):
     g.stroke(f.P(1, 8), B(*f.P(7, 8)), B(*f.P(7, 1)), f.P(1, 1), closed=True)
 
 
-@ital('f', 7, 1)
+@ital('f', 7, 1, width=ungiving(7, 1, arm=0.0))
 def f_ital(g):
     """The stem runs on below the baseline and turns back, the top's hook
-    turned over."""
+    turned over. Its body gives nothing past the Regular: the letter is a
+    stem and a crossbar, and what the body gave came off the bar's two
+    ends, 35 units each at Black for 72."""
     f = Frame(g, 7, 'asc')
     g.clip = (-f.W, -g.p.desc, 2 * f.W, g.p.asc)
     g.stroke(f.P(7, 12), B(*f.P(3.5, 12)), B(*f.P(3.5, -2)), f.P(0, -2))
