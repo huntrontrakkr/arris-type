@@ -15,7 +15,7 @@ import math
 
 from ..draw import B, Squint, glyph
 from ..params import SQRT2
-from .figures import beak_depth, heaviness
+from .figures import bay_stack, beak_depth, heaviness
 from .letterframe import STEEP, Frame, growing_width, least_white, plain_width as letter_width, white_scale
 
 
@@ -102,9 +102,11 @@ def exclam(g):
 
 @punct('question', '?', 9, 2)
 def question(g):
-    f = Frame(g, 9, 'cap')
+    # (from ExtraBold the stem the bowl returns into stands under the beak: the beak keeps its white
+    # off the return, its bars giving as the S's do, figures.bay_stack; 0.23 of a stem in the italic at Black)
+    f = bay_stack(g, lambda: Frame(g, 9, 'cap'), [(6, 11)])
     p = g.p
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     # The 2's bowl, its right side turning back into a short stem at the centre.
     xs = f.X(4)
     # a lead-in (the `#?` ligature: the top bar of #, in this frame, as (x, y,
@@ -634,31 +636,52 @@ def p_k(g):
     return g.p.sd / SQRT2
 
 
+def spread(at, least):
+    """``at``, a row of strokes' centres, moved as little as leaves every
+    two neighbours ``least`` apart, the first and the last where they
+    stand: a gap that is short takes what it lacks from the ones that have
+    more, each by its share of what they have over; with no more room than
+    that for all of them they stand evenly. (Where one gap ran short the
+    whole row used to go even at once: the at sign's inner a jumped 60
+    units up its ring in one step of weight or grade, and a little heavier
+    its uprights jumped across it.)"""
+    n = len(at) - 1
+    if at[-1] - at[0] <= n * least:
+        return [at[0] + i * (at[-1] - at[0]) / n for i in range(n + 1)]
+    gaps = [b - a for a, b in zip(at, at[1:])]
+    for _ in range(n):
+        short = [i for i in range(n) if gaps[i] < least - 1e-9]
+        if not short:
+            break
+        need = sum(least - gaps[i] for i in short)
+        for i in short:
+            gaps[i] = least
+        over = sum(v - least for v in gaps if v > least)
+        gaps = [v - need * (v - least) / over if v > least else v for v in gaps]
+    out = [at[0]]
+    for v in gaps:
+        out.append(out[-1] + v)
+    return out
+
+
 @punct('at', '@', 12, 3, width=lambda p: max(letter_width(12, 3)(p), 4 * p.sv + 3 * least_white(p)))
 def at(g):
     """An a in a ring open at its foot. Four uprights cross it (the ring's
     sides, the a's bowl and stem); the white between them is the frame's,
-    unless at heavy weights one would drop under least_white (the a's
-    counter would close to a pinhole): then the sign is wider and the four
-    stand evenly spaced. Up its height, the same with four bars."""
-    f = Frame(g, 12, 'cap')
+    and where at heavy weights one would drop under least_white (the a's
+    counter would close to a pinhole) it takes what it lacks from the
+    others (spread), until the sign is wider and the four stand evenly
+    spaced. Up its height, the same with four bars."""
     p = g.p
-    xs = [f.X(1), f.X(4.5), f.X(8), f.X(11)]
-    if min(b - a for a, b in zip(xs, xs[1:])) - p.sv < least_white(p) - 0.5:
-        step = (xs[3] - xs[0]) / 3
-        xs = [xs[0] + i * step for i in range(4)]
+    # four bars stack up the height (the ring's, the a's): where their white
+    # would drop under three quarters of a bar they thin, as tight stacks do
+    g.stack(4, p.cap, 0.75)
+    f = Frame(g, 12, 'cap')
+    xs = spread([f.X(1), f.X(4.5), f.X(8), f.X(11)], p.sv + least_white(p))
     xa, xs8 = xs[1], xs[2]
-    # inner a: bowl and stem, kept a stroke's white inside the ring; four
-    # bars stack up the height (the ring's, the a's), and where their white
-    # would drop under three quarters of a bar they thin, as tight stacks
-    # do, and stand evenly
+    # inner a: bowl and stem, kept a stroke's white inside the ring
     yb = max(f.Y(3), f.Y(1) + g.sh + max(p.m, 0.5 * p.sv))
-    ys = [f.Y(1), yb, f.Y(7.5), f.Y(11)]
-    if min(b - a for a, b in zip(ys, ys[1:])) - g.sh < 0.75 * g.sh:
-        g.stack(4, p.cap, 0.75)
-        f = Frame(g, 12, 'cap')
-        step = (f.Y(11) - f.Y(1)) / 3
-        ys = [f.Y(1) + i * step for i in range(4)]
+    ys = spread([f.Y(1), yb, f.Y(7.5), f.Y(11)], 1.75 * g.sh)
     yb, ya = ys[1], ys[2]
     # the bowl's corners as large as its counter allows: a full leg on a
     # counter under a stroke and a half across leaves it a diamond

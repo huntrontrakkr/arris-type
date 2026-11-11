@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 
 from ..draw import B, Opening, glyph
-from ..params import SQRT2, inner_leg, outer_leg
+from ..params import SQRT2, inner_leg, outer_leg, white_floor
 
 STEEP = (1 / math.sqrt(5), 2 / math.sqrt(5))  # the 2:1 slope, as a unit vector
 
@@ -30,19 +30,101 @@ def frame(g):
     return p, W, H, u, v, xl, xr, yb, yt
 
 
-def beak_depth(p, sh=None):
+def beak_depth(p, sh=None, low=False):
     """How far a beak terminal reaches below the bowl's top (or above its
     bottom). Its outer flank under the corner chamfer is one edge break long,
     so the corner rule turns it into a point; at weights where that would leave
     the inner flank shorter than an edge break, the inner flank sets the depth.
-    At the heritage weight both flanks are exactly one edge break."""
+    At the heritage weight both flanks are exactly one edge break. ``low``:
+    the letter stands in the x-height (the epsilon), and in the italic takes
+    the small capital's beak (_small_italic): with the capital's, 264 units
+    at Black, its two beaks stood 12 units apart across a mouth of 540."""
     sh = p.sh if sh is None else sh
-    if _small_italic(p):
+    if _small_italic(p) or (low and p.slant):
         return outer_leg(p, sh=sh) + p.c
     d = sh + inner_leg(p, sh) + _flank(p)
     if p.slant:
         d = min(d, (p.cap - p.c) / 2)                   # two beaks across a height never meet
     return max(_shortest(p, sh), d)
+
+
+BAY_WHITE = 0.6     # the white a beak keeps off the bar it turns toward, as a share of the least white (lower.beak_in, bay_stack)
+
+
+def bay_stack(g, frame, rows):
+    """Thin a letter's horizontals where its beaks turn into bays, the
+    whites between its bars (the S's two, the Ze's, the reversed E's, the
+    epsilon's, the question mark's one), so far that each beak's end keeps
+    BAY_WHITE of the least white off the bar it turns toward, 0.36 of a
+    stem from Bold; never under STACK_MIN of the weight's own, as the
+    figures' stacks. ``frame``: makes the letter's frame at the
+    horizontals as they stand; ``rows``: each bay's two bars, by their
+    frame rows. Returns the frame to draw in.
+
+    The lowercase a, e and s shorten their beaks for the same white
+    (lower.beak_in). A capital's cannot in the italic: there its beak keeps
+    a flank TAIL_FLAT breaks longer than the upright's (_flank), which its
+    corners need to be curved; shortened to what the bay wanted, the S's
+    and the Ze's corners were cut straight at ExtraBold and Black and
+    curved below. So the bars give instead, as the 3's and the 5's do. In
+    the italic the S's beak stood 29 units off its spine at Black, 0.18 of
+    a stem, for the upright's 78, and the Ze, the reversed E, the epsilon
+    and the question mark with it; in the watch's own drawing, its bars as
+    thick as its stems, the upright S 0.24 of a stem and the italic
+    epsilon's mouth shut (the owner, 2026-11-11, of the a's and the s's:
+    "where it meets the bottom storey or where it does not meet. That gap
+    ..."; of the italic's: "let's go ahead and fix all those things")."""
+    p = g.p
+    least = BAY_WHITE * white_floor(p.m, p.sv)
+    k1 = g.sh_k
+
+    def spare(k):
+        g.sh_k = k
+        f = frame()
+        return min(f.Y(hi) - f.Y(lo) - g.sh for lo, hi in rows) - (beak_depth(p, g.sh) - g.sh) - least
+    k = k1
+    if spare(k1) < 0:
+        k, thick = STACK_MIN * k1, k1               # (the thinner the bars, the more room: the most bar that leaves it)
+        if spare(k) >= 0:
+            for _ in range(24):
+                mid = (k + thick) / 2
+                k, thick = (mid, thick) if spare(mid) >= 0 else (k, mid)
+    g.sh_k = k
+    return frame()
+
+
+def off_the_beak(g, f, x_beak, x_end, row, top, bottom, d=None):
+    """Where a bar's end stands, on frame row ``row``, beside the beaks of
+    the bars on rows ``top`` and ``bottom`` (the Ze's waist, the reversed
+    E's bar, the Ukrainian E's, the epsilon's): no nearer the beak at
+    ``x_beak`` than leaves BAY_WHITE of the least white between the bar's
+    end and the beak's, measured corner to corner; ``x_end`` where there is
+    that already.
+
+    These beaks do not face their bar, they pass its end, and where a beak
+    is short the two stand corner to corner with room to spare: the
+    upright Ze at Black, 82 units. The italic's beak is TAIL_FLAT breaks
+    longer and comes down beside the bar's end (the italic Ze 37 units at
+    Black, the italic epsilon 15, 0.09 of a stem), and so does the watch's
+    own drawing, its bars as thick as its stems (the epsilon's mouth shut
+    in its italic at Black). The bar's end steps back; the beak and its
+    curves are as they were."""
+    p = g.p
+    least = BAY_WHITE * white_floor(p.m, p.sv)
+    d = beak_depth(p, g.sh) if d is None else d
+    over = (f.Y(top) + g.sh / 2 - d) - (f.Y(row) + g.sh / 2)       # white between the upper beak's end and the bar's top
+    under = (f.Y(row) - g.sh / 2) - (f.Y(bottom) - g.sh / 2 + d)    # and between the bar's underside and the lower beak's
+    dy = min(over, under)
+    if p.slant:
+        # (the italic rounds both corners: they stand as far apart as their points)
+        need = least if dy <= 0 else math.sqrt(max(0.0, least * least - dy * dy))
+    else:
+        # (upright each is broken an edge break, and the two cuts face each other: the white between
+        # them is (dx + dy + 2c)/√2, or dx where the beak has come down past the bar's edge)
+        need = max(0.0, min(least, SQRT2 * least - dy - 2 * p.c))
+    side = 1.0 if x_end >= x_beak else -1.0
+    edge = x_beak + side * p.sv / 2
+    return edge + side * max(side * (x_end - edge), need)
 
 
 def _small_italic(p) -> bool:

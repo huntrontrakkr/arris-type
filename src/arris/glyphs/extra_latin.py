@@ -12,9 +12,9 @@ from ..draw import AUTO_SHARE, B, NUDGE, REGISTRY, Opening, _counter_white, draw
 from ..geom import rings_to_shapely
 from ..params import SQRT2
 from .caps import big
-from .figures import STACK_MIN, beak_depth
+from .figures import BAY_WHITE, STACK_MIN, beak_depth
 from .lower import NARROW, narrow_frame, narrow_width, shoulder
-from .letterframe import Frame, k_arms, letter_width
+from .letterframe import Frame, k_arms, least_white, letter_width
 
 
 def stamp(g, name, dx=0.0, dy=0.0, width=None, clear=False):
@@ -412,7 +412,10 @@ def Germandbls(g):
     y_mid = f.Y(11) - (x8 - f.X(4.5))
     g.stroke(f.P(1, 0), B(*f.P(1, 11)), (x8, f.Y(11)))
     g.stroke((x8, f.Y(11)), (f.X(4.5), y_mid))
-    g.stroke((f.X(4.5), y_mid), B(x8, y_mid), B(*f.P(8, 1)), f.P(3, 1))
+    # the foot's end keeps a beak's white off the stem (figures.BAY_WHITE): on the third module it
+    # stood 39 units from it at Black, a quarter of a stem, a slit the height of the foot
+    xe = max(f.X(3), f.X(1) + p.sv / 2 + BAY_WHITE * least_white(p))
+    g.stroke((f.X(4.5), y_mid), B(x8, y_mid), B(*f.P(8, 1)), (xe, f.Y(1)))
 
 
 @glyph('AE', 'Æ', letter_width(13, 2), kind='cap')

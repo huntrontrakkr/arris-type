@@ -189,6 +189,37 @@ letters redrawn.
   ExtraBold, 57 at Black. Bold and lighter are as they were; æ, œ, ә and
   the accented letters take the rule with their letters. The c, with its
   whole mouth for room, keeps its beak.
+- The italic's hooks keep their white too, by another way. A capital's
+  beak keeps a flank a break and a quarter longer in the italic than
+  upright, which its corners need to be curved, and at the heavy weights
+  it closed on what it turns toward: the S's stood 29 units off its spine
+  at Black, 0.18 of a stem, for the upright's 78; the beaks of З, Э and Є
+  came down beside their bar's end, 37 units off it; ε, a letter of the
+  x-height with a capital's beaks, held 12 units between its two; Ә and Ҽ
+  0.19 of a stem. Shortened as the a's is, to what the white wanted, the
+  beaks lost their curves at ExtraBold and Black and kept them below. So
+  the beak stays and what it turns toward gives. The S's bars thin, as
+  the 3's and the 5's do, no further than leaves the beak's white
+  (`figures.bay_stack`: by 2% at ExtraBold and a fifth at Black, in the
+  italic; upright Arris not at all), and Ә's and Ҽ's with it. A bar's end
+  steps back from a beak that passes it (`figures.off_the_beak`: З, Э, Є
+  and their small capitals, in the italic; upright their corners are
+  broken and stand clear). The question mark's bars thin as the S's do. ε takes the small capital's beak in the
+  italic, the lowercase c's, as the italic з it mirrors has. The curved
+  corners of all of them are the ones they had, at every weight. The
+  capital ẞ's foot, which ended on the third module 39 units from its
+  stem at Black, keeps a beak's white off it.
+- The at sign's whites give way a gap at a time. Four uprights cross it
+  and four bars stack up it, and where one white ran short the whole row
+  went even at once: at Medium the inner a stood 75 units higher in its
+  ring than at Regular or SemiBold, and along the grade the sign changed
+  by a hundred squares of an edge break in one step of a twentieth
+  (found going along the grade axis). A gap that is short now takes what
+  it lacks from the others, by their shares of what they have over
+  (`punct.spread`), and the row stands evenly only where there is no more
+  room than that. The dollar's changes along the grade are its form's,
+  the stem through the S or in stubs, which the variable font switches
+  as a glyph; they are left.
 - A sign that could not be drawn at one width while its Mono body was
   being found stopped the build (℃ in Arris Mono Narrow SemiBold: its C,
   tried 59 units wide with a stem of 108, folded on itself and the union

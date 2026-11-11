@@ -159,6 +159,18 @@ def beak_free(g):
     return max(g.free('beak', beak_depth(p, g.sh)), floor)
 
 
+def _mouth_frame(g, modules, rows):
+    """The frame of a letter whose beak faces a bar (Ә, Ҽ). Upright, its
+    mouth's opening shortens the beak (MOUTH). In the italic the beak keeps
+    its flank, which its corners need to be curved (beak_free), and the
+    mouth ran out: 0.19 of a stem at Black. There the bars give instead,
+    as the S's do (figures.bay_stack)."""
+    from .figures import bay_stack
+    if g.p.slant:
+        return bay_stack(g, lambda: Frame(g, modules), [rows])
+    return Frame(g, modules)
+
+
 # A mouth, where a beak faces a bar (Ә Ҽ Ҩ), keeps three quarters of its
 # share of the stem, the beak shortening as the figures' do. Each drawing
 # records the white it leaves between the beak's tip and the bar.
@@ -221,7 +233,7 @@ def _stem_bar(g, x, y):
 def Schwa(g):
     """Э whose lower beak runs on up into its bar: the e turned, at the
     capital height, with a beak where it opens."""
-    f = Frame(g, 9)
+    f = _mouth_frame(g, 9, (6, 11))
     p, H, d = f.p, f.p.cap, beak_free(g)
     g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 1)), B(*f.P(1, 1)), f.P(1, 6))
     g.stroke(f.P(1, 6), f.P(8, 6))
@@ -656,13 +668,13 @@ def _che_abkhaz(g, f, xl, xr, top, yb, ybot, beak, foot_leg=None):
 
 @glyph('uni04BC', 'Ҽ', letter_width(11, 2), kind='cap', openings=[MOUTH])
 def Cheabkhasian(g):
-    f = Frame(g, 11)
+    f = _mouth_frame(g, 11, (1, 6))
     _che_abkhaz(g, f, f.X(3.5), f.X(10), f.Y(11), f.Y(6), f.Y(1), beak=True)
 
 
 @glyph('uni04BE', 'Ҿ', letter_width(11, 2), kind='cap', openings=[MOUTH])
 def Chedescabkhasian(g):
-    f = Frame(g, 11)
+    f = _mouth_frame(g, 11, (1, 6))
     _che_abkhaz(g, f, f.X(3.5), f.X(10), f.Y(11), f.Y(6), f.Y(1), beak=True,
                 foot_leg=drop_leg(g.p, f.X(10) - f.X(3.5)))
     drop(g, (f.X(3.5) + f.X(10)) / 2)

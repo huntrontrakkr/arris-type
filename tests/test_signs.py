@@ -94,3 +94,38 @@ def test_the_ring_is_a_third_of_the_cap_height_at_most(w):
     (hole,) = ring.interiors
     assert (x1 - x0 - (hole.bounds[2] - hole.bounds[0])) / 2 <= 0.72 * p.sv
     assert y1 <= 1.45 * p.cap and len(parts) == 2
+
+
+def test_a_row_of_strokes_gives_way_a_gap_at_a_time():
+    """punct.spread: a gap that is short takes what it lacks from the
+    others, by their shares of what they have over; all short, they stand
+    evenly; none short, nothing moves."""
+    from arris.glyphs.punct import spread
+    assert spread([0, 40, 80, 120], 30) == [0, 40, 80, 120]
+    assert spread([0, 20, 80, 120], 30) == pytest.approx([0, 30, 82.5, 120])      # 10 taken: 7.5 of the 30 over, 2.5 of the 10
+    assert spread([0, 10, 20, 90], 30) == pytest.approx([0, 30, 60, 90])
+    assert spread([0, 5, 50, 60], 30) == pytest.approx([0, 20, 40, 60])           # no room for all: even
+    for t in range(41):                                                          # and it goes steadily as a gap closes
+        a, b = spread([0, 40 - t, 80, 120], 30), spread([0, 39 - t, 80, 120], 30)
+        assert all(abs(x - y) <= 1.0 + 1e-9 for x, y in zip(a, b, strict=True))
+
+
+def test_the_at_signs_a_moves_by_steps_no_longer():
+    """Four uprights cross the at sign and four bars stack up it; where one
+    white ran short the whole row used to go even at once. At Medium the
+    inner a stood 60 units higher in its ring than at Regular or SemiBold,
+    and along the grade the sign changed by a hundred squares of an edge
+    break in one step of a twentieth (the grade axis, gone across step by
+    step). Each white takes what it lacks from the others now
+    (punct.spread). What still moves the a's foot is the thinning of the
+    sign's bars for its counter (draw's automatic counters), 31 units
+    between SemiBold and 650. (At Medium it stood at 254 units for the
+    Regular's 179 and the SemiBold's 180.)"""
+    from itertools import pairwise
+
+    def foot(w, g=0):                                       # the inner a's lower bar, on its centre line
+        return draw('at', params(w, g)).strokes[0].nodes[0].y
+    by_weight = [foot(w) for w in range(300, 901, 50)]
+    assert max(abs(b - a) for a, b in pairwise(by_weight)) < 40, [round(v) for v in by_weight]
+    by_grade = [foot(500, g) for g in range(-100, 101, 10)]
+    assert max(abs(b - a) for a, b in pairwise(by_grade)) < 25, [round(v) for v in by_grade]

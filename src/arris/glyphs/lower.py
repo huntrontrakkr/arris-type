@@ -12,7 +12,7 @@ import functools
 
 from ..draw import B, Opening, glyph
 from ..params import inner_leg, outer_leg, white_own
-from .figures import STACK_MIN, beak_depth, jog
+from .figures import BAY_WHITE, STACK_MIN, beak_depth, jog
 from .letterframe import ARM, Frame, k_arms, least_white, letter_width, narrowed, own_width, share_width, white_scale, zone
 
 
@@ -87,9 +87,6 @@ def beak(g, w):
     the cut (the shortest beak: an open mouth tells c from o, a from d, e
     from o)."""
     return outer_leg(g.p, sh=w) + g.p.c
-
-
-BAY_WHITE = 0.6     # the white a beak keeps off the bar it turns toward, as a share of the least white (beak_in)
 
 
 def beak_in(g, w, room):

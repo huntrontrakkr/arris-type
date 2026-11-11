@@ -230,6 +230,58 @@ def test_a_beak_keeps_its_bay_open(w, watch):
         assert 0.75 * c <= reach(ch, top, right) <= c + 1.0, (ch, top)
 
 
+@pytest.mark.parametrize('w', [800, 900])
+def test_the_italics_hooks_keep_their_white(w):
+    """In the italic a capital's beak keeps a flank a break and a quarter
+    longer than the upright's, which its corners need to be curved, and at
+    the heavy weights it closed on what it turns toward: the S's stood 29
+    units off its spine at Black, 0.18 of a stem, for the upright's 78; the
+    Ze's, the reversed E's and the Ukrainian E's came down beside their
+    bar's end; the epsilon, a letter of the x-height with a capital's
+    beaks, held 12 units between its two; the schwa and the Abkhasian che
+    0.19 of a stem (the owner, 2026-11-11, of the a's and the s's: "where
+    it meets the bottom storey or where it does not meet. That gap ...";
+    of these: "let's go ahead and fix all those things"). Shortened to
+    what the white wanted, the beaks lost their curves at ExtraBold and
+    Black. So the beak stays and what it turns toward gives: the S's bars
+    thin as the 3's do (figures.bay_stack), a bar's end steps back from the
+    beak beside it (figures.off_the_beak), and the epsilon takes the small
+    capital's beak in the italic (beak_depth, ``low``). Upright Arris is as
+    it was."""
+    from arris.glyphs.letterframe import least_white
+    from arris.glyphs.lower import BAY_WHITE
+    from arris.italic import italic
+    p = italic(params(w))
+    least = BAY_WHITE * least_white(p)
+    for name in ('S', 'uni0417', 'uni042D', 'uni0404', 'uni03B5', 'uni0437', 'uni044D', 'uni0454', 'uni04D8', 'uni04BC', 'question'):
+        t = _throat(rings_to_shapely(draw(name, p).rings()), p.sv)
+        assert t is None or t >= least - 3.0, (name, t, round(least, 1))
+
+    def curved(name, q):                                    # the points off the curve: a corner that is curved has them
+        return sum(1 for r in place(name, q)[0] for pt in r if len(pt) > 2 and not pt[2])
+    for name in ('S', 'uni0417', 'uni042D', 'uni0404'):
+        assert curved(name, p) == curved(name, italic(params(700))), name
+    assert draw('S', p).sh_k < 1.0 and draw('S', params(w)).sh_k == 1.0  # the italic's bars give; the upright's need not
+    for name in ('S', 'uni0417', 'uni042D', 'uni0404', 'uni03B5'):         # and upright Arris is the drawing it was
+        assert _throat(rings_to_shapely(draw(name, params(w)).rings()), params(w).sv) in (None, pytest.approx(0.49 * params(w).sv, abs=4))
+
+
+@pytest.mark.parametrize('w', [700, 800, 900])
+def test_the_capital_sharp_ss_foot_keeps_off_its_stem(w):
+    """Its lower bowl's foot ended on the third module, and the stem grew
+    toward it: 39 units between them at Black, a quarter of a stem, a slit
+    the height of the foot. The foot's end keeps a beak's white off the
+    stem (figures.BAY_WHITE)."""
+    from arris.glyphs.letterframe import least_white
+    from arris.glyphs.lower import BAY_WHITE
+    from arris.italic import italic
+    for p in (params(w), italic(params(w)), params(w, watch=1.0)):
+        g = draw('uni1E9E', p)
+        row = rings_to_shapely(g.rings()).intersection(LineString([(-100, g.sh / 2), (2000, g.sh / 2)]))
+        runs = sorted((s.bounds[0], s.bounds[2]) for s in getattr(row, 'geoms', [row]) if s.length > 1)
+        assert runs[1][0] - runs[0][1] >= BAY_WHITE * least_white(p) - 0.5
+
+
 @pytest.mark.parametrize('w', [400, 700, 900])
 def test_the_ds_corners_are_the_os(w):
     p = params(w)

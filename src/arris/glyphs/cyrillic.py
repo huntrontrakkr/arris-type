@@ -17,7 +17,7 @@ from shapely import affinity
 from ..draw import AUTO_MIN, NUDGE, Opening, Squint, B, REGISTRY, draw, glyph
 from ..geom import rings_to_shapely
 from .caps import big
-from .figures import beak_depth, jog
+from .figures import beak_depth, jog, off_the_beak
 from .letterframe import Frame, k_arms, letter_width
 
 ALIASES = {
@@ -134,8 +134,9 @@ def ze_shape(g, foot_leg=None):
     the parameter leg); Ҙ's drop hangs between them (cyrillic_ext.drop_leg)."""
     f = Frame(g, 9)
     p, H, d = f.p, f.p.cap, beak_depth(f.p)
-    g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6), big(p)), f.P(3, 6))
-    g.stroke(f.P(3, 6), B(*f.P(8, 6)), B(*f.P(8, 1), foot_leg), B(*f.P(1, 1), foot_leg), (f.X(1), d))
+    w = (off_the_beak(g, f, f.X(1), f.X(3), 6, 11, 1), f.Y(6))          # the waist's end, a beak's white off the beaks
+    g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6), big(p)), w)
+    g.stroke(w, B(*f.P(8, 6)), B(*f.P(8, 1), foot_leg), B(*f.P(1, 1), foot_leg), (f.X(1), d))
 
 
 @ccap('uni0418', 'И', 10, 2, width=lambda p: REGISTRY['N'].width(p))
@@ -291,14 +292,14 @@ def Ereversed(g):
     f = Frame(g, 9)
     p, H, d = f.p, f.p.cap, beak_depth(f.p)
     g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 1)), B(*f.P(1, 1)), (f.X(1), d))
-    g.stroke(f.P(3, 6), f.P(8, 6))
+    g.stroke((off_the_beak(g, f, f.X(1), f.X(3), 6, 11, 1), f.Y(6)), f.P(8, 6))
 
 
 @ccap('uni0404', 'Є', 9, 2, squint=OPEN_BOWLS)
 def Eukr(g):
     REGISTRY['C'].fn(g)
     f = Frame(g, 9)
-    g.stroke(f.P(1, 6), f.P(6, 6))
+    g.stroke(f.P(1, 6), (off_the_beak(g, f, f.X(8), f.X(6), 6, 11, 1), f.Y(6)))
 
 
 def _yu_gap(g):

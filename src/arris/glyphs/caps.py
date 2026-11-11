@@ -16,7 +16,7 @@ from __future__ import annotations
 import math
 
 from ..draw import B, Opening, _thickness, glyph
-from .figures import beak_depth, jog
+from .figures import bay_stack, beak_depth, jog
 from .letterframe import STEEP, Frame, heft, k_arms, least_white, letter_width
 
 
@@ -309,8 +309,8 @@ def R(g):
 
 @cap('S', 9, 2)
 def S(g):
-    f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    f = bay_stack(g, lambda: Frame(g, 9), [(6, 11), (1, 6)])     # each beak keeps its white off the spine
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 6)), B(*f.P(8, 6)), B(*f.P(8, 1)),
              B(*f.P(1, 1)), (f.X(1), d))
 
