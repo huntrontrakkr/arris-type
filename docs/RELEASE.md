@@ -101,6 +101,30 @@ letters redrawn.
   one as from the other (`lower.between`), as the variable font carries
   it; at either end it is what it was.
 
+  The grade is held to the same (the owner: "we have looked at the watch
+  axis but what about the other one?"). Along it, from -100 to 100 at
+  each weight from Light to Black, at Arris's end, at the watch's and
+  half way between, the stem never thins for a heavier grade, what a rule
+  reads as the weight is the ungraded weight's, the f's stub by its stem
+  and the r's share run one way, and no advance moves
+  (`tests/test_grade_advance.py`); scanned in twenty steps on 78 letters,
+  figures and signs, upright, italic and in the watch's drawing, no
+  advance moves and none fails to draw. The scan found two faults, both
+  mended. A narrow letter thickens outward from its middle in the body
+  its drawing has at the grade, and that body was read off the upright's
+  drawing: the cursive l, whose body gives another share from ExtraBold,
+  stood 27 units to the right of its ungraded self at any grade at Black,
+  in the same advance (`font._place_drawn` reads the drawing it has). And
+  the a at Black broke its bowl's left corners 55 units for 131 at grade
+  80 and 100 and not at 85 or 90: its foot is cut along its bar's own
+  edge, the cut's end and the corner before it are one point to the last
+  bit, and which side of the other each fell on decided whether the
+  stroke's outline crossed itself; when it did, the stroke was taken for
+  one whose bowls do not fit and they were shrunk to whatever size
+  passed. Two points of a stroke's side that are one are one edge the
+  less (`geom.SAME`). The jumps that remain along the grade are the at
+  sign's and the dollar's, as before the rescale.
+
   With it the engine knows a font's own parameters at any weight
   (`draw._cut`); until now only at one round to a thousandth, and a rule
   that searches along the weights (an opening held from where it first
@@ -128,18 +152,25 @@ letters redrawn.
   Cyrillic т, the same letter, with it. The n and the h, with more room,
   keep their branch to Bold (1.7 breaks under the arch there) and take
   the rule from ExtraBold, where the upright n loses its step too.
-  Arris Mono Italic's m is the upright's, drawn in a narrower body so its
-  slanted ink fits the cell, and its arches have no room there. It had
-  the pocket under its second arch at Regular and Retina; at Medium the
-  second arch began square on the stem's centre and the notch the arches
-  meet in had an upright side; at Bold the middle stem stopped 0.9 of a
-  unit under its arch (the italic's horizontals are cos(slant) thinner
-  than their name) and the second counter bit into it. An arch that joins
-  another keeps its cut at every weight, the stem stands to the underside
-  as it is drawn (`lower.bar_half`), and the m is joined one way from
-  Regular to Bold: two counters of one shape, one V over the middle stem,
-  shallower than the corner rule made it from SemiBold (22 units at Bold
-  for 53).
+  In Arris Mono's cell the m's arches run out of room to rise: from
+  SemiBold upright, from Medium in the italic, which draws the upright's
+  m in a narrower body so that its slanted ink fits the cell. With no
+  room the second arch began square on the stem's centre, and the notch
+  the arches meet in was what the corner rule made of that: it shrank
+  with the weight to 36 units at Medium and stood at 48 again from
+  SemiBold (Mono Narrow: 27 at SemiBold, 48 at Bold), with an upright
+  step in one side where the italic first ran out of room. The italic
+  also had the pocket under its second arch at Regular and Retina, and at
+  Bold its middle stem stopped 0.9 of a unit under its arch (the italic's
+  horizontals are cos(slant) thinner than their name) and the second
+  counter bit into it. An arch that joins another keeps its cut at every
+  weight, set where the notch it leaves is an edge break deep
+  (`lower.notch_meet`: nothing of a shoulder is drawn smaller than a
+  break), and the stem stands to the underside as it is drawn
+  (`lower.bar_half`). In all four Mono cuts the m is joined one way from
+  Light to Bold: two counters of one shape, and one V over the middle
+  stem that shrinks with the weight to a break and stays there (Mono: 81,
+  54, 45, 36, 28, 32 units from Light to Bold).
 - A sign that could not be drawn at one width while its Mono body was
   being found stopped the build (℃ in Arris Mono Narrow SemiBold: its C,
   tried 59 units wide with a stem of 108, folded on itself and the union

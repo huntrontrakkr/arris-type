@@ -9,7 +9,7 @@ from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.pens.pointPen import SegmentToPointPen  # noqa: F401  (kept for later point pens)
 
-from .draw import PROPORTIONAL_FIGS, REGISTRY, TAB_MATH, draw
+from .draw import PROPORTIONAL_FIGS, REGISTRY, TAB_MATH, draw, drawn_spec
 from .params import Params
 
 UPM = 1000
@@ -198,7 +198,10 @@ def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: li
         # centred where they were; everything else keeps its body
         W = g0.W
         if W <= 2.5 * p0.sv:
-            W = REGISTRY[name].width(p)
+            # (the body of the drawing it has there: the italic's own where it has one. Read off the
+            # upright's, the cursive l, whose body gives another share from ExtraBold, stood 27 units to
+            # the right of its ungraded self at any grade at Black, in the same advance)
+            W = drawn_spec(name, p).width(p)
             dx += (g0.W - W) / 2
         g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0), width=W)
         rings, rec = g.outline(record, tags=tags)

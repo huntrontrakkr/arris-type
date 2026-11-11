@@ -24,6 +24,7 @@ from shapely.geometry.polygon import orient
 from shapely.validation import explain_validity
 
 EPS = 1e-7
+SAME = 1e-6     # units: two points of a stroke's side nearer than this are one (_stroke_polygon)
 
 
 @dataclass(frozen=True)
@@ -253,6 +254,19 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
         if _dot(_sub(corner, verts[k]), din) < (c if fill is None else min(fill, c)) - EPS:
             verts[k] = corner
             verts[(k + 1) % len(verts)] = corner
+
+    # An edge of no length is no edge. Where a stroke is cut on the very line its last corner's inside
+    # falls on (a shoulder cut along its bar's own edge, lower.shoulder: the foot of the a's bowl), the
+    # cut's end and the corner are one point to the last bit, and which side of the other each came out
+    # on decided whether the outline crossed itself there. When it did, the stroke was taken for one
+    # whose bowls do not fit (stroke_polygon) and its bowls shrunk to whatever size happened to pass:
+    # the a's bowl at Black broke its left corners 55 units for 131 at grade 80 and 100, and not at
+    # 85 or 90, on a foot standing a fifth of a unit otherwise.
+    for verts in (left, right):
+        for i in range(len(verts) if closed else len(verts) - 1):
+            a_, b_ = verts[i], verts[(i + 1) % len(verts)]
+            if a_ != b_ and abs(a_[0] - b_[0]) < SAME and abs(a_[1] - b_[1]) < SAME:
+                verts[(i + 1) % len(verts)] = a_
 
     if closed:
         rings = [left, right]

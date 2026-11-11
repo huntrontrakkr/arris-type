@@ -551,7 +551,8 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
         over = g.sh / 2 + rise - (1 - r) * (p.sv / 2 + k) - r * p.c   # the diagonal's top at the stem's side, below the arch's
         if not joined and over < SHOULDER_NOTCH * p.c:
             return plain
-        return [(x0 + step, y_top - g.sh / 2), (x0 + rise, y_top), B(x_right, y_top)], 'h'
+        meet = max(x0 + rise, notch_meet(g, xs, g.sh / 2)) if joined else x0 + rise
+        return [(meet - g.sh / 2, y_top - g.sh / 2), (meet, y_top), B(x_right, y_top)], 'h'
     if p.slant and drop >= SHOULDER_DROP:
         # An arch in the italic too: the cursive's branch (deeper than the upright's shoulder,
         # italic_forms.BRANCH) and the upright's own, slanted (Arris Mono Italic's n, m and h). A bowl's
@@ -565,7 +566,8 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
         # horizontal cos(slant) thinner than its name (geom.Thickness).
         half = bar_half(g)
         if rise - half < p.c:
-            return [(x0 + rise - half, y_top - half), (x0 + rise, y_top), B(x_right, y_top)], 'h'
+            meet = max(x0 + rise, notch_meet(g, xs, half)) if joined else x0 + rise
+            return [(meet - half, y_top - half), (meet, y_top), B(x_right, y_top)], 'h'
     return [(x0, y_top - rise), (x0 + rise, y_top), B(x_right, y_top)], 'h'
 
 
@@ -580,6 +582,19 @@ KINK_STEP = 0.999       # edge breaks: the most a shoulder kept for its kink alo
 BOWL_DROP = 1.0         # the same for a bowl's join to its stem
 SHOULDER_NOTCH = 1.5    # the least notch over a shoulder, in edge breaks down the stem's side: a break deep where the stem
                         # stops at the arch (n), and where it goes on (h) a break of it is the corner's own fill
+
+
+def notch_meet(g, xs, half) -> float:
+    """The least x at which a joined arch's cut meets its line: so far past
+    the stem's centre that the notch it leaves with the corner of the arch
+    before it, the V over the m's middle stem, is an edge break deep. With
+    no room to rise the cut stood on the stem's centre, and the V shrank
+    with the weight to 18 units at Arris Mono's Bold, a little over half a
+    break: nothing of a shoulder is drawn smaller than a break. (The V's
+    foot is where the cut's upper edge, k left of its line, meets the
+    corner's outer flank, outer_leg down the stem's far side.)"""
+    p = g.p
+    return xs + 2 * p.c - half + p.sd / 2 ** 0.5 + p.sv / 2 - outer_leg(p, sh=2 * half)
 
 
 def bar_half(g) -> float:

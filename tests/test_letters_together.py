@@ -778,7 +778,8 @@ def _under_the_arches(name, p):
     from arris.draw import _thickness
     g = draw(name, p)
     ink = rings_to_shapely(g.rings())
-    under = p.xh - _thickness(p, g.sh)((1.0, 0.0))
+    q = g.p                                                 # (as it is drawn: a Mono letter past where its counters shut is held there)
+    under = q.xh - _thickness(q, g.sh)((1.0, 0.0))
     row = ink.intersection(LineString([(-1e4, p.xh / 3), (1e4, p.xh / 3)]))
     stems = sorted((s.bounds[0], s.bounds[2]) for s in getattr(row, 'geoms', [row]) if s.length > 1)
     counters = []
@@ -817,39 +818,51 @@ def test_the_cursive_ms_two_counters_are_one_shape(w):
             assert translate(a, stems[1][1] - stems[0][1]).symmetric_difference(b).area < 2.0, name
 
 
-@pytest.mark.parametrize('w', [400, 450, 500, 600, 700])
-def test_arris_mono_italics_m_is_joined_one_way_at_every_weight(w):
-    """Arris Mono Italic's m is the upright's, drawn in a narrower body so
-    that its slanted ink fits the cell, and there its arches have no room
-    to rise. Its two counters are one shape, and the notch its arches meet
-    in is one V, both sides at 45 degrees, at every weight. They were not:
-    a pocket of white ran up into the second arch at Regular and Retina;
-    at Medium the second arch, with no room, began square on the stem's
-    centre and the V had an upright step in it; at Bold the middle stem
-    stopped 0.9 of a unit under its arch (drawn to the arch's underside by
-    its name; the italic's horizontals are cos(slant) thinner), its corner
-    was broken as a stroke's end is, and the second counter bit into the
-    stem where the first came to a point. An arch that joins another keeps
-    its cut at every weight (lower.shoulder, ``joined``), and the stem
-    stands to the underside as it is drawn (lower.bar_half)."""
+@pytest.mark.parametrize('cut', ['mono', 'mono italic', 'narrow', 'narrow italic'])
+@pytest.mark.parametrize('w', [300, 400, 450, 500, 600, 700])
+def test_arris_monos_m_is_joined_one_way_at_every_weight(w, cut):
+    """In Arris Mono's cell the m's arches run out of room to rise: from
+    SemiBold upright, from Medium in the italic, which draws the upright's
+    m in a narrower body so that its slanted ink fits the cell. Its two
+    counters are one shape, and the notch its arches meet in is one V,
+    both sides at 45 degrees and never under an edge break deep, at every
+    weight of every Mono cut. They were not. With no room the second arch
+    began square on the stem's centre, and the notch was what the corner
+    rule made of that: it shrank with the weight to 36 units at Medium and
+    stood at 48 again from SemiBold (Mono Narrow: 27 at SemiBold, 48 at
+    Bold), with an upright step in one side where the italic first ran out
+    of room (Mono Italic's Medium, Mono Narrow Italic's SemiBold). In the
+    italic a pocket of white ran up into the second arch at Regular and
+    Retina, and at Bold the middle stem stopped 0.9 of a unit under its
+    arch (drawn to the arch's underside by its name; the italic's
+    horizontals are cos(slant) thinner), its corner was broken as a
+    stroke's end is, and the second counter bit into the stem where the
+    first came to a point. An arch that joins another keeps its cut at
+    every weight (lower.shoulder, ``joined``), set where the V it leaves
+    is a break deep (lower.notch_meet), and the stem stands to the
+    underside as it is drawn (lower.bar_half)."""
     from shapely.affinity import translate
 
+    from arris.instances import narrow_weight
     from arris.italic import italic
-    p = italic(params(w).with_(mono=True))
+    p = params(narrow_weight(w) if 'narrow' in cut else w).with_(mono=True, narrow='narrow' in cut)
+    p = italic(p) if 'italic' in cut else p
     ink, counters, stems, under = _under_the_arches('m', p)
     assert len(counters) == 2
     a, b = counters
-    assert a.bounds[3] <= under + 0.05 and b.bounds[3] <= under + 0.05
+    # one shape: no pocket of white up into one arch, no bite into the stem under one
     assert translate(a, stems[1][1] - stems[0][1]).symmetric_difference(b).area < 2.0
-    # the notch over the middle stem: one white, a triangle hanging from the arches' top
+    # the notch over the middle stem: one white, a V hanging from the arches' top
     x0, x1 = ((l[1] + r[0]) / 2 for l, r in pairwise(stems))              # (between the counters' middles: the V is wider than its stem)
     top = ink.intersection(LineString([(x1, 0), (x1, p.xh + 1)])).bounds[3]    # the arch's top
-    notch = box(x0, under, x1, top).difference(ink)
-    notch = [part for part in getattr(notch, 'geoms', [notch]) if part.area > 1.0]
-    assert len(notch) == 1
-    v = notch[0]
-    assert v.convex_hull.area - v.area < 1.0                              # no step in either side
+    row = LineString([(x0, top - 0.5), (x1, top - 0.5)]).difference(ink)
+    mouth = max(getattr(row, 'geoms', [row]), key=lambda s: s.length)      # the V's mouth, just under the top
+    whites = box(x0, p.xh / 2, x1, top).difference(ink)
+    v = next(part for part in getattr(whites, 'geoms', [whites]) if part.buffer(0.01).contains(mouth.centroid))
     low = min(v.exterior.coords, key=lambda q: q[1])
-    assert v.bounds[1] > under and top - low[1] > p.c / 2                 # (and deep enough to see: over half a break)
-    for x in (v.bounds[0], v.bounds[2]):                                  # each side at 45 degrees from its foot
-        assert abs(x - low[0]) == pytest.approx(top - low[1], abs=0.5)
+    assert top - low[1] >= draw('m', p).p.c - 0.5                         # never under an edge break deep
+    sides = [(q, r) for q, r in pairwise(v.exterior.coords) if abs(q[1] - r[1]) > 1.0]
+    if top - low[1] <= top - under:                                       # (a light weight's notch runs on down its stem's side)
+        assert len(sides) == 2                                            # one V, no step in either side
+        for q, r in sides:                                                # and both at 45 degrees
+            assert abs(q[0] - r[0]) == pytest.approx(abs(q[1] - r[1]), abs=0.5)
