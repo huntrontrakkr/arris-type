@@ -25,9 +25,9 @@ from __future__ import annotations
 from ..draw import B, REGISTRY, Opening, draw, glyph
 from ..params import SQRT2, outer_leg
 from .caps import big
-from .cyrillic import ALIASES as RU_ALIASES, ccap, mirror, sc, smallcap
+from .cyrillic import ALIASES as RU_ALIASES, ZE_BOWLS, ccap, mirror, sc, smallcap
 from .extra_latin import stamp
-from .figures import MOUTH_SHARE, _beak_limit, beak_depth, jog
+from .figures import MOUTH_SHARE, _beak_limit, beak_depth, jog, wedge_bars
 from .letterframe import Frame, k_arms, letter_width, white_scale
 
 # Code points that are Latin or Russian letters already.
@@ -248,7 +248,7 @@ def Schwa(g):
     g.defaults_used['mouth'] = (H - d) - (f.Y(6) + g.sh / 2)
 
 
-@ccap('uni0498', 'Ҙ', 9, 2)
+@ccap('uni0498', 'Ҙ', 9, 2, squint=ZE_BOWLS)                # (its small capital's bays as the з's: at Black they were slits, the italic's lower one shut)
 def Zedesc(g):
     from .cyrillic import ze_shape
     f = Frame(g, 9)
@@ -451,7 +451,7 @@ def Tetse(g):
 def Dzeabkhasian(g):
     """The 3 with a flat top and a 45-degree return (ẞ's), its lower bowl
     the 3's."""
-    f = Frame(g, 9)
+    f = wedge_bars(g, lambda: Frame(g, 9), lambda f: f.X(8) - f.X(4))
     p, d = f.p, beak_depth(f.p, g.sh)
     x8, xm = f.X(8), f.X(4)
     ym = f.Y(11) - (x8 - xm)
@@ -964,7 +964,7 @@ def pemidhook(g):
 @glyph('uni04E1', 'ӡ', letter_width(8, 2), kind='lower')
 def dzeabkhasian(g):
     """The Ӡ on the x-height, its bowl in the descender (as ʒ)."""
-    f = Frame(g, 8, 'lower')
+    f = wedge_bars(g, lambda: Frame(g, 8, 'lower'), lambda f: f.X(7) - f.X(3.5))
     p = g.p
     x7, xm = f.X(7), f.X(3.5)
     ym = f.Y(8) - (x7 - xm)

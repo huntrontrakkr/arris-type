@@ -120,6 +120,31 @@ def bay_stack(g, frame, rows, floor=None):
     return frame()
 
 
+def wedge_bars(g, frame, run):
+    """Thin a letter's horizontals for the wedge of white under a 45-degree
+    return (the ezh's, the Abkhasian dze's: a top bar, a diagonal back to
+    the middle, the 3's lower bowl), so far that it keeps BAY_WHITE of the
+    least white at its mouth; never under the stack's least. The return
+    runs as far down as across (``run``, of the frame), and the white
+    between the bar it leaves and the bar it lands on is that run less a
+    bar. Returns the frame to draw in.
+
+    Nothing kept that white. In the italic, whose bars in the x-height are
+    the weight's own, the small ezh's two bars met at Black, 170 units
+    thick on a run of 167, and what was left of the diagonal's end stood
+    out of the join in teeth; upright it had 49 units for the 57 a bay
+    keeps."""
+    p = g.p
+    least = BAY_WHITE * white_floor(p.m, p.sv, p.optical)
+    f = frame()
+    room = run(f) - least                                   # the most bar that leaves the wedge its white
+    if g.sh > room:
+        k1 = g.sh_k
+        g.sh_k = max((BAY_STACK_MIN if p.optical and p.slant else STACK_MIN) * k1, k1 * room / g.sh)
+        f = frame()
+    return f
+
+
 def off_the_beak(g, f, x_beak, x_end, row, top, bottom, d=None):
     """Where a bar's end stands, on frame row ``row``, beside the beaks of
     the bars on rows ``top`` and ``bottom`` (the Ze's waist, the reversed

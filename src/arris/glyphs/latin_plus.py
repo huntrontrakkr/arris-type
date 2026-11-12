@@ -35,7 +35,7 @@ from ..params import SQRT2
 from . import marks
 from .cyrillic import mirror
 from .extra_latin import stamp, width_of
-from .figures import beak_depth
+from .figures import beak_depth, wedge_bars
 from .letterframe import Frame, growing_width, letter_width, ungiving, white_scale
 from .marks import ABOVE, ATTACHED, BELOW, BESIDE, gap, size
 
@@ -299,7 +299,7 @@ def florin(g):
 def Ezh(g):
     """The sharp s's top bar and 45-degree return without its stem: a bar,
     a diagonal back to the middle, the 3's lower bowl ending on a beak."""
-    f = Frame(g, 9)
+    f = wedge_bars(g, lambda: Frame(g, 9), lambda f: f.X(8) - f.X(4.5))
     p = f.p
     x8 = f.X(8)
     y_mid = f.Y(11) - (x8 - f.X(4.5))
@@ -311,7 +311,7 @@ def Ezh(g):
 @glyph('uni0292', 'ʒ', letter_width(8, 2), kind='lower')
 def ezh(g):
     """The ezh on the x-height, its bowl hanging into the descender."""
-    f = Frame(g, 8, 'lower')
+    f = wedge_bars(g, lambda: Frame(g, 8, 'lower'), lambda f: f.X(7) - f.X(4))
     p = f.p
     x7 = f.X(7)
     y_mid = f.Y(8) - (x7 - f.X(4))

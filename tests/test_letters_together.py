@@ -430,6 +430,32 @@ def test_the_italics_hooks_keep_their_white(w):
 
 
 @pytest.mark.parametrize('w', [700, 800, 900])
+def test_the_ezhs_wedge_keeps_a_bays_white(w):
+    """The ezh and the Abkhasian dze are a top bar, a diagonal back to the
+    middle and the 3's lower bowl, and the white under the diagonal is a
+    wedge between the two bars: the diagonal's run less a bar. Nothing
+    kept it. In the italic, whose bars in the x-height are the weight's
+    own, the small ezh's two bars met at Black (170 units thick on a run
+    of 167) and what was left of the diagonal's end stood out of the join
+    in teeth; upright it had 49 units for the 57 a bay keeps. The bars
+    give for it (figures.wedge_bars). And the small Ҙ's bays are its
+    small Ze's (the owner, 2026-11-12, of the letters built on the 3:
+    "Some of these look awful", and of the figure itself, which is as it
+    was: "these threes as they get thicker look pretty good")."""
+    from arris.glyphs.letterframe import least_white
+    from arris.glyphs.lower import BAY_WHITE
+    from arris.italic import italic
+    for p in (params(w), italic(params(w))):
+        least = BAY_WHITE * least_white(p)
+        for name in ('uni0292', 'uni04E1', 'uni01B7', 'uni04E0'):
+            g = draw(name, p)
+            ys = sorted({round(n.y, 3) for s in g.strokes for n in s.nodes}, reverse=True)
+            top, waist = ys[0], ys[1]                       # the top bar's line and the bar the diagonal lands on
+            assert top - waist - g.sh >= least - 0.5, (name, round(top - waist - g.sh, 1), round(least, 1))
+        assert draw('uni0499', p).sh == pytest.approx(draw('uni0437', p).sh)
+
+
+@pytest.mark.parametrize('w', [700, 800, 900])
 def test_the_capital_sharp_ss_foot_keeps_off_its_stem(w):
     """Its lower bowl's foot ended on the third module, and the stem grew
     toward it: 39 units between them at Black, a quarter of a stem, a slit
