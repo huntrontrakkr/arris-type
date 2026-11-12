@@ -21,7 +21,7 @@ from shapely.geometry import Polygon
 from ..draw import B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .letterframe import STEEP, Frame, growing_width, kept_width, plain_width as letter_width
-from .punct import _bracket, axis, dot, dot_w, punct, stem_w
+from .punct import LOW_LINE, _bracket, axis, dash, dot, dot_w, punct, stem_w
 from .symkit import MIRROR, sign, stamp_t
 
 ALIASES = {0x2015: 'emdash', 0x2024: 'period', 0x2027: 'periodcentered',
@@ -69,7 +69,7 @@ def dblverticalbar(g):
     g.clip = (0, bot, g.W, top)
 
 
-@sign('underscoredbl', '‗', kept_width(9, 0))
+@sign('underscoredbl', '‗', dash(LOW_LINE, 9))
 def underscoredbl(g):
     """Two low lines: the lower where the underscore is, the upper a stroke
     above it; at heavy weights they thin (to 0.7) before they rise far."""
@@ -83,7 +83,7 @@ def underscoredbl(g):
         g.stroke((0, y), (g.W, y))
 
 
-@sign('uni203E', '‾', kept_width(9, 0))
+@sign('uni203E', '‾', dash(LOW_LINE, 9))
 def overline(g):
     p = g.p
     y = p.asc - g.sh / 2

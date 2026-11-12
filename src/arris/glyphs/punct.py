@@ -27,6 +27,20 @@ def punct(name, char, wm, stems=1, width=None, sides=1.0):
     return glyph(name, char, width or (letter_width(wm, stems) if stems else kept_width(wm, 0)), kind=('punct', sides))
 
 
+# The dashes, in modules: the lengths other families give theirs. At six, nine and sixteen modules the
+# hyphen stood 0.81 of the H's advance, the en dash 1.10 and the em dash 1.77, and the underscore, nine
+# modules too, 1.10: of sixty families the en dash, the em dash and the underscore were longer than any
+# but two or three, and the hyphen longer than all but three (their middle ones 0.60, 0.79, 1.23 and 0.75;
+# tools/width_survey.py's families, 2026-11-12). Arris Mono keeps the lengths its cell is drawn to.
+HYPHEN, EN_DASH, EM_DASH, LOW_LINE = 4, 6, 10.5, 5.5
+
+
+def dash(wm: float, mono: float):
+    """A dash's body: ``wm`` modules, and ``mono`` in Arris Mono's cell."""
+    own, cell = kept_width(wm, 0), kept_width(mono, 0)
+    return lambda p: cell(p) if p.mono else own(p)
+
+
 def stem_w(n=1):
     return lambda p: n * p.sv
 
@@ -122,7 +136,7 @@ def question(g):
     dot(g, xs, 0)
 
 
-@punct('hyphen', '-', 6, 0)
+@punct('hyphen', '-', 6, 0, width=dash(HYPHEN, 6))
 def hyphen(g):
     f = Frame(g, 6, 'lower')
     # in the monospaced cut the hyphen is a minus for code: on the math axis,
@@ -131,22 +145,23 @@ def hyphen(g):
     g.stroke((0, y), (g.W, y))
 
 
-@punct('endash', '–', 9, 0)
+@punct('endash', '–', 9, 0, width=dash(EN_DASH, 9))
 def endash(g):
     f = Frame(g, 9, 'lower')
     g.stroke((0, f.Y(5)), (g.W, f.Y(5)))
 
 
 @punct('emdash', '—', 16, 0,
-       width=lambda p: min(letter_width(16, 0)(p), p.fig_adv) if p.mono else kept_width(16, 0)(p))
+       width=lambda p: min(letter_width(16, 0)(p), p.fig_adv) if p.mono else kept_width(EM_DASH, 0)(p))
 def emdash(g):
-    """A bar sixteen modules long; in the monospaced cut, the cell's full
-    advance, as a code face's em dash runs (it shortens, never thins)."""
+    """A bar ten and a half modules long (EM_DASH); in the monospaced cut,
+    the cell's full advance, as a code face's em dash runs (it shortens,
+    never thins)."""
     f = Frame(g, 16, 'lower')
     g.stroke((0, f.Y(5)), (g.W, f.Y(5)))
 
 
-@punct('underscore', '_', 9, 0)
+@punct('underscore', '_', 9, 0, width=dash(LOW_LINE, 9))
 def underscore(g):
     f = Frame(g, 9, 'lower')
     g.stroke((0, f.Y(-2)), (g.W, f.Y(-2)))

@@ -25,9 +25,84 @@ def gap(p):
     return max(p.m, 0.4 * p.sv)
 
 
+HANG_GAIN = 1 / 3   # of what its letter's strokes gain past the Regular, the share a mark hanging off it takes (mark_params)
+
+
+def mark_params(p, gain=0.0):
+    """The parameters an accent is drawn with: its letter's up to its cut's
+    Regular, and the Regular's own from there to Black (draw.held_at: the
+    same cut, grade, watch balance and slant). Past the Regular an accent
+    is the Regular's accent, stroke for stroke: as thick, as big, its dots
+    as far apart, as far from its letter.
+
+    Drawn with the letter's own strokes at a size that grew with them, an
+    accent at Black carried 1.3 to 2.0 times the ink of other families' for
+    its letter and stood 1.2 to 1.6 times as tall (the acute 1.48 and 1.35,
+    the caron 1.99, the tilde 1.63 and 1.62; forty-two families, each
+    accent's ink over its letter's and its height over the x-height): the
+    owner, 2026-11-12, "all bloated and ugly at black". Held at the
+    Regular's size with seven tenths of the letter's gain they were lighter
+    and still spread (a dieresis's dots 134 units apart at Black for 72):
+    "They are still too far apart"; "Can you just make the accents at the
+    regular weight? Just keep them there, please."
+
+    ``gain``: the share of its letter's gain past the Regular the mark's
+    strokes take (HANG_GAIN for a mark that hangs off its letter: the
+    cedilla, the ogonek, the horn). Such a mark is a part of the letter's
+    own outline, and at the Regular's weight on a Black letter it read as
+    a hair on it: the owner, 2026-11-12, "if it's hanging off of the
+    letter, it should probably be a little bolder." A third of the way to
+    the letter's weight: at half the hook began to crowd its own notch at
+    Black, and at two thirds the ç's read as a block again.
+
+    A set derived from a font's (small capitals) has no Regular of its own
+    to ask for: its accents take the strokes that stand to its module as
+    the Regular's do, a module and a half to the stem (letterframe.heft)."""
+    from ..draw import _cut, held_at
+    q = held_at(p)
+    if q is p and _cut(p) is None:
+        r = 1.5 * p.m / p.sv
+        if r >= 1.0:
+            return p
+        q = p.with_(sv=p.sv * r, sh=p.sh * r, sd=p.sd * r, ss=p.ss * r, c=p.c * r)
+    if q is p or not gain:
+        return q
+    mix = lambda a, b: a + gain * (b - a)
+    return q.with_(sv=mix(q.sv, p.sv), sh=mix(q.sh, p.sh), sd=mix(q.sd, p.sd), ss=mix(q.ss, p.ss), c=mix(q.c, p.c))
+
+
+def kept(g, fn, *args, joined=False, gain=0.0):
+    """Draw a mark into g with its own parameters (mark_params): in g
+    itself where they are g's; else in a drawing of its own, stamped into
+    g. A mark that hangs from its letter reads the letter's ink and
+    parameters off that drawing (``base_ink``, ``own_p``, ``own_sh``), and
+    a line it must meet flush is the letter's too (``butt``).
+
+    ``joined``: the mark's drawing carries the letter's ink, so the join is
+    finished there as it is in the letter's own drawing up to the Regular:
+    the corners the two make are filled by the one rule. Stamped in alone,
+    an ogonek lost those fills where it became the Regular's (700 square
+    units of į between weights 400 and 401). ``gain``: mark_params'."""
+    q = mark_params(g.p, gain)
+    if q is g.p:
+        return fn(g, *args)
+    target = Glyph(q, W=g.W)
+    target.base_ink = g.extra[0] if g.extra else None
+    target.own_p, target.own_sh = g.p, g.sh
+    if joined and g.extra:
+        target.extra = [g.extra[0]]
+        target.extra_chamfers = list(g.extra_chamfers)
+    fn(target, *args)
+    g.butt += target.butt
+    if target.strokes or target.overlay or target.extra:
+        g.add_glyph(target)
+
+
 def size(p, case):
-    """Height of a stroke mark (acute, circumflex...)."""
-    return (2.0 if case == 'lc' else 1.5) * p.m + 0.5 * p.sv
+    """Height of a stroke mark (acute, circumflex...): two modules and half
+    a stem (a module and a half on a capital), the stem no more than the
+    Regular's (mark_params)."""
+    return (2.0 if case == 'lc' else 1.5) * p.m + 0.5 * min(p.sv, 1.5 * p.m)
 
 
 def _dot(g, x, y):
@@ -197,7 +272,8 @@ def cedilla(g, x, y, case):
         # merged with the corner's chamfer from 600 up, which held the
         # corner straight (and folded the outline back on itself at 550)
         from ..draw import _thickness
-        under = g.sh / 2 - _thickness(p, g.sh)((1.0, 0.0)) / 2    # (lower.crotch_butt)
+        own, own_sh = getattr(g, 'own_p', p), getattr(g, 'own_sh', g.sh)    # the letter's own (kept): its underside
+        under = own_sh / 2 - _thickness(own, own_sh)((1.0, 0.0)) / 2        # (lower.crotch_butt)
         g.butt += (('y', under, x - wv / 2 - 1.0, x + wv / 2 + 1.0),)
 
 
@@ -208,9 +284,10 @@ def ogonek(g, x, y, case):
     """Hangs from the base's rightmost ink on the baseline (a stem's foot or
     a bar's end, whichever the letter has), turning right underneath."""
     p = g.p
+    own = getattr(g, 'own_p', p)                            # the letter's own parameters (kept)
     yb = -p.under + g.sh / 2 + 0.25 * p.m
     from shapely.geometry import LineString
-    base = g.extra[0]
+    base = getattr(g, 'base_ink', None) or g.extra[0]
     cut = base.intersection(LineString([(-1e4, 0.3 * g.sh), (1e4, 0.3 * g.sh)]))
     xs = [c[0] for gg in getattr(cut, 'geoms', [cut]) for c in getattr(gg, 'coords', [])]
     if p.slant:
@@ -245,7 +322,7 @@ def ogonek(g, x, y, case):
         else:
             # a bowl corner at the foot of that edge (the e's arm, the o's and
             # U's bowls): under the bowl, clear of the corner's outer chamfer
-            x = xr - outer_leg(p) - TAIL_FLAT * p.c - w / 2
+            x = xr - outer_leg(own) - TAIL_FLAT * own.c - w / 2
         under = base.intersection(box(x - w / 2, -1e4, x + w / 2, top))
         g.stroke((x, g.sh / 2, w), B(x, yb, p.m / 2, w),
                  (x + max(1.5 * p.m + p.sv / 2, run_floor(p, p.m / 2, w)), yb))
@@ -290,12 +367,18 @@ def line_top(p):
     return ((m.asc if p.mono else m.win_asc) - 2) * p.cap / m.cap
 
 
-def accent_params(p, k):
-    """Marks drawn lighter and smaller by k: strokes, module and edge breaks
-    together, so a mark keeps its proportions as it shrinks."""
+def _scaled(p, k):
+    """p lighter and smaller by k: strokes, module and edge breaks together."""
     if k == 1.0:
         return p
     return p.with_(m=p.m * k, sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, leg=p.leg * k)
+
+
+def accent_params(p, k, gain=0.0):
+    """A mark's parameters (mark_params), drawn lighter and smaller by k:
+    strokes, module and edge breaks together, so a mark keeps its
+    proportions as it shrinks."""
+    return _scaled(mark_params(p, gain), k)
 
 
 def mark_ink(g, n0=0):
@@ -501,13 +584,14 @@ def _register(name, ch, bname, base, marks):
                 ATTACHED[m](g, x, case)
             elif m == '\u0327' and base in CEDILLA_AS_COMMA:
                 if base == 'g':
-                    commaabove(g, x, top + gap(p), case)
+                    kept(g, commaabove, x, top + gap(mark_params(p)), case)
                 else:
-                    commabelow(g, x, 0, case)
+                    kept(g, commabelow, x, 0, case)
             elif m == '\u0328':
-                ogonek(g, _ogonek_x(g, base), 0, case)
+                kept(g, ogonek, _ogonek_x(g, base), 0, case, joined=True, gain=HANG_GAIN)
             else:
-                BELOW[m](g, clear_below(g.extra[0], p, BELOW[m], x, case, g.W), 0, case)
+                gain = HANG_GAIN if m == '\u0327' else 0.0      # (the cedilla hangs off its letter)
+                kept(g, BELOW[m], clear_below(g.extra[0], mark_params(p, gain), BELOW[m], x, case, g.W), 0, case, gain=gain)
         if not above:
             return
         # (in the monospaced cell, the stack keeps the cell's margin: draw.CELL_GAP)
@@ -599,7 +683,7 @@ def draw_above(g, above, x, top, case, cell=None, avoid=None, lift=0.0):
     places = st[0]
     k = _squeeze(s)[1]
     q = accent_params(p, k)
-    target = g if k == 1.0 else Glyph(q, W=g.W)
+    target = g if q is p else Glyph(q, W=g.W)             # (its own strokes past the Regular: drawn apart, stamped in)
     for m, xm, ym in places:
         ABOVE[m](target, xm, ym, case)
     if target is not g:
@@ -639,9 +723,14 @@ def _caron_apostrophe(g, base):
     from .figures import heaviness
     p0 = g.p
     ink = g.extra[0]
-    # in the monospaced cell the apostrophe is drawn lighter toward Black (as
-    # a stack of marks lightens), so a d keeps its counter beside it
-    p = accent_params(p0, 1 - 0.5 * heaviness(p0)) if p0.mono else p0
+    # the Regular's apostrophe from there to Black (mark_params). Not in the
+    # monospaced cell: there is no room for white between the two there, the
+    # apostrophe is drawn into its letter and the letter's finish joins them
+    # (4 to 20 units between them before it, at Regular as at Bold). Stamped
+    # in at the Regular's weight it kept that hairline. It stays the
+    # letter's own, drawn lighter toward Black (as a stack of marks
+    # lightens), so a d keeps its counter beside it
+    p = _scaled(p0, 1 - 0.5 * heaviness(p0)) if p0.mono else mark_params(p0)
     tight = 1.0
     if p0.mono:
         # the letter narrows to make room in the cell (draw._cell_fit) down to
@@ -660,7 +749,7 @@ def _caron_apostrophe(g, base):
 
         def reach_right(s_):
             t, k = _squeeze(s_)
-            q = accent_params(p, k)
+            q = _scaled(p, k)
             top_ = q.cap if base.isupper() else q.asc
             scratch = Glyph(q, W=g.W)
             scratch.warp = getattr(bf, 'warp', None)        # (the letter's overshoot moves its marks: in the italic, leaned)
@@ -676,7 +765,7 @@ def _caron_apostrophe(g, base):
                 else:
                     lo_ = mid
             tight, k = _squeeze(hi_)
-            p = accent_params(p, k)
+            p = _scaled(p, k)
     top = p.cap if base.isupper() else p.asc
     gap = tight * max(p.m, 0.6 * p.sv)
     # the stem: the base's ink above the x-height and its bars

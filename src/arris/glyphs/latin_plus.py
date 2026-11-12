@@ -166,7 +166,7 @@ def horn_at(g, ax, ay, case, give=0.0):
     of marks does (marks._squeeze): its run and rise shorten, then it
     lightens and shrinks."""
     t, kl = marks._squeeze(give) if give > 0 else (1.0, 1.0)
-    p = marks.accent_params(g.p, kl)
+    p = marks.accent_params(g.p, kl, marks.HANG_GAIN)       # (it hangs off its letter: a little bolder than an accent)
     target = g if p is g.p else Glyph(p, W=g.W)
     k = p.sd / 2                                            # half the diagonal, across
     u = 1 / SQRT2
@@ -592,9 +592,9 @@ def _combining(name, cp, seq, where, case):
             ax, ay = horn_origin(p, case)
             horn_at(g, x + ax, ay, case)
         elif where == 'ogonek':
-            ogonek_mark(g, x)
+            marks.kept(g, ogonek_mark, x, gain=marks.HANG_GAIN)
         else:
-            BELOW[seq[0]](g, x, 0, case)
+            marks.kept(g, BELOW[seq[0]], x, 0, case, gain=marks.HANG_GAIN if seq[0] == '\u0327' else 0.0)
     glyph(name, chr(cp) if cp else None, mark_width, kind='mark')(fn)
     MARKS[name] = (where, case, seq)
 

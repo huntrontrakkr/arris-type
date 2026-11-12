@@ -84,16 +84,17 @@ def Upsilonhook(g):
 @glyph('uni03D3', 'ϓ', lambda p: REGISTRY['uni03D2'].width(p) + _tonos_width(p), kind='cap')
 def Upsilonacutehook(g):
     from .extra_latin import stamp
-    from .marks import acute, size
+    from .marks import acute, kept, mark_params, size
     p = g.p
-    a = size(p, 'uc')
+    q = mark_params(p)
+    a = size(q, 'uc')
     if p.mono:
         stamp(g, 'uni03D2', width=g.W)
-        acute(g, a / 2 + p.sv / 2, p.cap + 0.6 * p.m, 'uc')
+        kept(g, acute, a / 2 + q.sv / 2, p.cap + 0.6 * p.m, 'uc')
         return
     t = _tonos_width(p)
     stamp(g, 'uni03D2', t)
-    acute(g, t / 2 - 0.1 * p.m, p.cap - a, 'uc')
+    kept(g, acute, t / 2 - 0.1 * p.m, p.cap - a, 'uc')
 
 
 @glow('uni03D6', 'ϖ', 13, 3)
@@ -300,22 +301,22 @@ def sampi(g):
 
 @glyph('tonos', '΄', lambda p: 0.4 * p.cap / 2, kind=('punct', 0.4))
 def tonos(g):
-    from .marks import acute, size
+    from .marks import acute, kept, size
     p = g.p
-    acute(g, size(p, 'uc') / 2, p.cap - size(p, 'uc'), 'uc')
+    kept(g, acute, size(p, 'uc') / 2, p.cap - size(p, 'uc'), 'uc')
 
 
 @glyph('uni0374', 'ʹ', lambda p: 0.4 * p.cap / 2, kind=('punct', 0.4))
 def numeralsign(g):
     """The keraia: an acute standing at the cap height."""
-    from .marks import acute, size
+    from .marks import acute, kept, size
     p = g.p
-    acute(g, size(p, 'uc') / 2, p.cap - size(p, 'uc'), 'uc')
+    kept(g, acute, size(p, 'uc') / 2, p.cap - size(p, 'uc'), 'uc')
 
 
 @glyph('uni0375', '͵', lambda p: 0.4 * p.cap / 2, kind=('punct', 0.4))
 def lowernumeralsign(g):
     """The lower keraia: the same stroke, hung below the baseline."""
-    from .marks import acute, size
+    from .marks import acute, kept, size
     p = g.p
-    acute(g, size(p, 'uc') / 2, -0.8 * p.desc, 'uc')
+    kept(g, acute, size(p, 'uc') / 2, -0.8 * p.desc, 'uc')

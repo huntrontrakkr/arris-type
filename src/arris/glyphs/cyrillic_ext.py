@@ -1033,7 +1033,7 @@ def _ctick(g, f, x):
 @ital('uni048B', 8, 2)
 def shortitail_ital(g):
     """The italic й (a u), its foot running on into the cursive ц's tick."""
-    from .marks import breve, gap
+    from .marks import breve, gap, kept, mark_params
     f = Frame(g, 8, 'lower')
     _free(g)
     p = g.p
@@ -1043,7 +1043,7 @@ def shortitail_ital(g):
     g.stroke(f.P(7, 9), f.P(7, 1))
     x0, y0, x1, _ = g.clip
     g.clip = (x0, y0, x1, p.asc + p.cap)
-    breve(g, (xl + xr) / 2, p.xh + gap(p), 'lc')
+    kept(g, breve, (xl + xr) / 2, p.xh + gap(mark_params(p)), 'lc')
 
 
 @ital('uni04AD', 12, 3)

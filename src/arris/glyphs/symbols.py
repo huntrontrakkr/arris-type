@@ -413,25 +413,39 @@ SPACING = {'circumflex': ('ˆ', '̂'), 'caron': ('ˇ', '̌'), 'breve': ('˘', '�
 
 
 def _spacing_width(p):
+    """An accent's body alone: the Regular's past it, as the accent is (marks.mark_params)."""
+    p = marks.mark_params(p)
     return 2 * marks.size(p, 'lc') + 1.5 * p.sv
+
+
+def _hook_width(p):
+    return 3 * p.m + marks.mark_params(p, marks.HANG_GAIN).sv
 
 
 for nm, (ch, comb) in SPACING.items():
     def fn(g, comb=comb):
+        from ..draw import Glyph
         p = g.p
-        marks.ABOVE[comb](g, g.W / 2, p.xh + marks.gap(p), 'lc')
+        q = marks.mark_params(p)                            # (the accent alone is the accent on a letter)
+        target = g if q is p else Glyph(q, W=g.W)
+        marks.ABOVE[comb](target, g.W / 2, p.xh + marks.gap(q), 'lc')
+        if target is not g:
+            g.add_glyph(target)
     glyph(nm, ch, _spacing_width, kind=('punct', 0.6))(fn)
 
 
-@glyph('cedilla', '¸', lambda p: 3 * p.m + p.sv, kind=('punct', 0.6))
+@glyph('cedilla', '¸', _hook_width, kind=('punct', 0.6))
 def cedilla(g):
-    marks.cedilla(g, g.W - g.p.sv / 2 - 0.5 * g.p.m, 0, 'lc')
+    marks.kept(g, marks.cedilla, g.W - marks.mark_params(g.p, marks.HANG_GAIN).sv / 2 - 0.5 * g.p.m, 0, 'lc',
+               gain=marks.HANG_GAIN)
 
 
-@glyph('ogonek', '˛', lambda p: 3 * p.m + p.sv, kind=('punct', 0.6))
+@glyph('ogonek', '˛', _hook_width, kind=('punct', 0.6))
 def ogonek(g):
-    from .italic_forms import tail_run
-    p = g.p
-    yb = -p.under + g.sh / 2 + 0.25 * p.m
-    x = p.sv / 2
-    g.stroke((x, g.sh), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))
+    def hook(g):
+        from .italic_forms import tail_run
+        p = g.p
+        yb = -p.under + g.sh / 2 + 0.25 * p.m
+        x = p.sv / 2
+        g.stroke((x, g.sh), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))
+    marks.kept(g, hook, gain=marks.HANG_GAIN)

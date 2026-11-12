@@ -17,7 +17,8 @@ import math
 
 from ..draw import B, Opening, _thickness, glyph
 from .figures import bay_stack, beak_depth, jog
-from .letterframe import STEEP, Frame, heft, k_arms, least_white, letter_width
+from ..params import white_own
+from .letterframe import REGULAR_R, STEEP, Frame, heft, k_arms, least_white, letter_width, white_scale
 
 
 def cap(char, wm, stems, width=None, openings=()):
@@ -189,9 +190,53 @@ def _n_neck(p, sh):
     return N_NECK * max(sh, p.sd)
 
 
+def _n_full(p):
+    """The N's body with its joins a neck deep: two stems, the diagonal's
+    own width across, and its run at 2:1 between the necks."""
+    return 2 * p.sv + p.ss / STEEP[1] + (p.cap - 2 * _n_neck(p, p.sh)) / 2
+
+
+def _h_body(p):
+    return 2 * p.sv + 5 * p.m * white_scale(p, lower=False)
+
+
+_N_SHARE: list = []
+
+
+def n_share():
+    """The N's body as a share of the H's at the Regular: the capital's
+    (1.083) or the small и's (1.0855: the capital at the x-height, in the
+    n's white, cyrillic.sc), whichever is more."""
+    if not _N_SHARE:
+        from ..instances import params
+        p = params(400)
+        _N_SHARE.append(max(_n_full(q) / _h_body(q) for q in (p, p.with_(cap=p.xh, m=p.m * 0.8))))
+    return _N_SHARE[0]
+
+
 def n_width(p):
-    w = p.ss / STEEP[1]                                     # across-width of a 2:1 stroke
-    return 2 * p.sv + w + (p.cap - 2 * _n_neck(p, p.sh)) / 2
+    """The N's body. To the Regular it is what its diagonal makes it: at 2:1
+    between the stems, its joins a neck (_n_neck) from the cap and the
+    baseline. Past the Regular it keeps the share of the H's body it has
+    there (n_share), and the joins deepen instead.
+
+    Held to a neck of one stroke at every weight, the stems and the
+    diagonal each added their whole growth to the width: against the H's
+    advance the N stood 1.06 at Regular, 1.18 at Bold and 1.25 at Black,
+    and the small и the same against its н (1.06, 1.16, 1.23). Sixty-eight
+    families' N stands 1.01 to 1.02 of their H at every weight (the widest
+    1.17), and eighteen families' и 1.00 to 1.01 of their н (the widest
+    1.05). A heavy N's joins are deep in every face: the diagonal and the
+    stem are one block to a third of the height.
+
+    Never so narrow that a counter is under the least white across its open
+    end. The watch's own drawing (``optical`` 0) keeps its master's N, ten
+    modules to the H's nine, and Arris Mono's is its cell's (n_diagonal)."""
+    full = _n_full(p)
+    if p.mono or not p.optical:
+        return full
+    open_end = 2 * p.sv + p.ss / STEEP[1] + 2 * least_white(p) - p.cap / 2      # each counter the least white wide where it opens
+    return full + p.optical * (min(full, max(n_share() * _h_body(p), open_end)) - full)
 
 
 def n_diagonal(g, xa, xb, H):

@@ -98,19 +98,23 @@ REGULAR_R = 0.75    # the Regular's stem, in watch stems: a module and a half (i
 
 def kept_width(wm: float, stems: float):
     """The body of a sign of bars: a dash, the underscore, the plus, the
-    equals and the operators drawn in the plus's body. Past the Regular it
-    keeps the share of the H's body it has there.
+    equals and the operators drawn in the plus's body. At every weight it
+    keeps the share of the H's body it has at the Regular.
 
     Its modules are not white between stems: they are the length of its
-    bars. Read as white (plain_width) they gave way to stems the sign has
-    not got, and as the letters grew the signs shrank: against the H's
-    advance the hyphen stood 0.81 at Regular and 0.49 at Black, the en dash
-    1.10 and 0.67, the em dash 1.77 and 1.07, the plus and the equals 0.94
-    and 0.76, the hyphen at Black a square of ink between its letters and
-    the plus four stubs. In sixty other families each of them keeps its
-    share from Regular to Bold and to Black (0.99 at the median, none under
-    0.83 at Bold). To the Regular, in Arris Mono and in the watch's own
-    drawing, whose white gives nothing, the body is what it was.
+    bars. Read as white (plain_width) they widened toward Thin and past the
+    Regular gave way to stems the sign has not got: as the letters grew the
+    signs shrank. Against the H's advance the hyphen stood 1.24 of its
+    Regular's share at Thin and 0.60 of it at Black, a square of ink
+    between its letters; the en and the em dash the same; the plus and the
+    equals 1.12 and 0.81, the plus at Black four stubs. In sixty other
+    families each keeps its share from Thin to Black: 1.00 or 1.01 of the
+    Regular's at the median at every weight, none over 1.17 at Thin or
+    under 0.83 at Bold.
+
+    The watch's own drawing keeps the same share of its own H (its Black's
+    hyphen was the same square). In Arris Mono, whose signs are drawn to
+    their cell, the body is its modules, as it was.
 
     The operators that keep the watch's own white (draw.white_of) stand in
     the plus's body with the plus: they were a body of their own past the
@@ -121,13 +125,12 @@ def kept_width(wm: float, stems: float):
 
     def width(p):
         p = p.ungraded()
-        if not p.past:
+        if p.mono:
             return own(p)
         # (a sign drawn with lighter strokes to keep its whites, draw._lightened, stands in the body its
         # weight gives the others: at Black the plus and the < stood 54 units narrower than the equals)
         q = p.with_(sv=p.sv / p.light) if p.light != 1.0 else p
-        h = 2 * q.sv + 5 * q.m * white_scale(q, lower=False)
-        return own(q) + q.optical * (share * h - own(q))
+        return share * (2 * q.sv + 5 * q.m * white_scale(q, lower=False))
     return width
 
 

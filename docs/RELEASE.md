@@ -340,25 +340,33 @@ The six causes:
   the unit.
 - A sign of bars keeps its share of the line. The dashes, the underscore,
   the plus, the minus and the equals were measured as the letters are, in
-  stems and modules of white, and past the Regular their white gave way
-  to stems they have not got: as the letters grew the signs shrank.
-  Against the H's advance the hyphen stood 0.81 at Regular and 0.49 at
-  Black, a square of ink between its letters; the en dash 1.10 and 0.67,
-  the em dash 1.77 and 1.07, the plus and the equals 0.94 and 0.76, the
-  plus four stubs. In sixty other families each keeps its share from
-  Regular to Bold and to Black (0.99 at the median; none under 0.83 at
-  Bold). Their modules are the length of their bars: past the Regular the
-  body keeps the share of the H's body it has there
-  (`letterframe.kept_width`), and stands at 0.80 to 0.81, 1.10 to 1.13,
-  1.77 to 1.90 and 0.94 to 0.95. Every operator stands in the plus's body
-  again: the ones that kept the watch's own white were a body of their
-  own past the Regular (52 units wider than the equals at Black), and a
-  sign drawn with lighter strokes to keep its whites took its body from
-  those strokes (the plus and the < 54 units narrower than the equals).
-  To the Regular, in Arris Mono and in the watch's own drawing nothing
-  moves. Arris's dashes are long: at the Regular the en dash, the em dash
-  and the underscore are longer than any of the sixty families'. They are
-  left as drawn.
+  stems and modules of white: the white widened toward Thin, and past the
+  Regular gave way to stems they have not got, so as the letters grew the
+  signs shrank. Against the H's advance the hyphen stood 1.24 of its
+  Regular's share at Thin and 0.60 of it at Black, a square of ink
+  between its letters; the en and the em dash the same; the plus and the
+  equals 1.12 and 0.81, the plus at Black four stubs. In sixty other
+  families each keeps its share from Thin to Black (1.00 or 1.01 of the
+  Regular's at the median at every weight; none over 1.17 at Thin or
+  under 0.83 at Bold). Their modules are the length of their bars: at
+  every weight the body keeps the share of the H's body it has at the
+  Regular (`letterframe.kept_width`), in the watch's own drawing too.
+  Every operator stands in the plus's body again: the ones that kept the
+  watch's own white were a body of their own past the Regular (52 units
+  wider than the equals at Black), and a sign drawn with lighter strokes
+  to keep its whites took its body from those strokes (the plus and the <
+  54 units narrower than the equals). In Arris Mono, whose signs are
+  drawn to their cell, nothing moves.
+- The dashes are as long as other families'. At six, nine and sixteen
+  modules the hyphen stood 0.81 of the H's advance, the en dash 1.10 and
+  the em dash 1.77, and the underscore, nine modules too, 1.10: of sixty
+  families the en dash, the em dash and the underscore were longer than
+  all but two or three, the hyphen than all but three (their middle ones
+  0.60, 0.79, 1.23 and 0.75). They are four, six, ten and a half and five
+  and a half modules (`punct.HYPHEN` and the names beside it): 0.62, 0.81,
+  1.24 and 0.76 at the Regular, and within 0.07 of the families' at every
+  weight. The double low line and the overline are the underscore's
+  length. Arris Mono's are its cell's, as they were.
 - The ≤ and the ≥ stand between the baseline and the cap height at every
   weight. The <'s own chevron over a bar, the equals' white between: at
   the Regular the pair fills the cap height to 38 units, and bolder every
@@ -375,10 +383,78 @@ The six causes:
   at every weight. The rest of the Greek was read against twenty-one
   families the way the Cyrillic was against eighteen
   (`tools/script_shares.py`, which reads either now): forty-five of
-  forty-nine letters stand in their range at Regular and, with the Ξ,
-  forty-four at Bold. What stands outside is the Latin letter it shares
-  (Α Κ Μ Ν, the ν's walls) or a bowl's ink measured against the n (φ),
-  but for the π, the narrowest of them all by 3%, which is left.
+  forty-nine letters stood in their range at Regular and forty-three at
+  Bold. The π was the narrowest of them all, 0.98 of its n's advance for
+  their least 1.01 and their middle one 1.08: its legs stand a module
+  further apart, as far as the n's stems, in ten modules for nine (1.08).
+  With it, the Ξ and the N's width (the next note) forty-six stand in
+  range at both weights; what stands outside is the Latin letter it
+  shares (Α Κ Μ, the ν's walls) or a bowl's ink measured against the n
+  (φ).
+- The N keeps its share of the H. Its diagonal runs at 2:1 between its
+  stems, and with its joins held a stroke from the cap and the baseline
+  the stems and the diagonal each added their whole growth to the width:
+  against the H's advance the N stood 1.06 at Regular, 1.18 at Bold and
+  1.25 at Black, and the small и the same against its н (1.06, 1.16,
+  1.23). Sixty-eight families' N stands 1.01 to 1.02 of their H at every
+  weight (the widest 1.17), eighteen families' и 1.00 to 1.01 of their н
+  (the widest 1.05). Past the Regular the body keeps the share of the H's
+  it has there (`caps.n_width`: 1.07 of the advance from Medium to Black)
+  and the joins deepen instead, as a heavy N's do in every face: the
+  diagonal and the stem are one block to a third of the height at Black.
+  No counter is under the least white where it opens: at Black the N's
+  open 305 units across and the small и's 227. With it go И Й и й, the
+  Greek Ν, the
+  accented N's, № ₦ Ɲ. The Regular and the lighter weights are as they
+  were; the watch's own drawing keeps its master's N (ten modules to the
+  H's nine) and Arris Mono its cell's.
+- One font from one source. A reference that others are measured by is
+  drawn once and kept: a height's overshoot from its o, its bar from the
+  5, the hooks' lines from the e, a glyph's Regular, the weight a Mono
+  letter's counters shut at. It was drawn as a part of whichever glyph
+  asked for it first, and in Arris Mono a part of another glyph is not
+  fitted to the cell while a glyph of its own is: in Mono Italic the
+  x-height's overshoot was 1.50 units at Bold where a plain letter had
+  been drawn first and 1.09 where an accented letter's base had. The
+  build shares its glyphs out among workers, so the same source gave two
+  fonts: about a hundred accented letters and the tabular figures of
+  Mono Bold Italic differed from one run to the next, by under half a
+  unit. A reference is now drawn as a glyph of its own, whoever asks
+  (`draw._as_own`), and a check draws in several orders, each in a
+  process of its own.
+- An accent past the Regular is the Regular's accent. Accents were drawn
+  with their letter's own strokes at a size that grew with them: at Black
+  an acute carried 1.48 times the ink other families give it for its
+  letter and stood 1.35 times as tall, a circumflex 1.88, a caron 1.99, a
+  tilde 1.63 (forty-two families, each accent's ink over its letter's and
+  its height over the x-height), and a dieresis's dots stood 160 units
+  apart for the Regular's 72. The owner: "all bloated and ugly at black";
+  shown them at the Regular's size with seven tenths of the letter's
+  gain, "They are still too far apart" and "Can you just make the accents
+  at the regular weight? Just keep them there, please." From each cut's
+  Regular to its heaviest weight an accent is the Regular's own drawing
+  (`marks.mark_params`, `draw.held_at`): as thick, as big, its dots as
+  far apart, as far from its letter. Every accent over a letter and
+  under one, the apostrophe of ď ľ ť, the Greek tonos and its capitals'
+  room for it, the accents alone (´ ` ˆ ¨ ˜ ˇ, in the Regular's body)
+  and the combining marks. A mark that hangs off its letter is a part of
+  its outline, and at the Regular's weight on a Black letter it read as
+  a hair on it ("if it's hanging off of the letter, it should probably
+  be a little bolder"): the cedilla, the ogonek and the horn take a third
+  of what their letter's strokes gain past the Regular
+  (`marks.HANG_GAIN`), 127 units on a stem of 200 at Black. To the
+  Regular nothing moves. A letter's own dot (i, j) is its letter's.
+  In Arris Mono the apostrophe of ď ľ ť is its letter's too: the cell
+  has no room for white between them, and the two are drawn as one.
+- The ≠ stands on the equals' bars. The rule that lightens a sign to
+  keep its whites counted the wedges between the ≠'s slash and its bars,
+  outside the bars: six whites at the Regular for the two a reader sees.
+  Four went from Medium, and from SemiBold the whole sign was drawn 0.8
+  of its weight without getting one back, its bars thinner than the
+  equals' beside it (the owner, of Bold: it "looks like crap"). A sign's
+  whites are the ones inside the outline of what its slash is laid over
+  (`draw.white_features`): the ≠ keeps its two to Black on the equals'
+  own bars, its slash the Regular's weight as every laid stroke is.
 - Past the Regular the letters give white to their stems, as the letters
   of other families do. Arris got bolder outward: almost every unit a stem
   gained went onto the letter's width. Read at one boldness and one

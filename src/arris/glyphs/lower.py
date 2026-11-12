@@ -115,8 +115,9 @@ def hook_ref(p):
     zone's own bar (the watch's drawing)."""
     if not p.optical or p.slant:                            # (the italic keeps its own strokes: draw._start)
         return None
-    from ..draw import draw
-    return draw('e', p).hook
+    from ..draw import _as_own, draw
+    with _as_own():                                         # (the e as a letter of its own, whoever asks first)
+        return draw('e', p).hook
 
 
 def spine3(g):

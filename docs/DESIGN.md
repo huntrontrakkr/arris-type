@@ -152,6 +152,17 @@ a J. The comma below keeps inside the descender: its stub shortens, then
 the whole comma lightens, as heavy faces draw their accents; the breve's
 sides thin the same way so its cup stays open.
 
+**Accents stop at the Regular.** Up to its cut's Regular an accent is drawn
+with its letter's strokes. From there to Black it is the Regular's own
+accent: as thick, as big, its dots as far apart, as far from its letter
+(`marks.mark_params`). Drawn with the letter's strokes at a size that grew
+with them, the accents at Black carried up to twice the ink other families
+give theirs and stood half as tall again; the owner's call (2026-11-12) was
+the Regular's weight, kept. A mark that hangs off its letter (the cedilla,
+the ogonek, the horn) is a part of the letter's outline and takes a third
+of the letter's gain, so it does not read as a hair on a Black letter. A
+letter's own dot grows with its letter.
+
 ## 4. From pixels to every weight
 
 The watch has one weight. Arris has nine, Thin to Black, and two stroke
@@ -229,9 +240,11 @@ the f, the t and the j give no more than their crossbar and hook can
 spare, and the cursive f, a stem and a crossbar, gives nothing. A sign
 of bars (a dash, the underscore, the plus, the equals and every operator
 in the plus's body) has no white between stems to give: its modules are
-the length of its bars, and past the Regular it keeps the share of the
-H's body it has there (`letterframe.kept_width`), as the dashes and the
-operators of other families keep theirs. The
+the length of its bars, and at every weight it keeps the share of the
+H's body it has at the Regular (`letterframe.kept_width`), as the dashes
+and the operators of other families keep theirs. The N, whose 2:1
+diagonal would make it a quarter wider than the H at Black, keeps its
+Regular's share too and deepens its joins (`caps.n_width`). The
 watch's own drawing keeps its
 modules and Arris Mono its cell. Figures are spaced as
 the letters are, each by its own white; their tabular twins (`tnum`)

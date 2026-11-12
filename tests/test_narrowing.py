@@ -104,8 +104,8 @@ def test_signs_of_fixed_geometry_and_two_letters_give_nothing(w):
     letters, ⊦ lost its stem to a wedge at Black, ⊫ its two stems to a
     slab, and the feet of ≎ ran out past its bars. The ones drawn in the
     plus's body stand in it with the plus, which keeps its share of the
-    line past the Regular (letterframe.kept_width): wider than the watch's
-    own white gives, never narrower. The florin and the ϰ keep their
+    line at every weight (letterframe.kept_width): wider past the Regular
+    than the watch's own white gives, never narrower. The florin and the ϰ keep their
     bodies too (letterframe.ungiving): the one's crossbar and hook, the
     other's two curls. Punctuation and currency give as the capitals do,
     but for the signs that are bars alone."""
@@ -116,10 +116,12 @@ def test_signs_of_fixed_geometry_and_two_letters_give_nothing(w):
     for ch in '≎≏⊚→↔⌂':
         spec = REGISTRY[CMAP[ch]]
         assert spec.white == 'own' and spec.width(p) == pytest.approx(spec.width(own)), ch
-    for ch in '⊦⊧⊫∢≡∓':
+    for ch in '⊦⊧∢≡∓':
         spec = REGISTRY[CMAP[ch]]
-        assert spec.white == 'own' and spec.width(p) > spec.width(own), ch
-        assert spec.width(p) - spec.width(own) == pytest.approx(plus.width(p) - plus.width(own)), ch
+        assert spec.white == 'own' and spec.width(p) == pytest.approx(plus.width(p)), ch
+        assert spec.width(p) > own_width(8, 1)(p), ch
+    wide = REGISTRY[CMAP['⊫']]                              # the plus's body and a second stem
+    assert wide.width(p) - plus.width(p) == pytest.approx(wide.width(own) - plus.width(own))
     for ch in 'ƒϰ':
         assert REGISTRY[CMAP[ch]].width(p) == pytest.approx(REGISTRY[CMAP[ch]].width(own)), ch
     for ch in '$&?':
@@ -319,3 +321,42 @@ def test_the_qs_bars_are_the_os_at_black():
     g = draw('Q', p)
     assert g.sh_auto == pytest.approx(1.0)
     assert g.overrides.get('tail', g.defaults['tail']) > p.cap * 3.5 / 12 + p.c
+
+
+def test_the_n_keeps_its_share_of_the_h():
+    """The N's diagonal runs at 2:1 between its stems, and with its joins
+    held a stroke from the cap and the baseline the stems and the diagonal
+    each added their whole growth to the width: against the H's advance the
+    N stood 1.06 at Regular, 1.18 at Bold and 1.25 at Black, the small и
+    the same against its н. Sixty-eight families' N stands 1.01 to 1.02 of
+    their H at every weight (the widest 1.17), eighteen families' и 1.00
+    to 1.01 of their н (the widest 1.05). Past the Regular the body keeps
+    the share of the H's it has there and the joins deepen (caps.n_width);
+    no counter is under the least white where it opens. To the Regular, in
+    the watch's own drawing and in Arris Mono nothing moves."""
+    from shapely.geometry import LineString
+
+    from arris.font import place
+    from arris.geom import rings_to_shapely
+    from arris.glyphs.caps import _n_full, n_share
+    from arris.glyphs.letterframe import least_white
+    for w in (100, 300, 400):
+        assert REGISTRY['N'].width(params(w)) == pytest.approx(_n_full(params(w)))
+    for w in (400, 500, 600, 700, 800, 900):
+        p = params(w)
+        for ch, ref in (('N', 'H'), ('И', 'Н'), ('и', 'н'), ('й', 'н'), ('Ν', 'Η')):
+            share = place(CMAP.get(ch, 'N'), p)[1] / place(CMAP.get(ref, 'H'), p)[1]
+            assert 1.05 <= share <= 1.08, (ch, w, round(share, 3))
+        assert REGISTRY['N'].width(p) <= n_share() * REGISTRY['H'].width(p) + 1e-6
+    for w in (700, 900):
+        p = params(w)
+        # the watch's own N is its master's, Mono's its cell's
+        assert REGISTRY['N'].width(params(w, watch=1.0)) == pytest.approx(_n_full(params(w, watch=1.0)))
+        mono = params(mono_weight(700)).with_(mono=True)
+        assert REGISTRY['N'].width(mono) == pytest.approx(_n_full(mono))
+        # each counter of the small и, where it opens on the line, the least white wide
+        ink = rings_to_shapely(draw(CMAP['и'], p).rings())
+        x0, y0, x1, _ = ink.bounds
+        cut = ink.intersection(LineString([(x0 - 10, y0 + 2), (x1 + 10, y0 + 2)]))
+        runs = sorted((g.bounds[0], g.bounds[2]) for g in getattr(cut, 'geoms', [cut]) if g.length > 0.5)
+        assert len(runs) == 2 and runs[1][0] - runs[0][1] >= least_white(p) - 2.0, (w, runs)

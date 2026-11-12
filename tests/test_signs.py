@@ -141,14 +141,15 @@ OPERATORS = ['plus', 'minus', 'equal', 'multiply', 'divide', 'less', 'greater', 
 
 def test_a_sign_of_bars_keeps_its_share_of_the_line():
     """A dash's modules are the length of its bar, not white between stems.
-    Read as white they gave way past the Regular to stems the sign has not
-    got: against the H's advance the hyphen stood 0.81 at Regular and 0.49
-    at Black (a square of ink between its letters), the en dash 1.10 and
-    0.67, the plus and the equals 0.94 and 0.76. In sixty other families
-    each keeps its share (0.99 at the median from Regular to Bold and to
-    Black). Past the Regular the body keeps its share of the H's
-    (letterframe.kept_width); to the Regular, in Arris Mono and in the
-    watch's own drawing it is what it was."""
+    Read as white they widened toward Thin and past the Regular gave way to
+    stems the sign has not got: against the H's advance the hyphen stood
+    1.24 of its Regular's share at Thin and 0.60 of it at Black (a square
+    of ink between its letters), the plus and the equals 1.12 and 0.81. In
+    sixty other families each keeps its share from Thin to Black (1.00 or
+    1.01 of the Regular's at the median at every weight). The body keeps
+    the share of the H's body it has at the Regular (letterframe.kept_width),
+    in the watch's own drawing too; in Arris Mono, whose signs are drawn to
+    their cell, it is its modules as it was."""
     from arris.draw import REGISTRY
     from arris.font import place
     from arris.glyphs.letterframe import plain_width
@@ -157,18 +158,35 @@ def test_a_sign_of_bars_keeps_its_share_of_the_line():
     h0 = REGISTRY['H'].width(regular)
     for name in BARS + OPERATORS:
         share = REGISTRY[name].width(regular) / h0
-        for w in (500, 600, 700, 800, 900):
-            p = params(w)
-            assert REGISTRY[name].width(p) / REGISTRY['H'].width(p) == pytest.approx(share, rel=1e-9), (name, w)
-    for name, least, most in (('hyphen', 0.97, 1.01), ('endash', 0.99, 1.04), ('emdash', 0.99, 1.08), ('plus', 0.99, 1.02),
+        for watch in (0.0, 1.0):
+            for w in (100, 200, 300, 500, 600, 700, 800, 900):
+                p = params(w, watch=watch)
+                assert REGISTRY[name].width(p) / REGISTRY['H'].width(p) == pytest.approx(share, rel=1e-9), (name, w, watch)
+    for name, least, most in (('hyphen', 0.94, 1.04), ('endash', 0.98, 1.02), ('emdash', 0.97, 1.06), ('plus', 0.99, 1.02),
                               ('equal', 0.99, 1.02)):
-        at = {w: place(name, params(w))[1] / place('H', params(w))[1] for w in (400, 700, 900)}
-        assert least <= at[700] / at[400] <= most and least <= at[900] / at[400] <= most, (name, at)
-    # where no white gives, nothing moved: the lighter weights, Arris Mono, the watch's own drawing
-    for p in (params(300), params(400), params(900, watch=1.0), params(mono_weight(700)).with_(mono=True)):
-        for name, wm, stems in (('endash', 9, 0), ('hyphen', 6, 0), ('underscore', 9, 0)):
-            assert REGISTRY[name].width(p) == pytest.approx(plain_width(wm, stems)(p), abs=1e-9), (name, p.sv, p.mono)
-        assert REGISTRY['minus'].width(p) == pytest.approx(plain_width(8, 1)(p), abs=1e-9)
+        at = {w: place(name, params(w))[1] / place('H', params(w))[1] for w in (100, 400, 700, 900)}
+        assert all(least <= at[w] / at[400] <= most for w in at), (name, at)
+    # Arris Mono's signs are drawn to their cell: nothing moved there
+    for w in (300, 400, 700):
+        p = params(mono_weight(w)).with_(mono=True)
+        for name, wm, stems in (('endash', 9, 0), ('hyphen', 6, 0), ('underscore', 9, 0), ('minus', 8, 1)):
+            assert REGISTRY[name].width(p) == pytest.approx(min(plain_width(wm, stems)(p), p.fig_w)), (name, w)
+
+
+def test_the_dashes_are_as_long_as_other_families():
+    """At six, nine and sixteen modules the hyphen stood 0.81 of the H's
+    advance, the en dash 1.10 and the em dash 1.77, and the underscore, nine
+    modules too, 1.10: longer than all but two or three of sixty families'
+    (their middle ones 0.60, 0.79, 1.23 and 0.75). They are four, six, ten
+    and a half and five and a half modules; Arris Mono's are its cell's."""
+    from arris.font import place
+    for w in (100, 400, 700, 900):
+        p = params(w)
+        h = place('H', p)[1]
+        for name, theirs in (('hyphen', 0.60), ('endash', 0.79), ('emdash', 1.23), ('underscore', 0.75), ('underscoredbl', 0.75),
+                             ('uni203E', 0.75)):
+            assert place(name, p)[1] / h == pytest.approx(theirs, abs=0.075), (name, w)
+        assert place('hyphen', p)[1] < place('endash', p)[1] < place('emdash', p)[1]
 
 
 @pytest.mark.parametrize('w', [400, 600, 700, 800, 900])
@@ -211,6 +229,25 @@ def test_the_not_equals_slash_passes_its_bars(w):
     assert y1 >= top + 0.75 * g.p.m and y0 <= bottom - 0.75 * g.p.m, (round(y0), round(bottom), round(top), round(y1))
 
 
+@pytest.mark.parametrize('w', [500, 600, 700, 800, 900])
+def test_the_not_equals_bars_are_the_equals(w):
+    """The rule that lightens a sign to keep its whites counted the wedges
+    between the ≠'s slash and its bars, outside the bars: six whites at the
+    Regular for the two a reader sees. Four went from Medium, and from
+    SemiBold the whole sign was drawn 0.8 of its weight without getting one
+    back, its bars thinner than the equals' beside it (the owner, of Bold:
+    it "looks like crap"). A sign's whites are the ones inside the outline
+    of what its slash is laid over (draw.white_features): the ≠'s two, kept
+    to Black, on the equals' own bars."""
+    from arris.draw import REGISTRY, _build, white_features
+    p = params(w)
+    neq, eq = draw('notequal', p), draw('equal', p)
+    assert neq.p.light == 1.0 and neq.sh == pytest.approx(eq.sh)
+    assert sorted(n.y for st in neq.strokes for n in st.nodes) == pytest.approx(sorted(n.y for st in eq.strokes for n in st.nodes))
+    raw = _build(REGISTRY['notequal'], p, 0.0, 0.0, {})
+    assert white_features(raw.rings(), p, raw) == 2
+
+
 def test_the_xi_stands_in_the_sigmas_body():
     """Three bars and no stem: in a body of nine modules of white the Ξ
     stood 1.05 of the H's advance at Light and 0.55 at Black, where it was
@@ -223,3 +260,92 @@ def test_the_xi_stands_in_the_sigmas_body():
         assert place('uni039E', p)[1] == pytest.approx(place('uni03A3', p)[1], rel=0.02), w
         if w >= 300:
             assert 0.85 <= place('uni039E', p)[1] / place('H', p)[1] <= 0.96, w
+
+
+ACCENTS = [('eacute', 'e'), ('egrave', 'e'), ('ecircumflex', 'e'), ('edieresis', 'e'), ('ccaron', 'c'), ('abreve', 'a'),
+           ('emacron', 'e'), ('aring', 'a'), ('ntilde', 'n'), ('uhungarumlaut', 'u'), ('Eacute', 'E'), ('Odieresis', 'O'),
+           ('uni0219', 's'), ('uni1EA1', 'a')]
+
+
+def _accent(acc, base, p):
+    """(the accent's ink: the accented letter less its letter; the letter's ink)."""
+    from arris.font import place
+    a, b = (rings_to_shapely(place(n, p)[0]) for n in (acc, base))
+    return a.difference(b.buffer(0.5)), b
+
+
+@pytest.mark.parametrize('cut', ['upright', 'italic', 'watch', 'mono'])
+def test_an_accent_past_the_regular_is_the_regulars(cut):
+    """Accents were drawn with their letter's own strokes at a size that
+    grew with them: at Black they carried 1.3 to 2.0 times the ink of other
+    families' for their letter and stood 1.2 to 1.6 times as tall (the
+    acute 1.48 and 1.35, the caron 1.99; forty-two families). The owner,
+    2026-11-12: "all bloated and ugly at black"; shown them at the
+    Regular's size with seven tenths of the letter's gain, "They are still
+    too far apart" and "Can you just make the accents at the regular
+    weight? Just keep them there, please." From its cut's Regular to Black
+    an accent is the Regular's own drawing (marks.mark_params): the same
+    ink, the same white between it and its letter, wherever the letter's
+    top and middle put it."""
+    from shapely import affinity
+
+    from arris.glyphs.marks import mark_params
+    from arris.instances import mono_weight
+    from arris.italic import italic
+    at = {'upright': params, 'italic': lambda w: italic(params(w)), 'watch': lambda w: params(w, watch=1.0),
+          'mono': lambda w: params(mono_weight(w)).with_(mono=True)}[cut]
+    regular = at(400)
+    assert mark_params(regular) is regular and mark_params(at(300)).sv == at(300).sv
+    for w in (500, 700, 900):
+        q = mark_params(at(w))
+        assert (q.sv, q.sh, q.sd, q.c) == pytest.approx((regular.sv, regular.sh, regular.sd, regular.c)), w
+    for acc, base in ACCENTS:
+        a0, b0 = _accent(acc, base, regular)
+        for w in (700, 900):
+            a, b = _accent(acc, base, at(w))
+            moved = affinity.translate(a, a0.bounds[0] - a.bounds[0], a0.bounds[1] - a.bounds[1])
+            assert moved.symmetric_difference(a0).area <= 0.01 * a0.area, (acc, w)
+            white = lambda a, b: max(a.bounds[1] - b.bounds[3], b.bounds[1] - a.bounds[3])  # above its letter, or below
+            assert white(a, b) == pytest.approx(white(a0, b0), abs=1.0), (acc, w)
+
+
+@pytest.mark.parametrize('cut', ['upright', 'italic'])
+def test_an_accented_letter_does_not_step_at_the_regular(cut):
+    """Up to the Regular an accent is drawn in its letter, past it in a
+    drawing of its own (the Regular's), stamped in. One that hangs from
+    its letter is finished with the letter's ink under it either way
+    (marks.kept, joined): stamped in alone, the ogonek lost the fills of
+    its join where it became the Regular's, 700 square units of į between
+    weights 400 and 401 for the 180 of a weight's growth. Between 400 and
+    401 an accented letter changes as it does between 401 and 402."""
+    from arris.font import place
+    from arris.italic import italic
+    at = params if cut == 'upright' else (lambda w: italic(params(w)))
+    for name in ('iogonek', 'aogonek', 'Eogonek', 'ccedilla', 'ohorn', 'eacute', 'edieresis', 'uni0219', 'dcaron'):
+        inks = [rings_to_shapely(place(name, at(w))[0]) for w in (400, 401, 402)]
+        step, next_ = (inks[i].symmetric_difference(inks[i + 1]).area for i in range(2))
+        assert step <= 1.5 * next_ + 30, (name, round(step), round(next_))
+
+
+def test_a_mark_that_hangs_off_its_letter_is_a_little_bolder():
+    """The cedilla, the ogonek and the horn are a part of their letter's
+    outline. At the Regular's weight on a Black letter they read as a hair
+    on it (the owner, 2026-11-12: "if it's hanging off of the letter, it
+    should probably be a little bolder"): they take a third of what the
+    letter's strokes gain past the Regular (marks.HANG_GAIN), and stand
+    between the accents' strokes and the letter's."""
+    from arris.glyphs.marks import HANG_GAIN, mark_params
+    regular = params(400)
+    assert mark_params(regular, HANG_GAIN) is regular
+    for w in (500, 700, 900):
+        p = params(w)
+        q = mark_params(p, HANG_GAIN)
+        assert q.sv == pytest.approx(regular.sv + HANG_GAIN * (p.sv - regular.sv))
+        assert q.sh == pytest.approx(regular.sh + HANG_GAIN * (p.sh - regular.sh))
+        assert regular.sv < q.sv < p.sv
+    # as drawn: the cedilla's stem under the c, the ogonek's under the a, at Black
+    p = params(900)
+    hang = regular.sv + HANG_GAIN * (p.sv - regular.sv)
+    for name, y in (('ccedilla', -0.3 * p.m), ('aogonek', -0.6 * p.m)):
+        (x0, x1), = [r for r in _runs(_ink(name, p), y=y)]
+        assert x1 - x0 == pytest.approx(hang, rel=0.12), (name, round(x1 - x0), round(hang))

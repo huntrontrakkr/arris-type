@@ -97,13 +97,14 @@ def mark_anchors(name, rings, p: Params):
     dx, W, pts = _upright(name, rings, p)
     cx = dx + W / 2
     ys = [y for r in pts for _, y in r] or [0.0]
-    sg = marks.STACK_GAP * marks.gap(p)
+    q = marks.mark_params(p)                                # (a mark is drawn with its own parameters)
+    sg = marks.STACK_GAP * marks.gap(q)
     if where == 'top':
         attach = (cx, (p.cap if uc else p.xh) + marks.gap(p))
         stack = (cx, max(ys) + sg)
     elif where == 'bottom':
         attach = (cx, 0.0)
-        stack = (cx, min(ys) - sg + marks.gap(p))
+        stack = (cx, min(ys) - sg + marks.gap(q))
     elif where == 'horn':
         ax, ay = latin_plus.horn_origin(p, 'uc' if uc else 'lc')
         attach, stack = (cx + ax, ay), None

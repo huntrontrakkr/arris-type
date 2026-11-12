@@ -6,6 +6,7 @@ spacing is added when the font is assembled.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 
 from dataclasses import dataclass, field
@@ -616,6 +617,26 @@ def body_width(spec, p, width=None):
 _DEPTH = [0]   # how deep in other glyphs' drawings a drawing is made (a stamped or inset letter is 1 or more)
 
 
+@contextlib.contextmanager
+def _as_own():
+    """While a reference is drawn that others are measured by and that is
+    kept (a height's overshoot from its o, its bar from the 5, the hooks'
+    lines from the e, a glyph's Regular, the weight its counters shut at):
+    drawn as a glyph of its own, not as a part of whichever glyph asks for
+    it first. In Arris Mono a glyph of its own is fitted to its cell and a
+    part of another is not (_start), so the reference was one drawing if a
+    letter asked first and another if an accented letter's base did, and
+    kept either way: after a plain e, s or o the x-height's overshoot in
+    Mono Bold Italic was 1.50 units, before one 1.09, and the same font
+    came out two ways as its glyphs were shared out among the build's
+    workers (about a hundred accented letters and tabular figures)."""
+    depth, _DEPTH[0] = _DEPTH[0], 0
+    try:
+        yield
+    finally:
+        _DEPTH[0] = depth
+
+
 def _cell_kind(spec) -> bool:
     """Whether a glyph keeps to Mono's cell: not marks, spaces, ligatures."""
     return spec is not None and spec.kind not in ('mark', 'space') and \
@@ -934,7 +955,8 @@ def _cap_bar(p):
         if len(_CAP_BAR) > 512:
             _CAP_BAR.clear()
         _CAP_BAR[p] = None                                  # (while the 5 is drawn: what it stamps keeps the weight's own)
-        _CAP_BAR[p] = draw('five', p).sh
+        with _as_own():
+            _CAP_BAR[p] = draw('five', p).sh
     return _CAP_BAR[p]
 
 
@@ -954,7 +976,8 @@ def _zone_over(p, lower: bool) -> float:
         _ZONE_OVER[key] = 0.0               # (while the o is drawn: fitted into Mono's cell it asks for its own)
         _OWN_BAR[0] += 1                    # (its outside is all that is measured: on the weight's own bar, so the
         try:                                # letters the height's bar is taken from can ask while they are drawn)
-            g = _build(drawn_spec('o' if lower else 'O', p), p, 0.0, 0.0, {})
+            with _as_own():
+                g = _build(drawn_spec('o' if lower else 'O', p), p, 0.0, 0.0, {})
         finally:
             _OWN_BAR[0] -= 1
         _ZONE_OVER[key] = overshoot_need(g.rings(), p.xh if lower else p.cap)[0]
@@ -971,7 +994,8 @@ def _hook_warps(p):
     if p not in _HOOK_WARPS:
         if len(_HOOK_WARPS) > 512:
             _HOOK_WARPS.clear()
-        _HOOK_WARPS[p] = tuple(getattr(draw(n, p), 'warp', None) for n in 'ae')
+        with _as_own():
+            _HOOK_WARPS[p] = tuple(getattr(draw(n, p), 'warp', None) for n in 'ae')
     return _HOOK_WARPS[p]
 
 
@@ -1187,6 +1211,18 @@ def white_features(rings, p, g=None) -> int:
         return 0
     ink = rings_to_shapely(rings)
     hull = MultiPoint([q[:2] for r in rings for q in r]).convex_hull
+    if g is not None and g.overlay and (g.strokes or g.extra):
+        # A stroke laid over a sign (the slash of ≠, of a negation) runs out past it, and between its ends
+        # and the sign's own outline stand wedges of white that are nobody's: they close as the sign's
+        # strokes grow, whatever is done. Counted, the ≠ had six whites at the Regular for the two a reader
+        # sees, lost four from Medium, and was lightened as far as the rule goes from SemiBold without
+        # getting one back: its bars 0.8 of the equals' beside it. A sign's whites are the ones inside the
+        # outline of what it is laid over.
+        import shapely
+        from .geom import stroke_polygon
+        th = _thickness(g.p, g.sh)
+        own = shapely.union_all([stroke_polygon(st, th, g.p.c) for st in g.strokes] + list(g.extra)).convex_hull
+        hull = hull.intersection(own)
     r = WHITE_OPEN * _heaviest_stroke(g, p)
     centres = hull.difference(ink).buffer(-r, join_style='mitre')
     return sum(1 for q in getattr(centres, 'geoms', [centres])
@@ -1204,7 +1240,8 @@ def _white_reference(spec, p):
     if key not in _WHITE:
         from .instances import params
         ref = params(400).with_(mono=p.mono)
-        g = _build(spec, ref, 0.0, 0.0, {})
+        with _as_own():
+            g = _build(spec, ref, 0.0, 0.0, {})
         _WHITE[key] = white_features(g.rings(), ref, g)
     return _WHITE[key]
 
@@ -1256,9 +1293,10 @@ def _topology_reference(spec, p) -> tuple:
         if p.slant:
             from .italic import italic
             ref = italic(ref)
-        g = _build(spec, ref, 0.0, 0.0, {})
-        if OPTICAL is not None and ref.optical and spec.name.removesuffix('.ital') in OPTICAL['names']:
-            _optical(g, spec, ref)
+        with _as_own():
+            g = _build(spec, ref, 0.0, 0.0, {})
+            if OPTICAL is not None and ref.optical and spec.name.removesuffix('.ital') in OPTICAL['names']:
+                _optical(g, spec, ref)
         _TOPO[key] = _topology(g)
     return _TOPO[key]
 
@@ -1317,19 +1355,20 @@ def _cut_form(spec, sq, p):
     from .vision import READS
     key = (spec.name, sq.free, p.mono)
     if key not in _FORMS:
-        heavy = drawn(900).with_(mono=p.mono)                   # (the watch's Black: the heaviest any cut draws)
-        g0 = _build(spec, heavy, 0.0, 0.0, {})
-        d0 = g0.defaults.get(sq.free)
-        b = sq.limit(heavy)
-        choice = d0
-        if d0 is not None and b != d0:
-            kinds = ('hole', 'slot')
-            n0 = _squint_regular(spec, heavy, kinds, {sq.free: d0})[1]
-            n1 = _squint_regular(spec, heavy, kinds, {sq.free: b})[1]
-            s0 = _squint(g0, count=n0)
-            s1 = _squint(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), count=n1)
-            if s0 < READS - SQUINT_SLACK and s1 > s0:
-                choice = b
+        with _as_own():
+            heavy = drawn(900).with_(mono=p.mono)                   # (the watch's Black: the heaviest any cut draws)
+            g0 = _build(spec, heavy, 0.0, 0.0, {})
+            d0 = g0.defaults.get(sq.free)
+            b = sq.limit(heavy)
+            choice = d0
+            if d0 is not None and b != d0:
+                kinds = ('hole', 'slot')
+                n0 = _squint_regular(spec, heavy, kinds, {sq.free: d0})[1]
+                n1 = _squint_regular(spec, heavy, kinds, {sq.free: b})[1]
+                s0 = _squint(g0, count=n0)
+                s1 = _squint(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), count=n1)
+                if s0 < READS - SQUINT_SLACK and s1 > s0:
+                    choice = b
         _FORMS[key] = choice
     return _FORMS[key]
 
@@ -1349,15 +1388,16 @@ def _thinning_reads(spec, sq, p) -> bool:
     from .instances import drawn
     key = (spec.name, sq.free, p.mono)
     if key not in _THINS:
-        heavy = drawn(900).with_(mono=p.mono)
-        kinds = ('hole', 'slot')
-        g0 = _build(spec, heavy, 0.0, 0.0, {})
-        b = sq.limit(heavy)
-        _, n0, w0 = _squint_regular(spec, heavy, kinds, {sq.free: g0.defaults.get(sq.free)})
-        _, n1, w1 = _squint_regular(spec, heavy, kinds, {sq.free: b})
-        s0 = _read(g0, n0, w0 if sq.whites else 0)
-        s1 = _read(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), n1, w1 if sq.whites else 0)
-        _THINS[key] = s1 >= s0 - SQUINT_SLACK
+        with _as_own():
+            heavy = drawn(900).with_(mono=p.mono)
+            kinds = ('hole', 'slot')
+            g0 = _build(spec, heavy, 0.0, 0.0, {})
+            b = sq.limit(heavy)
+            _, n0, w0 = _squint_regular(spec, heavy, kinds, {sq.free: g0.defaults.get(sq.free)})
+            _, n1, w1 = _squint_regular(spec, heavy, kinds, {sq.free: b})
+            s0 = _read(g0, n0, w0 if sq.whites else 0)
+            s1 = _read(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), n1, w1 if sq.whites else 0)
+            _THINS[key] = s1 >= s0 - SQUINT_SLACK
     return _THINS[key]
 
 
@@ -1628,7 +1668,8 @@ def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
         # ungraded body: the reference is the cut's, whatever body p is drawn in)
         def short(w_):
             q = at(w_)
-            return op.measure(_build(spec, q, ot, ob, overrides, None)) < ratio * q.sv * across(q) - 1e-6
+            with _as_own():
+                return op.measure(_build(spec, q, ot, ob, overrides, None)) < ratio * q.sv * across(q) - 1e-6
         if short(400.0):
             we = 400.0
         elif not short(900.0):
@@ -1643,7 +1684,8 @@ def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
             _ENGAGED[key] = None
         else:
             q = at(we)
-            _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, None)), q.sv, across(q))
+            with _as_own():
+                _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, None)), q.sv, across(q))
     found = _ENGAGED[key]
     if found is None or w < found[0]:
         return None
@@ -1662,24 +1704,25 @@ def _squint_monotone(spec, sq, p, ot, ob, overrides, width):
     weight now thins at least as much as a lighter one."""
     key = (spec.name, sq.free, p, ot, ob, tuple(sorted(overrides.items())), width)
     if key not in _MONO:
-        reg = _regular_sv(p)
-        g0 = _build(spec, p, ot, ob, overrides, width)
-        a0 = overrides.get(sq.free, g0.defaults.get(sq.free))
-        lim = sq.limit(p)
-        best = None
-        lighter = _lighter(p)
-        if lighter is None:
-            anchors = [_restroked(p, reg + (p.sv - reg) * j / SQUINT_ANCHORS) for j in range(1, SQUINT_ANCHORS)]
-        else:
-            anchors = [q for q in lighter if q.sv >= reg]
-        for q in anchors + [p]:
-            v = _squint_value(spec, sq, q, ot, ob, overrides, width)
-            if v is None:
-                continue
-            if best is None or abs(v - a0) > abs(best - a0):
-                best = v
-        if best is not None and (lim - a0) * (best - a0) < 0:   # (only ever toward the limit)
+        with _as_own():
+            reg = _regular_sv(p)
+            g0 = _build(spec, p, ot, ob, overrides, width)
+            a0 = overrides.get(sq.free, g0.defaults.get(sq.free))
+            lim = sq.limit(p)
             best = None
+            lighter = _lighter(p)
+            if lighter is None:
+                anchors = [_restroked(p, reg + (p.sv - reg) * j / SQUINT_ANCHORS) for j in range(1, SQUINT_ANCHORS)]
+            else:
+                anchors = [q for q in lighter if q.sv >= reg]
+            for q in anchors + [p]:
+                v = _squint_value(spec, sq, q, ot, ob, overrides, width)
+                if v is None:
+                    continue
+                if best is None or abs(v - a0) > abs(best - a0):
+                    best = v
+            if best is not None and (lim - a0) * (best - a0) < 0:   # (only ever toward the limit)
+                best = None
         _MONO[key] = best
     return _MONO[key]
 
@@ -1720,7 +1763,8 @@ def _squint_regular(spec, p, kinds, over=None):
     key = (spec.name, p.mono, kinds, tuple(sorted(over.items())))
     if key not in _SQUINT:
         ref = params(400).with_(mono=p.mono)
-        reg = _build(spec, ref, 0.0, 0.0, dict(over))
+        with _as_own():
+            reg = _build(spec, ref, 0.0, 0.0, dict(over))
         d = _squint_pieces(reg, kinds)
         _SQUINT[key] = (min(READS, min(d, default=1.0)) - SQUINT_SLACK, len(d), white_features(reg.rings(), ref, reg))
     return _SQUINT[key]
@@ -1928,18 +1972,19 @@ def _mono_held(name, p, ot, ob, width):
     key = (name, at(MONO_HOLD), ot, ob, width)
     if key not in _MONO_HELD:
         _MONO_HELD[key] = None                              # while it is found, a drawing that asks again (a rule's
-        ref = _counters(_draw(name, at(MONO_HOLD), ot, ob, width))   # reference at Black) is drawn as it is
+        with _as_own():                                     # reference at Black) is drawn as it is
+            ref = _counters(_draw(name, at(MONO_HOLD), ot, ob, width))
 
-        def shut(w_):
-            q = at(w_)
-            return _shuts(_counters(_draw(name, q, ot, ob, width)), ref, q.sv)
-        held = None
-        if shut(900.0):
-            lo, hi = MONO_HOLD, 900.0
-            for _ in range(7):                              # to under 2 of weight
-                mid = (lo + hi) / 2
-                lo, hi = (lo, mid) if shut(mid) else (mid, hi)
-            held = lo
+            def shut(w_):
+                q = at(w_)
+                return _shuts(_counters(_draw(name, q, ot, ob, width)), ref, q.sv)
+            held = None
+            if shut(900.0):
+                lo, hi = MONO_HOLD, 900.0
+                for _ in range(7):                          # to under 2 of weight
+                    mid = (lo + hi) / 2
+                    lo, hi = (lo, mid) if shut(mid) else (mid, hi)
+                held = lo
         _MONO_HELD[key] = held
     held = _MONO_HELD[key]
     return p if held is None or w <= held else at(held)
@@ -2218,7 +2263,7 @@ def _anchor(name, p, ot, ob, width) -> tuple:
         if row is not None and cache.valid(row[0]):
             light, ov = json.loads(row[1])
         else:
-            with cache.using() as mods:
+            with cache.using() as mods, _as_own():          # (the lighter weight as a glyph of its own, whoever asks)
                 g = draw(name, p, ot, ob, width)
             light, ov = getattr(g, 'lightened', 1.0), dict(getattr(g, 'overrides', {}))
             if con is not None:

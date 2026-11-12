@@ -50,3 +50,50 @@ def test_mono_bold_oslashacute_does_not_turn_on_a_float():
     for o in outs[1:]:
         assert [len(r) for r in o] == [len(r) for r in outs[0]]
         assert max(abs(a - b) for r0, r in zip(outs[0], o) for q0, q in zip(r0, r) for a, b in zip(q0, q)) < 1e-6
+
+
+_DRAWN_AFTER = r'''
+import json, sys
+import arris.glyphs
+from arris.font import place
+from arris.instances import mono_weight, params
+from arris.italic import italic
+p = italic(params(mono_weight(int(sys.argv[1]))).with_(mono=True)).with_(cursive=True)
+for first in [n for n in sys.argv[3].split(',') if n]:
+    place(first, p)
+out = {}
+for name in sys.argv[2].split(','):
+    rings, adv = place(name, p)
+    out[name] = [[[round(float(v), 2) for v in q[:2]] for q in r] for r in rings]
+print(json.dumps(out))
+'''
+
+
+@pytest.mark.parametrize('w', [400, 700])
+def test_a_drawing_does_not_depend_on_what_was_drawn_before_it(w):
+    """A reference that others are measured by is drawn once and kept: a
+    height's overshoot from its o, its bar from the 5, the hooks' lines from
+    the e, a glyph's Regular. It was drawn as a part of whichever glyph
+    asked first, and in Arris Mono a part of another glyph is not fitted to
+    the cell and a glyph of its own is: in Mono Italic the x-height's
+    overshoot was 1.50 units at Bold where a plain letter had been drawn
+    first and 1.09 where an accented letter's base had, and the same font
+    came out two ways as its glyphs were shared out among the build's
+    workers (about a hundred accented letters and the tabular figures in
+    Mono Bold Italic). Drawn as a glyph of its own, whoever asks
+    (draw._as_own). Each order in a process of its own: what is kept is
+    kept for the life of one."""
+    import json
+    import os
+    import subprocess
+    import sys
+    names = 'uni0451,uni04D1,uni0219,omicrontonos,uni218A,eight.tnum,s,e'
+    env = dict(os.environ, ARRIS_CACHE='')
+
+    def drawn(first):
+        run = subprocess.run([sys.executable, '-W', 'ignore', '-c', _DRAWN_AFTER, str(w), names, first], env=env,
+                             capture_output=True, text=True, check=True)
+        return json.loads(run.stdout.strip().splitlines()[-1])
+    alone = drawn('')
+    for first in ('e', 'a,o,s,x', 'edieresis,uni04D3', 'H,five,O'):
+        assert drawn(first) == alone, first

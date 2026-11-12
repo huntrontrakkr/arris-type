@@ -243,12 +243,17 @@ def xi(g):
     g.stroke(f.P(6, 7), B(*f.P(1, 7)), B(*f.P(1, 1)), B(*f.P(7, 1)), f.P(7, -2.5))
 
 
-@glow('uni03C0', 'π', 9, 2)
+@glow('uni03C0', 'π', 10, 2)
 def pi(g):
-    f = Frame(g, 9, 'lower')
+    """Two legs under a bar that passes them by two modules each side, the
+    legs as far apart as the n's stems. In nine modules they stood a module
+    nearer, and the letter was the narrowest of twenty-one families' π:
+    0.98 of its n's advance, their least 1.01 and their middle one 1.08
+    (tools/script_shares.py)."""
+    f = Frame(g, 10, 'lower')
     g.stroke((0, f.Y(8)), (f.W, f.Y(8)))
     g.stroke(f.P(2, 8), f.P(2, 0))
-    g.stroke(f.P(7, 8), B(*f.P(7, 1)), f.P(9, 1))
+    g.stroke(f.P(8, 8), B(*f.P(8, 1)), f.P(10, 1))
 
 
 @glow('uni03C1', 'ρ', 8, 2)
@@ -327,21 +332,25 @@ TONOS = {0x0386: 'A', 0x0388: 'E', 0x0389: 'H', 0x038A: 'I', 0x038C: 'O', 0x038E
 
 
 def _tonos_width(p):
-    from .marks import size
+    """The room a capital's tonos takes beside it: the accent's own (the
+    Regular's past it: marks.mark_params)."""
+    from .marks import mark_params, size
+    p = mark_params(p)
     return size(p, 'uc') + 0.6 * p.sv + 0.5 * p.m
 
 
 for cp, base in TONOS.items():
     def fn(g, base=base):
         from .extra_latin import stamp
-        from .marks import acute, size
+        from .marks import acute, kept, mark_params, size
         p = g.p
-        a = size(p, 'uc')
+        q = mark_params(p)
+        a = size(q, 'uc')
         if p.mono:                                          # no room beside it: above, to the left
             stamp(g, base, width=g.W)
-            acute(g, a / 2 + p.sv / 2, p.cap + 0.6 * p.m, 'uc')
+            kept(g, acute, a / 2 + q.sv / 2, p.cap + 0.6 * p.m, 'uc')
             return
         t = _tonos_width(p)
         stamp(g, base, t)
-        acute(g, t / 2 - 0.1 * p.m, p.cap - a, 'uc')
+        kept(g, acute, t / 2 - 0.1 * p.m, p.cap - a, 'uc')
     glyph(f'uni{cp:04X}', chr(cp), lambda p, b=base: REGISTRY[b].width(p) + _tonos_width(p), kind='cap')(fn)
