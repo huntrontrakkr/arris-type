@@ -620,20 +620,39 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     # Black, where a break is 50: taken for a miss from a stem of 185, the two cuts went into one and the bump's
     # face stood 44 units taller at once.
     jog = JOG * c if fill is None else JOG * min(c, JOG_FILLS * fill)
-    for poly in u.geoms:
+    # Where finished ink is part of the drawing, what is finished again is set down in an order of its own
+    # choosing, not the union's: the pieces and their holes from the lowest and leftmost, each outline from its
+    # lowest, leftmost point. The union hands back one shape with its holes in what order it likes and its
+    # outlines begun where it likes, and where a stamped letter's edge fell on another edge to the last bit (an
+    # o that overshoots by the height's one overshoot, under the ø's slash's clip) a hair decided which: Mono
+    # Bold's ø, and the ǿ stamped from it, came out as two orders of one outline.
+    low = lambda b: (round(b[1], 4), round(b[0], 4))
+
+    def ordered(pts):
+        if not done or not pts:
+            return pts
+        i = min(range(len(pts)), key=lambda j: (round(pts[j][1], 4), round(pts[j][0], 4)))
+        return pts[i:] + pts[:i]
+    for poly in (sorted(u.geoms, key=lambda g: low(g.bounds)) if done else u.geoms):
         poly = orient(poly, sign=1.0)
-        if any(abs(poly.area - f.area) <= 1e-6 * max(f.area, 1.0)
-               and poly.symmetric_difference(f).area <= 1e-6 * max(f.area, 1.0) for f in done):
+        same = next((f for f in done if abs(poly.area - f.area) <= 1e-6 * max(f.area, 1.0)
+                     and poly.symmetric_difference(f).area <= 1e-6 * max(f.area, 1.0)), None)
+        if same is not None:
+            # (and as it was finished to the point: its own rings, in its own order, from its own first point.
+            # The union gives the same shape back with its holes in what order it likes and its outline begun
+            # where it likes, and a clip that falls on the stamped letter's very edge, as a cell's does on a
+            # letter that overshoots by the height's one overshoot, decided which by the last bit of a float)
+            poly = orient(same, sign=1.0)
             for r in [poly.exterior] + list(poly.interiors):
                 pts = list(r.coords)[:-1]
                 if r is poly.exterior or Polygon(r).area >= min_hole:
                     rings.append(pts)
             continue
-        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), jog, moved, even))
-        for hole in poly.interiors:
+        rings.append(ordered(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), jog, moved, even)))
+        for hole in (sorted(poly.interiors, key=lambda h: low(h.bounds)) if done else poly.interiors):
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), jog, moved, even))
+            rings.append(ordered(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), jog, moved, even)))
     if overlay:
         rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, crotch)
     if rec is not None and moved:
@@ -687,14 +706,24 @@ def _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, 
     given = {(round(q[0], 6), round(q[1], 6)) for r in rings for q in r}
     given |= {(round(q[0], 6), round(q[1], 6)) for pc in pieces for r in [pc.exterior] + list(pc.interiors)
               for q in r.coords}
+    # (in an order of its own choosing, not the union's: the pieces and their holes from the lowest and
+    # leftmost, each outline from its lowest, leftmost point. Where an edge of the letter falls on an edge of
+    # what is laid over it to the last bit, the union gave one outline back in two orders as a hair fell: Mono
+    # Bold's ø, whose o overshoots by the height's one overshoot.)
+    low = lambda b: (round(b[1], 4), round(b[0], 4))
+
+    def ordered(pts):
+        if not pts:
+            return pts
+        i = min(range(len(pts)), key=lambda j: (round(pts[j][1], 4), round(pts[j][0], 4)))
+        return pts[i:] + pts[:i]
     out = []
-    for poly in getattr(u, 'geoms', [u]):
-        if not isinstance(poly, Polygon) or poly.area <= 1e-9:
-            continue
+    polys = [q for q in getattr(u, 'geoms', [u]) if isinstance(q, Polygon) and q.area > 1e-9]
+    for poly in sorted(polys, key=lambda q: low(q.bounds)):
         poly = orient(poly, sign=1.0)
-        out.append(_polish(_straight(list(poly.exterior.coords)[:-1], given), JOIN_SLIVER, moved))
-        out += [_polish(_straight(list(h.coords)[:-1], given), JOIN_SLIVER, moved)
-                for h in poly.interiors if Polygon(h).area >= min_hole]
+        out.append(ordered(_polish(_straight(list(poly.exterior.coords)[:-1], given), JOIN_SLIVER, moved)))
+        out += [ordered(_polish(_straight(list(h.coords)[:-1], given), JOIN_SLIVER, moved))
+                for h in sorted(poly.interiors, key=lambda h: low(h.bounds)) if Polygon(h).area >= min_hole]
     return out
 
 

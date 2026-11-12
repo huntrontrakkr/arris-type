@@ -942,6 +942,7 @@ def _zone_over(p, lower: bool) -> float:
         from .vision import overshoot_need
         if len(_ZONE_OVER) > 1024:
             _ZONE_OVER.clear()
+        _ZONE_OVER[key] = 0.0               # (while the o is drawn: fitted into Mono's cell it asks for its own)
         _OWN_BAR[0] += 1                    # (its outside is all that is measured: on the weight's own bar, so the
         try:                                # letters the height's bar is taken from can ask while they are drawn)
             g = _build(drawn_spec('o' if lower else 'O', p), p, 0.0, 0.0, {})
