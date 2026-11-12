@@ -108,7 +108,11 @@ class Bars:
             g.stroke((0 if self.x0 is None else self.x0, y), (g.W if self.x1 is None else self.x1, y))
 
 
-TILDEW = growing_width(8, 1, 1.5)               # tilde signs: room for the step's bays at heavy weights
+TILDEW = growing_width(8, 1, 1.5)               # the tilde alone: room for the step's bays at heavy weights
+                                                # (stacked it rises less and stands in the operators' body)
+TILDE_STACKED = 0.6                             # a stacked tilde's rise, of its stroke
+TILDE_PINCH = 0.35                              # of a stroke: the least white between two tildes where one steps
+TILDES_TALL = lambda p, n: (0.5 + 0.25 * (n - 1)) * p.cap      # the tallest n tildes stand: two 0.75 of the cap height
 
 
 def tilde_rise(g):
@@ -122,7 +126,17 @@ def tilde_rise(g):
     sd, sh = max(th((1, 1)), th((-1, 1))), th((1, 0))
     # a flat's inner edge loses sqrt2 sd - sh to the turns at its ends
     flat = max(0.5 * sh, SQRT2 * sd - sh) + 0.25 * p.sv
-    return min(max(g.W / 4, g.sh + 0.35 * p.sv), (g.W - 2 * flat) / 2)
+    rise = min(max(g.W / 4, g.sh + 0.35 * p.sv), (g.W - 2 * flat) / 2)
+    if getattr(g, 'stacked', False):
+        # over or under another part it rises six tenths of its stroke, and
+        # two tildes stand as two bars do, a bar and the stack's white apart,
+        # one in the other's bays (stack): two of the ~ itself, a quarter of
+        # the body high each and the whole white between their boxes, stood
+        # 0.74 of the cap height tall at Regular and past the capitals both
+        # ways from Bold (twenty-nine families' ≈: half the cap height at
+        # Regular, 0.6 at their heaviest, 0.79 at the outside)
+        rise = min(rise, TILDE_STACKED * g.sh)
+    return rise
 
 
 class Tilde:
@@ -229,19 +243,38 @@ def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
     p = g.p
     centre = axis(p) if centre is None else centre
     gapf = (lambda: eq_gap(g)) if gap is None else (lambda: gap(g))
+    g.stacked = len(comps) > 1
     limit = (tall or TALL)(p)
+    if g.stacked and all(isinstance(c, Tilde) for c in comps):
+        limit = min(limit, TILDES_TALL(p, len(comps)))       # (they thin to it, as any stack does to its own)
+    elif g.stacked and any(isinstance(c, Tilde) for c in comps):
+        limit = min(limit, p.cap)                            # a tilde over bars: in the capitals' height
     flex = [c for c in comps if isinstance(c, Chevron) and c.h is None]
+
+    def whites():
+        """The white under each part but the last: the stack's. Two tildes
+        that step the same way stand a rise closer, the lower in the
+        upper's bays: their flats the stack's white apart, or as far as
+        leaves TILDE_PINCH of a stroke where one has stepped and the other
+        has not."""
+        out = []
+        for a, b in zip(comps, comps[1:]):
+            if isinstance(a, Tilde) and isinstance(b, Tilde) and a.mirror == b.mirror:
+                out.append(max(gapf() - tilde_rise(g), TILDE_PINCH * g.sh))
+            else:
+                out.append(gapf())
+        return out
 
     def fit(k):
         g.sh_k = k
         if flex:
-            fixed = sum(c.height(g) for c in comps if c not in flex) + gapf() * (len(comps) - 1)
+            fixed = sum(c.height(g) for c in comps if c not in flex) + sum(whites())
             room = le_height(g) - fixed
             each = (room / len(flex) - 2 * kv(g)) / 2
             for c in flex:
                 c.h_fit = max(each, 0.75 * p.sv)
         ext = [_extent(c, g) for c in comps]
-        return ext, sum(y1 - y0 for y0, y1 in ext) + gapf() * (len(comps) - 1)
+        return ext, sum(y1 - y0 for y0, y1 in ext) + sum(whites())
 
     # thin the horizontals just as far as the limit needs (continuously, so
     # the variable font interpolates it), never below 0.7
@@ -257,9 +290,14 @@ def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
                     hi = mid
         ext, total = fit(lo)
     y = centre + total / 2
-    for c, (y0, y1) in zip(comps, ext):
+    for c, (y0, y1), white in zip(comps, ext, whites() + [0.0]):
         _draw(c, g, y - y1)
-        y -= (y1 - y0) + gapf()
+        y -= (y1 - y0) + white
+    if g.stacked and g.clip is None and any(isinstance(c, Tilde) and c.x0 == 0.0 and c.x1 is None for c in comps):
+        # a stacked tilde ends at the body's sides, as the bars it stands with do: where its half rise is
+        # too short for an upright cut its ends are cut square to their slope and stood out past the body
+        # (a sixth of it at Black, and the sign's advance grew by as much)
+        g.clip = (0.0, -10 * p.cap, g.W, 10 * p.cap)
 
 
 def _extent(c, g):
@@ -269,6 +307,7 @@ def _extent(c, g):
     from ..draw import Glyph, _thickness
     from ..geom import stroke_polygon
     tmp = Glyph(g.p, W=g.W, sh_k=g.sh_k, sh_auto=g.sh_auto)
+    tmp.stacked = getattr(g, 'stacked', False)
     _draw(c, tmp, 0.0)
     th = _thickness(tmp.p, tmp.sh)
     polys = ([stroke_polygon(s, th, tmp.p.c) for s in tmp.strokes] + list(tmp.extra)
@@ -366,50 +405,50 @@ def nottilde(g):
     negate(g, half=_neg_half(g))
 
 
-@op(u(0x2242), '≂', width=TILDEW)
+@op(u(0x2242), '≂')
 def minustilde(g):
     stack(g, [Bar(), Tilde()])
 
 
-@op(u(0x2243), '≃', width=TILDEW)
+@op(u(0x2243), '≃')
 def asymptequal(g):
     stack(g, [Tilde(), Bar()])
 
 
-@op(u(0x2244), '≄', width=TILDEW)
+@op(u(0x2244), '≄')
 def notasymptequal(g):
     stack(g, [Tilde(), Bar()])
     negate(g, half=_neg_half(g))
 
 
-@op('congruent', '≅', width=TILDEW)
+@op('congruent', '≅')
 def congruent(g):
     stack(g, [Tilde(), Bars(2)])
 
 
-@op(u(0x2247), '≇', width=TILDEW)
+@op(u(0x2247), '≇')
 def notcongruent(g):
     stack(g, [Tilde(), Bars(2)])
     negate(g, half=_neg_half(g))
 
 
-@op('approxequal', '≈', width=TILDEW)
+@op('approxequal', '≈')
 def approxequal(g):
     stack(g, [Tilde(), Tilde()])
 
 
-@op(u(0x2249), '≉', width=TILDEW)
+@op(u(0x2249), '≉')
 def notapprox(g):
     stack(g, [Tilde(), Tilde()])
     negate(g, half=_neg_half(g))
 
 
-@op(u(0x224A), '≊', width=TILDEW)
+@op(u(0x224A), '≊')
 def approxorequal(g):
     stack(g, [Tilde(), Tilde(), Bar()])
 
 
-@op(u(0x224B), '≋', width=TILDEW)
+@op(u(0x224B), '≋')
 def tripletilde(g):
     stack(g, [Tilde(), Tilde(), Tilde()])
 
@@ -1293,29 +1332,40 @@ def dot_step(p):
     return 2.2 * p.dot()
 
 
+def dot_reach(p):
+    """From the axis to the centre of a dot that stands over or under it in
+    a sign of dots (∶ ∷ ∴ ∵ ∹): the sign stands as tall as the plus, its
+    dots' outer edges where the plus's arms end. Set by the ellipsis's
+    step, 2.2 dots apart, a sign of dots grew with its dots: the ratio
+    stood from 0.24 to 0.76 of the cap height at Regular and from under
+    the baseline to over the capitals at Black (-0.07 to 1.07), where six
+    families' stands 0.13 to 0.84 and 0.11 to 0.89."""
+    return (OPW(p) - p.dot()) / 2
+
+
 @op(u(0x2236), '∶', width=lambda p: p.dot())
 def ratio(g):
     p = g.p
     for s in (-1, 1):
-        cdot(g, g.W / 2, axis(p) + s * dot_step(p) / 2 * 1.4)
+        cdot(g, g.W / 2, axis(p) + s * dot_reach(p))
 
 
 def _dd(g):
-    """Half the step between a pair of dots: the ellipsis's, or as much as
-    the body holds."""
-    return min(0.7 * dot_step(g.p), (g.W - g.p.dot()) / 2)
+    """Half the step between a pair of dots: the plus's reach (dot_reach),
+    or as much as the body holds."""
+    return min(dot_reach(g.p), (g.W - g.p.dot()) / 2)
 
 
-@op(u(0x2237), '∷', width=lambda p: p.dot() + 1.4 * dot_step(p))
+@op(u(0x2237), '∷', width=lambda p: OPW(p))
 def proportion(g):
     p = g.p
     d = _dd(g)
     for sx in (-1, 1):
         for sy in (-1, 1):
-            cdot(g, g.W / 2 + sx * d, axis(p) + sy * 0.7 * dot_step(p))
+            cdot(g, g.W / 2 + sx * d, axis(p) + sy * dot_reach(p))
 
 
-@op('therefore', '∴', width=lambda p: p.dot() + 1.4 * dot_step(p))
+@op('therefore', '∴', width=lambda p: OPW(p))
 def therefore(g):
     p = g.p
     d = _dd(g)
@@ -1324,7 +1374,7 @@ def therefore(g):
     cdot(g, g.W / 2 + d, axis(p) - d)
 
 
-@op(u(0x2235), '∵', width=lambda p: p.dot() + 1.4 * dot_step(p))
+@op(u(0x2235), '∵', width=lambda p: OPW(p))
 def because(g):
     p = g.p
     d = _dd(g)
@@ -1349,7 +1399,7 @@ def excess(g):
     s = p.dot()
     g.stroke((0, a), (g.W - s - max(0.8 * p.sv, p.m), a))
     for sy in (-1, 1):
-        cdot(g, g.W - s / 2, a + sy * 0.7 * dot_step(p))
+        cdot(g, g.W - s / 2, a + sy * dot_reach(p))
 
 
 @op(u(0x223A), '∺', width=lambda p: OPW(p))
@@ -1859,20 +1909,28 @@ def _root_layout(p):
     wi = _root_params(p).fig_w
     w = p.ss / STEEP[1]
     yb = t + 0.5 * p.sv + gap
-    dx = max(0.0, wi + gap - t - yb / 2 + w / 2)
-    bar = 1.0 * p.m if p.mono else 3.5 * p.m
+    dx = max(0.0, wi + gap - t / 2 - yb / 2)                # (the rise's left side at the index's foot)
+    bar = 1.0 * p.m if p.mono else 2.5 * p.m
     return wi, yb, dx, bar
 
 
 def _tick(p):
-    """The radical's tick: √'s two modules, or longer than its stroke is
-    wide across (the heaviest grade)."""
-    return max(2.0 * p.m, 1.3 * p.sd / SQRT2)
+    """How high a root's tick starts: as √'s (symbols.radical_tick), or as
+    high as leaves its index room over it under the sign's top."""
+    from .symbols import radical_tick
+    top = p.cap + 0.5 * p.m
+    gap = max(0.5 * p.sv, 0.75 * p.m)
+    return min(radical_tick(p), top - _root_params(p).cap - 0.5 * p.sv - gap)
+
+
+def _root_foot(p):
+    """The root's foot from where its tick starts: as √'s (symbols.radical_foot), on its own tick."""
+    return p.ss / STEEP[1] / 2 + _tick(p) / 2
 
 
 def _root_w(p):
     wi, yb, dx, bar = _root_layout(p)
-    return dx + _tick(p) + (p.cap + 0.5 * p.m) / 2 + bar
+    return dx + _root_foot(p) + (p.cap + 0.5 * p.m) / 2 + bar
 
 
 def _root(g, n):
@@ -1886,9 +1944,10 @@ def _root(g, n):
     # the body, which in Mono's cell is narrower than the radical, the bar
     # ran back into the rise and the clip cut the rise's top off
     end = _root_w(p)
-    g.stroke((dx, t), (dx + t, 0), start='v', end='h')
-    g.stroke((dx + t, 0), (dx + t + top / 2, top), start='h', end='h')
-    g.stroke((dx + t + top / 2 - p.sv / 2, top - g.sh / 2), (end, top - g.sh / 2))
+    x = dx + _root_foot(p)
+    g.stroke((x - t / 2, t), (x, 0), start='h', end='h')
+    g.stroke((x, 0), (x + top / 2, top), start='h', end='h')
+    g.stroke((x + top / 2 - p.sv / 2, top - g.sh / 2), (end, top - g.sh / 2))
     g.clip = (0, 0, end, top)
     sub = draw(n, _root_params(p))
     g.add_glyph(sub, 0, yb)

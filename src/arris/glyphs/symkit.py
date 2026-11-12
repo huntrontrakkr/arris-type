@@ -256,8 +256,20 @@ def _body(width, p, kind):
     a letter fills the cell; other signs keep their width, at most a cell."""
     from ..draw import LETTER_KINDS
     if p.mono:
-        return p.fig_w if kind in LETTER_KINDS else min(width(p), p.fig_w)
+        return p.fig_w if kind in LETTER_KINDS else min(width(p), sign_room(p))
     return width(p)
+
+
+def sign_room(p):
+    """The widest a sign that is not a letter stands in the monospaced
+    cell: the figures' body, and in Arris Mono Narrow Arris Mono's (what a
+    wide letter keeps there: Params.wide), not the narrow letters'. A sign
+    stands in Mono Narrow as it does in Mono until it has to be fitted
+    (its ink out of the cell: in the italic, leaned); fitted, it was drawn
+    down to the narrow letters' body, 468 units for 540: the ≤ of Arris
+    Mono Narrow Italic 0.78 as tall as the upright's with 0.6 of its ink,
+    the × 0.82 and 0.68, the # two thirds of its ink, 143 glyphs in all."""
+    return p.wide * p.fig_w
 
 
 PLAIN = (0.0, 0.0, ())      # a sign's look as drawn on its own (_look)
@@ -368,10 +380,10 @@ def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
                 # it stands in the cell's body, narrowed no further
                 a, b = _ink_x(fn, q, cell, look=look, at=p)
             return b - a <= p.fig_adv - 2 * CELL_GAP * p.m + tol
-        if width(q) > p.fig_w + tol:
+        if width(q) > sign_room(p) + tol:
             return False
         a, b = _ink_x(fn, q, _drawn_body(width, q, cell, kind), look=look, at=p)
-        return b - a <= p.fig_w + tol
+        return b - a <= sign_room(p) + tol
 
     k, s = 1.0, 1.0
     if look != PLAIN:
@@ -453,7 +465,7 @@ def mono_fitted(name, fn, width, kind):
     sign is (_mono_fit: condensed, or drawn smaller, and centred)."""
     def body(p):
         n = width(p)
-        return min(n, p.fig_w) if p.mono and mono_overflows(name, fn, width, p) else n
+        return min(n, sign_room(p)) if p.mono and mono_overflows(name, fn, width, p) else n
 
     def wrapped(g):
         p = g.p

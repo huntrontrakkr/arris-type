@@ -369,9 +369,10 @@ arrowhead's barbs are at least √2 stems and a diagonal stroke long, so the
 white between a barb's end and the shaft never drops below half a stem,
 and the arrow widens to keep a shaft beyond its head; a pilcrow's stems
 keep three quarters of a stem between them; the bars of # stay a stroke
-apart; a dagger's bar moves down so the stem above it stays longer than it
-is thick; small figures' strokes ease from 0.8 to 0.68 of the figures' as
-the weight rises. Behind these sits a rule for every symbol: the white
+apart; a dagger's bar crosses in the upper third at every weight, eight
+tenths of a stem of stem over it at least (`punct.dagger_bar`), and its
+body grows 1.2 units for every unit of stem; small figures' strokes ease
+from 0.8 to 0.68 of the figures' as the weight rises. Behind these sits a rule for every symbol: the white
 features it has at Regular (white at least half its heaviest stroke wide,
 inside its hull) it keeps at every weight, its strokes lightening as far
 as needed, never below 0.8 (`draw.LIGHTEN_MIN`; `tools/white_scan.py`
@@ -921,8 +922,16 @@ one sign high and the next low.
 
 The signs underneath agree with each other: < and > are 2:1 chevrons
 filling the operator box, as tall as + (and ≤ ≥ ≮ ≶ ≺ build on the same
-chevron); the bars of = stand 1.6 bars apart, the white every stacked sign
-keeps; the brace is told from ( by a square bracket's ends (flat arms,
+chevron); the bars of = stand 1.6 bars apart to the Regular, the white
+every stacked sign keeps, and past it that white gives a third of what the
+stem gains (`punct.eq_white`: 126 units at Regular, 89 at Black, as some
+seventy families' does by their boldness), so = ≡ ≈ ≅ ≋ stand in the
+capitals' height at every weight. A tilde in a stack rises six tenths of
+its stroke and two of them stand a bar and that white apart, one in the
+other's bays (`operators.stack`); a sign of dots (÷ ∶ ∷ ∴ ∵) is as tall as
+the plus, its dots' outer edges where the plus's arms end
+(`operators.dot_reach`); the radical's tick starts at 0.45 of its height,
+at the steep 2:1 as its rise (`symbols.radical_tick`); the brace is told from ( by a square bracket's ends (flat arms,
 square corners, as long as the bracket's) and from [ by a point at its
 waist, a stem deep on the shallow 2:1, where ( has only its 45° ends. In
 the monospaced cut, dots (. , : ; and the tittles) are half

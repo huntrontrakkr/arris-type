@@ -84,6 +84,9 @@ def mark_params(p, gain=None):
     return q.with_(sv=mix(q.sv, p.sv), sh=mix(q.sh, p.sh), sd=mix(q.sd, p.sd), ss=mix(q.ss, p.ss))
 
 
+JOIN_FILL = 4.0     # units across: the least piece that is a join's fill (kept)
+
+
 def whites(g):
     """The parameters a mark's whites are measured by (between a
     dieresis's dots, a double acute's strokes): the Regular's past it, so
@@ -137,12 +140,13 @@ def kept(g, fn, *args, joined=False, gain=None, apart=False):
         letter, mark = g.extra[0], g.extra[-1]
         whole = rings_to_shapely(drawn(True).outline()[0])
         more = whole.difference(shapely.union_all([letter, mark]).buffer(0.05))
-        # (a fill, not the sliver two outlines leave where they all but agree: under a unit and a half
-        # across it is no corner's fill, and stamped in it met the letter at a point: the italic ç at
-        # Black, grade 100, on the watch's ladder)
+        # (a fill, not the sliver two outlines leave where they all but agree: under JOIN_FILL across it
+        # is no corner's fill, and stamped in it met the letter at a point: the italic ç at Black, grade
+        # 100, on the watch's ladder, a unit and a half across; Arris Mono Narrow Bold Italic's ą and Ą, a
+        # piece three units by four)
         g.extra += [q_ for q_ in getattr(more, 'geoms', [more])
                     if q_.area > 1.0 and q_.distance(letter) < 1.0 and q_.distance(mark) < 1.0
-                    and not q_.buffer(-0.75).is_empty]
+                    and not q_.buffer(-JOIN_FILL / 2).is_empty]
 
 
 def size(p, case):

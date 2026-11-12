@@ -396,11 +396,13 @@ def _chevron_to(g, i, sign, upper=None, lower=None):
 def _slash_line(g, i):
     """The slash of cell i as itself; returns x(y) along its centreline."""
     from .letterframe import STEEP
+    from .punct import slash_lean
     p = g.p
     sub, x0 = _stamp(g, 'slash', i)
     bot = -p.under + 0.5 * p.m
     w = p.ss / STEEP[1]
-    return lambda y: x0 + w / 2 + (y - bot) / 2
+    k = slash_lean(p)
+    return lambda y: x0 + w / 2 + (y - bot) * k
 
 
 def _meet_slash(tip, a, line, sign, up):
@@ -408,9 +410,10 @@ def _meet_slash(tip, a, line, sign, up):
     going up (``up``) or down meets the slash centreline x(y)."""
     dx = 1 if sign < 0 else -1
     dy = 1 if up else -1
-    # tip + dx 2t = line(a + dy t), line(y) = c + y / 2
+    # tip + dx 2t = line(a + dy t), line(y) = c + k y (k a half; less in the italic: punct.slash_lean)
     c = line(0.0)
-    return (c + a / 2 - tip) / (2 * dx - dy / 2)
+    k = line(1.0) - c
+    return (c + a * k - tip) / (2 * dx - dy * k)
 
 
 # --- Equality and comparison ---------------------------------------------

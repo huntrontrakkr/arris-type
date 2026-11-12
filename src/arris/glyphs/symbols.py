@@ -279,10 +279,10 @@ def perthousand(g):
     pct_ring(g, w + pct(g.p)[5], 0)
 
 
-@glyph('daggerdbl', '‡', growing_width(6, 1, 2.0), kind=('punct', 1.0))
+@glyph('daggerdbl', '‡', lambda p: __import__('arris.glyphs.punct', fromlist=['x']).dagger_width(p), kind=('punct', 1.0))
 def daggerdbl(g):
-    """The dagger with a second bar; the stem's ends beyond the bars stay
-    longer than a stem is thick."""
+    """The dagger with a second bar, as far from the foot as the first is
+    from the top."""
     from .punct import dagger_bar
     p, W = g.p, g.W
     g.stroke((W / 2, -p.under + p.m), (W / 2, p.cap))
@@ -318,16 +318,35 @@ def infinity(g):
     _ring(g, W / 2, a - h, W - s / 2, a + h, leg=1.2 * p.m)
 
 
-@glyph('radical', '\u221a', lambda p: 2.0 * p.m + (p.cap + 0.5 * p.m) / 2 + 3.5 * p.m, kind=('punct', 0.6))
+RADICAL_TICK = 0.45     # of the radical's height: where its tick starts
+
+
+def radical_tick(p):
+    """How high the radical's tick starts. In 368 fonts the tick's end
+    stands at half the sign's height (the middle half of them 0.46 to
+    0.57). Two modules long at 45 degrees it stood at a fifth, and from
+    Bold its stroke was wider than it was long: a slash under a bar."""
+    return RADICAL_TICK * (p.cap + 0.5 * p.m)
+
+
+def radical_foot(p):
+    """Where the radical's foot stands from its left side: half its tick's
+    height on (the steep 2:1) and half the stroke's width across, so the
+    tick's level end starts at the body's side."""
+    from .letterframe import STEEP
+    return p.ss / STEEP[1] / 2 + radical_tick(p) / 2
+
+
+@glyph('radical', '\u221a', lambda p: radical_foot(p) + (p.cap + 0.5 * p.m) / 2 + 2.5 * p.m, kind=('punct', 0.6))
 def radical(g):
-    """A short 45-degree tick down to the baseline, a long 2:1 rise, a bar
-    along the top."""
+    """A tick down to the baseline and a long rise, both at the steep 2:1,
+    and a bar along the top."""
     p, W = g.p, g.W
     top = p.cap + 0.5 * p.m
-    t = 2.0 * p.m
-    g.stroke((0, t), (t, 0), start='v', end='h')
-    g.stroke((t, 0), (t + top / 2, top), start='h', end='h')
-    g.stroke((t + top / 2 - p.sv / 2, top - g.sh / 2), (W, top - g.sh / 2))
+    t, x = radical_tick(p), radical_foot(p)
+    g.stroke((x - t / 2, t), (x, 0), start='h', end='h')
+    g.stroke((x, 0), (x + top / 2, top), start='h', end='h')
+    g.stroke((x + top / 2 - p.sv / 2, top - g.sh / 2), (W, top - g.sh / 2))
     g.clip = (0, 0, W, top)
 
 

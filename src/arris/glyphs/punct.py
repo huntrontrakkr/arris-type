@@ -354,22 +354,42 @@ def braceright(g):
     _brace(g, mirror=True)
 
 
+def slash_lean(p, mirror=False):
+    """A slash's run over its rise: a half, the steep 2:1. In the italic of
+    the monospaced cuts the forward slash leans the slant less, so that
+    slanted it leans as the upright's does. The slant leans a forward
+    slash again: at its own lean and the slant's it was 700 units wide in
+    a cell of 600, and a sign that does not fit its cell is drawn smaller
+    until it does (symkit.mono_fitted): Arris Mono Italic's slash stood
+    0.8 of its height with half its ink, Mono Narrow Italic's 0.7 with a
+    third, and with it the // /* */ of a comment. (The backslash leans
+    against the slant and narrows.)"""
+    if p.mono and p.slant and not mirror:
+        return 0.5 - p.slant
+    return 0.5
+
+
 def _slash(g, mirror=False):
     p = g.p
     top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     w = p.ss / STEEP[1]
     W = g.W
-    x_at = lambda y: w / 2 + (y - bot) / 2
+    k = slash_lean(p, mirror)
+    x_at = lambda y: w / 2 + (y - bot) * k
     pts = [(x_at(bot), bot), (x_at(top), top)]
+    if k != 0.5:
+        # as wide across as the 2:1 stroke it will lean as: the stroke's own thickness at this lean is a
+        # little more, and a few units over the cell the sign was fitted smaller all the same
+        pts[0] += (w / math.hypot(1.0, k),)
     if mirror:
         pts = [(W - x, y) for x, y in pts]
     g.stroke(*pts, start='h', end='h')
     g.clip = (0, bot, W, top)
 
 
-def slash_width(p):
+def slash_width(p, mirror=False):
     top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
-    return p.ss / STEEP[1] + (top - bot) / 2
+    return p.ss / STEEP[1] + (top - bot) * slash_lean(p, mirror)
 
 
 @punct('slash', '/', 9, width=slash_width)
@@ -377,7 +397,7 @@ def slash(g):
     _slash(g)
 
 
-@punct('backslash', '\\', 9, width=slash_width)
+@punct('backslash', '\\', 9, width=lambda p: slash_width(p, True))
 def backslash(g):
     _slash(g, mirror=True)
 
@@ -411,11 +431,33 @@ def minus(g):
     g.stroke((0, axis(p)), (W, axis(p)))
 
 
+EQ_WHITE = 1.6      # of a bar: the white between the bars of =, to the Regular
+EQ_GIVES = 0.34     # past it, what that white gives of every unit the stem gains
+EQ_LEAST = 0.5      # of a bar: the least it is
+
+
 def eq_white(g):
     """White between the bars of = (and of every sign stacked from them):
     1.6 bars, two modules at the lightest weights, so the pair never clogs
-    into one stroke at text sizes."""
-    return max(1.6 * g.sh, 2 * g.p.m)
+    into one stroke at text sizes. Past the Regular it is the Regular's,
+    less a third of what the stem has gained (EQ_GIVES), half a bar at
+    least: 126 units at Regular, 89 at Black.
+
+    In 397 fonts of some seventy families, read by their boldness (the
+    H's stem over the cap height), the white stands 1.72 bars at Arris
+    Regular's boldness, 1.04 at its SemiBold's, 0.86 at its Bold's and
+    0.62 at its Black's: in cap heights 0.18 falling to 0.12, a third of a
+    unit for every unit of stem. Held at 1.6 bars at every weight it grew
+    with the bars, to 272 units at Black: the equals stood from 0.07 to
+    0.93 of the cap height there (thirty families' heaviest: 0.11 to 0.81
+    at the outside) and the ≈ and the ≡ ran past the capitals both ways."""
+    from ..draw import held_at
+    p = g.p
+    q = held_at(p)
+    if q is p:
+        return max(EQ_WHITE * g.sh, 2 * p.m)
+    reg = max(EQ_WHITE * g.sh * q.sh / p.sh, 2 * p.m)       # with this sign's own thinning, if it has any
+    return max(reg - EQ_GIVES * (p.sv - q.sv), EQ_LEAST * g.sh)
 
 
 def eq_offset(g):
@@ -440,14 +482,23 @@ def multiply(g):
     g.clip = (0, a - h, W, a + h)
 
 
+DIVIDE_WHITE = 0.45     # of a bar: the least white between the division sign's bar and a dot
+
+
 @punct('divide', '÷', 8, 1, width=OPERATOR)
 def divide(g):
     p, W = g.p, g.W
     a = axis(p)
     g.stroke((0, a), (W, a))
-    gap = dot_gap(p) * 0.75
-    dot(g, W / 2, a + g.sh / 2 + gap)
-    dot(g, W / 2, a - g.sh / 2 - gap - p.dot())
+    # as tall as the plus: its dots' outer edges where the plus's arms end,
+    # the dots the weight's, or what leaves DIVIDE_WHITE of a bar between a
+    # dot and the bar. (The white was fixed and the dots the weight's: the
+    # sign stood 0.24 to 0.76 of the cap height at Regular, where thirty
+    # families' stands 0.10 to 0.80, and -0.06 to 1.06 at Black, past
+    # every one of them.)
+    s = min(p.dot(), (W - g.sh) / 2 - DIVIDE_WHITE * g.sh)
+    for y in (a + W / 2 - s, a - W / 2):
+        g.lay((W / 2, y, s), (W / 2, y + s), c=p.c * s / p.dot())      # a smaller dot's corners broken in its own measure
 
 
 SLOPE = math.atan2(1, 2)       # chevrons run at the shallow 2:1
@@ -974,13 +1025,34 @@ def notequal(g):
           start='h', end='h')
 
 
+DAGGER_STUB = 0.8       # of a stem: the least of the dagger's stem that stands over its bar
+DAGGER_GROWS = 1.2      # its body's gain for every unit its stem gains past the Regular
+
+
 def dagger_bar(p):
     """Where a dagger's bar crosses: three and a half modules down, or lower
-    where the stem above it would be shorter than two stems thick."""
-    return p.cap - max(3.5 * p.m, 2.2 * p.sv)
+    where the stem over it would be shorter than DAGGER_STUB of a stem
+    (the heaviest weights). At two stems and a fifth the bar went down the
+    stem as the weight rose, to 0.39 of the cap height at Black, the middle
+    of the stem: a plus, and the double dagger's two bars had 5 units
+    between them and were lightened into one. It crosses at 0.71 of the
+    cap height to the Bold and at 0.66 at Black."""
+    return p.cap - max(3.5 * p.m, DAGGER_STUB * p.sv + p.sh / 2)
 
 
-@punct('dagger', '†', 6, 1, width=growing_width(6, 1, 2.0))
+def dagger_width(p):
+    """A dagger's body: a letter's of six modules and what its stem has
+    gained past the Regular, DAGGER_GROWS times over: 0.69 of the H's ink
+    at Regular, 0.77 at Bold, 0.82 at Black (thirty families: 0.80 at
+    Regular and at their heaviest, 0.91 at the outside; at twice the gain
+    it stood 0.96 at Black). Its weight's own stem: lightened for its
+    whites (draw.white_features) it keeps the body, so its arms get the
+    room the lightening is for."""
+    from ..draw import _unlightened
+    return growing_width(6, 1, DAGGER_GROWS)(_unlightened(p))
+
+
+@punct('dagger', '†', 6, 1, width=dagger_width)
 def dagger(g):
     p, W = g.p, g.W
     g.stroke((W / 2, -p.under + p.m), (W / 2, p.cap))

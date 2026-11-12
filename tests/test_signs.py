@@ -484,3 +484,86 @@ def test_the_dollar_never_goes_lighter_as_the_weight_goes_up(cut):
     for a, b, w in zip(ink, ink[1:], range(600, 900, 20)):
         assert b / a > 0.88, (w, b / a)
     assert ink[-1] > ink[0]
+
+
+def test_the_equals_white_gives_as_its_bars_gain():
+    """The white between the equals' bars is 1.6 bars to the Regular and
+    gives a third of what the stem gains past it (punct.eq_white): in some
+    seventy families it stands 1.72 bars at Regular and 0.62 at their
+    heaviest, the sign 0.39 and 0.52 of the cap height tall (0.68 at the
+    outside). Held at 1.6 bars the equals stood 0.86 tall at Black."""
+    white, tall = {}, {}
+    for w in (300, 400, 700, 900):
+        p = params(w)
+        g = _ink('equal', p)
+        (b0, t0), (b1, t1) = _runs(g, x=g.centroid.x)
+        white[w], tall[w] = (b1 - t0) / (t0 - b0), (t1 - b0) / p.cap
+    assert white[400] == pytest.approx(1.6, abs=0.02)
+    assert 0.7 <= white[700] <= 1.0 and 0.5 <= white[900] <= 0.7, white
+    assert tall[400] < tall[700] < tall[900] <= 0.62, tall
+
+
+@pytest.mark.parametrize('w', [400, 700, 900])
+def test_the_stacked_signs_stand_in_the_capitals(w):
+    """= ≡ ≈ ≅ ≋ ≃ ≊ between the baseline and the cap height at every
+    weight, the ≈ no taller than three quarters of it (twenty-nine
+    families': 0.79 at the outside), each in the equals' body. From Bold
+    the ≈ and the ≡ ran past the capitals both ways."""
+    from arris.font import place
+    p = params(w)
+    adv = place('equal', p)[1]
+    for n in ('equal', 'equivalence', 'approxequal', 'congruent', 'uni224B', 'uni2243', 'uni224A'):
+        g = _ink(n, p)
+        assert g.bounds[1] >= -1 and g.bounds[3] <= p.cap + 1, (n, g.bounds)
+        assert place(n, p)[1] == pytest.approx(adv, abs=1), n
+    g = _ink('approxequal', p)
+    assert (g.bounds[3] - g.bounds[1]) / p.cap <= 0.76
+    assert len(g.geoms) == 2                                  # two waves, white between them all the way
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_a_sign_of_dots_stands_as_tall_as_the_plus(w):
+    """÷ ∶ ∷ ∴ ∵: the dots' outer edges where the plus's arms end. The
+    ratio and the division sign stood 0.52 of the cap height tall at
+    Regular (thirty families' ÷: 0.70) and 1.13 at Black."""
+    p = params(w)
+    plus = _ink('plus', p)
+    for n in ('divide', 'uni2236', 'uni2237', 'therefore', 'uni2235'):
+        g = _ink(n, p)
+        assert g.bounds[1] == pytest.approx(plus.bounds[1], abs=2) and g.bounds[3] == pytest.approx(plus.bounds[3], abs=2), n
+    div = sorted(_ink('divide', p).geoms, key=lambda q: q.bounds[1])
+    assert len(div) == 3
+    bar = div[1].bounds[3] - div[1].bounds[1]
+    assert div[1].bounds[1] - div[0].bounds[3] >= 0.44 * bar          # white between a dot and the bar
+
+
+@pytest.mark.parametrize('w', [400, 600, 700, 800, 900])
+def test_the_daggers_bar_stays_high(w):
+    """The dagger's bar crosses in the upper third at every weight, and the
+    double dagger's two bars stand apart. Lowered to keep two stems of
+    stem over it, the bar crossed at 0.39 of the cap height at Black: a
+    plus, and the double dagger one blob."""
+    p = params(w)
+    g = _ink('dagger', p)
+    (b, t), = _runs(g, x=g.bounds[0] + 0.1 * (g.bounds[2] - g.bounds[0]))
+    assert (b + t) / 2 >= 0.62 * p.cap, (b, t)
+    assert p.cap - t >= 0.5 * (t - b)                                  # a stub of stem over it
+    g = _ink('daggerdbl', p)
+    (b0, t0), (b1, _) = _runs(g, x=g.bounds[0] + 0.1 * (g.bounds[2] - g.bounds[0]))
+    assert b1 - t0 >= 0.8 * (t0 - b0)                                  # white between the bars
+    H = _ink('H', p)
+    assert 0.66 <= (g.bounds[2] - g.bounds[0]) / (H.bounds[2] - H.bounds[0]) <= 0.86
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_radical_has_its_tick(w):
+    """The radical's tick starts near half the sign's height (368 fonts:
+    0.50, the middle half 0.46 to 0.57). Two modules long, it stood at a
+    fifth and was gone into its own stroke from Bold."""
+    p = params(w)
+    for n in ('radical', 'uni221B'):
+        g = _ink(n, p)
+        main = max(getattr(g, 'geoms', [g]), key=lambda q: q.area)
+        x0, y0, x1, y1 = main.bounds
+        tick = max(y for x, y in main.exterior.coords if x <= x0 + 0.1 * (x1 - x0))
+        assert (0.40 if n == "radical" else 0.28) <= (tick - y0) / (y1 - y0) <= 0.60, (n, w, (tick - y0) / (y1 - y0))

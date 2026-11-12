@@ -501,6 +501,52 @@ The six causes:
   for 654). The ¢ with stubs gains a twentieth of its ink at Bold and
   Black the same way. Arris Watch's and Arris Mono's are unchanged (Mono
   keeps the stem through at every weight).
+- Signs that outgrew the capitals, from the same reading (the owner: "I
+  agree with it"):
+  - The equals and every sign stacked from bars. The white between the
+    bars was 1.6 bars at every weight, 272 units at Black: the = stood
+    from 0.07 to 0.93 of the cap height there (thirty families' heaviest
+    0.11 to 0.81 at the outside), the ≡ and the ≈ past the capitals both
+    ways. In 397 fonts read by their boldness the white stands 1.72 bars
+    at Arris Regular's, 0.86 at its Bold's, 0.62 at its Black's: past
+    the Regular it gives a third of what the stem gains
+    (`punct.eq_white`). The = stands 0.20 to 0.80 at Black.
+  - The tilde signs. Two of the ~ itself with the whole white between
+    their boxes stood 0.74 of the cap height tall at Regular and 1.15 at
+    Black. A stacked tilde rises six tenths of its stroke, two of them
+    stand as two bars do, a tilde over bars stays in the capitals, and
+    all stand in the operators' body (`operators.stack`): the ≈ 0.46 of
+    the cap height tall at Regular, 0.74 at Black.
+  - The signs of dots. ÷ ∶ ∷ ∴ ∵ were set by the ellipsis's step and grew
+    with their dots, from under the baseline to over the capitals at
+    Black; each is as tall as the plus (`operators.dot_reach`), the
+    division sign's dots smaller where the weight's would leave no white
+    beside the bar.
+  - The daggers. The bar went down the stem as the weight rose, to keep
+    two stems of stem over it, and crossed at 0.39 of the cap height at
+    Black: a plus, and the double dagger's bars one blob. It crosses at
+    0.71 to the Bold and 0.66 at Black (`punct.dagger_bar`), the body
+    0.69 to 0.82 of the H's (0.96 at Black).
+  - The radical. Its tick was two modules long and gone into its own
+    stroke from Bold: a slash under a bar. It starts at 0.45 of the
+    sign's height, at the steep 2:1 (368 fonts: 0.50); ∛ ∜ with it, their
+    tick as high as leaves the index room.
+- Arris Mono Narrow, read through after these changes (the owner:
+  "sometimes it will break"). Its six fonts built and checked whole:
+  - Bold Italic's ą and Ą carried a scrap of the ogonek's join, three
+    units by four, as a contour of its own across their outline (new
+    with the ogonek's join: `marks.JOIN_FILL`).
+  - The forward slash of Arris Mono Italic and Mono Narrow Italic was
+    drawn 0.8 and 0.7 of its height with half and a third of its ink,
+    and the // /* */ of a comment with it (since 1.015): leaned again
+    by the slant it did not fit its cell and was drawn smaller until it
+    did. It leans as the upright's does (`punct.slash_lean`).
+  - A sign fitted into the cell was fitted to the narrow letters' body,
+    468 units, where Arris Mono fits it to 540: 143 glyphs of Mono
+    Narrow Italic stood smaller than their uprights (the ≤ 0.78 as tall
+    with 0.6 of its ink, the × 0.82 and 0.68). They are fitted to Arris
+    Mono's body (`symkit.sign_room`) and stand as they do in Arris Mono
+    Italic.
 - The ≠ stands on the equals' bars. The rule that lightens a sign to
   keep its whites counted the wedges between the ≠'s slash and its bars,
   outside the bars: six whites at the Regular for the two a reader sees.
