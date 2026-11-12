@@ -31,7 +31,7 @@ from __future__ import annotations
 from ..draw import TAB_MATH, B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
-from .letterframe import STEEP, growing_width, kept_width, plain_width as letter_width
+from .letterframe import STEEP, growing_width, kept_width, least_white, plain_width as letter_width
 from .punct import _ring, axis, dot
 
 ALIASES = {}
@@ -1832,13 +1832,34 @@ def integral(g, x, bot, top):
     g.stroke((x + reach, top - d), B(x + reach, yt), B(x, yt), B(x, yb), B(x - reach, yb), (x - reach, bot + d))
 
 
+def _ints(p, n):
+    """The parameters n integrals side by side are drawn with: a stack of
+    parts, lighter toward Black (arrows.stack_k); one alone is the
+    weight's own."""
+    if n == 1:
+        return p
+    from ..draw import _lightened
+    from .arrows import stack_k
+    k = stack_k(p)
+    return _lightened(p, k) if k != 1.0 else p
+
+
 def int_w(n=1):
-    return lambda p: 2 * (2.5 * p.m + p.sv / 2) + p.sv + (n - 1) * int_step(p)
+    def width(p):
+        q = _ints(p, n)
+        return 2 * (2.5 * q.m + q.sv / 2) + q.sv + (n - 1) * int_step(q)
+    return width
 
 
 def int_step(p):
-    """From one integral to the next: its hook's reach and a stem's white."""
-    return 2.5 * p.m + p.sv + max(0.75 * p.sv, p.m)
+    """From one integral to the next: its hook's reach to the outside of
+    its beak, the least white a sign keeps between two parts
+    (letterframe.least_white), and the next one's stem. Until version 2 the
+    beak's own half was left out: a hook's end stood a quarter of a stem
+    off the next integral's stem, 22 units at Regular and 50 at Black. (In
+    the monospaced cell, where the group is fitted to one cell whatever it
+    measures, half that white: more only makes the whole group smaller.)"""
+    return 2.5 * p.m + 1.5 * p.sv + (0.5 if p.mono else 1.0) * least_white(p)
 
 
 def int_span(p):
@@ -1853,7 +1874,7 @@ def integral1(g):
 
 @op(u(0x222C), '∬', width=int_w(2))
 def integral2(g):
-    p = g.p
+    p = g.p = _ints(g.p, 2)
     x0 = 2.5 * p.m + p.sv
     for i in range(2):
         integral(g, x0 + i * int_step(p), *int_span(p))
@@ -1861,7 +1882,7 @@ def integral2(g):
 
 @op(u(0x222D), '∭', width=int_w(3))
 def integral3(g):
-    p = g.p
+    p = g.p = _ints(g.p, 3)
     x0 = 2.5 * p.m + p.sv
     for i in range(3):
         integral(g, x0 + i * int_step(p), *int_span(p))

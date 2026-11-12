@@ -1191,6 +1191,11 @@ def _heaviest_stroke(g, p) -> float:
     (its reach is drawn from its strokes) between one master and the next."""
     if g is None or not getattr(g, 'strokes', None):
         return max(p.sv, p.sh, p.sd, p.ss)
+    if getattr(g, 'pictured', False):
+        # a picture is the Regular's drawing at every heavier weight (technical.picture): its whites are
+        # read by the strokes it is drawn in. Read by the weight's, the stopwatch lost a white it had
+        # at Regular, was lightened as far as the rule goes and drawn smaller than its Regular.
+        p = g.p
     th = _thickness(p, g.sh)
     best = 0.0
     for st in g.strokes:

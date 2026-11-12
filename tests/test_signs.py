@@ -3,6 +3,8 @@ the percent's rings clear of its slash, the number sign's ends longer than
 its strokes are thick, the straight quotes a third of the cap height."""
 from __future__ import annotations
 
+import itertools
+
 import pytest
 from shapely.geometry import LineString
 
@@ -601,3 +603,124 @@ def test_small_signs_keep_near_their_share_of_the_line():
         p = params(w)
         assert _wide('multiply', p) == pytest.approx(MULTIPLY * _wide('plus', p), abs=0.02), w
         assert _wide('braceright', p) == pytest.approx(_wide('braceleft', p)), w
+
+
+def _adv(name, p):
+    from arris.font import place
+    return place(name, p)[1] / place('H', p)[1]
+
+
+def test_struck_and_wavy_arrows_keep_near_their_length():
+    """A negation is held at the Regular's weight past it, and so are its
+    reach past the shafts and the room the arrow makes for it
+    (arrows.strike_at); a wave's and a zigzag's whites, flats and lead are
+    measured in the Regular's stem (arrows.pattern_stem). In the weight's
+    own, of the H's advance at Regular, Bold and Black: ↛ 1.53, 2.05, 2.49;
+    ↮ 1.71, 2.27, 2.80; ↝ 1.30, 1.54, 1.64; ⇝ 1.52, 1.82, 1.94, where the
+    plain arrow went 1.18, 1.18, 1.40."""
+    from arris.glyphs.arrows import pattern_stem, strike_at
+    regular = params(400)
+    assert strike_at(params(900)).sv == regular.sv and strike_at(params(300)).sv == params(300).sv
+    assert pattern_stem(params(900)) == regular.sv and pattern_stem(params(300)) == params(300).sv
+    at_regular = {'uni219B': 1.53, 'uni219A': 1.53, 'uni21AE': 1.71, 'uni21CF': 1.63, 'uni219D': 1.30, 'uni21DD': 1.52,
+                  'uni21AD': 1.57}
+    most = {'uni219B': 2.00, 'uni219A': 2.00, 'uni21AE': 2.35, 'uni21CF': 1.75, 'uni219D': 1.42, 'uni21DD': 1.76,
+            'uni21AD': 1.76}
+    for name, share in at_regular.items():
+        assert _adv(name, regular) == pytest.approx(share, abs=0.02), name       # the Regular as it was
+        for w in (700, 900):
+            assert share - 0.02 <= _adv(name, params(w)) <= most[name], (name, w)
+            assert len(getattr(_ink(name, params(w)), 'geoms', [0])) == 1, (name, w)
+
+
+@pytest.mark.parametrize('w', [400, 600, 700, 800, 900])
+def test_the_interrobang_is_a_question_mark_with_a_stroke_through_it(w):
+    """Its exclamation stroke is added to the question mark: past the
+    Regular it holds the Regular's weight, laid over. At the weight's own it
+    filled the bowl's left half by Bold, the whole mark was lightened to
+    keep the counter that was left (to 0.8 from Bold), and it read as a P.
+    Under the top bar stand the beak, the stroke and the bowl's right side,
+    white between them, and the mark is drawn in its weight's strokes, or
+    all but (0.94 at Black)."""
+    p = params(w)
+    g = draw('uni203D', p)
+    assert g.p.light >= 0.93
+    (laid, _), = g.overlay
+    assert laid.nodes[0].w == pytest.approx(min(p.sv, params(400).sv), rel=0.07)
+    ink = rings_to_shapely(g.rings())
+    runs = _runs(ink, y=p.cap - g.sh - 0.1 * p.sv)
+    assert len(runs) == 3, runs
+    (_, a1), (b0, b1), (c0, _) = runs
+    assert b1 - b0 == pytest.approx(laid.nodes[0].w, abs=1.0)
+    assert min(b0 - a1, c0 - b1) >= 0.4 * params(400).sv                    # (36 units under the beak at Regular)
+    # and it stands on the bowl's return: nothing of it shows under the bowl's left end
+    low = _runs(ink, y=laid.nodes[-1].y - 0.4 * g.sh)
+    assert all(x0 >= b0 - p.sv for x0, _ in low), low
+
+
+def test_a_column_of_dots_keeps_its_dots():
+    """Four dots over the cap height keep 0.55 of the Regular's stem
+    between them past it (genpunct.column_dot), and a dot smaller than the
+    period's is broken in proportion. With 0.55 of the weight's own stem the
+    dots were 119 units at Bold and 98 at Black, and broken on the weight's
+    own leg they were diamonds."""
+    from arris.glyphs.genpunct import column_dot
+    sizes = [column_dot(params(w), 4) for w in (300, 400, 500, 600, 700, 800, 900)]
+    assert sizes == sorted(sizes)
+    for name, n in (('uni205D', 3), ('uni205E', 4)):
+        for w in (400, 700, 900):
+            p = params(w)
+            dots = list(_ink(name, p).geoms)
+            assert len(dots) == n, (name, w)
+            for d in dots:
+                x0, y0, x1, y1 = d.bounds
+                assert d.area >= 0.8 * (x1 - x0) * (y1 - y0), (name, w)          # an octagon, not a diamond
+            ys = sorted(d.bounds[1::2] for d in dots)
+            assert min(b[0] - a[1] for a, b in itertools.pairwise(ys)) >= 0.5 * params(400).sv, (name, w)
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_tironian_et_is_a_seven(w):
+    """A bar on the x-height turning down at its right end into a stem to
+    the descender. Until version 2 the bar ran on past the stem and the stem
+    stopped on the line: a T."""
+    p = params(w)
+    g = draw('uni204A', p)
+    ink = rings_to_shapely(g.rings())
+    x0, y0, x1, y1 = ink.bounds
+    assert y1 == pytest.approx(p.xh, abs=1.0) and y0 == pytest.approx(-p.under, abs=1.0)
+    (a, b), = _runs(ink, y=0.0)
+    assert b == pytest.approx(x1, abs=1.0) and b - a == pytest.approx(p.sv, abs=1.0)
+    (a, b), = _runs(ink, y=p.xh - 0.5 * g.sh)
+    assert a == pytest.approx(x0, abs=1.0) and b == pytest.approx(x1, abs=p.c + 1.0)
+
+
+@pytest.mark.parametrize('name', ['uni231A', 'uni2328', 'uni23F0', 'uni23F1', 'uni23F2', 'uni2326', 'uni232B'])
+def test_a_picture_is_the_regulars_drawing_at_every_heavier_weight(name):
+    """The watch, the keyboard, the clocks and the erase keys
+    (technical.picture). Their whites are the least a drawing may have at
+    the Regular, so every unit a stroke gained past it went to the
+    picture's size: at Black the watch stood 1.68 of the cap height tall
+    for 1.25, the keyboard 1.48 for 0.90."""
+    regular = _ink(name, params(400))
+    for w in (500, 700, 900):
+        g = draw(name, params(w))
+        assert g.p.light == 1.0 and g.p.sv == params(400).sv, w
+        assert rings_to_shapely(g.rings()).bounds == pytest.approx(regular.bounds, abs=0.5), w
+        assert rings_to_shapely(g.rings()).area == pytest.approx(regular.area, rel=0.005), w
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_integrals_side_by_side_stand_apart(w):
+    """A hook's end keeps the least white off the next integral's stem
+    (operators.int_step). The step left the beak's own half out: 22 units
+    at Regular, 50 at Black."""
+    from arris.glyphs.letterframe import least_white
+    p = params(w)
+    for name, n in (('uni222C', 2), ('uni222D', 3)):
+        g = draw(name, p)
+        parts = sorted(rings_to_shapely(g.rings()).geoms, key=lambda q: q.bounds[0])
+        assert len(parts) == n
+        for a, b in itertools.pairwise(parts):
+            assert a.distance(b) >= 0.95 * least_white(g.p), (name, w)
+    assert _adv('uni222C', params(900)) <= 1.7 and _adv('uni222D', params(900)) <= 2.35

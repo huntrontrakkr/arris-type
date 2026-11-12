@@ -548,6 +548,48 @@ The six causes:
   multiplication sign's arms ran corner to corner of the plus's square,
   root two as long as the plus's: 0.85 of the square across at every
   weight (0.81 of the H). The comma and the semicolon are as they were.
+- Signs that outgrew their line or lost their form toward Black, from
+  the same reading:
+  - Struck arrows. A negation is held at the Regular's weight past it;
+    its reach past the shafts and the room the arrow makes for it are
+    now the Regular's too (`arrows.strike_at`). Of the H's advance at
+    Regular, Bold and Black: ↛ 1.53, 1.77, 1.98 (was 1.53, 2.05, 2.49),
+    ↮ 1.71, 2.00, 2.32 (2.27, 2.80), ⇏ 1.63, 1.71, 1.70 (1.89, 1.96);
+    the plain arrow goes 1.18, 1.18, 1.40.
+  - Wavy and zigzag arrows. The whites in a wave or a tooth, the wave's
+    flats and the lead to the head are measured in the Regular's stem
+    past it (`arrows.pattern_stem`): ↝ 1.30, 1.37, 1.39 (was 1.54,
+    1.64), ⇝ 1.52, 1.67, 1.73 (1.82, 1.94), ↭ 1.57, 1.63, 1.73 (1.80,
+    1.98).
+  - The interrobang's exclamation stroke is added to the question mark:
+    past the Regular it holds the Regular's weight, laid over
+    (`draw.lay_bar`), standing on the end of the bowl's return where the
+    question mark's own stem has gone. At the weight's own it filled the
+    bowl's left half by Bold, the whole mark was lightened to 0.8 to
+    keep the counter that was left, and it read as a P.
+  - ⁝ ⁞ keep 0.55 of the Regular's stem between their dots past it, and
+    a dot smaller than the period's is broken in proportion
+    (`genpunct.column_dot`): four dots are 143 units at Bold and at
+    Black, where they were 119 and 98, and diamonds at Black.
+  - The Tironian et is a bar on the x-height turning down at its right
+    end into a stem to the descender, as in Inter, DejaVu and Noto. It
+    was a T: its bar ran on past the stem and the stem stopped on the
+    line.
+  - The watch, the keyboard, the alarm clock, the stopwatch, the timer
+    and the two erase keys are the Regular's drawing at every heavier
+    weight (`technical.picture`), as other families draw one picture for
+    every weight. Their whites are the least a drawing may have at the
+    Regular, so every unit a stroke gained past it went to the picture's
+    size: at Black the watch stood 1.68 of the cap height tall for 1.25,
+    the keyboard 1.48 for 0.90 and 2.36 of the H's advance for 1.62, the
+    alarm clock 1.52 for 0.95. The white rule reads a picture by the
+    strokes it is drawn in (`draw._heaviest_stroke`).
+  - ∬ ∭: a hook's end keeps the least white off the next integral's
+    stem (`operators.int_step`; the step left the beak's own half out:
+    22 units at Regular, 50 at Black), and the group is drawn as a stack
+    of parts, lighter toward Black. ∬ 1.43, 1.58, 1.63 of the H's
+    advance (was 1.38, 1.64, 1.82), ∭ 1.94, 2.18, 2.28 (1.83, 2.24,
+    2.52). In the monospaced cell they are as they were.
 - Arris Mono Narrow, read through after these changes (the owner:
   "sometimes it will break"). Its six fonts built and checked whole:
   - Bold Italic's ą and Ą carried a scrap of the ogonek's join, three

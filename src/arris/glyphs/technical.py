@@ -80,6 +80,27 @@ def lighten(g):
         g.p = _lightened(g.p, k)
 
 
+def _pict(p):
+    """The parameters a picture is drawn with (the watch, the keyboard, the
+    clocks, the erase keys): the weight's own to the Regular, the Regular's
+    past it (draw.held_at). Its whites are already the least a drawing may
+    have at the Regular (a module between a hand and its ring, between two
+    keys), so every unit a stroke gained past it was added to the picture's
+    size: at Black the watch stood from 0.34 of the cap height under the
+    line to 1.34 above it (1.25 tall at Regular), the keyboard 1.48 tall
+    for 0.90 and 2.36 of the H's advance for 1.62, the alarm clock 1.52 for
+    0.95. Other families draw one picture for every weight."""
+    from ..draw import held_at
+    return held_at(p)
+
+
+def picture(g):
+    q = _pict(g.p)
+    if q is not g.p:
+        g.p = q
+        g.pictured = True
+
+
 def line_top(p):
     """The line's ascent and descent (font.Metrics), in this drawing's units:
     bracket pieces run exactly to them, as terminal cells do (piece)."""
@@ -345,19 +366,19 @@ def _erase_h(p):
 
 
 def _erase_w(p):
-    q = _light(p)
+    q = _pict(p)
     return 3.2 * _erase_h(q) + q.sv
 
 
 @tech(u(0x2326), '⌦', _erase_w)
 def eraseright(g):
-    lighten(g)
+    picture(g)
     _erase(g, True)
 
 
 @tech(u(0x232B), '⌫', _erase_w)
 def eraseleft(g):
-    lighten(g)
+    picture(g)
     _erase(g, False)
 
 
@@ -381,16 +402,16 @@ KEYS = 5
 
 def _kbd_w(p):
     """⌨'s body: five keys, half a stem or more of white between them."""
-    q = _light(p)
+    q = _pict(p)
     s = max(q.dot() * 0.8, q.sv)
     gap = max(0.6 * s, 0.75 * q.m)
-    return max(letter_width(14, 2)(p), KEYS * s + (KEYS + 1) * gap + 2 * q.sv)
+    return max(letter_width(14, 2)(q), KEYS * s + (KEYS + 1) * gap + 2 * q.sv)
 
 
 @tech(u(0x2328), '⌨', _kbd_w)
 def keyboard(g):
     """A frame with two rows of keys and a space bar."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p)
     W = g.W
@@ -1047,7 +1068,7 @@ def hands(g, c, a, r, minute=(0, 1), hour=(1, 0), long_=0.8, short=0.55):
 
 
 def clock_w(share=0.38, extra=0.0):
-    return lambda p: 2 * face_r(_light(p), share) + _light(p).sv + extra * p.m
+    return lambda p: 2 * face_r(_pict(p), share) + _pict(p).sv + extra * p.m
 
 
 def _light(p):
@@ -1060,11 +1081,11 @@ def _crown(p):
     return 0.5 * p.sv + 0.75 * p.m
 
 
-@tech(u(0x231A), '⌚', lambda p: 2 * face_r(_light(p), 0.3) + _light(p).sv + _crown(_light(p)), solid=True)
+@tech(u(0x231A), '⌚', lambda p: 2 * face_r(_pict(p), 0.3) + _pict(p).sv + _crown(_pict(p)), solid=True)
 def watch(g):
     """The watch: a chamfered case, a little taller than wide, on its
     straps, a crown at the right, hands at twelve and three."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p)
     rx = (g.W - p.sv - _crown(p)) / 2
@@ -1094,11 +1115,11 @@ def _alarm_r(p, W):
     return min(face_r(p, 0.33), (W / 2 - _alarm_reach(p)) / 0.97)
 
 
-@tech(u(0x23F0), '⏰', lambda p: 2 * (0.97 * face_r(_light(p), 0.33) + _alarm_reach(_light(p))))
+@tech(u(0x23F0), '⏰', lambda p: 2 * (0.97 * face_r(_pict(p), 0.33) + _alarm_reach(_pict(p))))
 def alarmclock(g):
     """An octagon's face with two bells above its upper chamfers and two
     feet below its lower ones."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p) - 0.04 * p.cap
     gap = max(0.75 * p.sv, 1.0 * p.m)
@@ -1126,7 +1147,7 @@ def alarmclock(g):
 def stopwatch(g):
     """An octagon's face, a crown on top (a stem and a cap) and a button at
     its upper right, one hand at twelve."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p) - 0.06 * p.cap
     r = (g.W - p.sv) / 2
@@ -1149,7 +1170,7 @@ def stopwatch(g):
 def timerclock(g):
     """An octagon's face with a mark above it and a hand turned back to
     half past ten."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p) - 0.05 * p.cap
     r = (g.W - p.sv) / 2

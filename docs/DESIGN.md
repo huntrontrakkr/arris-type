@@ -936,7 +936,11 @@ the small signs hold near the share of the line they have there (a
 quotation mark's dot and the bullet take half of what the weight's would
 gain, `punct.quote_dot`; a bracket's and a brace's arms stand out a little
 over half a stem, and the brace's point is cut flat where it would stand
-out past the Regular's); the brace is told from ( by a square bracket's ends (flat arms,
+out past the Regular's; a struck arrow makes the Regular's room for its
+stroke, `arrows.strike_at`, and a wave or a zigzag is measured in the
+Regular's stem, `arrows.pattern_stem`), and a picture (the watch, the
+keyboard, the clocks, the erase keys) is the Regular's drawing at every
+heavier weight (`technical.picture`); the brace is told from ( by a square bracket's ends (flat arms,
 square corners, as long as the bracket's) and from [ by a point at its
 waist, a stem deep on the shallow 2:1, where ( has only its 45° ends. In
 the monospaced cut, dots (. , : ; and the tittles) are half
