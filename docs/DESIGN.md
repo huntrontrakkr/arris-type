@@ -159,9 +159,11 @@ accent: as thick, as big, its dots as far apart, as far from its letter
 with them, the accents at Black carried up to twice the ink other families
 give theirs and stood half as tall again; the owner's call (2026-11-12) was
 the Regular's weight, kept. A mark that hangs off its letter (the cedilla,
-the ogonek, the horn) is a part of the letter's outline and takes a third
-of the letter's gain, so it does not read as a hair on a Black letter. A
-letter's own dot grows with its letter.
+the ogonek, the horn) is a part of the letter's outline and takes two
+thirds of the letter's gain, so it does not read as a hair on a Black
+letter. The cedilla and the ogonek are one hook turned opposite ways
+(`marks.hook`): the same neck, foot, depth and reach, six tenths of a stem
+in the italic. A letter's own dot grows with its letter.
 
 ## 4. From pixels to every weight
 

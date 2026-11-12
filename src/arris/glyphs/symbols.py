@@ -443,9 +443,7 @@ def cedilla(g):
 @glyph('ogonek', '˛', _hook_width, kind=('punct', 0.6))
 def ogonek(g):
     def hook(g):
-        from .italic_forms import tail_run
-        p = g.p
-        yb = -p.under + g.sh / 2 + 0.25 * p.m
-        x = p.sv / 2
-        g.stroke((x, g.sh), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))
+        wv, wh, yb, run = marks.hook(g)
+        x = wv / 2
+        g.stroke((x, g.sh, wv), B(x, yb, g.p.m / 2, wh), (x + run, yb))
     marks.kept(g, hook, gain=marks.HANG_GAIN)

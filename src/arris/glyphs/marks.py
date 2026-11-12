@@ -25,7 +25,7 @@ def gap(p):
     return max(p.m, 0.4 * p.sv)
 
 
-HANG_GAIN = 1 / 3   # of what its letter's strokes gain past the Regular, the share a mark hanging off it takes (mark_params)
+HANG_GAIN = 2 / 3   # of what its letter's strokes gain past the Regular, the share a mark hanging off it takes (mark_params)
 
 
 def mark_params(p, gain=0.0):
@@ -51,9 +51,8 @@ def mark_params(p, gain=0.0):
     cedilla, the ogonek, the horn). Such a mark is a part of the letter's
     own outline, and at the Regular's weight on a Black letter it read as
     a hair on it: the owner, 2026-11-12, "if it's hanging off of the
-    letter, it should probably be a little bolder." A third of the way to
-    the letter's weight: at half the hook began to crowd its own notch at
-    Black, and at two thirds the ç's read as a block again.
+    letter, it should probably be a little bolder." Shown a third, a half
+    and two thirds of the way to the letter's weight, he named two thirds.
 
     A set derived from a font's (small capitals) has no Regular of its own
     to ask for: its accents take the strokes that stand to its module as
@@ -78,24 +77,42 @@ def kept(g, fn, *args, joined=False, gain=0.0):
     parameters off that drawing (``base_ink``, ``own_p``, ``own_sh``), and
     a line it must meet flush is the letter's too (``butt``).
 
-    ``joined``: the mark's drawing carries the letter's ink, so the join is
-    finished there as it is in the letter's own drawing up to the Regular:
-    the corners the two make are filled by the one rule. Stamped in alone,
-    an ogonek lost those fills where it became the Regular's (700 square
-    units of į between weights 400 and 401). ``gain``: mark_params'."""
+    ``joined``: the corners the mark makes with its letter are filled as
+    they are in the letter's own drawing up to the Regular. Stamped in
+    alone, an ogonek lost those fills where it became the Regular's (700
+    square units of į between weights 400 and 401). The two are finished
+    together in a drawing apart, and what that adds where they meet is
+    stamped in with the mark. Only that: with the letter's ink stamped in
+    a second time under the mark, the italic no longer knew the letter's
+    own corners for its own, and the ą's bowl was cut straight at Bold and
+    ExtraBold. ``gain``: mark_params'."""
     q = mark_params(g.p, gain)
     if q is g.p:
         return fn(g, *args)
-    target = Glyph(q, W=g.W)
-    target.base_ink = g.extra[0] if g.extra else None
-    target.own_p, target.own_sh = g.p, g.sh
-    if joined and g.extra:
-        target.extra = [g.extra[0]]
-        target.extra_chamfers = list(g.extra_chamfers)
-    fn(target, *args)
+
+    def drawn(with_letter):
+        t = Glyph(q, W=g.W)
+        t.base_ink = g.extra[0] if g.extra else None
+        t.own_p, t.own_sh = g.p, g.sh
+        if with_letter:
+            t.extra = [g.extra[0]]
+            t.extra_chamfers = list(g.extra_chamfers)
+        fn(t, *args)
+        return t
+    target = drawn(False)
     g.butt += target.butt
-    if target.strokes or target.overlay or target.extra:
-        g.add_glyph(target)
+    if not (target.strokes or target.overlay or target.extra):
+        return
+    g.add_glyph(target)
+    if joined and len(g.extra) > 1:
+        import shapely
+
+        from ..geom import rings_to_shapely
+        letter, mark = g.extra[0], g.extra[-1]
+        whole = rings_to_shapely(drawn(True).outline()[0])
+        more = whole.difference(shapely.union_all([letter, mark]).buffer(0.05))
+        g.extra += [q_ for q_ in getattr(more, 'geoms', [more])
+                    if q_.area > 1.0 and q_.distance(letter) < 1.0 and q_.distance(mark) < 1.0]
 
 
 def size(p, case):
@@ -237,6 +254,44 @@ def commaabove(g, x, y, case):
 
 
 CEDILLA_ROOM = 1.15   # descenders: how far below the baseline the cedilla's foot may hang (commabelow's room)
+HOOK_ITALIC = 0.6     # stems: how thick a hook under an italic letter is (see hook, ogonek)
+
+
+def hook(g):
+    """What the cedilla and the ogonek share: (the neck's thickness, the
+    foot's, the foot's centreline, how far the foot runs from the neck's
+    centre). They are one hook, turned left under a c and right under an
+    a: as thick, as deep, as long.
+
+    They were two drawings. The ogonek kept the depth and reach the
+    cedilla had before its notch was looked after (cedilla): 15 units
+    shorter at the Regular, and from Bold its foot grew up into its notch
+    where the cedilla's hangs lower. In the italic the ogonek was six
+    tenths of a stem (ogonek) and the cedilla a whole one, 14,000 square
+    units of ink under the a for 23,400 under the c. The owner,
+    2026-11-12: "They're two different sizes".
+
+    In the italic both are HOOK_ITALIC of a stem. Thicker, a hook changes
+    the letter it hangs from: at seven tenths the Į's stem was drawn
+    another way at the Regular, at a whole stem the į's to Medium and the
+    Į's at SemiBold and Bold (the ink above the baseline, against the
+    plain letter's)."""
+    from ..draw import _thickness
+    p = g.p
+    th = _thickness(p, g.sh)
+    wv, wh = th((0.0, 1.0)), th((1.0, 0.0))
+    if p.slant:
+        wv, wh = HOOK_ITALIC * wv, HOOK_ITALIC * wh
+    room = CEDILLA_ROOM * p.under
+    tall = gap(p)                                            # the notch's height, at least
+    k = min(1.0, (room - tall) / wh)                         # the hook's strokes, lightened only past the room
+    wv, wh = k * wv, k * wh
+    foot = max(min(-p.under + 0.25 * p.m, -tall - wh), -room)  # the foot's underside: as drawn, or lower
+    run = wv / 2 + max(1.5 * p.m, gap(p) + 2 * p.c)          # the notch's width past the neck, both its ends broken
+    if p.slant:
+        from .italic_forms import run_floor
+        run = max(run, run_floor(p, p.m / 2, wh))           # (the ogonek's corner into its foot curves at every weight)
+    return wv, wh, foot + wh / 2, run
 
 
 def cedilla(g, x, y, case):
@@ -254,18 +309,9 @@ def cedilla(g, x, y, case):
     (CEDILLA_ROOM descenders), and past that the hook lightens, as
     commabelow does. Thin and Light as they were; the Regular's foot 15
     units longer; from Bold the hook reads as one."""
-    from ..draw import _thickness
     p = g.p
-    th = _thickness(p, g.sh)
-    wv, wh = th((0.0, 1.0)), th((1.0, 0.0))
-    room = CEDILLA_ROOM * p.under
-    tall = gap(p)                                            # the notch's height, at least
-    k = min(1.0, (room - tall) / wh)                         # the hook's strokes, lightened only past the room
-    wv, wh = k * wv, k * wh
-    foot = max(min(-p.under + 0.25 * p.m, -tall - wh), -room)  # the foot's underside: as drawn, or lower
-    yb = foot + wh / 2
-    reach = max(1.5 * p.m, gap(p) + 2 * p.c)                 # the notch's width past the stem, both its ends broken
-    g.stroke((x, g.sh / 2, wv), (x, yb, wh), (x - wv / 2 - reach, yb))
+    wv, wh, yb, run = hook(g)
+    g.stroke((x, g.sh / 2, wv), B(x, yb, p.m / 2, wh), (x - run, yb))
     if p.slant:
         # square to the base's underside, as the ogonek: the c's foot corner
         # ends where the stem begins, and the corner rule's fill at the join
@@ -277,15 +323,13 @@ def cedilla(g, x, y, case):
         g.butt += (('y', under, x - wv / 2 - 1.0, x + wv / 2 + 1.0),)
 
 
-OGONEK_ITALIC = 0.6   # stems: the italic ogonek's thickness (see ogonek)
-
-
 def ogonek(g, x, y, case):
     """Hangs from the base's rightmost ink on the baseline (a stem's foot or
-    a bar's end, whichever the letter has), turning right underneath."""
+    a bar's end, whichever the letter has), turning right underneath: the
+    cedilla's hook, turned the other way (hook)."""
     p = g.p
     own = getattr(g, 'own_p', p)                            # the letter's own parameters (kept)
-    yb = -p.under + g.sh / 2 + 0.25 * p.m
+    wv, wh, yb, run = hook(g)
     from shapely.geometry import LineString
     base = getattr(g, 'base_ink', None) or g.extra[0]
     cut = base.intersection(LineString([(-1e4, 0.3 * g.sh), (1e4, 0.3 * g.sh)]))
@@ -295,7 +339,7 @@ def ogonek(g, x, y, case):
         # runs down to the baseline (the end of the a's, i's and u's exit
         # tails, the E's bar, an I's stem) and runs it on down; a quarter
         # stem in, the slant showed a step at the join and a nose at 680/+60.
-        # It is OGONEK_ITALIC of a stem thick: an exit tail is as long as its
+        # It is HOOK_ITALIC of a stem thick: an exit tail is as long as its
         # own corner needs and little more, and a stem-thick ogonek at its end
         # cut into that corner's chamfer and held it straight from 400 to 850.
         # Where the edge ends on a bowl corner (the e's arm, the o's and U's
@@ -308,8 +352,8 @@ def ogonek(g, x, y, case):
         from shapely.geometry import box
 
         from ..params import outer_leg
-        from .italic_forms import TAIL_FLAT, run_floor
-        w = OGONEK_ITALIC * p.sv
+        from .italic_forms import TAIL_FLAT
+        w = wv
         top = p.cap if case == 'uc' else p.xh
         body = base.intersection(box(-1e4, 0.0, 1e4, top))
         if body.is_empty:
@@ -324,12 +368,11 @@ def ogonek(g, x, y, case):
             # U's bowls): under the bowl, clear of the corner's outer chamfer
             x = xr - outer_leg(own) - TAIL_FLAT * own.c - w / 2
         under = base.intersection(box(x - w / 2, -1e4, x + w / 2, top))
-        g.stroke((x, g.sh / 2, w), B(x, yb, p.m / 2, w),
-                 (x + max(1.5 * p.m + p.sv / 2, run_floor(p, p.m / 2, w)), yb))
+        g.stroke((x, g.sh / 2, w), B(x, yb, p.m / 2, wh), (x + run, yb))
         g.butt += (('y', 0.0 if under.is_empty else under.bounds[1], x - w / 2 - 1.0, x + w / 2 + 1.0),)
         return
-    x = (max(xs) - 0.75 * p.sv) if xs else x
-    g.stroke((x, g.sh / 2), B(x, yb, p.m / 2), (x + 1.5 * p.m + p.sv / 2, yb))
+    x = (max(xs) - 0.75 * wv) if xs else x
+    g.stroke((x, g.sh / 2, wv), B(x, yb, p.m / 2, wh), (x + run, yb))
 
 
 ABOVE = {'̀': grave, '́': acute, '̂': circumflex, '̃': tilde, '̄': macron,

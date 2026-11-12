@@ -331,9 +331,10 @@ def test_a_mark_that_hangs_off_its_letter_is_a_little_bolder():
     """The cedilla, the ogonek and the horn are a part of their letter's
     outline. At the Regular's weight on a Black letter they read as a hair
     on it (the owner, 2026-11-12: "if it's hanging off of the letter, it
-    should probably be a little bolder"): they take a third of what the
-    letter's strokes gain past the Regular (marks.HANG_GAIN), and stand
-    between the accents' strokes and the letter's."""
+    should probably be a little bolder"): they take two thirds of what
+    the letter's strokes gain past the Regular (marks.HANG_GAIN, the
+    owner's pick of a third, a half and two thirds), and stand between the
+    accents' strokes and the letter's."""
     from arris.glyphs.marks import HANG_GAIN, mark_params
     regular = params(400)
     assert mark_params(regular, HANG_GAIN) is regular
@@ -349,3 +350,52 @@ def test_a_mark_that_hangs_off_its_letter_is_a_little_bolder():
     for name, y in (('ccedilla', -0.3 * p.m), ('aogonek', -0.6 * p.m)):
         (x0, x1), = [r for r in _runs(_ink(name, p), y=y)]
         assert x1 - x0 == pytest.approx(hang, rel=0.12), (name, round(x1 - x0), round(hang))
+
+
+@pytest.mark.parametrize('cut', ['upright', 'italic'])
+def test_the_cedilla_and_the_ogonek_are_one_hook(cut):
+    """They were two drawings (the owner, 2026-11-12: "They're two
+    different sizes"): the ogonek's foot 15 units shorter at the Regular
+    and, from Bold, growing up into its notch where the cedilla's hangs
+    lower; in the italic the ogonek six tenths of a stem and the cedilla a
+    whole one. One hook (marks.hook), turned left under a c and right
+    under an a: as deep, its neck as thick, as much ink; upright, as far
+    across."""
+    from shapely.geometry import box
+
+    from arris.font import place
+    from arris.italic import italic
+    at = params if cut == 'upright' else (lambda w: italic(params(w)))
+    for w in (300, 400, 700, 900):
+        p = at(w)
+        # (as the font carries them: in the italic, leaned and curved)
+        ced, ogo = (rings_to_shapely(place(n, p)[0]).intersection(box(-1e4, -1e4, 1e4, -1.0)) for n in ('cedilla', 'ogonek'))
+        assert ced.bounds[1] == pytest.approx(ogo.bounds[1], abs=1.5), w
+        (c0, c1), = _runs(ced, y=-10.0)
+        (o0, o1), = _runs(ogo, y=-10.0)
+        assert c1 - c0 == pytest.approx(o1 - o0, abs=1.5), w
+        assert ced.area == pytest.approx(ogo.area, rel=0.01), w
+        if cut == 'upright':
+            assert ced.bounds[2] - ced.bounds[0] == pytest.approx(ogo.bounds[2] - ogo.bounds[0], abs=1.5), w
+
+
+def test_the_letter_under_an_italic_ogonek_is_the_plain_letter():
+    """A hook must not change the letter it hangs from. Finished with its
+    letter's ink stamped in a second time under it, the italic ą lost the
+    curve of its bowl's upper left corner at Bold and ExtraBold (5,000
+    square units cut straight): the italic no longer knew the letter's
+    corners for its own. Only the mark and the fills of its join are
+    stamped in (marks.kept). Above the baseline the ą is the a at every
+    weight."""
+    from shapely import affinity
+    from shapely.geometry import box
+
+    from arris.font import place
+    from arris.italic import italic
+    up = box(-1e4, 8.0, 1e4, 1e4)
+    worst = {}
+    for w in (400, 600, 700, 800, 900):
+        p = italic(params(w))
+        a, b = (rings_to_shapely(place(n, p)[0]).intersection(up) for n in ('aogonek', 'a'))
+        worst[w] = affinity.translate(a, b.bounds[0] - a.bounds[0], 0).symmetric_difference(b).area
+    assert max(worst.values()) <= 500.0, {w: round(v) for w, v in worst.items()}

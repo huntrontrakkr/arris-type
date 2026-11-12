@@ -440,10 +440,21 @@ The six causes:
   and the combining marks. A mark that hangs off its letter is a part of
   its outline, and at the Regular's weight on a Black letter it read as
   a hair on it ("if it's hanging off of the letter, it should probably
-  be a little bolder"): the cedilla, the ogonek and the horn take a third
-  of what their letter's strokes gain past the Regular
-  (`marks.HANG_GAIN`), 127 units on a stem of 200 at Black. To the
-  Regular nothing moves. A letter's own dot (i, j) is its letter's.
+  be a little bolder"): the cedilla, the ogonek and the horn take two
+  thirds of what their letter's strokes gain past the Regular
+  (`marks.HANG_GAIN`), 163 units on a stem of 200 at Black. A letter's
+  own dot (i, j) is its letter's.
+- The cedilla and the ogonek are one hook, turned left under a c and
+  right under an a (`marks.hook`): as thick, as deep, as long. They were
+  two drawings ("They're two different sizes"). The ogonek kept the depth
+  and reach the cedilla had before its notch was looked after: its foot
+  15 units shorter at the Regular, and from Bold growing up into its
+  notch where the cedilla's hangs lower. In the italic the ogonek was six
+  tenths of a stem and the cedilla a whole one (14,000 square units of
+  ink under the a for 23,400 under the c); both are six tenths, the most
+  a hook can be before it changes the letter it hangs from (at seven
+  tenths the Į's stem was drawn another way at the Regular). The ˛ alone
+  was a whole stem in the italic, and matches now.
   In Arris Mono the apostrophe of ď ľ ť is its letter's too: the cell
   has no room for white between them, and the two are drawn as one.
 - The ≠ stands on the equals' bars. The rule that lightens a sign to
