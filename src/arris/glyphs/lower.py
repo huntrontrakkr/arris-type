@@ -1442,7 +1442,14 @@ def y(g):
     join = turned(f.W, p.xh, arch)[:-1]                     # (the notch's cut,) where the foot leaves the flat
     d = min(ya + gable_run(p, g.W) - y1, join[-1][0] - xl - p.c)
     g.stroke((xl, p.xh), (xl, y1 + d), (xl + d, y1), *reversed(join), end=cut)
-    hook(g, f, span=hook_span(p))                           # the g's own hook, to the unit
+    span = hook_span(p)                                     # the g's own hook, to the unit
+    if p.mono:
+        # (in the cell a letter is drawn narrower than its body where its ink would run out of it, the ỵ for
+        # the dot beside its tail, draw._cell_fit, and the hook gives with the body: held at the g's span its
+        # ink did not narrow as its body did, and in Arris Mono Italic the ỵ stood 32 units out of the cell's
+        # left side at Bold. In its own body the two spans are one: the cell's)
+        span = min(span, f.X(7) - f.X(1))
+    hook(g, f, span=span)
     g.butt += crotch_butt(g, f.Y(1))
 
 

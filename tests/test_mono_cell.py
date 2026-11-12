@@ -39,6 +39,27 @@ def test_ink_stands_inside_the_cell(name, ital):
     assert x0 - c0 >= gap - SLACK and c0 + p.fig_adv - x1 >= gap - SLACK, (name, x0 - c0, c0 + p.fig_adv - x1)
 
 
+@pytest.mark.parametrize('narrow', [False, True], ids=['mono', 'narrow'])
+@pytest.mark.parametrize('w', [300, 400, 450, 500, 600, 700])
+def test_the_y_with_a_dot_below_stands_in_its_cell(w, narrow):
+    """The ỵ's dot stands beside its tail, and for it the letter is drawn
+    narrower than the cell (draw._cell_fit). The y's hook is the g's
+    (lower.hook_span: one hook for the two), and held at the g's span it did
+    not narrow as its body did: in Arris Mono Narrow Italic the ỵ's ink
+    began 4 units left of its cell at Retina and 21 at Bold. In the cell
+    the hook gives with the body."""
+    from arris.font import place
+    from arris.geom import rings_to_shapely
+    from arris.instances import narrow_weight
+    from arris.italic import polylines
+    p = params(narrow_weight(w) if narrow else mono_weight(w)).with_(mono=True, narrow=narrow)
+    for q, ital in ((p, False), (italic(p).with_(cursive=True), True)):
+        for name in ('y', 'uni1EF5'):
+            rings, adv = place(name, q)
+            x0, _, x1, _ = rings_to_shapely(polylines(rings) if ital else rings).bounds
+            assert x0 >= -0.5 and x1 <= adv + 0.5, (name, ital, round(x0, 1), round(x1, 1))
+
+
 def test_a_sign_drawn_smaller_is_drawn_smaller_whole():
     # ©'s ring is drawn to its body: drawn smaller to fit the italic's cell,
     # ring and letter shrink together, and its strokes are never a hairline

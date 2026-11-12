@@ -597,7 +597,14 @@ def y_ital(g):
     arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=BOWL_DROP)
     g.stroke(f.P(1, 9), *reversed(turned(f.W, f.p.xh, arch)), end=cut)
     entry(g, f, f.X(1))
-    hook(g, f, span=hook_span(f.p))                         # the g's own hook (lower.hook_span)
+    span = hook_span(f.p)                                   # the g's own hook (lower.hook_span)
+    if f.p.mono:
+        # (in the cell the letter is drawn narrower than its body where its ink would run out, for its own
+        # tail and for a mark set beside it, _in_cell, and its hook gives with it: held at the g's span the
+        # ink did not narrow with the body, and the ỵ, drawn narrower for its dot, stood 32 units out of the
+        # cell's left side at Bold)
+        span = min(span, f.X(7) - f.X(1))
+    hook(g, f, span=span)
     g.butt += crotch_butt(g, f.Y(1))                    # the foot meets the descender square (lower.crotch_butt)
 
 
