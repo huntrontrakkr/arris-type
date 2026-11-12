@@ -437,3 +437,50 @@ def test_the_letter_under_an_italic_ogonek_is_the_plain_letter():
         a, b = (rings_to_shapely(place(n, p)[0]).intersection(up) for n in ('aogonek', 'a'))
         worst[w] = affinity.translate(a, b.bounds[0] - a.bounds[0], 0).symmetric_difference(b).area
     assert max(worst.values()) <= 500.0, {w: round(v) for w, v in worst.items()}
+
+
+DOLLAR_CUTS = {'upright': lambda w: params(w), 'italic': lambda w: _italic(params(w)),
+               'watch': lambda w: params(w, watch=1.0)}
+
+
+def _italic(p):
+    from arris.italic import italic
+    return italic(p)
+
+
+@pytest.mark.parametrize('cut', list(DOLLAR_CUTS))
+def test_the_dollar_with_stubs_is_its_weights_s(cut):
+    """With stubs for a stem the dollar is the S and two stubs, in its
+    weight's own strokes: its second form is a glyph of its own, held to its
+    own Regular (draw._second_spec), as the variable font carries it.
+    Measured against the first form's Regular it was lightened as far as the
+    rules go, for the four counters its stem no longer cut: at Black bars of
+    96 units on an S of 160, 0.75 of the S's ink."""
+    from arris.font import place
+    at = DOLLAR_CUTS[cut]
+    stubs = 0
+    for w in (400, 600, 700, 800, 900):
+        p = at(w)
+        d = draw('dollar', p)
+        if d.overrides.get('stem', 1.0) >= 0.5:
+            continue
+        stubs += 1
+        assert d.p.sv == pytest.approx(p.sv), w                 # not lightened
+        assert 'sh_auto' not in d.overrides, w                  # nor its bars thinned for counters it has not got
+        ink, s = (rings_to_shapely(place(n, p)[0]).area for n in ('dollar', 'S'))
+        assert 1.02 <= ink / s <= 1.15, (w, ink / s)           # the S and its two stubs
+        assert d.rings() == draw('dollar.stem', p).rings(), w   # the drawing the variable font swaps in
+    assert stubs, cut
+
+
+@pytest.mark.parametrize('cut', list(DOLLAR_CUTS))
+def test_the_dollar_never_goes_lighter_as_the_weight_goes_up(cut):
+    """Where the stem gives way to stubs the dollar loses the stem's run
+    through the S, a tenth of its ink at most, and nothing else: it lost
+    28% between 680 and 690."""
+    from arris.font import place
+    at = DOLLAR_CUTS[cut]
+    ink = [rings_to_shapely(place('dollar', at(w))[0]).area for w in range(600, 901, 20)]
+    for a, b, w in zip(ink, ink[1:], range(600, 900, 20)):
+        assert b / a > 0.88, (w, b / a)
+    assert ink[-1] > ink[0]

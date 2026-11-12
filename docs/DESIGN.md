@@ -381,7 +381,11 @@ a stem it has none of. Lightening and the counter thinning are monotone
 in the weight: a weight keeps at least what the next lighter named weight
 of its cut decided, so neither comes and goes along the weight axis.
 A choice of form keeps the lighter weight's too: once the ¢ or the $
-takes stubs for its stem, every heavier weight does. Between the watch
+takes stubs for its stem, every heavier weight does. The second form is a
+glyph of its own (`draw._second_spec`), as the variable font carries it:
+every rule here measures it against its own Regular, not the first
+form's, so the $ with stubs, which is the S and has the S's counters, is
+drawn in its weight's strokes. Between the watch
 axis's ends a glyph's lightening is the blend of what it takes at either
 end: the variable font draws that axis from its ends, so a lightening
 that came and went between them (some sixty glyphs, the italic @ among

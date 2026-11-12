@@ -9,7 +9,7 @@ from __future__ import annotations
 import contextlib
 import os
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Callable
 
 from . import cache
@@ -2006,10 +2006,57 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
 
 def drawn_spec(name: str, p: Params) -> Spec:
     """The drawing ``name`` gets at ``p``: where the font slants and has an
-    italic drawing of it (n.ital), that one replaces the upright one."""
+    italic drawing of it (n.ital), that one replaces the upright one. A
+    second form (second_form) is its glyph's drawing, pinned."""
     if p.slant and not p.plain and f'{name}.ital' in REGISTRY:
         return REGISTRY[f'{name}.ital']
+    if name not in REGISTRY:
+        base, _, free = name.rpartition('.')
+        if base in REGISTRY:
+            spec = drawn_spec(base, p)
+            for sq in spec.squint:
+                if sq.form and sq.free == free:
+                    return _second_spec(spec, sq, p)
     return REGISTRY[name]
+
+
+def pinned(fn: Callable, free: str, v: float) -> Callable:
+    """The drawing with its free variable held at v."""
+    def f(g):
+        g.overrides[free] = v
+        return fn(g)
+    f.__module__, f.__name__ = fn.__module__, getattr(fn, '__name__', f.__name__)
+    return f
+
+
+def second_form(name: str, free: str) -> str:
+    """The name of a glyph's second form (Squint.form) as a glyph of its
+    own: dollar.stem, and dollar.stem.ital for an italic drawing."""
+    root = name.removesuffix('.ital')
+    return f'{root}.{free}' + name[len(root):]
+
+
+_SECOND: dict = {}
+
+
+def _second_spec(spec: Spec, sq: Squint, p: Params) -> Spec:
+    """A glyph's second form as a glyph of its own: its drawing pinned to
+    that form, the rule that chose it gone. A form is measured against its
+    own Regular: the closed counters its horizontals thin for, the white a
+    symbol keeps, the topology the lock holds, the lightening a heavier
+    weight keeps from a lighter. The variable font carries the two forms
+    as two glyphs (arris.vf.forms) and always drew them so; the static
+    fonts measured the second against the first's Regular, and the dollar,
+    which with stubs for a stem is the S and has the S's counters, not the
+    four its stem cuts, was lightened as far as the rules go for whites it
+    no longer had: bars of 96 units at Black on an S of 160, a fifth
+    lighter at 690 than at 680."""
+    key = (spec.name, sq.free)
+    if key not in _SECOND:
+        _SECOND[key] = replace(spec, name=second_form(spec.name, sq.free), unicode=None,
+                               fn=pinned(spec.fn, sq.free, sq.limit(p)),
+                               squint=tuple(q for q in spec.squint if q is not sq))
+    return _SECOND[key]
 
 
 def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
@@ -2108,6 +2155,12 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
                 prev = _anchor(name, lighter[-1], ot, ob, width)[1].get(sq.free)
                 if prev is not None and (v is None or abs(prev - a0) > abs(v - a0)):
                     v = prev
+            a0, lim = g.defaults[sq.free], sq.limit(p)
+            if v is not None and (v - (a0 + lim) / 2) * (lim - a0) > 0:
+                # the second form is a drawing of its own, held to its own
+                # Regular by every rule (_second_spec), as the variable font
+                # carries it
+                return _draw(second_form(name, sq.free), p, ot, ob, width)
         if v is not None:
             overrides[sq.free] = v
             g = _build(spec, p, ot, ob, overrides, width)

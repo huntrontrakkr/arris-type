@@ -484,6 +484,23 @@ The six causes:
   steep edge meets a level one (the tab's) was cut again, half as deep
   again, and the ¸ changed by 1,700 square units between weights 400 and
   401.
+- The dollar with stubs for a stem is drawn in its weight's strokes.
+  Found reading every symbol at four weights against other families
+  (thirty at their heaviest: the dollar's thickest stroke 0.86 to 1.45 of
+  the H's stem, Arris 0.80). From 690 the stem stops running through the
+  S, and the S that is left has two bays, not the four counters the stem
+  cut; the rules that keep a symbol's white went on measuring it against
+  the Regular's four, could not find them, and lightened it as far as
+  they go: bars of 106 units at Bold on an S of 133, 96 at Black on 160,
+  28% of its ink gone between 680 and 690. The variable font, which
+  carries the two forms as two glyphs, never did this, so the static
+  fonts and the variable font disagreed. A second form is now a glyph of
+  its own in the engine too (`draw._second_spec`), measured against its
+  own Regular by every rule: bars of 133 at Bold and 170 at Black, and
+  its body grows with the S's again (an advance of 713 units at Black
+  for 654). The ¢ with stubs gains a twentieth of its ink at Bold and
+  Black the same way. Arris Watch's and Arris Mono's are unchanged (Mono
+  keeps the stem through at every weight).
 - The ≠ stands on the equals' bars. The rule that lightens a sign to
   keep its whites counted the wedges between the ≠'s slash and its bars,
   outside the bars: six whites at the Regular for the two a reader sees.
