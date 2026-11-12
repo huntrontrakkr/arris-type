@@ -284,7 +284,7 @@ def cruzeiro(g):
     wc = g.W - p.m
     stamp(g, 'C', width=wc)
     # the r as tall as leaves a stroke's white under the C's upper beak
-    k = min(0.62, max(0.45, (p.cap - beak_depth(p) - wmin(p)) / p.cap))
+    k = min(0.62, max(0.45, (p.cap - beak_depth(p, draw('C', p).sh) - wmin(p)) / p.cap))
     pr = _small_letter(p, k, 0.7).with_(mono=False)        # a letter inside a sign: the plain r, not Mono's footed one
     wr = REGISTRY['r'].width(pr)
     stamp(g, 'r', dx=g.W - wr - 0.25 * p.m, p=pr)
@@ -543,7 +543,7 @@ def hryvnia(g):
     stroke's white from its bar rather than run into it."""
     f = Frame(g, 9)
     p, W, H = f.p, f.W, f.p.cap
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     o, hang = bar_inset(p), bar_hang(p)
     xl, xr = f.X(1) + o, f.X(8) - o                          # the body, the bars running out past it
     yt, yb = f.Y(11), f.Y(1)
@@ -686,7 +686,7 @@ def lari(g):
     f = Frame(g, 10)
     p, W = f.p, f.W
     ya = f.Y(8)
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     g.stroke((W, f.Y(1)), B(f.X(1), f.Y(1)), B(f.X(1), ya), B(f.X(9), ya), (f.X(9), f.Y(1) + g.sh / 2 + d))
     for x in _stub_xs(p, W / 2):
         g.stroke((x, ya), (x, p.cap))
@@ -745,7 +745,7 @@ def pfennig(g):
     p = f.p
     g.clip = (0, -p.under, f.W, p.asc)
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
-    beak = max(f.Y(12) - beak_depth(p) + g.sh / 2, p.xh + max(p.m, 0.6 * p.sv))   # clear of the bowl
+    beak = max(f.Y(12) - beak_depth(p, g.sh) + g.sh / 2, p.xh + max(p.m, 0.6 * p.sv))   # clear of the bowl
     # In the italic the bowl's curved corner reaches down to a tail that
     # ends under it and shuts the slit's mouth into a pinhole at some weights
     # and not others, which the topology lock lightened the sign to open, on

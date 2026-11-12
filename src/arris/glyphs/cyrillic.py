@@ -115,7 +115,7 @@ def Zhe(g):
             g.stroke(*[(xm + sign * (x + ox - xm), y) for x, y in pts], start=a, end=b)
 
 
-# З's, Э's and Є's bowls are open: the counter rule (closed counters) never
+# Э's and Є's bowls are open (the З's too, which keeps its bars: below): the counter rule (closed counters) never
 # lightens them, and at Black their small capitals з э є kept only slits
 # between the beaks and the middle arm (solid at the heaviest grade). Their
 # horizontals thin under the squint instead, as far as the counter rule's,
@@ -123,7 +123,14 @@ def Zhe(g):
 OPEN_BOWLS = (Squint('sh_auto', lambda p: AUTO_MIN, whites=True),)
 
 
-@ccap('uni0417', 'З', 9, 2, squint=OPEN_BOWLS)
+# The Ze stands on the height's bar at every weight, as the Э, the Є and its own descender form (Ҙ) do. It was
+# thinned under the squint, and that rule gives all or nothing: from Bold its three bars stood at seven
+# tenths of the others' (93 units at Bold beside 133, less than its own 115 at SemiBold; 103 at Black beside
+# 147), and its waist, the two breaks of its end using its whole height from a stem of 189, came to a point
+# (the owner, 2026-11-12, of the italic's at 850: "The middle thing just looks so crappy here. It's super
+# thin. It doesn't make sense"). What the squint was put there for, the slits between the beaks and the
+# waist at Black, the beak's white now keeps (figures.off_the_beak: the waist's end steps back for it).
+@ccap('uni0417', 'З', 9, 2)
 def Ze(g):
     """The 3 with the 2's beak on top."""
     ze_shape(g)
@@ -132,10 +139,21 @@ def Ze(g):
 def ze_shape(g, foot_leg=None):
     """З. ``foot_leg``: the leg of the lower bowl's foot corners (the default:
     the parameter leg); Ҙ's drop hangs between them (cyrillic_ext.drop_leg)."""
+    from ..draw import _thickness, fill_leg
+    from ..geom import JOG, JOG_FILLS
+    from ..params import SQRT2
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     w = (off_the_beak(g, f, f.X(1), f.X(3), 6, 11, 1), f.Y(6))          # the waist's end, a beak's white off the beaks
-    g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6), big(p)), w)
+    # The upper bowl's rounder corner gives where the waist is short. Its diagonal's inner edge comes down on
+    # the waist's top, and between it and the break of the waist's end the top keeps a flat the outline
+    # holds (over geom.JOG, which closes a shorter step between two 45-degree edges: the italic's at Black,
+    # its end stepped back from the beaks, had 31 units there for 34, the top was taken for a miss, and the
+    # waist ended in a wedge, the diagonal's edge run straight through to the end's lower break).
+    edge = _thickness(p, g.sh)((SQRT2 / 2, SQRT2 / 2)) / SQRT2 - g.sh / 2    # the inner edge's foot on the waist's top, left of the corner's cut
+    flat = 1.1 * JOG * min(p.c, JOG_FILLS * fill_leg(p))
+    corner = min(big(p), max(p.leg, f.X(8) - edge - w[0] - p.c - flat))
+    g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6), corner), w)
     g.stroke(w, B(*f.P(8, 6)), B(*f.P(8, 1), foot_leg), B(*f.P(1, 1), foot_leg), (f.X(1), d))
 
 
@@ -290,7 +308,7 @@ def Yusbig(g):
 @ccap('uni042D', 'Э', 9, 2, squint=OPEN_BOWLS)
 def Ereversed(g):
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 1)), B(*f.P(1, 1)), (f.X(1), d))
     g.stroke((off_the_beak(g, f, f.X(1), f.X(3), 6, 11, 1), f.Y(6)), f.P(8, 6))
 

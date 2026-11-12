@@ -166,7 +166,7 @@ def delta(g):
 def epsilon(g):
     """A small Ze, mirrored: beaks at the right, the waist's point at the left."""
     f = Frame(g, 8, 'lower')
-    p, d = f.p, beak_depth(f.p, low=True)
+    p, d = f.p, beak_depth(f.p, g.sh, low=True)
     w = (off_the_beak(g, f, f.X(7), f.X(5), 4.5, 8, 1, d), f.Y(4.5))   # the waist's end, a beak's white off the beaks
     g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 4.5), big(p)), w)
     g.stroke(w, B(*f.P(1, 4.5)), B(*f.P(1, 1)), B(*f.P(7, 1)), (f.X(7), d))
@@ -268,7 +268,7 @@ def sigma(g):
 @glow('uni03C2', 'ς', 8, 2)
 def finalsigma(g):
     f = Frame(g, 8, 'lower')
-    p, d = f.p, beak_depth(f.p)
+    p, d = f.p, beak_depth(f.p, g.sh)
     g.clip = (0, -p.desc, f.W, p.xh)
     from .italic_forms import tail_run
     g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 2.5)), B(*f.P(7, 2.5)),

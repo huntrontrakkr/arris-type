@@ -276,6 +276,21 @@ def test_one_bar_and_one_overshoot_on_each_height(w):
     runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
     assert len(runs) == 3 and all(b - a == pytest.approx(cap, abs=0.01) for a, b in (runs[0], runs[-1]))
     assert runs[1][1] - runs[1][0] <= cap + 0.01
+    # and a beak hangs from the bar it is drawn on, so the beaks of the height end on one line: C's, G's, Э's,
+    # Є's and the euro's were still measured from the weight's own bar, 170 units at Black where the letters
+    # stand on 147, and ended 23 units under the S's and the 2's (4 at ExtraBold)
+    def beak(name, right):                                  # the top beak's lower end, on its side of the letter
+        ink = rings_to_shapely(draw(name, p).rings())
+        x0, y0, x1, y1 = ink.bounds
+        x = x1 - p.sv / 2 if right else x0 + p.sv / 2
+        col = ink.intersection(LineString([(x, y0 - 10), (x, y1 + 10)]))
+        return max(s.bounds[1] for s in getattr(col, 'geoms', [col]) if s.length > 1)
+    latin = [beak(n, r) for n, r in (('C', True), ('G', True), ('S', True), ('two', False), ('Euro', True))]
+    cyrillic = [beak(n, r) for n, r in (('uni042D', False), ('uni0404', True), ('uni0417', False))]
+    assert max(latin) - min(latin) < 0.01 and max(cyrillic) - min(cyrillic) < 0.01, (latin, cyrillic)
+    # (the Cyrillic capitals take no overshoot yet, draw.OPTICAL's names being the Latin letters and the
+    # figures: their beaks end the O's overshoot's share lower, under a unit)
+    assert abs(latin[0] - cyrillic[0]) < 1.0
     # one overshoot: what stands over the line stands over it by the O's (the o's)
     over = lambda ch, H: draw(CMAP[ch], p).rings() and max(y for r in draw(CMAP[ch], p).rings() for _, y in r) - H
     assert {round(over(ch, p.cap), 3) for ch in 'OCGQS0289'} == {round(over('O', p.cap), 3)}
@@ -381,17 +396,37 @@ def test_the_italics_hooks_keep_their_white(w):
     from arris.italic import italic
     p = italic(params(w))
     least = BAY_WHITE * least_white(p)
-    for name in ('S', 'uni0417', 'uni042D', 'uni0404', 'uni03B5', 'uni0437', 'uni044D', 'uni0454', 'uni04D8', 'uni04BC', 'question'):
+    for name in ('S', 'uni0417', 'uni042D', 'uni0404', 'uni03B5', 'uni0437', 'uni044D', 'uni0454', 'uni04D8', 'uni04BC', 'uni04A8',
+                 'question'):
         t = _throat(rings_to_shapely(draw(name, p).rings()), p.sv)
         assert t is None or t >= least - 3.0, (name, t, round(least, 1))
+    # (a mouth's own rule never draws its beak out: the Ә's and the Ҽ's stood 31 units open at Black, the beak
+    # 24 longer than the bars it hangs from make it; the Ҩ's, over a loop come down all it may, 5)
+    for name in ('uni04D8', 'uni04BC', 'uni04A8'):
+        assert draw(name, p).defaults_used['mouth'] >= least - 3.0, name
 
     def curved(name, q):                                    # the points off the curve: a corner that is curved has them
         return sum(1 for r in place(name, q)[0] for pt in r if len(pt) > 2 and not pt[2])
     for name in ('S', 'uni0417', 'uni042D', 'uni0404'):
         assert curved(name, p) == curved(name, italic(params(700))), name
+    # The Ze stands on the height's bar, as the Э and the Є (it was thinned to seven tenths of it from Bold,
+    # and its waist's end, the two breaks using its whole height, was a point from a stem of 189: the owner,
+    # 2026-11-12, "The middle thing just looks so crappy here. It's super thin"), and its waist ends square
+    # to its own line: the top keeps a flat between the upper bowl's corner and the end's break (thinned, at
+    # Black, it had 31 units there for the 34 an outline holds, and the waist ended in a wedge, 30 units
+    # longer under its line than over it).
+    ze = draw('uni0417', p)
+    assert ze.sh == pytest.approx(draw('uni042D', p).sh) and ze.sh == pytest.approx(draw('E', p).sh)
+    ink = rings_to_shapely(ze.rings())
+    ends = []
+    for y in (p.cap / 2 + ze.sh / 2 - 2, p.cap / 2 - ze.sh / 2 + 2):
+        row = ink.intersection(LineString([(p.sv + 1, y), (ze.W - p.sv - 1, y)]))
+        ends.append(min(s.bounds[0] for s in getattr(row, 'geoms', [row]) if s.length > 1))
+    assert abs(ends[0] - ends[1]) < 3.0, ends
     assert draw('S', p).sh_k < 1.0 and draw('S', params(w)).sh_k == 1.0  # the italic's bars give; the upright's need not
-    for name in ('S', 'uni0417', 'uni042D', 'uni0404', 'uni03B5'):         # and upright Arris is the drawing it was
-        assert _throat(rings_to_shapely(draw(name, params(w)).rings()), params(w).sv) in (None, pytest.approx(0.49 * params(w).sv, abs=4))
+    for name in ('S', 'uni0417', 'uni042D', 'uni0404', 'uni03B5'):         # and upright Arris keeps the white on the bars it has
+        t = _throat(rings_to_shapely(draw(name, params(w)).rings()), params(w).sv)
+        assert t is None or t >= BAY_WHITE * least_white(params(w)) - 3.0, (name, t)
 
 
 @pytest.mark.parametrize('w', [700, 800, 900])
@@ -785,15 +820,29 @@ def test_every_bowl_meets_its_stem_through_a_notch(w):
         assert _pieces(ch, p, foot) == notched, ch
 
 
-@pytest.mark.parametrize('w', [300, 400, 600, 700])
+@pytest.mark.parametrize('w', [300, 400, 600, 700, 800, 900])
 def test_the_italics_q_g_and_y_take_the_bowls_notch_and_keep_their_tails_flat(w):
     """The italic's bowls on a descending stem join it through the little
     notch too, at the foot; its hooks end flat, without the upright's
     terminal (the owner: "the descender should remain flat but ... a little
     bit of a crook in the bowls ... little teeny weeny notch", and of the
-    y: "this should be on the y as well")."""
+    y: "this should be on the y as well"). The notch is kept to Black
+    (lower.BOWL_NOTCH_ITAL): the italic's join goes two breaks deeper into
+    its stem than the upright's, and the notch lost 11 units with every
+    hundred of weight, 12 deep at Bold and gone from ExtraBold. And the
+    join does not cut the bar it joins: from SemiBold its stroke began
+    inside the foot, its level end cut the foot's top, and the q's foot was
+    124 units for its top's 131 at Bold, 137 for 168 at Black, with a kink
+    in the counter's far corner where the cut ran out."""
     from arris.italic import italic, polylines
     p = italic(params(w))
+    q = rings_to_shapely(draw('q', p).rings())              # (as drawn, before the slant: the bars are level)
+    x = (q.bounds[0] + q.bounds[2]) / 2 - 20
+    col = q.intersection(LineString([(x, -5), (x, p.xh + 20)]))
+    runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(col, 'geoms', [col]) if s.length > 1)
+    assert runs[0][1] - runs[0][0] == pytest.approx(runs[-1][1] - runs[-1][0], abs=1.5)     # the foot, the top
+    if w >= 600:                                            # (lighter, the join's step shows under the bar, as it is meant to)
+        assert len(draw('q', p).rings()[1]) == 8            # the counter: four walls and their four corners
 
     def slanted(ch):                                    # the italic's outline as the font has it, its curves in chords
         return rings_to_shapely(polylines(place(CMAP[ch], p)[0]))

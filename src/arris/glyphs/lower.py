@@ -755,6 +755,17 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     deeper = r * (shoulder_enter(p) - p.c)
     if flat > STEP_KEPT * p.c:
         deeper = min(deeper, flat - STEP_KEPT * p.c)
+    if p.slant and drop < SHOULDER_DROP and p.optical and not p.mono:
+        # The italic's bowls keep their notch too. The italic's shoulder goes deeper into its stem than the
+        # upright's, by two breaks of the weight's own less the fill, and the notch over it is that much
+        # shallower: at the foot of the cursive q, g and y it lost 11 units with every hundred of weight, 44
+        # deep at Regular, 12 at Bold and gone from ExtraBold (the owner, of the upright's: "if we're going
+        # to do it on the a and the u, then we need to do it on all the bowls"; of the italic's: "a little
+        # bit of a crook in the bowls"). It keeps BOWL_NOTCH_ITAL of a break past the corner's fill: the
+        # shoulder goes no deeper than leaves it, from a little past SemiBold.
+        over = bar_half(g) + rise - (1 - r) * (p.sv / 2 + k) - r * p.c   # the notch's corner on the stem's side, as entered a break
+        kept = (BOWL_NOTCH_ITAL * p.c + fill_leg(p) / 2 ** 0.5) * p.optical
+        deeper = min(deeper, max(0.0, over - kept))
     x0 -= deeper
     step = rise - g.sh / 2                                  # the diagonal's cut, below the arch's underside
     if upright and step < p.c:
@@ -774,17 +785,21 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
                 return plain
             meet = x0 + rise
         return [(meet - g.sh / 2, y_top - g.sh / 2), (meet, y_top), B(x_right, y_top)], 'h'
-    if p.slant and drop >= SHOULDER_DROP:
+    if p.slant:
         # An arch in the italic too: the cursive's branch (deeper than the upright's shoulder,
-        # italic_forms.BRANCH) and the upright's own, slanted (Arris Mono Italic's n, m and h). A bowl's
-        # join, BOWL_DROP, keeps the little notch it was given. The italic's arch is not held to the
-        # upright's room; where its branch would show under an edge break below the arch it is cut
-        # along the arch's underside, and the counter's top is the arch's alone. Drawn whole, the
-        # cursive m's stood under a tenth of a break below its arches at Bold and inside them from ExtraBold,
-        # and the white ran up into the arch beside it in a pocket, another under each arch (the
-        # owner: "some funky stuff going on under the loops"); Arris Mono Italic's m had the pocket
-        # under its second arch at Regular. The underside is the arch's as the italic draws it, a
-        # horizontal cos(slant) thinner than its name (geom.Thickness).
+        # italic_forms.BRANCH) and the upright's own, slanted (Arris Mono Italic's n, m and h). The
+        # italic's arch is not held to the upright's room; where its branch would show under an edge
+        # break below the arch it is cut along the arch's underside, and the counter's top is the
+        # arch's alone. Drawn whole, the cursive m's stood under a tenth of a break below its arches at
+        # Bold and inside them from ExtraBold, and the white ran up into the arch beside it in a pocket,
+        # another under each arch (the owner: "some funky stuff going on under the loops"); Arris Mono
+        # Italic's m had the pocket under its second arch at Regular. The underside is the arch's as the
+        # italic draws it, a horizontal cos(slant) thinner than its name (geom.Thickness).
+        # A bowl's join (BOWL_DROP: the cursive q, g and y) the same. It was left to start where its
+        # diagonal does, and from SemiBold that is inside the bar: the stroke's level end cut the bar it
+        # joins, and the bowl's foot was drawn that much thinner than its top beside the join (124 units
+        # for 131 at Bold, 137 for 168 at Black), with a kink in the counter's far corner where the cut
+        # ran out.
         half = bar_half(g)
         if rise - half < p.c:
             meet = max(x0 + rise, notch_meet(g, xs, half)) if joined else x0 + rise
@@ -801,6 +816,8 @@ SHOULDER_DROP = 2.0     # modules below the arch where an arch's shoulder leaves
 STEP_KEPT = 1.1         # edge breaks: the flat a shoulder's cut keeps past its fill (over geom.JOG, so the outline keeps the step)
 KINK_STEP = 0.999       # edge breaks: the most a shoulder kept for its kink alone rises past the arch's underside (under one: no step is drawn)
 BOWL_DROP = 1.0         # the same for a bowl's join to its stem
+BOWL_NOTCH_ITAL = 0.5   # edge breaks, the weight's own: the notch a bowl's join keeps in the italic, clear of its corner's fill (the
+                        # upright's q has 24 units at Black, half a break)
 NOTCH_KEPT = 1.5        # edge breaks, the weight's own: the notch an arch keeps over its shoulder at every weight of Arris (a
                         # bowl's, three quarters of it)
 SHOULDER_NOTCH = 1.5    # the least notch over a shoulder, in edge breaks down the stem's side: a break deep where the stem

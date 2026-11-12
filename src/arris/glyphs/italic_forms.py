@@ -385,7 +385,7 @@ def j_ital(g):
     f = Frame(g, 6, 'asc', top=g.p.asc + g.p.sv)
     p = f.p
     _free(g)
-    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
     entry(g, f, f.X(5))
     _dot(g, f, f.X(5))
 
@@ -398,7 +398,7 @@ def dotlessj_ital(g):
     f = Frame(g, 6, 'asc', top=g.p.asc + g.p.sv)
     p = f.p
     _free(g)
-    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
     entry(g, f, f.X(5))
 
 

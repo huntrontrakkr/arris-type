@@ -151,15 +151,23 @@ def cross_bar(g, x0, x1, y):
 
 def beak_free(g):
     """A beak's depth, which a mouth's opening may shorten, never past its
-    outer flank (as the 3's and 5's: figures.beak_bottom)."""
+    outer flank (as the 3's and 5's: figures.beak_bottom), and never
+    lengthens: the opening's limit is the shortest beak of the weight's own
+    bars at their thinnest (figures._beak_limit), and where the letter's
+    bars are thinner than that (the italic's Ә and Ҽ at Black, their bars
+    at the height's common bar and thinned again for the bay,
+    figures.bay_stack) the limit was the longer of the two: the mouth's own
+    rule drew the beak out 24 units and left the mouth 31 for the 55 the
+    bars had given way for."""
     from ..params import outer_leg
     from .figures import _shortest
     p = g.p
+    own = beak_depth(p, g.sh)
     floor = _shortest(p, g.sh) if p.slant else outer_leg(p, sh=g.sh) + p.c
-    return max(g.free('beak', beak_depth(p, g.sh)), floor)
+    return max(min(g.free('beak', own), own), floor)
 
 
-def _mouth_frame(g, modules, rows):
+def _mouth_frame(g, modules, rows, floor=None):
     """The frame of a letter whose beak faces a bar (Ә, Ҽ). Upright, its
     mouth's opening shortens the beak (MOUTH). In the italic the beak keeps
     its flank, which its corners need to be curved (beak_free), and the
@@ -167,7 +175,7 @@ def _mouth_frame(g, modules, rows):
     as the S's do (figures.bay_stack)."""
     from .figures import bay_stack
     if g.p.slant:
-        return bay_stack(g, lambda: Frame(g, modules), [rows])
+        return bay_stack(g, lambda: Frame(g, modules), [rows], floor=floor)
     return Frame(g, modules)
 
 
@@ -444,7 +452,7 @@ def Dzeabkhasian(g):
     """The 3 with a flat top and a 45-degree return (ẞ's), its lower bowl
     the 3's."""
     f = Frame(g, 9)
-    p, d = f.p, beak_depth(f.p)
+    p, d = f.p, beak_depth(f.p, g.sh)
     x8, xm = f.X(8), f.X(4)
     ym = f.Y(11) - (x8 - xm)
     g.stroke(f.P(1, 11), (x8, f.Y(11)), (xm, ym))
@@ -580,7 +588,7 @@ def Ertick(g):
 def Koppa(g):
     """C whose lower arm turns down into the descender."""
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(7.5, 1), (f.X(7.5), -TAIL * p.desc))
     _down(g, TAIL * p.desc)
 
@@ -703,7 +711,10 @@ def Haabkhasian(g):
     letter at Black and a heavy grade), or the bowl is too narrow to turn
     down (the monospaced cell), the bowl ends flat on its top bar."""
     from ..params import outer_leg
-    f = Frame(g, 11)
+    # (in the italic the beak keeps its flank and cannot shorten, _mouth_frame: the loop comes down all it may,
+    # and past that the bars give, as the Ә's and the Ҽ's. Over the loop at its lowest the mouth was 26 units
+    # at a stem of 189 and 5 at Black)
+    f = _mouth_frame(g, 11, (6.5, 11), floor=_ha_loop_limit(g.p))
     p = g.p
     xr = f.X(10)
     xm = (f.X(1) + xr) / 2                                  # the loop as wide as the bowl beside it
@@ -783,7 +794,7 @@ def Tjekomi(g):
 def Sjekomi(g):
     """G without its bar: the C whose foot turns up the right side."""
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)), f.P(8, 6))
 
 
@@ -958,7 +969,7 @@ def dzeabkhasian(g):
     x7, xm = f.X(7), f.X(3.5)
     ym = f.Y(8) - (x7 - xm)
     g.stroke(f.P(1, 8), (x7, f.Y(8)), (xm, ym))
-    g.stroke((xm, ym), B(x7, ym), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    g.stroke((xm, ym), B(x7, ym), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
 
 
 def _che_small(g, desc=False):

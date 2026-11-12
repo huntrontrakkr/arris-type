@@ -71,7 +71,7 @@ def Upsilonhook(g):
     f = Frame(g, 10)
     p, W, H = f.p, f.W, f.p.cap
     xl, xr = f.X(1), f.X(9)
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     yt = f.Y(11)
     xa = xl + 1.25 * p.leg + 0.5 * p.sv                     # where the arm meets the top line
     yj = yt - 2 * (W / 2 - xa)                              # at the 7's 2:1 slope, as the v's arms
@@ -134,7 +134,7 @@ def kappa_symbol(g):
     yt, yb = f.Y(8), f.Y(1)
     run = (yt - yb) / 2
     xa = (W - run) / 2
-    d = beak_depth(p) - g.sh / 2                            # the beak's stub, below the flat's centre
+    d = beak_depth(p, g.sh) - g.sh / 2                            # the beak's stub, below the flat's centre
     x0, x1 = p.sv / 2, W - p.sv / 2
     curl = [(x0, yt - d), B(x0, yt), (xa, yt), (xa + run, yb), B(x1, yb), (x1, yb + d)]
     if _draws(g, curl):
@@ -208,7 +208,7 @@ def koppaarchaic(g):
 def Stigma(g):
     """The final sigma at capital height."""
     f = Frame(g, 9)
-    p, d = f.p, beak_depth(f.p)
+    p, d = f.p, beak_depth(f.p, g.sh)
     g.clip = (0, -p.desc, f.W, p.cap)
     from .italic_forms import tail_run
     g.stroke((f.X(8), p.cap - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 4)), B(*f.P(8, 4)),
@@ -269,7 +269,7 @@ def _sampi(g, f, xl, xr, top, foot):
     arch and apart. Where the x-height has no room for them (the small
     sampi at heavy weights) the lower one runs into the descender."""
     p = g.p
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     g.stroke((xl, top + g.sh / 2 - d), B(xl, top), B(xr, top), (xr, foot))
     t = p.sh + (p.sd - p.sh) * 26.565 / 45                   # thickness at the shallow slope (geom.Thickness)
     v = t * 5 ** 0.5 / 2                                    # ... measured upright

@@ -63,7 +63,7 @@ def c_shape(g, foot_leg=None):
     ``foot_leg``: the leg of the foot's corners (the default: the parameter
     leg); Ҫ's drop hangs between them (cyrillic_ext.drop_leg)."""
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1), foot_leg), B(*f.P(8, 1), foot_leg),
              (f.X(8), d))
 
@@ -92,7 +92,7 @@ def F(g):
 @cap('G', 9, 2)
 def G(g):
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     # the bar below the middle and deep into the bowl, clear of the S and B;
     # never nearer the bowl's foot than the least white (at Black the white
     # under it was 79 units, half a stroke: a slit)
@@ -143,7 +143,7 @@ def J(g):
     f = Frame(g, 7.5)
     p = f.p
     x_arm = min(f.X(J_ARM), f.X(6.5) - 1.5 * p.sv)          # past the stem by a stem at least
-    g.stroke((x_arm, f.Y(11)), f.P(6.5, 11), B(*f.P(6.5, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p)))
+    g.stroke((x_arm, f.Y(11)), f.P(6.5, 11), B(*f.P(6.5, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p, g.sh)))
 
 
 @cap('K', 9, 1)

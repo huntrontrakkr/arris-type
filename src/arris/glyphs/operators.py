@@ -1658,7 +1658,7 @@ def partialdiff(g):
     xl, xr = p.sv / 2, W - p.sv / 2
     yb, yt = g.sh / 2, p.cap - g.sh / 2
     ybt = 0.58 * p.cap - g.sh / 2
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     g.stroke(B(xl, yb), B(xr, yb), B(xr, ybt), B(xl, ybt), closed=True)
     # The right side runs on up from the bowl's straight side, so the two are one at every weight,
     # and turns back over the bowl into the 2's beak while that leaves a stem's white above the

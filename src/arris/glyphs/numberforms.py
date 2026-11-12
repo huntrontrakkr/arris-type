@@ -192,7 +192,7 @@ def sixlate(g):
     f = Frame(g, 9)
     p, H = f.p, f.p.cap
     g.clip = (0, -p.under, f.W, H)
-    g.stroke((f.X(8), H - beak_depth(p)), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)),
+    g.stroke((f.X(8), H - beak_depth(p, g.sh)), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)),
              (f.X(8), -p.under))
 
 

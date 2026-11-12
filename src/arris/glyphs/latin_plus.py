@@ -305,7 +305,7 @@ def Ezh(g):
     y_mid = f.Y(11) - (x8 - f.X(4.5))
     g.stroke(f.P(1, 11), (x8, f.Y(11)))
     g.stroke((x8, f.Y(11)), (f.X(4.5), y_mid))
-    g.stroke((f.X(4.5), y_mid), B(x8, y_mid), B(*f.P(8, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p)))
+    g.stroke((f.X(4.5), y_mid), B(x8, y_mid), B(*f.P(8, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p, g.sh)))
 
 
 @glyph('uni0292', 'ʒ', letter_width(8, 2), kind='lower')
@@ -317,7 +317,7 @@ def ezh(g):
     y_mid = f.Y(8) - (x7 - f.X(4))
     g.stroke(f.P(1, 8), (x7, f.Y(8)))
     g.stroke((x7, f.Y(8)), (f.X(4), y_mid))
-    g.stroke((f.X(4), y_mid), B(x7, y_mid), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    g.stroke((f.X(4), y_mid), B(x7, y_mid), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
 
 
 @glyph('uni01E4', 'Ǥ', width_of('G', 1.5), kind='cap')

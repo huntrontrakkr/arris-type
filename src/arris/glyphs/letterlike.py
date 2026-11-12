@@ -150,7 +150,7 @@ def dsj(g):
     xi = ds_x(p, xs)
     yb = fj.Y(-2)
     x1 = fj.X(1)
-    g.stroke((xi, p.xh, ds_t(p)), B(xi, yb), B(x1, yb), (x1, -p.desc + beak_depth(p)))
+    g.stroke((xi, p.xh, ds_t(p)), B(xi, yb), B(x1, yb), (x1, -p.desc + beak_depth(p, g.sh)))
     g.stroke((xs, p.xh), (xs, yb))
     _dot(g, f, (xs + xi) / 2)
     g.clip = None
@@ -324,7 +324,7 @@ def scriptg(g):
     f = Frame(g, 8, 'lower')
     p = f.p
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    top = min(-p.desc + beak_depth(p), -max(p.m, 0.6 * p.sv))     # white under the bowl
+    top = min(-p.desc + beak_depth(p, g.sh), -max(p.m, 0.6 * p.sv))     # white under the bowl
     g.stroke(f.P(7, 9), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), max(top, f.Y(-2) + 0.01)))
     close_slit(g, f.X(1) + p.sv / 2, f.X(7), f.Y(-2) + g.sh / 2, f.Y(1) - g.sh / 2)
 
@@ -391,7 +391,7 @@ def weierstrass(g):
     drop = min(hook_room(p), max(0.0, 2.5 * p.c - (p.desc - outer_leg(p))))
     yh = f.Y(-2) - drop
     g.clip = (-g.W, -p.desc - drop, 2 * g.W, p.xh)
-    g.stroke((xs, p.xh), B(xs, yh), B(p.sv / 2, yh), (p.sv / 2, f.Y(-2) + g.sh / 2 + beak_depth(p)))
+    g.stroke((xs, p.xh), B(xs, yh), B(p.sv / 2, yh), (p.sv / 2, f.Y(-2) + g.sh / 2 + beak_depth(p, g.sh)))
     g.stroke((xs, f.Y(8)), B(xb, f.Y(8)), B(xb, f.Y(1)), (xs, f.Y(1)), closed=True)
     _entry(g, xs, p.xh)
 
@@ -486,7 +486,7 @@ def frakturZ(g):
     yb = -p.desc + g.sh / 2
     g.stroke((0, yt), (W, yt))
     g.stroke((yt + a, yt), (xm, ym), start='h', end='flat')
-    beak = min(yb + g.sh / 2 + beak_depth(p), ym - g.sh / 2 - max(p.m, 0.6 * p.sv))
+    beak = min(yb + g.sh / 2 + beak_depth(p, g.sh), ym - g.sh / 2 - max(p.m, 0.6 * p.sv))
     g.stroke((xm - p.sv / 4, ym), B(xr, ym), B(xr, yb), B(xl, yb), (xl, max(beak, yb + 0.01)))
 
 

@@ -61,7 +61,7 @@ def _left_tail(g, x, top):
     f = Frame(g, 8, 'asc')
     yd = f.Y(-2)
     xl = x - _hook_room(p)
-    g.stroke((x, top), B(x, yd), B(xl, yd), (xl, -p.desc + beak_depth(p)))
+    g.stroke((x, top), B(x, yd), B(xl, yd), (xl, -p.desc + beak_depth(p, g.sh)))
 
 
 @glyph('uni019D', 'Ɲ', lambda p: REGISTRY['N'].width(p) + _hook_room(p), kind='cap')
@@ -74,7 +74,7 @@ def Nhookleft(g):
     f = Frame(g, 8, 'asc')
     xl, xr = o + p.sv / 2, g.W - p.sv / 2
     yd = f.Y(-2)
-    g.stroke((xl, H), B(xl, yd), B(xl - o, yd), (xl - o, -p.desc + beak_depth(p)))
+    g.stroke((xl, H), B(xl, yd), B(xl - o, yd), (xl - o, -p.desc + beak_depth(p, g.sh)))
     g.stroke((xr, 0), (xr, H))
     at = n_diagonal(g, xl + p.sv / 2, xr - p.sv / 2, H)
     # cut flush on the cap line and the baseline (the N's clip does that; this
@@ -99,7 +99,7 @@ def _cap_hook(g, x):
     f = Frame(g, 9)
     yt = f.Y(11)
     xl = x - _hook_room(p)
-    g.stroke((x, yt), B(xl, yt), (xl, yt - 2 * beak_depth(p)))
+    g.stroke((x, yt), B(xl, yt), (xl, yt - 2 * beak_depth(p, g.sh)))
 
 
 @glyph('uni0181', 'Ɓ', lambda p: REGISTRY['B'].width(p) + _hook_room(p), kind='cap')
