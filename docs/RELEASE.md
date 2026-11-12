@@ -113,6 +113,22 @@ stands.
   top's 168 at Black). A mouth's own rule never draws its beak out (the
   italic Ә and Ҽ stood 31 units open at Black for 55; the Ҩ, 5). The
   cursive j's body keeps 0.85 of a break inside its hook.
+- The italic's lowercase stands on the upright's bar. It kept the weight's
+  own horizontal, and from SemiBold a line of it was the darker of the
+  two: by 2.6% at Black, on bars of 170 units beside the upright's 118,
+  every counter of the cursive the tighter for it. The cursive e's top is
+  that bar and its diagonal alone gives for its eye.
+- Cyrillic widths, read on eighteen families that have it
+  (`tools/cyrillic_shares.py`: each letter's advance as a share of the
+  Н's). Arris stood inside their range for 48 of the 66 basic letters at
+  Regular; Л Д Ж Ф Ш Щ and their small letters stood under it (the Ш 1.23
+  of the Н for their 1.29 to 1.50: the three-stem letters had the m's
+  fault before it was widened) and keep their drawings in wider bodies
+  (`cyrillic.EL_BODY` and the rest). 57 of 66 now. Left: и й И Й, which
+  are the N's width, 18% over the Н's at Bold and 25% at Black where no
+  family goes past 5% (the Latin N the same against the H: its diagonal
+  holds one slope and the letter widens for it), and у У, the Latin y's
+  drawing, heavier than any family's.
 - The letters built on the 3. The Ze stands on the height's bar, as the Э,
   the Є and the Ҙ: thinned under the squint, which gives all or nothing,
   its three bars stood at seven tenths of the others' from Bold and its

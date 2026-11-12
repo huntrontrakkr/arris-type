@@ -75,7 +75,18 @@ def _bent_leg(f, g, x_top, y_top, x_foot):
     return [(x_top, y_top), (x_top, y_bend), (x_foot, yb)]
 
 
-@ccap('uni041B', '\u041b', 9, 2)
+# Widths by the share of the Н's that eighteen families give each letter (Exo 2, Fira Sans, IBM Plex Sans,
+# Inter, Manrope, Montserrat, Noto Sans, Onest, Roboto, Rubik, Source Sans 3, Tektur and six more, at
+# Regular and Bold: the advance of each letter over the Н's, and the н's for the small ones). Arris's stood
+# inside their range for 48 of the 66 letters at Regular; these did not. The Л was 0.91 of the Н for their
+# 0.99 (0.92 to 1.11), the Д 0.93 for 1.03, the Ж 1.16 for 1.30 (1.18 to 1.50), the Ф 1.02 for 1.13 (1.04 to
+# 1.36), the Ш 1.23 for 1.35 (1.29 to 1.50) and the Щ 1.25 for 1.38: the three-stem letters had the m's
+# fault before it was widened (lower.M_BODY), counters three modules wide beside the Н's five. Each keeps
+# its drawing in a wider body, as the m does.
+EL_BODY, DE_BODY, ZHE_BODY, EF_BODY, SHA_BODY, SHCHA_BODY = 10, 11, 14.5, 12, 13.5, 14.5
+
+
+@ccap('uni041B', '\u041b', 9, 2, width=letter_width(EL_BODY, 2))
 def El(g):
     f = Frame(g, 9)
     g.stroke(f.P(8, 0), f.P(8, 11), f.P(2.5, 11))
@@ -89,7 +100,7 @@ def _el_leg(g, f):
     g.stroke((x0, f.Y(11)), (x0, y_bend), (x1, 0), end='h')
 
 
-@ccap('uni0414', 'Д', 10, 2)
+@ccap('uni0414', 'Д', 10, 2, width=letter_width(DE_BODY, 2))
 def De(g):
     f = Frame(g, 10)
     p, W = f.p, f.W
@@ -101,7 +112,7 @@ def De(g):
         g.stroke((x, f.Y(1)), (x, -0.8 * p.desc))
 
 
-@ccap('uni0416', '\u0416', 13, 3)
+@ccap('uni0416', '\u0416', 13, 3, width=letter_width(ZHE_BODY, 3))
 def Zhe(g):
     """K's arm and leg, back to back on one stem."""
     f = Frame(g, 13)
@@ -184,7 +195,7 @@ def U_(g):
     g.stroke(f.P(8, 12), B(*f.P(8, 1)), f.P(2, 1))
 
 
-@ccap('uni0424', 'Ф', 11, 3)
+@ccap('uni0424', 'Ф', 11, 3, width=letter_width(EF_BODY, 3))
 def Ef(g):
     f = Frame(g, 11)
     g.stroke(B(*f.P(1, 3)), B(*f.P(10, 3)), B(*f.P(10, 9)), B(*f.P(1, 9)), closed=True)
@@ -220,14 +231,14 @@ def Che(g):
     g.stroke(f.P(8, 0), f.P(8, 12))
 
 
-@ccap('uni0428', 'Ш', 12, 3)
+@ccap('uni0428', 'Ш', 12, 3, width=letter_width(SHA_BODY, 3))
 def Sha(g):
     f = Frame(g, 12)
     g.stroke(f.P(1, 12), f.P(1, 1), f.P(11, 1), f.P(11, 12))
     g.stroke((f.W / 2, f.Y(1)), (f.W / 2, f.p.cap))
 
 
-@ccap('uni0429', 'Щ', 13, 3)
+@ccap('uni0429', 'Щ', 13, 3, width=letter_width(SHCHA_BODY, 3))
 def Shcha(g):
     f = Frame(g, 13)
     p, W = f.p, f.W

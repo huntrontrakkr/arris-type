@@ -636,7 +636,7 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
     g.sh_auto = overrides.get('sh_auto', 1.0)
     g.defaults['sh_auto'] = 1.0
     if spec.kind == 'lower' and not p.slant:
-        g.zone_k = p.low                    # (the italic keeps its own strokes: its letters are drawn for them)
+        g.zone_k = p.low
         if p.optical and spec.name not in ZONE_SETTERS and not _OWN_BAR[0]:
             # The zone's bar is the one the a's and the e's hooks hang from (lower.hook_ref): where those
             # thin it with their closed end's bar, from ExtraBold, every bar of the lowercase thins with
@@ -648,6 +648,15 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
             ref = hook_ref(p)
             if ref is not None:
                 g.zone_k = ref[0] / p.sh
+    elif spec.kind == 'lower' and p.optical and not _OWN_BAR[0]:
+        # The italic's lowercase stands on the upright's bar. It kept the weight's own (it is not thinned
+        # for the x-height as the upright is), and from SemiBold a line of it was the darker of the two: by
+        # 2.6% at Black, on bars of 170 units beside the upright's 118, with every counter of the cursive the
+        # tighter for it.
+        from .glyphs.lower import hook_ref
+        ref = hook_ref(p.with_(slant=0.0))
+        if ref is not None:
+            g.zone_k = min(1.0, ref[0] / p.sh)
     elif spec.kind in ('cap', 'fig') and p.optical and spec.name not in CAP_SETTERS and not _OWN_BAR[0]:
         # The capitals and the figures the same: one bar on the cap height, the one the 5, the 6 and the 9
         # keep where their mouths hold them (from ExtraBold: 147 units to Black). Each letter thinned for

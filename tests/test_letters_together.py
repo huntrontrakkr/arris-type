@@ -429,6 +429,45 @@ def test_the_italics_hooks_keep_their_white(w):
         assert t is None or t >= BAY_WHITE * least_white(params(w)) - 3.0, (name, t)
 
 
+@pytest.mark.parametrize('w', [500, 600, 700, 800, 900])
+def test_the_italics_lowercase_stands_on_the_uprights_bar(w):
+    """The italic's lowercase kept the weight's own horizontal (it is not
+    thinned for the x-height as the upright's is), and from SemiBold a
+    line of it was the darker of the two: by 2.6% at Black, on bars of 170
+    units beside the upright's 118, with every counter of the cursive the
+    tighter for it. It stands on the upright's bar (draw._start)."""
+    from arris.glyphs.lower import hook_ref
+    from arris.italic import italic
+    p = params(w)
+    bar = hook_ref(p)[0]
+    assert {round(draw(ch, italic(p)).sh0, 6) for ch in 'obdpqgnhmucz'} == {round(bar, 6)}
+    assert bar < p.sh                                        # (the weight's own, which it had)
+
+
+@pytest.mark.parametrize('w', [400, 700])
+def test_the_cyrillics_widths_stand_in_other_families_range(w):
+    """Each letter's advance as a share of the Н's, in eighteen families
+    that have Cyrillic (tools/cyrillic_shares.py), is a range, and six of
+    Arris's capitals stood under it at Regular with their small letters:
+    the Л 0.91 of the Н for 0.92 to 1.11, the Д 0.93 for their middle's
+    1.03, the Ж 1.16 for 1.18 to 1.50, the Ф 1.02 for 1.04 to 1.36, the Ш
+    1.23 for 1.29 to 1.50, the Щ 1.25 for 1.31 to 1.56. The three-stem
+    letters had the m's fault before it was widened, counters three
+    modules wide beside the Н's five. Each keeps its drawing in a wider
+    body (cyrillic.EL_BODY and the rest)."""
+    p = params(w)
+    adv = lambda name: place(name, p)[1]
+    share = lambda name: adv(name) / adv('H')
+    # (the families' least and most at Regular and Bold, the wider of the two ranges)
+    for name, lo, hi in (('uni041B', 0.92, 1.11), ('uni0414', 0.90, 1.23), ('uni0416', 1.18, 1.50), ('uni0424', 1.02, 1.36),
+                         ('uni0428', 1.29, 1.54), ('uni0429', 1.31, 1.58)):
+        assert lo <= share(name) <= hi, (name, round(share(name), 3))
+    small = lambda name: adv(name) / adv('uni043D')                         # (against the н)
+    for name, lo, hi in (('uni043B', 0.94, 1.06), ('uni0434', 0.94, 1.16), ('uni0436', 1.18, 1.53), ('uni0448', 1.27, 1.50),
+                         ('uni0449', 1.25, 1.59)):
+        assert lo <= small(name) <= hi, (name, round(small(name), 3))
+
+
 @pytest.mark.parametrize('w', [700, 800, 900])
 def test_the_ezhs_wedge_keeps_a_bays_white(w):
     """The ezh and the Abkhasian dze are a top bar, a diagonal back to the
@@ -906,15 +945,17 @@ def test_the_cursive_e_gives_only_its_top_and_bar_for_its_eye():
         p = italic(params(w))
         g, o = draw('e', p), draw('o', p)
         k = g.free('eye', 1.0)
-        # (three quarters of the weight's own at a stem of 200: from ExtraBold the top and the bar stand at
-        # 128 units while the weight's horizontal goes on to 170, as the upright's lowercase bar does)
+        # (the bar alone gives, to four fifths of the diagonal's own at a stem of 200: the top is the
+        # height's bar, which the italic's lowercase stands on as the upright's does, and the thinner of the
+        # two to begin with)
         assert 0.75 <= k <= 1.0 and g.sh_auto == pytest.approx(1.0), (w, k)
-        assert p.sh * k >= last - 0.5, w                # the top (and the bar with it) never loses weight
-        last = p.sh * k
+        assert p.sd * k >= last - 0.5, w                # the bar never loses weight
+        last = p.sd * k
+        assert p.sh * k >= g.sh0 - 1.5, w               # and has not come down to the top, which is whole (to a unit)
         x_exit = p.sv / 2 + (g.W - p.sv) * 5 / 6        # where the exit leaves the foot (the frame's sixth module)
         y0, y1 = run(rings_to_shapely(g.rings()), x_exit - 1.5 * p.c)       # the foot, under the opening
         b0, b1 = run(rings_to_shapely(o.rings()), o.W / 2)
-        assert y1 - y0 == pytest.approx(p.sh, abs=1.5), w                   # the weight's horizontal, whole
+        assert y1 - y0 == pytest.approx(g.sh0, abs=1.5), w                  # the height's bar, whole
         assert y1 - y0 == pytest.approx(b1 - b0, rel=0.03), w               # and the o's (which thins its own a little for its counter)
         end = max(q[1] for r in g.rings() for q in r if q[0] > x_exit + p.c and q[1] < p.xh / 2)
         assert end >= y1 + EXIT_OVER * p.c - 1.5, w

@@ -646,7 +646,10 @@ def _e_strokes(g, f, xl, xr, x_exit):
     p = g.p
     full = max(g.sh0 * g.sh_k, p.floor)                     # the alphabet's horizontal here
     k = g.free('eye', 1.0)
-    top, bar = full * k, p.sd * k
+    # (the top gives with the bar once the bar has come down to it: on the height's bar, which the italic's
+    # lowercase stands on past the Regular, draw._start, it is the thinner of the two to begin with, and
+    # thinned by the bar's share it stood at 101 units at Black under a bar of 144)
+    top, bar = min(full, max(p.sh * g.sh_k, p.floor) * k), p.sd * k
     yt, yf = p.xh - top / 2, full / 2
     g.stroke((xl, yt - (xr - xl), bar), (xr, yt))
     L = max(_reach(p, FLAG), full / 2 + EXIT_OVER * p.c)
