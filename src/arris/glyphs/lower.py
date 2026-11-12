@@ -240,6 +240,7 @@ def a(g):
     g.defaults_used.update(arm=ya, bowl=yb)
     d, leg = beak_in(g, arm, low)
     g.hook = (arm, d, leg)                                  # (hook_ref: the c and the s take theirs from here)
+    g.arm = arm                                             # (draw._optical: the bar on its line)
     # At Black the a is the e turned half round, all but the notch at the foot of its stem (the owner,
     # 2026-11-12: "at black, the e and the lowercase a should practically be identical flipped, aside from
     # the smallest little notch on a at the bottom"; "maybe bold and extra bold can use a little bit of
@@ -335,6 +336,7 @@ def e(g):
     g.stroke((f.X(1), yb, bar), (f.X(7), yb), B(f.X(7), yt), B(f.X(1), yt), closed=True)
     d, leg = beak_in(g, arm, open_)
     g.hook = (arm, d, leg)                                  # (hook_ref: the c and the s take theirs from here)
+    g.arm = arm                                             # (draw._optical: the bar on its line)
     g.stroke((f.X(1), yb), B(f.X(1), y1, None, arm), B(f.X(7), y1, leg), (f.X(7), d))
 
 

@@ -242,7 +242,7 @@ def _mouth_gap(g):
     """White between a beak's tip (its ink above the bottom bar) and the bar
     it faces."""
     from shapely.geometry import box
-    tip = g.part('beak').intersection(box(-1e4, g.sh - g.ob + 1e-3, 1e4, 1e4))
+    tip = g.part('beak').intersection(box(-1e4, getattr(g, 'arm', g.sh) - g.ob + 1e-3, 1e4, 1e4))
     return tip.distance(g.part('bar')) if not tip.is_empty else 1e4
 
 
@@ -357,15 +357,24 @@ def _heavy_stack(p):
 def three(g):
     p, W, H, u, v, xl, xr, yb, yt = frame(g)
     ym = 6 * v
-    bot = yb - g.ob
+    # Its top and its foot are the cap height's bar at every weight, as the 2's and the 5's beside it
+    # (draw._cap_bar), and the waist alone gives for the bowl and the mouth (frame's sh_k): thinned all three
+    # alike, the 3 stood on arms of 130 units at ExtraBold and 119 at Black beside figures on 147 (the owner,
+    # 2026-11-12: "let's make sure that we're extremely consistent like this across everything ... fix the
+    # 3"). The italic, which keeps the weight's own bars, thins the three as it did.
+    arm = g.sh if p.slant else g.sh0
+    g.arm = arm                                             # (_mouth_gap: the bar the beak rises from)
+    yt, bot = H - arm / 2, arm / 2 - g.ob
     xm = g.free('bar_x', 3 * u)                             # heavy small sizes pull the bar's end in
     # The upper bowl's lower corner is a module rounder than the lower bowl's
     # upper one; their outer chamfers meet in a sharp point at the waist.
-    g.stroke((u, yt), B(xr, yt), B(xr, ym, p.leg + u), (xm, ym), part='bar')
+    g.stroke((u, yt, arm), B(xr, yt), B(xr, ym, p.leg + u), (xm, ym), part='bar')
     # parts that continue one another overlap by a quarter stem, so they
     # always join (end-to-end square cuts join only if they coincide exactly)
-    g.stroke((xm, ym), B(xr, ym), B(xr, bot), (W / 2, bot))
-    g.stroke((W / 2 + p.sv / 4, bot), B(xl, bot), (xl, beak_bottom(g)), part='beak')
+    g.stroke((xm, ym), B(xr, ym), B(xr, bot, None, arm), (W / 2, bot))
+    # (an opening may shorten the beak, but never past its outer flank: beak_bottom, on the arm's thickness)
+    reach = max(g.free('beak', beak_depth(p, arm)), _shortest(p, arm))
+    g.stroke((W / 2 + p.sv / 4, bot, arm), B(xl, bot), (xl, -g.ob + reach), part='beak')
 
 
 def _four_gap(g):

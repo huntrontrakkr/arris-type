@@ -239,6 +239,53 @@ def test_the_hooks_of_c_a_e_and_s_stand_on_one_line(w, mono):
     assert seen['top end']['c'] < seen['top bar']['c'] - 0.5 * p.c and seen['bottom end']['c'] > seen['bottom bar']['c'] + 0.5 * p.c
 
 
+@pytest.mark.parametrize('w', [400, 700, 800, 850, 900])
+def test_one_bar_and_one_overshoot_on_each_height(w):
+    """Every bar of the lowercase is the one the a's and the e's hooks hang
+    from, and every bar of the capitals and the figures the one the 5 keeps
+    (draw._start; the owner, 2026-11-12: "o needs to open up a little bit
+    more. Let's make sure that we're extremely consistent like this across
+    everything", then "fix the 3 and put the overshoot on one value"). Each
+    letter thinned for itself, and at Black the O and the E stood on 170
+    units, the S on 154, the 5 on 147, the 3 and the Q on 119; each took
+    the overshoot its own outline asked, the C 3.3 units at Regular by the
+    O's 1.3 and the J's foot 10.8."""
+    from arris.glyphs.lower import hook_ref
+    p = params(w)
+    bar = hook_ref(p)[0]
+    assert {round(draw(ch, p).sh0, 6) for ch in 'obdpqgnhmucrz'} == {round(bar, 6)}
+    cap = draw('five', p).sh
+    assert {round(draw(CMAP[ch], p).sh0, 6) for ch in 'OCGQSEBDPRZT02378'} == {round(cap, 6)}
+    assert draw('S', p).sh == pytest.approx(cap) and draw('Q', p).sh == pytest.approx(cap)
+    # the 3's top and foot are that bar, and its waist alone gives
+    three = _ink('3', p)
+    x0, y0, x1, y1 = three.bounds
+    cut = three.intersection(LineString([((x0 + x1) / 2, y0 - 5), ((x0 + x1) / 2, y1 + 5)]))
+    runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+    assert len(runs) == 3 and all(b - a == pytest.approx(cap, abs=0.01) for a, b in (runs[0], runs[-1]))
+    assert runs[1][1] - runs[1][0] <= cap + 0.01
+    # one overshoot: what stands over the line stands over it by the O's (the o's)
+    over = lambda ch, H: draw(CMAP[ch], p).rings() and max(y for r in draw(CMAP[ch], p).rings() for _, y in r) - H
+    assert {round(over(ch, p.cap), 3) for ch in 'OCGQS0289'} == {round(over('O', p.cap), 3)}
+    assert {round(over(ch, p.xh), 3) for ch in 'oceas'} == {round(over('o', p.xh), 3)}
+
+
+def test_at_black_the_q_is_the_o_with_its_tail():
+    """Its corner is cut as the O's are, more from Bold and all the way at
+    Black (the owner, 2026-11-12: "it looks like the O aside from the
+    little bit in the middle. Keep that as it is, but you're going to need
+    to clip on the corners a little bit more as it reaches black"); to Bold
+    it is square, where the tail runs into it."""
+    outside = lambda ch, p: max(draw(ch, p).rings(), key=lambda r: max(x for x, _ in r) - min(x for x, _ in r))
+    p = params(900)
+    o, q = outside('O', p), outside('Q', p)
+    assert sorted((round(x, 2), round(y, 2)) for x, y in o) == sorted((round(x, 2), round(y, 2)) for x, y in q)
+    assert len(draw('Q', p).rings()) >= 2                                # its counter, and its tail in it
+    corner = lambda p: max(x for x, y in outside('Q', p) if y < 1.0)     # where the foot's flat ends, on the right
+    widths = [max(x for x, _ in outside('Q', params(w))) - corner(params(w)) for w in (700, 800, 900)]
+    assert widths[0] == pytest.approx(params(700).c, abs=0.5) and widths[0] < widths[1] < widths[2]
+
+
 def test_at_black_the_a_is_the_e_turned_half_round():
     """All but the notch at the foot of its stem (the owner, 2026-11-12:
     "at black, the e and the lowercase a should practically be identical

@@ -637,7 +637,7 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
     g.defaults['sh_auto'] = 1.0
     if spec.kind == 'lower' and not p.slant:
         g.zone_k = p.low                    # (the italic keeps its own strokes: its letters are drawn for them)
-        if p.optical and spec.name not in ZONE_SETTERS:
+        if p.optical and spec.name not in ZONE_SETTERS and not _OWN_BAR[0]:
             # The zone's bar is the one the a's and the e's hooks hang from (lower.hook_ref): where those
             # thin it with their closed end's bar, from ExtraBold, every bar of the lowercase thins with
             # them, and the counters of o, c, b, n and the rest stand on the lines the a's and the e's do
@@ -648,7 +648,7 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
             ref = hook_ref(p)
             if ref is not None:
                 g.zone_k = ref[0] / p.sh
-    elif spec.kind in ('cap', 'fig') and p.optical and not p.slant and spec.name not in CAP_SETTERS:
+    elif spec.kind in ('cap', 'fig') and p.optical and not p.slant and spec.name not in CAP_SETTERS and not _OWN_BAR[0]:
         # The capitals and the figures the same: one bar on the cap height, the one the 5, the 6 and the 9
         # keep where their mouths hold them (from ExtraBold: 147 units to Black). Each letter thinned for
         # itself, and at Black the O and the E stood on bars of 170 units, the S on 154, the 5, 6 and 9 on
@@ -904,7 +904,7 @@ def _bowl_side(rings, y_line, inward, p):
     return flats > 0
 
 
-CAP_SETTERS = {'five', 'six', 'nine', 'three'}     # the figures the cap height's bar is taken from (_cap_bar), and the 3, which thins its own
+CAP_SETTERS = {'five', 'six', 'nine'}       # the figures the cap height's bar is taken from (_cap_bar)
 _CAP_BAR: dict = {}
 
 
@@ -919,6 +919,27 @@ def _cap_bar(p):
 
 
 ZONE_SETTERS = {'a', 'e', 's'}  # the letters the lowercase's bar is taken from, and the s, which shares its own out (_start)
+_ZONE_OVER: dict = {}
+_OWN_BAR = [0]              # while set, a letter is begun on the weight's own bar (_start, _zone_over)
+
+
+def _zone_over(p, lower: bool) -> float:
+    """What a round letter reaches past its line at ``p``: the o's need
+    on the x-height, the O's on the cap height (vision.overshoot_need)."""
+    key = (p, lower)
+    if key not in _ZONE_OVER:
+        from .vision import overshoot_need
+        if len(_ZONE_OVER) > 1024:
+            _ZONE_OVER.clear()
+        _OWN_BAR[0] += 1                    # (its outside is all that is measured: on the weight's own bar, so the
+        try:                                # letters the height's bar is taken from can ask while they are drawn)
+            g = _build(drawn_spec('o' if lower else 'O', p), p, 0.0, 0.0, {})
+        finally:
+            _OWN_BAR[0] -= 1
+        _ZONE_OVER[key] = overshoot_need(g.rings(), p.xh if lower else p.cap)[0]
+    return _ZONE_OVER[key]
+
+
 HOOKS_WITH = {'c', 's'}     # letters whose hooks are the a's and the e's (lower.hook_ref): they move with theirs (_optical)
 _HOOK_WARPS: dict = {}
 
@@ -958,7 +979,12 @@ def _optical(g, spec, p):
         g.warp = Joined(low, high, H / 2) if (low is not None or high is not None) else None
         return
     r = OPTICAL['counters']
-    A = max(H / 2 - 1.5 * g.sh, 0.0)                         # a counter's height with the middle centred
+    # (the bars on its lines, where the letter draws them thicker than its own: the arm the a's and the e's
+    # hooks hang from, the 3's top and foot. They move as one piece too; measured on the letter's own bar they
+    # stood half in the white that stretches, and the rise took 3 units off the Black 3's top and gave them to
+    # its foot)
+    outer = max(g.sh, getattr(g, 'arm', 0.0))
+    A = max(H / 2 - outer - g.sh / 2, 0.0)                   # a counter's height with the middle centred
     dc = A * (1 - r) / (1 + r) * p.optical
     if spec.name in EVEN_MIDDLE:
         # (the a and the e: one closed counter each, the e's over its bar and the a's under it, so the rise
@@ -968,6 +994,12 @@ def _optical(g, spec, p):
         dc *= 1.0 - min(1.0, max(0.0, (p.sv / p.grade_k - STEMS[700]) / (STEMS[900] - STEMS[700])))
     rings0 = g.rings()
     top, bot = overshoot_need(rings0, H)
+    if p.optical:
+        # One overshoot for a height: the o's on the x-height, the O's on the cap height (the capitals and the
+        # figures), whatever the letter. Each had what its own outline asked, and at Regular the C stood 3.3
+        # units over the line by the O's 1.3, the figures 3.0, the J's foot 10.8: the bars they carry there
+        # stood that far off one another's (the owner, 2026-11-12: "put the overshoot on one value").
+        top = bot = _zone_over(p, spec.kind == 'lower')
     cap_ = OPTICAL['over_max'] * H
     # a side the drawing already carries past its line (v's point) keeps the
     # overshoot it was drawn with
@@ -1016,12 +1048,12 @@ def _optical(g, spec, p):
     # floor forced it, the whole rise arrived between 100 and 110, and the
     # font, drawing a line from Thin to ExtraLight, had a tenth of it at 110.
     if p.floor:
-        zone = H - t - (m + t / 2)
+        zone = H - outer - (m + t / 2)
         k = min(1.0, p.floor / max(min(t, p.sh), 1e-6))
         ramp = min(1.0, max(0.0, (min(t, p.sh) - p.floor) / p.floor))
         dc = max(0.0, min(dc * ramp, zone * (1 - k) + ot))
-    knots = [(t, t - ob), (m - t / 2, m - t / 2 + dc), (m + t / 2, m + t / 2 + dc), (H - t, H - t + ot)]
-    if not (dc or ot or ob) or not (t < m - t / 2 and m + t / 2 < H - t):
+    knots = [(outer, outer - ob), (m - t / 2, m - t / 2 + dc), (m + t / 2, m + t / 2 + dc), (H - outer, H - outer + ot)]
+    if not (dc or ot or ob) or not (outer < m - t / 2 and m + t / 2 < H - outer):
         return
 
     g.warp = Warp(tuple(knots), ot, ob)

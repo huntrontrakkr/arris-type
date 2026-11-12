@@ -275,7 +275,18 @@ def Q(g):
     # as the letter grows (to 0.7 of the diagonal's own at Black, Q_TAIL).
     # At the diagonal's weight it filled the counter's floor from Bold, and
     # the bowl's bottom read as twice its thickness.
-    g.stroke(B(*f.P(1, 1)), f.P(9, 1), B(*f.P(9, 11)), B(*f.P(1, 11)), closed=True)
+    # Toward Black the square corner is cut as the O's are, and at Black the Q is the O with its tail (the
+    # owner, 2026-11-12: "it looks like the O aside from the little bit in the middle. Keep that as it is,
+    # but you're going to need to clip on the corners a little bit more as it reaches black"): from Bold the
+    # corner's cut grows from an edge break to the bowl's own. To Bold it is square, where the tail runs
+    # into it.
+    from ..instances import STEMS
+    like = min(1.0, max(0.0, (p.sv / p.grade_k - STEMS[700]) / (STEMS[900] - STEMS[700]))) * p.optical
+    corner = f.P(9, 1)
+    if like:
+        own = (p.sv + g.sh) / 2 - p.sd / 2 ** 0.5           # (the cut a corner with no leg has)
+        corner = B(*f.P(9, 1), max(0.0, p.c + (p.leg + own - p.c) * like - own))
+    g.stroke(B(*f.P(1, 1)), corner, B(*f.P(9, 11)), B(*f.P(1, 11)), closed=True)
     ct = (f.X(9) - p.sv / 2) + (f.Y(1) + g.sh / 2) - p.c   # tail: x + y = ct
     y0 = g.free('tail', f.Y(5))
     w = p.sd * (1 - (1 - Q_TAIL) * min(1.0, heft(p) / (175.0 - 90.0)))
