@@ -2,8 +2,9 @@
 
 Marks are drawn in the same language: acute and grave are 45-degree strokes
 cut flat top and bottom; circumflex and caron are small gables; dieresis
-and dot are stem-square dots; the tilde steps at 45 degrees; breve and ring
-are small chamfered bowls; cedilla and ogonek turn on a chamfered corner.
+and dot are stem-square dots; the tilde steps at 45 degrees; the breve is a
+small chamfered bowl and the ring an octagon; the cedilla is a flat tab and
+the ogonek turns on a chamfered corner.
 
 Placement is measured, not tabulated: a mark above sits a fixed gap above
 the base's own highest ink (so it clears an ascender or a capital without a
@@ -25,39 +26,50 @@ def gap(p):
     return max(p.m, 0.4 * p.sv)
 
 
-HANG_GAIN = 2 / 3   # of what its letter's strokes gain past the Regular, the share a mark hanging off it takes (mark_params)
+MARK_GAIN = 0.5     # of what its letter's strokes gain past the Regular, the share an accent's take (mark_params)
+HANG_GAIN = 1 / 3   # the same for a mark hanging off its letter: the cedilla, the ogonek, the horn
 
 
-def mark_params(p, gain=0.0):
-    """The parameters an accent is drawn with: its letter's up to its cut's
-    Regular, and the Regular's own from there to Black (draw.held_at: the
-    same cut, grade, watch balance and slant). Past the Regular an accent
-    is the Regular's accent, stroke for stroke: as thick, as big, its dots
-    as far apart, as far from its letter.
+def mark_params(p, gain=None):
+    """The parameters a mark is drawn with: its letter's up to its cut's
+    Regular; past it, the Regular's own (draw.held_at: the same cut, grade,
+    watch balance and slant) with strokes that take ``gain`` of what the
+    letter's gain: MARK_GAIN for an accent, HANG_GAIN for a mark that
+    hangs off its letter (the ogonek, the horn). Its breaks stay the
+    Regular's, and its whites (kept, whites).
 
     Drawn with the letter's own strokes at a size that grew with them, an
     accent at Black carried 1.3 to 2.0 times the ink of other families' for
     its letter and stood 1.2 to 1.6 times as tall (the acute 1.48 and 1.35,
-    the caron 1.99, the tilde 1.63 and 1.62; forty-two families, each
-    accent's ink over its letter's and its height over the x-height): the
+    the caron 1.99, the tilde 1.63 and 1.62; forty-two families): the
     owner, 2026-11-12, "all bloated and ugly at black". Held at the
-    Regular's size with seven tenths of the letter's gain they were lighter
-    and still spread (a dieresis's dots 134 units apart at Black for 72):
-    "They are still too far apart"; "Can you just make the accents at the
-    regular weight? Just keep them there, please."
+    Regular's size with seven tenths of the letter's gain its dots still
+    spread (a dieresis's 134 units apart at Black for the Regular's 72):
+    "They are still too far apart". Held at the Regular's weight outright
+    ("Can you just make the accents at the regular weight?") an accent was
+    a hairline on a Black letter, four tenths of its stem: "It looks
+    wrong. Can we look at what other heavy or black weights look like on
+    other languages and try to figure out what we can do better?"
 
-    ``gain``: the share of its letter's gain past the Regular the mark's
-    strokes take (HANG_GAIN for a mark that hangs off its letter: the
-    cedilla, the ogonek, the horn). Such a mark is a part of the letter's
-    own outline, and at the Regular's weight on a Black letter it read as
-    a hair on it: the owner, 2026-11-12, "if it's hanging off of the
-    letter, it should probably be a little bolder." Shown a third, a half
-    and two thirds of the way to the letter's weight, he named two thirds.
+    Fifty-nine families, each mark's thickest stroke over its letter's
+    stem at Regular and at the heaviest weight: an accent's is 0.76 to
+    0.86 of the stem at Regular and 0.62 to 0.71 at the heaviest, and of
+    what the stem gains between the two it takes half (0.49 to 0.63 at the
+    median, accent by accent); the white between it and its letter closes
+    a little (0.12 of the x-height to 0.09) and a dieresis's dots thicken
+    without drifting apart. Half the gain and the Regular's whites put
+    Arris's accents at 0.62 to 0.66 of the stem at Black. A hook under a
+    letter takes about the same in those families and stays small (0.68 to
+    0.71 of the stem, 0.45 to 0.48 of its letter's width); Arris's ogonek
+    starts at a whole stem at Regular where theirs is 0.84, and at a third
+    of the gain stands 0.67 and 0.46 at Black (at two thirds, 0.92 and
+    0.64).
 
     A set derived from a font's (small capitals) has no Regular of its own
     to ask for: its accents take the strokes that stand to its module as
     the Regular's do, a module and a half to the stem (letterframe.heft)."""
     from ..draw import _cut, held_at
+    gain = MARK_GAIN if gain is None else gain
     q = held_at(p)
     if q is p and _cut(p) is None:
         r = 1.5 * p.m / p.sv
@@ -66,11 +78,20 @@ def mark_params(p, gain=0.0):
         q = p.with_(sv=p.sv * r, sh=p.sh * r, sd=p.sd * r, ss=p.ss * r, c=p.c * r)
     if q is p or not gain:
         return q
+    # (its breaks stay the Regular's, as the letters' inside corners do past it (draw.fill_leg): on breaks
+    # that grew with its strokes a ring's counter filled to a pinhole at Black)
     mix = lambda a, b: a + gain * (b - a)
-    return q.with_(sv=mix(q.sv, p.sv), sh=mix(q.sh, p.sh), sd=mix(q.sd, p.sd), ss=mix(q.ss, p.ss), c=mix(q.c, p.c))
+    return q.with_(sv=mix(q.sv, p.sv), sh=mix(q.sh, p.sh), sd=mix(q.sd, p.sd), ss=mix(q.ss, p.ss))
 
 
-def kept(g, fn, *args, joined=False, gain=0.0):
+def whites(g):
+    """The parameters a mark's whites are measured by (between a
+    dieresis's dots, a double acute's strokes): the Regular's past it, so
+    the dots thicken and do not drift apart (kept, draw_above)."""
+    return getattr(g, 'reg', g.p)
+
+
+def kept(g, fn, *args, joined=False, gain=None, apart=False):
     """Draw a mark into g with its own parameters (mark_params): in g
     itself where they are g's; else in a drawing of its own, stamped into
     g. A mark that hangs from its letter reads the letter's ink and
@@ -85,13 +106,18 @@ def kept(g, fn, *args, joined=False, gain=0.0):
     stamped in with the mark. Only that: with the letter's ink stamped in
     a second time under the mark, the italic no longer knew the letter's
     own corners for its own, and the ą's bowl was cut straight at Bold and
-    ExtraBold. ``gain``: mark_params'."""
+    ExtraBold. ``gain``: mark_params'. ``apart``: in a drawing of its own at
+    every weight (a mark that is a glyph by itself: a sign's own drawing
+    breaks a sharp corner another way than a mark's, and the ¸ changed by
+    1,700 square units between weights 400 and 401)."""
     q = mark_params(g.p, gain)
-    if q is g.p:
+    if q is g.p and not apart:
         return fn(g, *args)
 
     def drawn(with_letter):
         t = Glyph(q, W=g.W)
+        t.finished = True                                   # (the host leaves its corners as they are: Glyph.outline)
+        t.reg = mark_params(g.p, 0.0)
         t.base_ink = g.extra[0] if g.extra else None
         t.own_p, t.own_sh = g.p, g.sh
         if with_letter:
@@ -111,8 +137,12 @@ def kept(g, fn, *args, joined=False, gain=0.0):
         letter, mark = g.extra[0], g.extra[-1]
         whole = rings_to_shapely(drawn(True).outline()[0])
         more = whole.difference(shapely.union_all([letter, mark]).buffer(0.05))
+        # (a fill, not the sliver two outlines leave where they all but agree: under a unit and a half
+        # across it is no corner's fill, and stamped in it met the letter at a point: the italic ç at
+        # Black, grade 100, on the watch's ladder)
         g.extra += [q_ for q_ in getattr(more, 'geoms', [more])
-                    if q_.area > 1.0 and q_.distance(letter) < 1.0 and q_.distance(mark) < 1.0]
+                    if q_.area > 1.0 and q_.distance(letter) < 1.0 and q_.distance(mark) < 1.0
+                    and not q_.buffer(-0.75).is_empty]
 
 
 def size(p, case):
@@ -152,12 +182,21 @@ def circumflex(g, x, y, case, flip=False):
 
 
 def caron(g, x, y, case):
+    """The circumflex turned over. Its point is a stroke's underside, which
+    comes down as the stroke thickens: past the Regular it is lifted by as
+    much, so the white under it stays the Regular's (43 units over a c; it
+    closed to 29 at Black, where other families keep 0.09 of the x-height)."""
+    from ..draw import _thickness
+    r = whites(g)
+    if r is not g.p:
+        level = (1.0, 0.0)
+        y += (_thickness(g.p, g.sh)(level) - _thickness(r, g.sh * r.sh / g.p.sh)(level)) / 2
     circumflex(g, x, y, case, flip=True)
 
 
 def dieresis(g, x, y, case):
     p = g.p
-    d = p.dot() + max(1.2 * p.m, 0.8 * p.dot())
+    d = p.dot() + max(1.2 * p.m, 0.8 * whites(g).dot())    # (the white between the dots: the Regular's past it)
     _dot(g, x - d / 2, y)
     _dot(g, x + d / 2, y)
 
@@ -203,12 +242,19 @@ RING_STROKE = 1.25  # the most its stroke grows to, in modules
 
 
 def ring(g, x, y, case):
-    """A small chamfered square ring: its stroke 0.7 of the stem, up to a
-    module and a quarter and no further (accents lighten at heavy weights),
-    its counter a module and a half across. Three tenths of the cap height
-    at Regular and a third from Bold, as faces of this kind draw it (Chakra
-    Petch, Oxanium, Exo 2, Rajdhani: 0.26 to 0.31 of it, the stroke 0.56 to
-    0.70 of the stem; at their heaviest 0.26 to 0.36 and 0.41 to 0.59).
+    """A small ring of eight sides, an octagon inside and out, after
+    Tomorrow's (the owner, 2026-11-12: "Do Tomorrow because it's better"):
+    its stroke 0.7 of the stem, up to a module and a quarter and no further
+    (accents lighten at heavy weights), its counter a module and a half
+    across. Three tenths of the cap height at Regular and a third from
+    Bold, as faces of this kind draw it (Chakra Petch, Oxanium, Exo 2,
+    Rajdhani: 0.26 to 0.31 of it, the stroke 0.56 to 0.70 of the stem; at
+    their heaviest 0.26 to 0.36 and 0.41 to 0.59).
+
+    It was a square on four bowl corners. A bowl corner's diagonal is as
+    thick as the alphabet's diagonals, thicker than the ring's sides: the
+    counter came out a diamond and the outside all but square, a block with
+    a pinhole at Black. Its eight sides are one thickness.
 
     Until 1.017 it was drawn in the full stem up to two modules, round a
     counter of two: 0.38 of the cap height at Regular and half of it from
@@ -218,15 +264,16 @@ def ring(g, x, y, case):
     t = min(max(0.7 * p.sv, p.floor), RING_STROKE * p.m)    # the stroke
     inner = max(RING * p.m, t)                              # the counter, across
     r = (inner + t) / 2                                     # centreline half-size
-    leg = p.m / 2
     yc = y + r + t / 2
-    g.stroke(B(x - r, yc - r, leg, t), B(x + r, yc - r, leg, t), B(x + r, yc + r, leg, t), B(x - r, yc + r, leg, t),
-             closed=True)
+    a = 2 * r / (2 + SQRT2)                                 # a regular octagon's cut
+    pts = [(x - r + a, yc - r), (x + r - a, yc - r), (x + r, yc - r + a), (x + r, yc + r - a),
+           (x + r - a, yc + r), (x - r + a, yc + r), (x - r, yc + r - a), (x - r, yc - r + a)]
+    g.stroke(*[(px, py, t) for px, py in pts], closed=True)
 
 
 def hungarumlaut(g, x, y, case):
     p = g.p
-    d = 2 * p.sd / SQRT2 + max(0.6 * p.m, 0.4 * p.sv)     # clear of each other at every weight
+    d = 2 * p.sd / SQRT2 + max(0.6 * p.m, 0.4 * whites(g).sv)     # clear of each other at every weight (the Regular's white past it)
     acute(g, x - d / 2, y, case)
     acute(g, x + d / 2, y, case)
 
@@ -254,28 +301,25 @@ def commaabove(g, x, y, case):
 
 
 CEDILLA_ROOM = 1.15   # descenders: how far below the baseline the cedilla's foot may hang (commabelow's room)
-HOOK_ITALIC = 0.6     # stems: how thick a hook under an italic letter is (see hook, ogonek)
+HOOK_ITALIC = 0.6     # stems: how thick the ogonek under an italic letter is (see hook, ogonek)
 
 
 def hook(g):
-    """What the cedilla and the ogonek share: (the neck's thickness, the
-    foot's, the foot's centreline, how far the foot runs from the neck's
-    centre). They are one hook, turned left under a c and right under an
-    a: as thick, as deep, as long.
+    """The ogonek's measures: (its neck's thickness, its foot's, the foot's
+    centreline, how far the foot runs from the neck's centre). A neck down
+    from the letter and a foot turning right, with a notch between the
+    letter and the foot that must outlast the corner rule, which breaks
+    the notch's inside corners at the neck and the foot's end beyond it:
+    so the notch is at least a mark's gap tall, and that gap and two
+    corner breaks wide; as it would close, the foot hangs lower, as far as
+    the comma below may (CEDILLA_ROOM descenders), and past that the hook
+    lightens.
 
-    They were two drawings. The ogonek kept the depth and reach the
-    cedilla had before its notch was looked after (cedilla): 15 units
-    shorter at the Regular, and from Bold its foot grew up into its notch
-    where the cedilla's hangs lower. In the italic the ogonek was six
-    tenths of a stem (ogonek) and the cedilla a whole one, 14,000 square
-    units of ink under the a for 23,400 under the c. The owner,
-    2026-11-12: "They're two different sizes".
-
-    In the italic both are HOOK_ITALIC of a stem. Thicker, a hook changes
-    the letter it hangs from: at seven tenths the Į's stem was drawn
-    another way at the Regular, at a whole stem the į's to Medium and the
-    Į's at SemiBold and Bold (the ink above the baseline, against the
-    plain letter's)."""
+    In the italic it is HOOK_ITALIC of a stem. Thicker, it changes the
+    letter it hangs from: at seven tenths the Į's stem was drawn another
+    way at the Regular, at a whole stem the į's to Medium and the Į's at
+    SemiBold and Bold (the ink above the baseline, against the plain
+    letter's)."""
     from ..draw import _thickness
     p = g.p
     th = _thickness(p, g.sh)
@@ -294,39 +338,37 @@ def hook(g):
     return wv, wh, foot + wh / 2, run
 
 
+TAB_DEPTH = 2.0     # modules: how far under the baseline the cedilla's tab hangs
+
+
 def cedilla(g, x, y, case):
-    """A hook from the base: down, and a foot turning left underneath. The
-    notch between the base's underside and the foot is what makes it a
-    hook, and it must outlast the corner rule, which breaks the notch's
-    inside corners at the stem and the foot's end beyond it: so it is at
-    least a mark's gap (gap(), the white between a base and its accent)
-    tall, and that gap and two corner breaks wide.
-    Drawn at a fixed depth and reach, the foot grew up into the notch with
-    the weight (143 units of white at Thin, 86 at Regular, 44 at Bold, 16 at
-    Black), the corner breaks took what was left, and from Bold the hook
-    read as a block with a pinhole in it. So as the notch would close the
-    foot hangs lower and reaches further, as far as the comma below may hang
-    (CEDILLA_ROOM descenders), and past that the hook lightens, as
-    commabelow does. Thin and Light as they were; the Regular's foot 15
-    units longer; from Bold the hook reads as one."""
+    """A flat tab under the letter, after Tomorrow's (the owner,
+    2026-11-12: "the cedilla under the c ... just turns into a little flat
+    tab"; of the tab at a third, two thirds and the whole of the letter's
+    weight, "F. Definitely": the whole). A short stroke leaning as steeply
+    as the alphabet's steep diagonals (two down for one across), its top in
+    the letter, cut level underneath, as wide as the letter's own stem at
+    every weight, two modules deep. The middle of what shows of it stands
+    under x.
+
+    It was a hook: a neck down and a foot turning left, with a notch
+    between the letter and the foot that had to outlast the corner rule.
+    From Bold that took a foot hung lower and reaching further, and at
+    Black the hook stood 0.92 of the stem thick and 0.62 of its letter
+    wide where fifty-nine other families' heaviest weights have 0.68 and
+    0.48: a second foot under the letter ("It looks wrong")."""
     p = g.p
-    wv, wh, yb, run = hook(g)
-    g.stroke((x, g.sh / 2, wv), B(x, yb, p.m / 2, wh), (x - run, yb))
-    if p.slant:
-        # square to the base's underside, as the ogonek: the c's foot corner
-        # ends where the stem begins, and the corner rule's fill at the join
-        # merged with the corner's chamfer from 600 up, which held the
-        # corner straight (and folded the outline back on itself at 550)
-        from ..draw import _thickness
-        own, own_sh = getattr(g, 'own_p', p), getattr(g, 'own_sh', g.sh)    # the letter's own (kept): its underside
-        under = own_sh / 2 - _thickness(own, own_sh)((1.0, 0.0)) / 2        # (lower.crotch_butt)
-        g.butt += (('y', under, x - wv / 2 - 1.0, x + wv / 2 + 1.0),)
+    own = getattr(g, 'own_p', p)                            # the letter's own parameters (kept)
+    depth = TAB_DEPTH * p.m
+    top = g.sh / 2
+    x0 = x + depth / 4                                      # its centreline on the baseline
+    w = own.sv * 2 / 5 ** 0.5                               # across the stroke: its level cuts are a stem wide
+    g.stroke((x0 - depth / 2, -depth, w), (x0 + top / 2, top), start='h', end='h')
 
 
 def ogonek(g, x, y, case):
     """Hangs from the base's rightmost ink on the baseline (a stem's foot or
-    a bar's end, whichever the letter has), turning right underneath: the
-    cedilla's hook, turned the other way (hook)."""
+    a bar's end, whichever the letter has), turning right underneath (hook)."""
     p = g.p
     own = getattr(g, 'own_p', p)                            # the letter's own parameters (kept)
     wv, wh, yb, run = hook(g)
@@ -417,7 +459,7 @@ def _scaled(p, k):
     return p.with_(m=p.m * k, sv=p.sv * k, sh=p.sh * k, sd=p.sd * k, ss=p.ss * k, c=p.c * k, leg=p.leg * k)
 
 
-def accent_params(p, k, gain=0.0):
+def accent_params(p, k, gain=None):
     """A mark's parameters (mark_params), drawn lighter and smaller by k:
     strokes, module and edge breaks together, so a mark keeps its
     proportions as it shrinks."""
@@ -469,7 +511,7 @@ def _nearest_clear(scratch, n0, draw_at, others, sg, reach):
     return hi
 
 
-def stack_above(p, marks, x, top, case, W, room=None, avoid=None, tight=1.0):
+def stack_above(p, marks, x, top, case, W, room=None, avoid=None, tight=1.0, reg=None):
     """Where the marks above a base go: ([(mark, x, y)], the stack's top,
     how much wider than ``room`` the stack is).
 
@@ -486,6 +528,8 @@ def stack_above(p, marks, x, top, case, W, room=None, avoid=None, tight=1.0):
     stack's, closed up to this share of themselves (draw_above)."""
     from ..draw import Glyph
     scratch = Glyph(p, W=W)
+    if reg is not None:
+        scratch.reg = reg
     places = []
     y = top + tight * gap(p)
     sg = tight * STACK_GAP * gap(p)
@@ -633,8 +677,11 @@ def _register(name, ch, bname, base, marks):
             elif m == '\u0328':
                 kept(g, ogonek, _ogonek_x(g, base), 0, case, joined=True, gain=HANG_GAIN)
             else:
-                gain = HANG_GAIN if m == '\u0327' else 0.0      # (the cedilla hangs off its letter)
-                kept(g, BELOW[m], clear_below(g.extra[0], mark_params(p, gain), BELOW[m], x, case, g.W), 0, case, gain=gain)
+                # (the cedilla hangs off its letter: its breaks a hanging mark's, its join finished with the letter)
+                hangs = m == '\u0327'
+                q = p if hangs else mark_params(p)
+                kept(g, BELOW[m], clear_below(g.extra[0], q, BELOW[m], x, case, g.W), 0, case,
+                     joined=hangs, gain=HANG_GAIN if hangs else None, apart=hangs)
         if not above:
             return
         # (in the monospaced cell, the stack keeps the cell's margin: draw.CELL_GAP)
@@ -710,7 +757,7 @@ def draw_above(g, above, x, top, case, cell=None, avoid=None, lift=0.0):
 
     def at(s):
         t, k = _squeeze(s)
-        return stack_above(accent_params(p, k), above, x, top, case, g.W, cell, avoid, tight=t)
+        return stack_above(accent_params(p, k), above, x, top, case, g.W, cell, avoid, tight=t, reg=accent_params(p, k, 0.0))
     s = 0.0
     st = at(0.0)
     if not fits(st):
@@ -727,6 +774,9 @@ def draw_above(g, above, x, top, case, cell=None, avoid=None, lift=0.0):
     k = _squeeze(s)[1]
     q = accent_params(p, k)
     target = g if q is p else Glyph(q, W=g.W)             # (its own strokes past the Regular: drawn apart, stamped in)
+    if target is not g:
+        target.finished = True
+        target.reg = accent_params(p, k, 0.0)
     for m, xm, ym in places:
         ABOVE[m](target, xm, ym, case)
     if target is not g:

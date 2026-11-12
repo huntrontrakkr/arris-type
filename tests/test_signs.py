@@ -275,21 +275,22 @@ def _accent(acc, base, p):
 
 
 @pytest.mark.parametrize('cut', ['upright', 'italic', 'watch', 'mono'])
-def test_an_accent_past_the_regular_is_the_regulars(cut):
+def test_an_accent_takes_half_of_what_its_letter_gains(cut):
     """Accents were drawn with their letter's own strokes at a size that
     grew with them: at Black they carried 1.3 to 2.0 times the ink of other
-    families' for their letter and stood 1.2 to 1.6 times as tall (the
-    acute 1.48 and 1.35, the caron 1.99; forty-two families). The owner,
-    2026-11-12: "all bloated and ugly at black"; shown them at the
-    Regular's size with seven tenths of the letter's gain, "They are still
-    too far apart" and "Can you just make the accents at the regular
-    weight? Just keep them there, please." From its cut's Regular to Black
-    an accent is the Regular's own drawing (marks.mark_params): the same
-    ink, the same white between it and its letter, wherever the letter's
-    top and middle put it."""
-    from shapely import affinity
-
-    from arris.glyphs.marks import mark_params
+    families' for their letter (the owner, 2026-11-12: "all bloated and
+    ugly at black"). Held at the Regular's weight they were hairlines on a
+    Black letter, four tenths of its stem where fifty-nine other families'
+    heaviest weights have 0.62 to 0.71 ("It looks wrong. Can we look at
+    what other heavy or black weights look like"). In those families an
+    accent's strokes take half of what the stem gains from Regular to
+    heaviest (0.49 to 0.63 at the median, accent by accent) and the whites
+    stay close to the Regular's. Past its cut's Regular an accent's strokes
+    take MARK_GAIN of the letter's gain (marks.mark_params); its breaks,
+    its size, the white between a dieresis's dots and the white between it
+    and its letter stay the Regular's."""
+    from arris.font import place
+    from arris.glyphs.marks import MARK_GAIN, mark_params
     from arris.instances import mono_weight
     from arris.italic import italic
     at = {'upright': params, 'italic': lambda w: italic(params(w)), 'watch': lambda w: params(w, watch=1.0),
@@ -297,16 +298,26 @@ def test_an_accent_past_the_regular_is_the_regulars(cut):
     regular = at(400)
     assert mark_params(regular) is regular and mark_params(at(300)).sv == at(300).sv
     for w in (500, 700, 900):
-        q = mark_params(at(w))
-        assert (q.sv, q.sh, q.sd, q.c) == pytest.approx((regular.sv, regular.sh, regular.sd, regular.c)), w
+        p, q = at(w), mark_params(at(w))
+        assert q.sv == pytest.approx(regular.sv + MARK_GAIN * (p.sv - regular.sv)), w
+        assert q.sd == pytest.approx(regular.sd + MARK_GAIN * (p.sd - regular.sd)), w
+        assert q.c == pytest.approx(regular.c), w
+    white = lambda a, b: max(a.bounds[1] - b.bounds[3], b.bounds[1] - a.bounds[3])  # above its letter, or below
     for acc, base in ACCENTS:
         a0, b0 = _accent(acc, base, regular)
         for w in (700, 900):
             a, b = _accent(acc, base, at(w))
-            moved = affinity.translate(a, a0.bounds[0] - a.bounds[0], a0.bounds[1] - a.bounds[1])
-            assert moved.symmetric_difference(a0).area <= 0.01 * a0.area, (acc, w)
-            white = lambda a, b: max(a.bounds[1] - b.bounds[3], b.bounds[1] - a.bounds[3])  # above its letter, or below
-            assert white(a, b) == pytest.approx(white(a0, b0), abs=1.0), (acc, w)
+            # (to a unit; the tilde's cut corners are broken 5 units higher on a thicker stroke)
+            assert white(a, b) == pytest.approx(white(a0, b0), abs=6.0 if acc == 'ntilde' else 1.5), (acc, w)
+            assert a0.area < a.area, (acc, w)                                       # heavier than the Regular's
+    # the dots thicken; they do not drift apart
+    def between(p):
+        ink = rings_to_shapely(place('edieresis', p)[0])
+        dots = sorted((q for q in ink.geoms if q.bounds[1] > 0.9 * p.xh and q.area < 0.2 * ink.area), key=lambda q: q.bounds[0])
+        assert len(dots) == 2
+        return dots[0].distance(dots[1])                    # (edge to edge: in the italic the dots lean)
+    for w in (700, 900):
+        assert between(at(w)) == pytest.approx(between(regular), abs=1.5), w
 
 
 @pytest.mark.parametrize('cut', ['upright', 'italic'])
@@ -328,13 +339,14 @@ def test_an_accented_letter_does_not_step_at_the_regular(cut):
 
 
 def test_a_mark_that_hangs_off_its_letter_is_a_little_bolder():
-    """The cedilla, the ogonek and the horn are a part of their letter's
-    outline. At the Regular's weight on a Black letter they read as a hair
-    on it (the owner, 2026-11-12: "if it's hanging off of the letter, it
-    should probably be a little bolder"): they take two thirds of what
-    the letter's strokes gain past the Regular (marks.HANG_GAIN, the
-    owner's pick of a third, a half and two thirds), and stand between the
-    accents' strokes and the letter's."""
+    """The ogonek and the horn are a part of their letter's outline. At the
+    Regular's weight on a Black letter they read as a hair on it (the
+    owner, 2026-11-12: "if it's hanging off of the letter, it should
+    probably be a little bolder"): they take a third of what the letter's
+    strokes gain past the Regular (marks.HANG_GAIN). At two thirds the
+    ogonek stood 0.92 of the stem and 0.64 of its letter's width where
+    fifty-nine other families' heaviest weights have 0.71 and 0.45 ("It
+    looks wrong"); at a third, 0.67 and 0.46."""
     from arris.glyphs.marks import HANG_GAIN, mark_params
     regular = params(400)
     assert mark_params(regular, HANG_GAIN) is regular
@@ -344,39 +356,65 @@ def test_a_mark_that_hangs_off_its_letter_is_a_little_bolder():
         assert q.sv == pytest.approx(regular.sv + HANG_GAIN * (p.sv - regular.sv))
         assert q.sh == pytest.approx(regular.sh + HANG_GAIN * (p.sh - regular.sh))
         assert regular.sv < q.sv < p.sv
-    # as drawn: the cedilla's stem under the c, the ogonek's under the a, at Black
+    # as drawn: the ogonek's neck under the a, at Black
     p = params(900)
-    hang = regular.sv + HANG_GAIN * (p.sv - regular.sv)
-    for name, y in (('ccedilla', -0.3 * p.m), ('aogonek', -0.6 * p.m)):
-        (x0, x1), = [r for r in _runs(_ink(name, p), y=y)]
-        assert x1 - x0 == pytest.approx(hang, rel=0.12), (name, round(x1 - x0), round(hang))
+    (x0, x1), = _runs(_ink('aogonek', p), y=-0.6 * p.m)
+    assert x1 - x0 == pytest.approx(regular.sv + HANG_GAIN * (p.sv - regular.sv), rel=0.12)
 
 
 @pytest.mark.parametrize('cut', ['upright', 'italic'])
-def test_the_cedilla_and_the_ogonek_are_one_hook(cut):
-    """They were two drawings (the owner, 2026-11-12: "They're two
-    different sizes"): the ogonek's foot 15 units shorter at the Regular
-    and, from Bold, growing up into its notch where the cedilla's hangs
-    lower; in the italic the ogonek six tenths of a stem and the cedilla a
-    whole one. One hook (marks.hook), turned left under a c and right
-    under an a: as deep, its neck as thick, as much ink; upright, as far
-    across."""
+def test_the_cedilla_is_a_flat_tab(cut):
+    """The cedilla was a hook: a neck down and a foot turning left. At
+    Black it stood 0.92 of the stem thick and 0.62 of its letter wide where
+    fifty-nine other families' heaviest weights have 0.68 and 0.48, a
+    second foot under the letter (the owner, 2026-11-12: "It looks wrong";
+    "the cedilla under the c ... just turns into a little flat tab"; of
+    the tab at a third, two thirds and the whole of the letter's weight,
+    "F. Definitely": the whole). After Tomorrow's: a short stroke leaning
+    two down for one across, cut level underneath, two modules deep, as
+    wide as the letter's stem at every weight, one drawing from Thin to
+    Black (the ¸ alone no different from the one under a c)."""
     from shapely.geometry import box
 
     from arris.font import place
+    from arris.glyphs.marks import TAB_DEPTH
     from arris.italic import italic
     at = params if cut == 'upright' else (lambda w: italic(params(w)))
     for w in (300, 400, 700, 900):
         p = at(w)
-        # (as the font carries them: in the italic, leaned and curved)
-        ced, ogo = (rings_to_shapely(place(n, p)[0]).intersection(box(-1e4, -1e4, 1e4, -1.0)) for n in ('cedilla', 'ogonek'))
-        assert ced.bounds[1] == pytest.approx(ogo.bounds[1], abs=1.5), w
-        (c0, c1), = _runs(ced, y=-10.0)
-        (o0, o1), = _runs(ogo, y=-10.0)
-        assert c1 - c0 == pytest.approx(o1 - o0, abs=1.5), w
-        assert ced.area == pytest.approx(ogo.area, rel=0.01), w
+        depth = TAB_DEPTH * p.m
+        below = lambda name, p=p: rings_to_shapely(place(name, p)[0]).intersection(box(-1e4, -1e4, 1e4, -1.0))
+        tab = below('cedilla')
+        assert tab.bounds[1] == pytest.approx(-depth, abs=1.0), w
+        (a0, a1), = _runs(tab, y=-depth / 2)
+        assert a1 - a0 == pytest.approx(p.sv, abs=1.5), w                           # a stem wide
+        (b0, b1), = _runs(tab, y=-depth + 1.0)
+        assert b1 - b0 >= p.sv - 2.2 * p.c - 2.0, w                                 # level underneath, its corners broken
         if cut == 'upright':
-            assert ced.bounds[2] - ced.bounds[0] == pytest.approx(ogo.bounds[2] - ogo.bounds[0], abs=1.5), w
+            (t0, t1), = _runs(tab, y=-10.0)
+            lean = (t0 + t1) / 2 - (b0 + b1) / 2                                    # two down for one across
+            assert lean == pytest.approx((depth - 11.0) / 2, abs=0.2 * p.c + 2.0), w
+        # under a letter it is the same tab
+        (c0, c1), = _runs(below('ccedilla'), y=-depth / 2)
+        assert c1 - c0 == pytest.approx(a1 - a0, abs=1.5), w
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_ring_is_an_octagon(w):
+    """The ring was a square on four bowl corners. A bowl corner's diagonal
+    is as thick as the alphabet's diagonals, thicker than the ring's sides:
+    its counter came out a diamond and its outside all but square, a block
+    with a pinhole at Black. After Tomorrow's (the owner, 2026-11-12: "Do
+    Tomorrow because it's better"): a regular octagon inside and out,
+    eight sides of one thickness."""
+    ring = _ink('ring', params(w))
+    assert len(ring.interiors) == 1
+    x0, y0, x1, y1 = ring.bounds
+    i0, j0, i1, j1 = ring.interiors[0].bounds
+    assert x1 - x0 == pytest.approx(y1 - y0, abs=0.5) and i1 - i0 == pytest.approx(j1 - j0, abs=0.5)
+    octagon = lambda across: 2 * (2 ** 0.5 - 1) * across ** 2                       # a regular octagon's area
+    assert ring.area == pytest.approx(octagon(x1 - x0) - octagon(i1 - i0), rel=0.02)
+    assert len(ring.exterior.coords) - 1 == 8 and len(ring.interiors[0].coords) - 1 == 8
 
 
 def test_the_letter_under_an_italic_ogonek_is_the_plain_letter():

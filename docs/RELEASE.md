@@ -422,41 +422,68 @@ The six causes:
   unit. A reference is now drawn as a glyph of its own, whoever asks
   (`draw._as_own`), and a check draws in several orders, each in a
   process of its own.
-- An accent past the Regular is the Regular's accent. Accents were drawn
-  with their letter's own strokes at a size that grew with them: at Black
-  an acute carried 1.48 times the ink other families give it for its
-  letter and stood 1.35 times as tall, a circumflex 1.88, a caron 1.99, a
-  tilde 1.63 (forty-two families, each accent's ink over its letter's and
-  its height over the x-height), and a dieresis's dots stood 160 units
-  apart for the Regular's 72. The owner: "all bloated and ugly at black";
-  shown them at the Regular's size with seven tenths of the letter's
-  gain, "They are still too far apart" and "Can you just make the accents
-  at the regular weight? Just keep them there, please." From each cut's
-  Regular to its heaviest weight an accent is the Regular's own drawing
-  (`marks.mark_params`, `draw.held_at`): as thick, as big, its dots as
-  far apart, as far from its letter. Every accent over a letter and
-  under one, the apostrophe of ď ľ ť, the Greek tonos and its capitals'
-  room for it, the accents alone (´ ` ˆ ¨ ˜ ˇ, in the Regular's body)
-  and the combining marks. A mark that hangs off its letter is a part of
-  its outline, and at the Regular's weight on a Black letter it read as
-  a hair on it ("if it's hanging off of the letter, it should probably
-  be a little bolder"): the cedilla, the ogonek and the horn take two
-  thirds of what their letter's strokes gain past the Regular
-  (`marks.HANG_GAIN`), 163 units on a stem of 200 at Black. A letter's
-  own dot (i, j) is its letter's.
-- The cedilla and the ogonek are one hook, turned left under a c and
-  right under an a (`marks.hook`): as thick, as deep, as long. They were
-  two drawings ("They're two different sizes"). The ogonek kept the depth
-  and reach the cedilla had before its notch was looked after: its foot
-  15 units shorter at the Regular, and from Bold growing up into its
-  notch where the cedilla's hangs lower. In the italic the ogonek was six
-  tenths of a stem and the cedilla a whole one (14,000 square units of
-  ink under the a for 23,400 under the c); both are six tenths, the most
-  a hook can be before it changes the letter it hangs from (at seven
-  tenths the Į's stem was drawn another way at the Regular). The ˛ alone
-  was a whole stem in the italic, and matches now.
-  In Arris Mono the apostrophe of ď ľ ť is its letter's too: the cell
-  has no room for white between them, and the two are drawn as one.
+- An accent takes half of what its letter gains. Accents were drawn with
+  their letter's own strokes at a size that grew with them: at Black an
+  acute carried 1.48 times the ink other families give it for its letter
+  and stood 1.35 times as tall, a circumflex 1.88, a caron 1.99, a tilde
+  1.63, and a dieresis's dots stood 160 units apart for the Regular's 72
+  (the owner: "all bloated and ugly at black"; of a first trial, "They
+  are still too far apart"). Held at the Regular's weight outright they
+  were hairlines on a Black letter, four tenths of its stem ("It looks
+  wrong. Can we look at what other heavy or black weights look like on
+  other languages and try to figure out what we can do better?"). Read
+  off fifty-nine families at Regular and at their heaviest weight, each
+  mark's thickest stroke over its letter's stem: an accent's is 0.76 to
+  0.86 of the stem at Regular and 0.62 to 0.71 at the heaviest, half of
+  what the stem gains between the two (0.49 to 0.63 at the median, accent
+  by accent); the white between it and its letter closes a little, and a
+  dieresis's dots thicken without drifting apart. Past its cut's Regular
+  a mark's strokes take half of the letter's gain (`marks.MARK_GAIN`,
+  `marks.mark_params`), and its corner breaks, its size and its whites
+  stay the Regular's: 0.62 to 0.66 of the stem at Black, the dots of ë as
+  far apart as at Regular. Every accent over a letter and under one, the
+  apostrophe of ď ľ ť, the Greek tonos and its capitals' room for it, the
+  accents alone (´ ` ˆ ¨ ˜ ˇ) and the combining marks. To the Regular
+  nothing moves. A letter's own dot (i, j) is its letter's. In Arris Mono
+  the apostrophe of ď ľ ť is its letter's too: the cell has no room for
+  white between them, and the two are drawn as one.
+- The cedilla is a flat tab. It was a hook, a neck down and a foot
+  turning left, and at Black it stood 0.92 of the stem thick and 0.62 of
+  its letter wide where those families have 0.68 and 0.48: a second foot
+  under the letter. After Tomorrow's (the owner: "the cedilla under the
+  c ... just turns into a little flat tab"; of the tab at a third, two
+  thirds and the whole of the letter's weight, "F. Definitely"): a short
+  stroke leaning two down for one across, its top in the letter, cut
+  level underneath, two modules deep and as wide as the letter's stem at
+  every weight (`marks.cedilla`); 0.46 of the c's width at Black. Ç ç Ş ş
+  and their kin, the ¸ alone and the combining cedilla, one drawing from
+  Thin to Black.
+- The ogonek is a small hook on a third of its letter's gain
+  (`marks.HANG_GAIN`; the horn the same): 0.67 of the stem and 0.46 of
+  its letter's width at Black, for the families' 0.71 and 0.45. Its foot
+  is 15 units longer at the Regular and hangs lower as its notch would
+  close, as the cedilla's did. In the italic it stays six tenths of a
+  stem, the most it can be before it changes the letter it hangs from (at
+  seven tenths the Į's stem was drawn another way at the Regular); the ˛
+  alone was a whole stem there and matches now. Its join is finished with
+  its letter's ink under it, so nothing steps where it stops being the
+  letter's own stroke. (Finished with the letter stamped in a second time
+  under it, the italic ą lost the curve of its bowl's upper left corner
+  at Bold and ExtraBold; only the mark and the fills of its join are
+  stamped in, and a check holds the ą to the a above the baseline.)
+- The ring is an octagon, after Tomorrow's ("Do Tomorrow because it's
+  better"). It was a square on four bowl corners, whose diagonals are as
+  thick as the alphabet's and thicker than the ring's sides: the counter
+  came out a diamond and the outside all but square, a block with a
+  pinhole at Black. Eight sides of one thickness, a regular octagon
+  inside and out (`marks.ring`), at every weight; its size as before.
+- A mark stamped into a heavier letter keeps the corners it was finished
+  with (`Glyph.outline`, `finished`). A part drawn at other parameters
+  than its host's was finished a second time on the host's breaks, which
+  a level or 45-degree stroke passes unchanged; a corner cut where a
+  steep edge meets a level one (the tab's) was cut again, half as deep
+  again, and the ¸ changed by 1,700 square units between weights 400 and
+  401.
 - The ≠ stands on the equals' bars. The rule that lightens a sign to
   keep its whites counted the wedges between the ≠'s slash and its bars,
   outside the bars: six whites at the Regular for the two a reader sees.

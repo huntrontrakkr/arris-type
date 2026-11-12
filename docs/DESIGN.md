@@ -152,18 +152,23 @@ a J. The comma below keeps inside the descender: its stub shortens, then
 the whole comma lightens, as heavy faces draw their accents; the breve's
 sides thin the same way so its cup stays open.
 
-**Accents stop at the Regular.** Up to its cut's Regular an accent is drawn
-with its letter's strokes. From there to Black it is the Regular's own
-accent: as thick, as big, its dots as far apart, as far from its letter
-(`marks.mark_params`). Drawn with the letter's strokes at a size that grew
-with them, the accents at Black carried up to twice the ink other families
-give theirs and stood half as tall again; the owner's call (2026-11-12) was
-the Regular's weight, kept. A mark that hangs off its letter (the cedilla,
-the ogonek, the horn) is a part of the letter's outline and takes two
-thirds of the letter's gain, so it does not read as a hair on a Black
-letter. The cedilla and the ogonek are one hook turned opposite ways
-(`marks.hook`): the same neck, foot, depth and reach, six tenths of a stem
-in the italic. A letter's own dot grows with its letter.
+**Accents take half.** Up to its cut's Regular a mark is drawn with its
+letter's strokes. Past it, its strokes take half of what the letter's gain
+(`marks.MARK_GAIN`), its corner breaks stay the Regular's, and so do its
+whites: the white between a dieresis's dots, between a double acute's
+strokes, between the mark and its letter. That is what fifty-nine other
+families do at their heaviest weights (an accent's stroke 0.62 to 0.71 of
+the stem, half of the stem's gain from Regular); with the letter's whole
+gain Arris's accents were bloated at Black, and held at the Regular's
+weight they were hairlines. A letter's own dot grows with its letter.
+
+**Under the letter.** The cedilla is a flat tab, after Tomorrow's: a short
+stroke leaning two down for one across, cut level underneath, two modules
+deep and as wide as the letter's stem at every weight. The ogonek is a
+small hook from the letter's right foot, turning right, on a third of the
+letter's gain (`marks.HANG_GAIN`), six tenths of a stem in the italic. The
+horn takes the same third. The ring is a regular octagon inside and out,
+eight sides of one thickness, also after Tomorrow's.
 
 ## 4. From pixels to every weight
 

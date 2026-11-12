@@ -62,7 +62,7 @@ def dotbelow(g, x, y, case):
 def dieresisbelow(g, x, y, case):
     p = g.p
     s = below_dot(p)
-    d = s + max(1.2 * p.m, 0.8 * s)
+    d = s + max(1.2 * p.m, 0.8 * min(s, marks.whites(g).dot()))
     for xd in (x - d / 2, x + d / 2):
         g.stroke((xd, -gap(p) - s, s), (xd, -gap(p)))
 
@@ -592,7 +592,8 @@ def _combining(name, cp, seq, where, case):
         elif where == 'ogonek':
             marks.kept(g, ogonek_mark, x, gain=marks.HANG_GAIN)
         else:
-            marks.kept(g, BELOW[seq[0]], x, 0, case, gain=marks.HANG_GAIN if seq[0] == '\u0327' else 0.0)
+            hangs = seq[0] == '\u0327'                       # (the cedilla: a hanging mark's breaks, one drawing at every weight)
+            marks.kept(g, BELOW[seq[0]], x, 0, case, gain=marks.HANG_GAIN if hangs else None, apart=hangs)
     glyph(name, chr(cp) if cp else None, mark_width, kind='mark')(fn)
     MARKS[name] = (where, case, seq)
 

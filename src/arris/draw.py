@@ -435,8 +435,13 @@ class Glyph:
         # glyphs stamped as drawn at this one's parameters, only moved (an
         # accented letter's base): finished. One drawn at other parameters
         # (a small figure in a fraction) or scaled is finished again here.
+        # Not a mark drawn with its own (marks.kept: ``finished``): it is the
+        # mark it is under a lighter letter. Finished again on a heavier
+        # letter's breaks, a corner cut where a steep edge meets a level one
+        # (the cedilla's tab) was cut a second time, half as deep again.
         finished = [e for e in self.extra if any(src[0] is e and tuple(src[3][:4]) == (1.0, 0.0, 0.0, 1.0)
-                                                 and src[1].p == p for src in self.extra_src)]
+                                                 and (src[1].p == p or getattr(src[1], 'finished', False))
+                                                 for src in self.extra_src)]
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished,
                     overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p), fill=fill_leg(p))

@@ -428,16 +428,18 @@ for nm, (ch, comb) in SPACING.items():
         p = g.p
         q = marks.mark_params(p)                            # (the accent alone is the accent on a letter)
         target = g if q is p else Glyph(q, W=g.W)
+        if target is not g:
+            target.finished = True
+            target.reg = marks.mark_params(p, 0.0)
         marks.ABOVE[comb](target, g.W / 2, p.xh + marks.gap(q), 'lc')
         if target is not g:
             g.add_glyph(target)
     glyph(nm, ch, _spacing_width, kind=('punct', 0.6))(fn)
 
 
-@glyph('cedilla', '¸', _hook_width, kind=('punct', 0.6))
+@glyph('cedilla', '¸', lambda p: 3 * p.m + p.sv, kind=('punct', 0.6))
 def cedilla(g):
-    marks.kept(g, marks.cedilla, g.W - marks.mark_params(g.p, marks.HANG_GAIN).sv / 2 - 0.5 * g.p.m, 0, 'lc',
-               gain=marks.HANG_GAIN)
+    marks.kept(g, marks.cedilla, g.W / 2, 0, 'lc', gain=marks.HANG_GAIN, apart=True)
 
 
 @glyph('ogonek', '˛', _hook_width, kind=('punct', 0.6))
