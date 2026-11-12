@@ -31,7 +31,7 @@ from __future__ import annotations
 from ..draw import TAB_MATH, B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
-from .letterframe import STEEP, growing_width, plain_width as letter_width
+from .letterframe import STEEP, growing_width, kept_width, plain_width as letter_width
 from .punct import _ring, axis, dot
 
 ALIASES = {}
@@ -43,7 +43,7 @@ def _mono(width):
 
 
 def op(name, char, width=None, sides=1.0, solid=False):
-    w = _mono(width or letter_width(8, 1))
+    w = _mono(width or kept_width(8, 1))
     TAB_MATH.add(name)                         # on the math advance (draw.TAB_MATH)
     return glyph(name, char, w, kind=('punct', sides), solid=solid)
 
@@ -52,7 +52,7 @@ def u(cp):
     return f'uni{cp:04X}'
 
 
-OPW = letter_width(8, 1)                       # the plus sign's body
+OPW = kept_width(8, 1)                         # the plus sign's body (punct.OPERATOR)
 RINGW = growing_width(8, 1, 2.6)               # circled and squared operators: counters grow with the stroke
 
 

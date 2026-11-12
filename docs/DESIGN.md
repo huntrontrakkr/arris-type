@@ -226,7 +226,12 @@ Regular's and the H's 0.71, and a line sets a twentieth longer, not a
 ninth (at Arris's own Black 0.70 and 0.77, the line a twenty-fifth). A letter with one stem, and the y, give the share of
 their body the n or the H gives, the cursive's j, l, r and k among them;
 the f, the t and the j give no more than their crossbar and hook can
-spare, and the cursive f, a stem and a crossbar, gives nothing. The
+spare, and the cursive f, a stem and a crossbar, gives nothing. A sign
+of bars (a dash, the underscore, the plus, the equals and every operator
+in the plus's body) has no white between stems to give: its modules are
+the length of its bars, and past the Regular it keeps the share of the
+H's body it has there (`letterframe.kept_width`), as the dashes and the
+operators of other families keep theirs. The
 watch's own drawing keeps its
 modules and Arris Mono its cell. Figures are spaced as
 the letters are, each by its own white; their tabular twins (`tnum`)

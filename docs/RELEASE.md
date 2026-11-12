@@ -119,7 +119,7 @@ stands.
   every counter of the cursive the tighter for it. The cursive e's top is
   that bar and its diagonal alone gives for its eye.
 - Cyrillic widths, read on eighteen families that have it
-  (`tools/cyrillic_shares.py`: each letter's advance as a share of the
+  (`tools/script_shares.py`: each letter's advance as a share of the
   Н's). Arris stood inside their range for 48 of the 66 basic letters at
   Regular; Л Д Ж Ф Ш Щ and their small letters stood under it (the Ш 1.23
   of the Н for their 1.29 to 1.50: the three-stem letters had the m's
@@ -338,6 +338,47 @@ The six causes:
   two inks stand half a sidebearing apart, as the proportional digraph's
   do (`latin_plus._digraph`). The upright Mono digraphs are unchanged to
   the unit.
+- A sign of bars keeps its share of the line. The dashes, the underscore,
+  the plus, the minus and the equals were measured as the letters are, in
+  stems and modules of white, and past the Regular their white gave way
+  to stems they have not got: as the letters grew the signs shrank.
+  Against the H's advance the hyphen stood 0.81 at Regular and 0.49 at
+  Black, a square of ink between its letters; the en dash 1.10 and 0.67,
+  the em dash 1.77 and 1.07, the plus and the equals 0.94 and 0.76, the
+  plus four stubs. In sixty other families each keeps its share from
+  Regular to Bold and to Black (0.99 at the median; none under 0.83 at
+  Bold). Their modules are the length of their bars: past the Regular the
+  body keeps the share of the H's body it has there
+  (`letterframe.kept_width`), and stands at 0.80 to 0.81, 1.10 to 1.13,
+  1.77 to 1.90 and 0.94 to 0.95. Every operator stands in the plus's body
+  again: the ones that kept the watch's own white were a body of their
+  own past the Regular (52 units wider than the equals at Black), and a
+  sign drawn with lighter strokes to keep its whites took its body from
+  those strokes (the plus and the < 54 units narrower than the equals).
+  To the Regular, in Arris Mono and in the watch's own drawing nothing
+  moves. Arris's dashes are long: at the Regular the en dash, the em dash
+  and the underscore are longer than any of the sixty families'. They are
+  left as drawn.
+- The ≤ and the ≥ stand between the baseline and the cap height at every
+  weight. The <'s own chevron over a bar, the equals' white between: at
+  the Regular the pair fills the cap height to 38 units, and bolder every
+  part of it grew, 805 units tall at SemiBold and 997 at Black, 150 under
+  the baseline and 127 over the capitals. The white gives first, to the
+  least white a counter keeps, and then the chevron is drawn as large as
+  the height leaves, its bar as wide. The ≠'s slash passes its bars by a
+  module: four modules each way from the axis took it 98 units past the
+  Regular's bars and left it 66 inside Black's, two bars and a tick.
+- The Greek Ξ stands in the Σ's body. Three bars and no stem, it was nine
+  modules of white: 1.05 of the H's advance at Light, 0.97 at Regular and
+  0.55 at Black, where it was three stubs. Other families' Ξ is 0.85 of
+  their H at Regular and at Bold, a little over their Σ; Arris's is 0.90
+  at every weight. The rest of the Greek was read against twenty-one
+  families the way the Cyrillic was against eighteen
+  (`tools/script_shares.py`, which reads either now): forty-five of
+  forty-nine letters stand in their range at Regular and, with the Ξ,
+  forty-four at Bold. What stands outside is the Latin letter it shares
+  (Α Κ Μ Ν, the ν's walls) or a bowl's ink measured against the n (φ),
+  but for the π, the narrowest of them all by 3%, which is left.
 - Past the Regular the letters give white to their stems, as the letters
   of other families do. Arris got bolder outward: almost every unit a stem
   gained went onto the letter's width. Read at one boldness and one
@@ -362,7 +403,7 @@ The six causes:
   45 degrees have no counter to give, and narrowed with the letters ⊦ lost
   its stem to a wedge at Black, ⊫ its two stems to a slab, and the feet of
   ≎ ran out past its bars. Punctuation and currency give as the capitals
-  do.
+  do, but for the signs that are bars alone (the note on them, below).
 
   What a narrower body could not hold as it was is kept by rule. A
   one-stem letter (E F K L T Z, k z) gives the share of its body the H or

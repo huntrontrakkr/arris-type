@@ -102,16 +102,24 @@ def test_signs_of_fixed_geometry_and_two_letters_give_nothing(w):
     measure the watch's own white (draw.white_of): bars a set white apart
     and strokes at 45 degrees, with no counter to give. Narrowed with the
     letters, ⊦ lost its stem to a wedge at Black, ⊫ its two stems to a
-    slab, and the feet of ≎ ran out past its bars. The florin and the ϰ
-    keep their bodies too (letterframe.ungiving): the one's crossbar and
-    hook, the other's two curls. Punctuation and currency give as the
-    capitals do."""
+    slab, and the feet of ≎ ran out past its bars. The ones drawn in the
+    plus's body stand in it with the plus, which keeps its share of the
+    line past the Regular (letterframe.kept_width): wider than the watch's
+    own white gives, never narrower. The florin and the ϰ keep their
+    bodies too (letterframe.ungiving): the one's crossbar and hook, the
+    other's two curls. Punctuation and currency give as the capitals do,
+    but for the signs that are bars alone."""
     from dataclasses import replace
     p = params(w)
-    own = replace(p, white_low=1.0, white_cap=1.0)
-    for ch in '⊦⊧⊫≎≏⊚∢→↔⌂':
+    own = replace(p, white_low=1.0, white_cap=1.0, past=0.0)
+    plus = REGISTRY['plus']
+    for ch in '≎≏⊚→↔⌂':
         spec = REGISTRY[CMAP[ch]]
         assert spec.white == 'own' and spec.width(p) == pytest.approx(spec.width(own)), ch
+    for ch in '⊦⊧⊫∢≡∓':
+        spec = REGISTRY[CMAP[ch]]
+        assert spec.white == 'own' and spec.width(p) > spec.width(own), ch
+        assert spec.width(p) - spec.width(own) == pytest.approx(plus.width(p) - plus.width(own)), ch
     for ch in 'ƒϰ':
         assert REGISTRY[CMAP[ch]].width(p) == pytest.approx(REGISTRY[CMAP[ch]].width(own)), ch
     for ch in '$&?':

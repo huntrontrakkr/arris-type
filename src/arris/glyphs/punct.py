@@ -16,11 +16,15 @@ import math
 from ..draw import B, Squint, glyph
 from ..params import SQRT2
 from .figures import bay_stack, beak_depth, heaviness
-from .letterframe import STEEP, Frame, growing_width, least_white, plain_width as letter_width, white_scale
+from .letterframe import STEEP, Frame, growing_width, kept_width, least_white, plain_width as letter_width, white_scale
+
+
+OPERATOR = kept_width(8, 1)     # the plus's body, and every operator's drawn in it: bars, which keep their share of the line
 
 
 def punct(name, char, wm, stems=1, width=None, sides=1.0):
-    return glyph(name, char, width or letter_width(wm, stems), kind=('punct', sides))
+    # (no stems: bars alone, a dash's, which keep their share of the line as the operators do: letterframe.kept_width)
+    return glyph(name, char, width or (letter_width(wm, stems) if stems else kept_width(wm, 0)), kind=('punct', sides))
 
 
 def stem_w(n=1):
@@ -134,7 +138,7 @@ def endash(g):
 
 
 @punct('emdash', '—', 16, 0,
-       width=lambda p: min(letter_width(16, 0)(p), p.fig_adv) if p.mono else letter_width(16, 0)(p))
+       width=lambda p: min(letter_width(16, 0)(p), p.fig_adv) if p.mono else kept_width(16, 0)(p))
 def emdash(g):
     """A bar sixteen modules long; in the monospaced cut, the cell's full
     advance, as a code face's em dash runs (it shortens, never thins)."""
@@ -377,7 +381,7 @@ def axis(p):
     return p.cap / 2
 
 
-@punct('plus', '+', 8, 1)
+@punct('plus', '+', 8, 1, width=OPERATOR)
 def plus(g):
     p, W = g.p, g.W
     a, h = axis(p), W / 2
@@ -386,7 +390,7 @@ def plus(g):
     g.clip = (0, a - h, W, a + h)
 
 
-@punct('minus', '−', 8, 1)
+@punct('minus', '−', 8, 1, width=OPERATOR)
 def minus(g):
     p, W = g.p, g.W
     g.stroke((0, axis(p)), (W, axis(p)))
@@ -404,7 +408,7 @@ def eq_offset(g):
     return (g.sh + eq_white(g)) / 2
 
 
-@punct('equal', '=', 8, 1)
+@punct('equal', '=', 8, 1, width=OPERATOR)
 def equal(g):
     p, W = g.p, g.W
     off = eq_offset(g)
@@ -412,7 +416,7 @@ def equal(g):
         g.stroke((0, y), (W, y))
 
 
-@punct('multiply', '×', 8, 1)
+@punct('multiply', '×', 8, 1, width=OPERATOR)
 def multiply(g):
     p, W = g.p, g.W
     a, h = axis(p), W / 2
@@ -421,7 +425,7 @@ def multiply(g):
     g.clip = (0, a - h, W, a + h)
 
 
-@punct('divide', '÷', 8, 1)
+@punct('divide', '÷', 8, 1, width=OPERATOR)
 def divide(g):
     p, W = g.p, g.W
     a = axis(p)
@@ -456,12 +460,12 @@ def _chevron(g, mirror=False):
     g.stroke(T(W, a + v), T(x_tip, a), T(W, a - v), start='v', end='v')
 
 
-@punct('less', '<', 8, 1)
+@punct('less', '<', 8, 1, width=OPERATOR)
 def less(g):
     _chevron(g)
 
 
-@punct('greater', '>', 8, 1)
+@punct('greater', '>', 8, 1, width=OPERATOR)
 def greater(g):
     _chevron(g, mirror=True)
 
@@ -741,7 +745,7 @@ def asterisk(g):
         g.stroke((xc - c, yc - sy * s_, slanted(g, min(th(d), t_max), d)), (xc + c, yc + sy * s_))
 
 
-@punct('asciicircum', '^', 8, 1)
+@punct('asciicircum', '^', 8, 1, width=OPERATOR)
 def asciicircum(g):
     p, W = g.p, g.W
     k = p.sd / SQRT2
@@ -752,7 +756,7 @@ def asciicircum(g):
     g.clip = (0, ya - h - p.sv, W, top)
 
 
-@punct('asciitilde', '~', 8, 1)
+@punct('asciitilde', '~', 8, 1, width=OPERATOR)
 def asciitilde(g):
     """A step on the axis: up at 45 degrees, along, down, along, up."""
     p, W = g.p, g.W
@@ -885,7 +889,7 @@ def questiondown(g):
     g.clip = (0, shift, g.W, p.xh)
 
 
-@punct('plusminus', '±', 8, 1)
+@punct('plusminus', '±', 8, 1, width=OPERATOR)
 def plusminus(g):
     p, W = g.p, g.W
     a, h = axis(p) + p.m, W / 2 - p.sv / 4
@@ -894,7 +898,7 @@ def plusminus(g):
     g.stroke((0, a - h - g.sh), (W, a - h - g.sh))
 
 
-@punct('logicalnot', '¬', 8, 1)
+@punct('logicalnot', '¬', 8, 1, width=OPERATOR)
 def logicalnot(g):
     p, W = g.p, g.W
     a = axis(p)
@@ -903,39 +907,56 @@ def logicalnot(g):
 
 def _lessequal(g, mirror):
     """The < chevron itself over a bar, the equal sign's white between,
-    the pair centred on the axis."""
+    the pair centred on the axis, between the baseline and the cap height.
+
+    At the Regular the <'s own chevron, the white and the bar fill that
+    height to 38 units. Bolder, the bar, the white (1.6 bars) and the arms'
+    own ink all grow and the chevron grows with its body: the pair stood
+    805 units tall at SemiBold and 997 at Black, 150 under the baseline and
+    127 over the capitals. Where they do not fit, the white gives first,
+    down to the least white a counter keeps, and then the chevron is drawn
+    as large as the height leaves, its bar as wide as it is, the two
+    centred in the operator's body."""
     p, W = g.p, g.W
     x_tip, reach = chevron_geometry(g)
-    v = reach / 2
     from ..draw import _thickness
     kv = _thickness(p, g.sh)((2, 1)) / (2 * math.cos(SLOPE))     # the arms' ink past their centreline ends, vertically
     white = eq_white(g)
+    room = p.cap - g.sh - 2 * kv                             # what the bar and the arms' ink leave of the height
+    if reach + white > room:
+        white = max(min(white, least_white(p)), room - reach)
+        reach = max(min(reach, room - white), 2 * kv)
+    v = reach / 2
+    x0 = (W - x_tip - reach) / 2                             # the narrower pair, centred
     a = axis(p) + (white + g.sh) / 2                         # the chevron's centre
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
-    g.stroke(T(W, a + v), T(x_tip, a), T(W, a - v), start='v', end='v')
+    g.stroke(T(W - x0, a + v), T(x0 + x_tip, a), T(W - x0, a - v), start='v', end='v')
     yb = a - v - kv - white - g.sh / 2
-    g.stroke((0, yb), (W, yb))
+    g.stroke((x0, yb), (W - x0, yb))
 
 
-@punct('lessequal', '\u2264', 8, 1)
+@punct('lessequal', '\u2264', 8, 1, width=OPERATOR)
 def lessequal(g):
     _lessequal(g, False)
 
 
-@punct('greaterequal', '\u2265', 8, 1)
+@punct('greaterequal', '\u2265', 8, 1, width=OPERATOR)
 def greaterequal(g):
     _lessequal(g, True)
 
 
-@punct('notequal', '≠', 8, 1)
+@punct('notequal', '≠', 8, 1, width=OPERATOR)
 def notequal(g):
     from ..draw import held_c
     equal(g)
     p, W = g.p, g.W
     a = axis(p)
-    w = p.ss / STEEP[1]
-    g.lay((W / 2 - 2 * p.m, a - 4 * p.m, g.held((1.0, 2.0))), (W / 2 + 2 * p.m, a + 4 * p.m), c=held_c(p),
-          start='h', end='h')                                # its slash, added: the Regular's from there on
+    # its slash, added: the Regular's from there on. Four modules each way from the axis, or a module past
+    # the bars where they stand further out: at the Regular it passes them by 98 units, and with the bars
+    # of Black, 306 from the axis, it ended 66 units inside them, the sign two bars and a tick between
+    up = max(4 * p.m, eq_offset(g) + g.sh / 2 + p.m)
+    g.lay((W / 2 - up / 2, a - up, g.held((1.0, 2.0))), (W / 2 + up / 2, a + up), c=held_c(p),
+          start='h', end='h')
 
 
 def dagger_bar(p):

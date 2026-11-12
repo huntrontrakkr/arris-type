@@ -68,8 +68,12 @@ def Theta(g):
     g.stroke(f.P(3.5, 6), f.P(6.5, 6))
 
 
-@gcap('uni039E', 'Ξ', 9, 0)
+@gcap('uni039E', 'Ξ', 9, 1)
 def Xi(g):
+    """Three bars, in the Σ's body: a letter with no stem has no white to
+    give its stems, and in a body of nine modules of white it stood 1.05 of
+    the H's advance at Light and 0.55 at Black, three stubs (other families'
+    Ξ: 0.85 of their H at Regular and at Bold, a little over their Σ)."""
     f = Frame(g, 9)
     g.stroke((0, f.Y(11)), (f.W, f.Y(11)))
     g.stroke(f.P(1.5, 6), f.P(7.5, 6))

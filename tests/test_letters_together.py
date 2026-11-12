@@ -447,7 +447,7 @@ def test_the_italics_lowercase_stands_on_the_uprights_bar(w):
 @pytest.mark.parametrize('w', [400, 700])
 def test_the_cyrillics_widths_stand_in_other_families_range(w):
     """Each letter's advance as a share of the Н's, in eighteen families
-    that have Cyrillic (tools/cyrillic_shares.py), is a range, and six of
+    that have Cyrillic (tools/script_shares.py), is a range, and six of
     Arris's capitals stood under it at Regular with their small letters:
     the Л 0.91 of the Н for 0.92 to 1.11, the Д 0.93 for their middle's
     1.03, the Ж 1.16 for 1.18 to 1.50, the Ф 1.02 for 1.04 to 1.36, the Ш

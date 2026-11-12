@@ -133,3 +133,93 @@ def test_the_at_signs_a_moves_by_steps_no_longer():
     assert max(abs(b - a) for a, b in pairwise(by_weight)) < 45, [round(v) for v in by_weight]
     by_grade = [foot(500, g) for g in range(-100, 101, 10)]
     assert max(abs(b - a) for a, b in pairwise(by_grade)) < 25, [round(v) for v in by_grade]
+
+
+BARS = ['hyphen', 'endash', 'emdash', 'underscore', 'underscoredbl', 'uni203E']
+OPERATORS = ['plus', 'minus', 'equal', 'multiply', 'divide', 'less', 'greater', 'plusminus', 'logicalnot']
+
+
+def test_a_sign_of_bars_keeps_its_share_of_the_line():
+    """A dash's modules are the length of its bar, not white between stems.
+    Read as white they gave way past the Regular to stems the sign has not
+    got: against the H's advance the hyphen stood 0.81 at Regular and 0.49
+    at Black (a square of ink between its letters), the en dash 1.10 and
+    0.67, the plus and the equals 0.94 and 0.76. In sixty other families
+    each keeps its share (0.99 at the median from Regular to Bold and to
+    Black). Past the Regular the body keeps its share of the H's
+    (letterframe.kept_width); to the Regular, in Arris Mono and in the
+    watch's own drawing it is what it was."""
+    from arris.draw import REGISTRY
+    from arris.font import place
+    from arris.glyphs.letterframe import plain_width
+    from arris.instances import mono_weight
+    regular = params(400)
+    h0 = REGISTRY['H'].width(regular)
+    for name in BARS + OPERATORS:
+        share = REGISTRY[name].width(regular) / h0
+        for w in (500, 600, 700, 800, 900):
+            p = params(w)
+            assert REGISTRY[name].width(p) / REGISTRY['H'].width(p) == pytest.approx(share, rel=1e-9), (name, w)
+    for name, least, most in (('hyphen', 0.97, 1.01), ('endash', 0.99, 1.04), ('emdash', 0.99, 1.08), ('plus', 0.99, 1.02),
+                              ('equal', 0.99, 1.02)):
+        at = {w: place(name, params(w))[1] / place('H', params(w))[1] for w in (400, 700, 900)}
+        assert least <= at[700] / at[400] <= most and least <= at[900] / at[400] <= most, (name, at)
+    # where no white gives, nothing moved: the lighter weights, Arris Mono, the watch's own drawing
+    for p in (params(300), params(400), params(900, watch=1.0), params(mono_weight(700)).with_(mono=True)):
+        for name, wm, stems in (('endash', 9, 0), ('hyphen', 6, 0), ('underscore', 9, 0)):
+            assert REGISTRY[name].width(p) == pytest.approx(plain_width(wm, stems)(p), abs=1e-9), (name, p.sv, p.mono)
+        assert REGISTRY['minus'].width(p) == pytest.approx(plain_width(8, 1)(p), abs=1e-9)
+
+
+@pytest.mark.parametrize('w', [400, 600, 700, 800, 900])
+def test_every_operator_stands_on_one_advance(w):
+    """The plus, the minus, the equals and the rest stand on one advance at
+    a weight. A sign drawn with lighter strokes to keep its whites took its
+    body from those strokes: at Black the plus and the < stood 54 units
+    narrower than the equals."""
+    from arris.font import place
+    p = params(w)
+    advances = {n: round(place(n, p)[1]) for n in OPERATORS}
+    assert len(set(advances.values())) == 1, advances
+
+
+@pytest.mark.parametrize('w', [400, 500, 600, 700, 800, 900])
+def test_less_or_equal_stands_between_the_baseline_and_the_cap_height(w):
+    """The < over a bar: at the Regular the pair fills the cap height to 38
+    units. Bolder it grew with every part of it, 805 units tall at SemiBold
+    and 997 at Black, 150 under the baseline and 127 over the capitals. The
+    white gives to the least white and the chevron to what is left."""
+    p = params(w)
+    for name in ('lessequal', 'greaterequal'):
+        ink = _ink(name, p)
+        _, y0, _, y1 = ink.bounds
+        assert y0 >= -1.0 and y1 <= p.cap + 1.0, (name, round(y0), round(y1))
+        assert len(list(getattr(ink, 'geoms', [ink]))) == 2          # the chevron and its bar, apart
+
+
+@pytest.mark.parametrize('w', [400, 600, 700, 800, 900])
+def test_the_not_equals_slash_passes_its_bars(w):
+    """Four modules each way from the axis took the slash 98 units past the
+    Regular's bars; Black's bars stand 306 from the axis, and the slash
+    ended 66 units inside them: two bars and a tick between."""
+    g = draw('notequal', params(w))
+    ink = rings_to_shapely(g.rings())
+    bars = [st for st in g.strokes]
+    top = max(n.y for st in bars for n in st.nodes) + g.sh / 2
+    bottom = min(n.y for st in bars for n in st.nodes) - g.sh / 2
+    _, y0, _, y1 = ink.bounds
+    assert y1 >= top + 0.75 * g.p.m and y0 <= bottom - 0.75 * g.p.m, (round(y0), round(bottom), round(top), round(y1))
+
+
+def test_the_xi_stands_in_the_sigmas_body():
+    """Three bars and no stem: in a body of nine modules of white the Ξ
+    stood 1.05 of the H's advance at Light and 0.55 at Black, where it was
+    three stubs. Other families' Ξ is 0.85 of their H at Regular and at
+    Bold, a little over their Σ."""
+    from arris.font import place
+    for w in (100, 300, 400, 700, 900):
+        p = params(w)
+        assert draw('uni039E', p).W == pytest.approx(draw('uni03A3', p).W)
+        assert place('uni039E', p)[1] == pytest.approx(place('uni03A3', p)[1], rel=0.02), w
+        if w >= 300:
+            assert 0.85 <= place('uni039E', p)[1] / place('H', p)[1] <= 0.96, w

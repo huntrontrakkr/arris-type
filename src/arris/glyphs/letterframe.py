@@ -93,6 +93,44 @@ def own_width(wm: float, stems: float):
     return lambda p: stems * p.sv + (wm - 2 * stems) * p.m * white_own(p.sv / (2 * p.m))
 
 
+REGULAR_R = 0.75    # the Regular's stem, in watch stems: a module and a half (instances.REGULAR_R, heft)
+
+
+def kept_width(wm: float, stems: float):
+    """The body of a sign of bars: a dash, the underscore, the plus, the
+    equals and the operators drawn in the plus's body. Past the Regular it
+    keeps the share of the H's body it has there.
+
+    Its modules are not white between stems: they are the length of its
+    bars. Read as white (plain_width) they gave way to stems the sign has
+    not got, and as the letters grew the signs shrank: against the H's
+    advance the hyphen stood 0.81 at Regular and 0.49 at Black, the en dash
+    1.10 and 0.67, the em dash 1.77 and 1.07, the plus and the equals 0.94
+    and 0.76, the hyphen at Black a square of ink between its letters and
+    the plus four stubs. In sixty other families each of them keeps its
+    share from Regular to Bold and to Black (0.99 at the median, none under
+    0.83 at Bold). To the Regular, in Arris Mono and in the watch's own
+    drawing, whose white gives nothing, the body is what it was.
+
+    The operators that keep the watch's own white (draw.white_of) stand in
+    the plus's body with the plus: they were a body of their own past the
+    Regular, 52 units wider than the equals at Black."""
+    own = own_width(wm, stems)
+    k0 = white_own(REGULAR_R)
+    share = (2 * REGULAR_R * stems + (wm - 2 * stems) * k0) / (4 * REGULAR_R + 5 * k0)
+
+    def width(p):
+        p = p.ungraded()
+        if not p.past:
+            return own(p)
+        # (a sign drawn with lighter strokes to keep its whites, draw._lightened, stands in the body its
+        # weight gives the others: at Black the plus and the < stood 54 units narrower than the equals)
+        q = p.with_(sv=p.sv / p.light) if p.light != 1.0 else p
+        h = 2 * q.sv + 5 * q.m * white_scale(q, lower=False)
+        return own(q) + q.optical * (share * h - own(q))
+    return width
+
+
 ARM = 1.0     # what a one-stem letter's open side widens by, for each unit its stem grows past Regular
 
 
