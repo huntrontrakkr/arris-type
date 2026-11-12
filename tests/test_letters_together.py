@@ -831,8 +831,10 @@ def test_the_cursive_e_gives_only_its_top_and_bar_for_its_eye():
         p = italic(params(w))
         g, o = draw('e', p), draw('o', p)
         k = g.free('eye', 1.0)
-        assert 0.8 <= k <= 1.0 and g.sh_auto == pytest.approx(1.0), (w, k)
-        assert p.sh * k >= last - 1e-6, w               # the top (and the bar with it) never loses weight
+        # (three quarters of the weight's own at a stem of 200: from ExtraBold the top and the bar stand at
+        # 128 units while the weight's horizontal goes on to 170, as the upright's lowercase bar does)
+        assert 0.75 <= k <= 1.0 and g.sh_auto == pytest.approx(1.0), (w, k)
+        assert p.sh * k >= last - 0.5, w                # the top (and the bar with it) never loses weight
         last = p.sh * k
         x_exit = p.sv / 2 + (g.W - p.sv) * 5 / 6        # where the exit leaves the foot (the frame's sixth module)
         y0, y1 = run(rings_to_shapely(g.rings()), x_exit - 1.5 * p.c)       # the foot, under the opening

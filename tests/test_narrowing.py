@@ -174,11 +174,14 @@ def test_the_cursives_one_stem_letters_give_the_ns_share(w):
     # the j too, down to a break of white inside its hook (or what its own body has there: 0.86 of one at Black)
     own, j = own_width(6, 1)(p), REGISTRY['j.ital'].width(p)
     given = own * REGISTRY['n'].width(p) / own_width(8, 2)(p)
-    assert j == pytest.approx(max(given, min(own, 2 * p.sv + lower.J_SLOT * p.c)))
-    assert j - 2 * p.sv >= min(0.85, lower.J_SLOT) * p.c
+    from arris.glyphs.italic_forms import J_LEAST
+    assert j == pytest.approx(max(given, min(max(own, 2 * p.sv + J_LEAST * p.c), 2 * p.sv + lower.J_SLOT * p.c)))
+    assert j - 2 * p.sv >= min(J_LEAST, lower.J_SLOT) * p.c - 1e-6
     assert REGISTRY['f.ital'].width(p) == pytest.approx(own_width(7, 1)(p))
     # and the turned f is the cursive f turned, in the cursive f's body (the upright f's is a seventh narrower)
-    assert REGISTRY['uni214E'].width(p) == REGISTRY['f.ital'].width(p) > 1.05 * REGISTRY['f'].width(p)
+    # (to Bold: from ExtraBold the upright f, which holds the Bold's shape as its stem grows, is the wider)
+    assert REGISTRY['uni214E'].width(p) == REGISTRY['f.ital'].width(p)
+    assert w >= 800 or REGISTRY['f.ital'].width(p) > 1.05 * REGISTRY['f'].width(p)
     assert REGISTRY['uni214E'].width(params(w)) == REGISTRY['f'].width(params(w))
     for lig in ('f_i.ss10', 'f_j.ss10'):
         rings = place(lig, p)[0]

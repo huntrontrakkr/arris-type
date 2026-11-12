@@ -367,10 +367,16 @@ def i_ital(g):
 def j_width(p):
     """The cursive j's body: a one-stem letter's, giving past the Regular
     no more than leaves lower.J_SLOT breaks of white inside its hook, or
-    what its own body has there: with the whole share given the hook held
-    4 units of white at Black for 37, a block under the line."""
+    what its own body has there, and that no less than J_LEAST of a break:
+    with the whole share given the hook held 4 units of white at Black for
+    37, a block under the line; and at a stem of 200 its own body is two
+    stems wide to the unit, the hook's end against the stem."""
     from .lower import J_SLOT
-    return max(letter_width(6, 1)(p), min(own_width(6, 1)(p), 2 * p.sv + J_SLOT * p.c))
+    own = max(own_width(6, 1)(p), 2 * p.sv + J_LEAST * p.c)
+    return max(letter_width(6, 1)(p), min(own, 2 * p.sv + J_SLOT * p.c))
+
+
+J_LEAST = 0.85      # edge breaks: the least white inside the cursive j's hook (its own body's, to a stem of 175)
 
 
 @ital('j', 6, 1, width=j_width)
