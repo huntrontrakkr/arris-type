@@ -128,9 +128,14 @@ OPEN_BOWLS = (Squint('sh_auto', lambda p: AUTO_MIN, whites=True),)
 # tenths of the others' (93 units at Bold beside 133, less than its own 115 at SemiBold; 103 at Black beside
 # 147), and its waist, the two breaks of its end using its whole height from a stem of 189, came to a point
 # (the owner, 2026-11-12, of the italic's at 850: "The middle thing just looks so crappy here. It's super
-# thin. It doesn't make sense"). What the squint was put there for, the slits between the beaks and the
-# waist at Black, the beak's white now keeps (figures.off_the_beak: the waist's end steps back for it).
-@ccap('uni0417', 'З', 9, 2)
+# thin. It doesn't make sense"). What the squint was put there for at this height, the slits between the beaks
+# and the waist at Black, the beak's white now keeps (figures.off_the_beak: the waist's end steps back for it).
+# Its small capital (з) keeps the squint: three of the italic's bars, which are the weight's own in the
+# x-height, leave its bays 15 units each at Black, and without it the lower one closed from a stem of 189.
+ZE_BOWLS = (Squint('sh_auto', lambda p: AUTO_MIN if p.cap <= p.xh + 1e-6 else 1.0, whites=True),)
+
+
+@ccap('uni0417', 'З', 9, 2, squint=ZE_BOWLS)
 def Ze(g):
     """The 3 with the 2's beak on top."""
     ze_shape(g)
