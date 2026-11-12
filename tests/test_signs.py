@@ -863,3 +863,26 @@ def test_the_at_sign_stands_in_every_monospaced_cut():
             assert sign.bounds[1] <= -0.12 * p.cap, (cut, w)       # under the baseline (fitted a little smaller, leaned)
             liga = rings_to_shapely(place('asciitilde_at.liga', p)[0])
             assert liga.bounds[1] >= -1.0, (cut, w)                # the ligature has no foot
+
+
+@pytest.mark.parametrize('cut', ['upright', 'italic'])
+def test_a_roots_index_is_a_finished_small_figure(cut):
+    """The index of ∛ and ∜ is drawn as the small figure it is and left as
+    drawn, its stem no heavier than ROOT_HEFT of its own module. It was
+    finished a second time on the radical's breaks, two and a half times
+    its own at Bold, which closed the step in the 4's diagonal as a miss:
+    the diagonal ran up past the stem's top six units off it at Bold, and
+    through it in the italic (the outline crossed itself at Bold and
+    ExtraBold); and its stem was the Black's own proportion, 3.3 of its
+    module, in a figure 300 units tall."""
+    from arris import topology
+    from arris.font import place
+    from arris.glyphs.operators import ROOT_HEFT, _root_params
+    for w in (300, 400, 600, 700, 800, 900):
+        p = params(w) if cut == 'upright' else _italic(params(w))
+        q = _root_params(p)
+        assert q.sv <= ROOT_HEFT * q.m + 1e-6, w
+        for name in ('uni221B', 'uni221C'):
+            rings, _ = place(name, p)
+            assert not topology.faults(rings, p.c, bool(p.slant)), (name, w)
+            assert len(rings_to_shapely(rings).geoms) == 2, (name, w)           # the radical and its index, apart

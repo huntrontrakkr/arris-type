@@ -1907,9 +1907,19 @@ def contourintegral(g):
 ROOT_K = 0.42                                  # the index's size, of the figures'
 
 
+ROOT_HEFT = 2.2                                # the heaviest the index's stem may be, in its own modules
+
+
 def _root_params(p):
-    s = 0.5 - 0.08 * heaviness(p)                            # strokes in proportion to the index's size
+    """The index's parameters: a figure ROOT_K of the figures' size, its
+    strokes in proportion, and never heavier than ROOT_HEFT of its own
+    module: a little under what a superior figure may be
+    (symkit.SMALL_HEFT, 2.6), the index being two thirds of a superior's
+    size. Unheld, its stem was 2.8 of its module at Bold and 3.3 at Black,
+    the Black's own proportion in a figure 300 units tall, and the top of
+    the fourth root's 4 stood 14 units open at Black."""
     k = ROOT_K
+    s = min(0.5 - 0.08 * heaviness(p), ROOT_HEFT * k * p.m / p.sv)
     return p.with_(m=k * p.m, cap=k * p.cap, fig_w=k * p.fig_w, fig_adv=k * p.fig_adv, leg=k * p.leg,
                    sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
 
@@ -1965,7 +1975,15 @@ def _root(g, n):
     g.stroke((x, 0), (x + top / 2, top), start='h', end='h')
     g.stroke((x + top / 2 - p.sv / 2, top - g.sh / 2), (end, top - g.sh / 2))
     g.clip = (0, 0, end, top)
-    sub = draw(n, _root_params(p))
+    # the index is finished as the small figure it is (Glyph.outline:
+    # ``finished``). Finished again on the radical's breaks, two and a half
+    # times its own at Bold, the step in the 4's diagonal (33 units, under
+    # one of the radical's breaks) was closed as a miss: the diagonal ran
+    # straight up past the stem's top, six units off it at Bold and through
+    # it in the italic.
+    import copy
+    sub = copy.copy(draw(n, _root_params(p)))
+    sub.finished = True
     g.add_glyph(sub, 0, yb)
 
 

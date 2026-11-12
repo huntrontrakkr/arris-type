@@ -639,6 +639,14 @@ The six causes:
   baseline. One drawing for every cut: Arris and its italic, Arris Mono
   and Mono Narrow and their italics, and the `~@` ligature, whose tilde
   runs over the sign's top and down into the a.
+- The index of ∛ and ∜ is drawn as the small figure it is and left as
+  drawn (`operators._root`), its stem at most 2.2 of its own module
+  (`ROOT_HEFT`). It was finished a second time on the radical's breaks,
+  which closed the step in the 4's diagonal: from Bold the diagonal ran
+  up past the stem's top a few units off it, and in the italic at Bold
+  and ExtraBold the outline crossed itself; and at Black its stem was 3.3
+  of its module, a smudge. Found by scanning every sign changed in this
+  round in all seven cuts (3,939 drawings; nothing else faulted).
 - Arris Mono Narrow, read through after these changes (the owner:
   "sometimes it will break"). Its six fonts built and checked whole:
   - Bold Italic's ą and Ą carried a scrap of the ogonek's join, three
