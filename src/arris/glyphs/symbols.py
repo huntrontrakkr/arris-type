@@ -18,7 +18,7 @@ from ..params import SQRT2
 from . import marks
 from .symkit import sign
 from .cyrillic import sc
-from .letterframe import STEEP, Frame, growing_width, least_white, plain_width as letter_width
+from .letterframe import STEEP, Frame, growing_width, least_white, letter_width as arm_width, plain_width as letter_width
 from .punct import _ring, axis, dot, pct, pct_ring, punct
 
 ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyphen', 0x2011: 'hyphen'}
@@ -96,9 +96,13 @@ def cent(g):
     g.clip = None
 
 
-@glyph('sterling', '£', letter_width(8, 1), kind='cap')
+@glyph('sterling', '£', arm_width(8, 1), kind='cap')
 def sterling(g):
-    """A stem rising into a hooked top, a bar across, a base."""
+    """A stem rising into a hooked top, a bar across, a base. Its body is
+    the E's and the L's (letterframe.letter_width: a letter with one stem
+    makes room for its arms as they thicken). On the stem's growth alone it
+    stood 0.95 of the H's ink across at Regular and 0.74 at Black, where
+    twenty-one families' heaviest stand 0.90 and none under 0.74."""
     f = Frame(g, 8)
     p = f.p
     g.stroke(f.P(8, 11), B(*f.P(2.5, 11)), f.P(2.5, 1))
@@ -114,7 +118,7 @@ def yen(g):
     the stem's sides, and over the baseline; they run out past the stem by
     a bar's own reach."""
     from shapely.geometry import LineString
-    from .currency import bar_out, bar_pair, pair, wmin
+    from .currency import bar_own as bar_out, bar_pair, pair, wmin
     p = g.p
     stamp(g, 'Y', width=g.W)
     xc = g.W / 2
@@ -128,7 +132,7 @@ def yen(g):
     bar_pair(g, yc, xc - p.sv / 2 - bar_out(p), xc + p.sv / 2 + bar_out(p))
 
 
-@glyph('currency', '¤', lambda p: max(letter_width(8, 2)(p), 2.4 * p.m + 2 * p.sv + least_white(p)),
+@glyph('currency', '¤', lambda p: max(letter_width(10, 2)(p), 2.4 * p.m + 2 * p.sv + least_white(p)),
        kind=('punct', 1.0))
 def currency(g):
     """A ring on the axis, its counter never under least_white (the sign

@@ -32,7 +32,7 @@ from ..draw import TAB_MATH, B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
 from .letterframe import STEEP, growing_width, kept_width, least_white, plain_width as letter_width
-from .punct import _ring, axis, dot
+from .punct import _ring, axis, dot, dot_step
 
 ALIASES = {}
 
@@ -1325,11 +1325,6 @@ def dotmath(g):
 @op(u(0x2219), '∙', width=lambda p: 1.5 * p.dot())
 def bulletop(g):
     cdot(g, g.W / 2, axis(g.p), 1.5 * g.p.dot())
-
-
-def dot_step(p):
-    """From one dot to the next in a column or row (the ellipsis's)."""
-    return 2.2 * p.dot()
 
 
 def dot_reach(p):

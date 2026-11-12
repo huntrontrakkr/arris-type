@@ -590,6 +590,43 @@ The six causes:
     of parts, lighter toward Black. ∬ 1.43, 1.58, 1.63 of the H's
     advance (was 1.38, 1.64, 1.82), ∭ 1.94, 2.18, 2.28 (1.83, 2.24,
     2.52). In the monospaced cell they are as they were.
+- Currency signs and the ellipsis, from the same reading (of the H's
+  ink across, Regular to Black):
+  - The pound and the lira stand in the E's body
+    (`letterframe.letter_width`: a letter with one stem makes room for
+    its arms as they thicken). On the stem's growth alone they went 0.95
+    to 0.74, the narrowest of twenty-one families at Black. The tenge
+    and the tugrik stand in the T's (they went 1.21 to 0.87, wider than
+    any family at Regular and narrower than all but one at Black).
+  - A bar's reach past the letter it crosses is the Regular's past it
+    (`currency.bar_out`), as the bar itself is: at 0.9 of the weight's
+    own stem a bar 79 units thick stood 180 out at Black. ₦ 1.40 to 1.35
+    (was 1.68), ₴ 1.32 to 1.27 (1.59), ₩ 1.75 to 1.73 (2.06), ₽ 1.16 to
+    1.14 (1.30), ₣ 1.11 to 1.07 (1.24), € 1.17 to 1.10 (1.27), and ₱ ₭ ₳
+    with them. The yen's bars, which cross a stem with room either side,
+    keep the weight's own reach (`currency.bar_own`).
+  - The sheqel's four stems are a stack of parts, lighter toward Black,
+    a module and a half of white between them at every weight: 1.24,
+    1.40 at Bold, 1.44 at Black (was 1.71, 2.06; seven families'
+    heaviest 1.36, none over 1.55).
+  - The bitcoin and the colón stand in their letters' bodies and the
+    Turkish lira in a two-stem letter's (they widened with the stem for
+    strokes that are now the Regular's: 1.00 to 1.18). The cedi's stroke
+    runs through the middle of its counter, in the C's body and 0.7 of a
+    unit more for every unit of stem past the Regular, so it keeps the
+    least white off the C's stem and beaks at Black: 1.00 to 1.13 (was
+    1.27). The currency sign is larger: 0.96 to 0.88 (0.70 at Regular,
+    under all of nineteen families).
+  - The ellipsis's dots stand the Regular's white apart past it
+    (`punct.dot_step`): 0.95, 1.20 at Bold, 1.35 at Black (was 1.48,
+    1.78; twenty-one families' heaviest 1.29, none over 1.62), and ⋮ ⋯ ⋰
+    ⋱ with it (⋮ stood from a quarter of the cap height under the line
+    to a quarter over the capitals at Black).
+  - Arris Mono's ellipsis is drawn for its cell (`punct.ellipsis_dot`)
+    and stands on the baseline at every weight. Drawn with the period's
+    dots and fitted to the cell, it was drawn smaller about the math
+    axis from Medium up and left the line: 24 units over it at Medium,
+    59 at SemiBold, 89 at Bold (since 1.015).
 - Arris Mono Narrow, read through after these changes (the owner:
   "sometimes it will break"). Its six fonts built and checked whole:
   - Bold Italic's ą and Ą carried a scrap of the ogonek's join, three

@@ -940,7 +940,10 @@ out past the Regular's; a struck arrow makes the Regular's room for its
 stroke, `arrows.strike_at`, and a wave or a zigzag is measured in the
 Regular's stem, `arrows.pattern_stem`), and a picture (the watch, the
 keyboard, the clocks, the erase keys) is the Regular's drawing at every
-heavier weight (`technical.picture`); the brace is told from ( by a square bracket's ends (flat arms,
+heavier weight (`technical.picture`); a bar across a currency letter
+stands out of it as far as at the Regular (`currency.bar_out`) and an
+ellipsis's dots the Regular's white apart (`punct.dot_step`); the brace is
+told from ( by a square bracket's ends (flat arms,
 square corners, as long as the bracket's) and from [ by a point at its
 waist, a stem deep on the shallow 2:1, where ( has only its 45° ends. In
 the monospaced cut, dots (. , : ; and the tittles) are half

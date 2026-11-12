@@ -24,7 +24,8 @@ from ..draw import B, NUDGE, REGISTRY, draw, glyph, held_at, held_c, white_featu
 from ..params import SQRT2
 from .caps import big
 from .figures import STACK_MIN, beak_depth, heaviness, jog
-from .letterframe import STEEP, Frame, close_slit, growing_width, plain_width as letter_width
+from .letterframe import (STEEP, Frame, close_slit, growing_width, heft, least_white, letter_width as arm_width,
+                          plain_width as letter_width)
 from .symkit import _condensed, across, set_tight, sign, tight_width
 
 
@@ -140,15 +141,29 @@ def one_bar(g) -> bool:
     return g.free('one', 0.0) >= 0.5
 
 
-def bar_out(p):
-    """How far a bar runs out past the letter it crosses: a module, or 0.9
-    of a stem toward Black, so it reads as a bar and not as a nub on the
-    letter's side. In Mono the cell is fixed and the letter can give up
-    only a module of it; the bars make up some of the rest by hanging into
-    the cell's margin (bar_hang)."""
+def bar_own(p):
+    """How far a bar of the weight's own runs out past the stem it crosses
+    (the yen's): a module, or 0.9 of a stem toward Black, so it reads as a
+    bar and not as a nub on the letter's side. In Mono the cell is fixed
+    and the letter can give up only a module of it; the bars make up some
+    of the rest by hanging into the cell's margin (bar_hang)."""
     if p.mono:
         return p.m + bar_hang(p)
     return max(p.m, 0.9 * p.ungraded().sv)                  # (grade moves strokes, not layout)
+
+
+def bar_out(p):
+    """How far a bar runs out past the side of the letter it crosses, where
+    the body makes room for it: ``bar_own`` to the Regular, the Regular's
+    past it. The bar is the Regular's from there on (draw.EXTRA_HOLD), and
+    so is its reach: at 0.9 of the weight's own stem a bar 79 units thick
+    stood 180 out at Black, and of the H's ink across the ₦ was 1.68 for
+    1.40 at Regular, the ₴ 1.59 for 1.32, the ₩ 2.06 for 1.75, the ₽ 1.30
+    for 1.16, where other families' heaviest stand at most 1.36, 1.18,
+    1.81 and 1.19 and their bars stand out less than half a stem."""
+    if p.mono:
+        return bar_own(p)
+    return bar_own(held_at(p))
 
 
 def bar_hang(p):
@@ -210,13 +225,20 @@ def _c_width(extra=0.0):
     return lambda p: letter_width(9, 2)(p) + extra * p.m
 
 
-@cur('uni20B5', '₵', growing_width(9, 2, 1.5))
+CEDI_ROOM = 0.7      # what the cedi's body gains for a unit of stem past the Regular, over the C's
+
+
+@cur('uni20B5', '₵', lambda p: REGISTRY['C'].width(p) + CEDI_ROOM * heft(p))
 def cedi(g):
-    """C with a stroke through it, right of the middle so the counter's
-    closed part stays open."""
+    """C with a stroke through the middle of its counter, the Regular's
+    stroke past it: white either side of it between the C's stem and its
+    beaks, the least a sign keeps at Black (CEDI_ROOM). (It stood right of
+    the middle in a body a stem and a half wider for every stem gained,
+    1.27 of the H's ink across at Black; in the C's own body it stands 58
+    units off the stem and the beaks there.)"""
     p = g.p
     REGISTRY['C'].fn(g)
-    x = 0.5 * g.W + 0.25 * p.sv
+    x = 0.5 * g.W
     g.lay((x, -1.5 * p.m, g.held((0.0, 1.0))), (x, p.cap + 1.5 * p.m), c=held_c(p))
     g.clip = (0, -1.5 * p.m, g.W, p.cap + 1.5 * p.m)
 
@@ -235,7 +257,7 @@ def _stub_xs(p, xc):
     return (xc - d, xc + d)
 
 
-@cur('colonmonetary', '₡', growing_width(9, 2, 1.0))
+@cur('colonmonetary', '₡', lambda p: REGISTRY['C'].width(p))
 def colon_sign(g):
     """C with two strokes standing out of its top and bottom (the colón's
     two lines, shown where they leave the letter)."""
@@ -246,7 +268,7 @@ def colon_sign(g):
     g.clip = (0, -h, g.W, p.cap + h)
 
 
-@cur('uni20BF', '₿', growing_width(9, 2, 1.0))
+@cur('uni20BF', '₿', lambda p: REGISTRY['B'].width(p))
 def bitcoin(g):
     """B with two strokes standing out of its top and bottom."""
     p = g.p
@@ -406,7 +428,7 @@ def austral(g):
     bar_pair(g, f.Y(4), -hang, g.W + hang)
 
 
-@cur('uni20B8', '₸', letter_width(10, 1), squint=BARS)
+@cur('uni20B8', '₸', lambda p: REGISTRY['T'].width(p), squint=BARS)
 def tenge(g):
     """T with a second bar above its own: the stem hangs from the lower."""
     p = g.p
@@ -500,7 +522,7 @@ def kip(g):
     g.lay((-hang, p.cap / 2, g.held()), (dx + p.sv + 1.5 * p.m, p.cap / 2), c=held_c(p))
 
 
-@cur('lira', '₤', letter_width(8, 1), squint=BARS)
+@cur('lira', '₤', arm_width(8, 1), squint=BARS)
 def lira(g):
     """The pound sign with two bars, centred between its base and its top,
     the white below, between and above them shared evenly where the room
@@ -605,7 +627,7 @@ def _cross(g, xs, y_lo, y_hi, t, arms):
         g.lay((xs - el, y - el, across(g.p, t, (1, 1))), (xs + er, y + er), c=held_c(g.p), start='v', end='v')
 
 
-@cur('uni20BA', '\u20ba', growing_width(9, 2, 1.0))
+@cur('uni20BA', '\u20ba', letter_width(9, 2))
 def turkishlira(g):
     """A stem whose foot turns along the baseline and up the right side, two
     45-degree strokes across the stem."""
@@ -621,7 +643,7 @@ def turkishlira(g):
     _cross(g, xs, yc - dy / 2, yc + dy / 2, t, (ef, e, ef, ef))   # only the lower stroke's right arm is over the bowl
 
 
-@cur('uni20AE', '\u20ae', letter_width(10, 1))
+@cur('uni20AE', '\u20ae', lambda p: REGISTRY['T'].width(p))
 def tugrik(g):
     """T with two 45-degree strokes across its stem. The upper stroke stays
     a stroke's white under the bar; at heavy weights the lower one may run
@@ -692,12 +714,32 @@ def lari(g):
         g.stroke((x, ya), (x, p.cap))
 
 
-@cur('uni20AA', '₪', lambda p: 4 * p.sv + 3 * max(1.5 * p.m, 0.75 * p.sv))
+def _sheqel(p):
+    """(parameters, white between stems) the sheqel is drawn with: four
+    stems side by side are a stack of parts, lighter toward Black
+    (arrows.stack_k), a module and a half of white between them at every
+    weight. In the weight's own strokes with three quarters of a stem
+    between them it stood 1.24 of the H's ink across at Regular, 1.71 at
+    Bold and 2.06 at Black, where seven families' heaviest stand 1.36 and
+    none over 1.55."""
+    from ..draw import _lightened
+    from .arrows import stack_k
+    k = stack_k(p)
+    q = _lightened(p, k) if k != 1.0 else p
+    return q, max(1.5 * q.m, least_white(q))
+
+
+def _sheqel_w(p):
+    q, gap = _sheqel(p)
+    return 4 * q.sv + 3 * gap
+
+
+@cur('uni20AA', '₪', _sheqel_w)
 def sheqel(g):
     """Two hooks interlocked: a stem rising and turning down on the right,
     and inside it a stem falling and turning up on the right."""
+    g.p, gap = _sheqel(g.p)
     p, H = g.p, g.p.cap
-    gap = max(1.5 * p.m, 0.75 * p.sv)
     xs = [p.sv / 2 + i * (p.sv + gap) for i in range(4)]
     yt, yb = H - g.sh / 2, g.sh / 2
     g.stroke((xs[0], 0), B(xs[0], yt), B(xs[2], yt), (xs[2], g.sh + gap))

@@ -724,3 +724,70 @@ def test_integrals_side_by_side_stand_apart(w):
         for a, b in itertools.pairwise(parts):
             assert a.distance(b) >= 0.95 * least_white(g.p), (name, w)
     assert _adv('uni222C', params(900)) <= 1.7 and _adv('uni222D', params(900)) <= 2.35
+
+
+def test_currency_signs_keep_their_share_of_the_line():
+    """Of the H's ink across, from Regular to Black: the pound and the lira
+    went 0.95 to 0.74 (a letter with one stem that made no room for its
+    arms), the tenge and the tugrik 1.21 to 0.87, the sheqel 1.24 to 2.06,
+    and the letters with bars grew with a bar that stood 0.9 of the
+    weight's stem out of them (₦ 1.40 to 1.68, ₴ 1.32 to 1.59, ₩ 1.75 to
+    2.06). The pound's body is the E's and the tenge's the T's; the
+    bitcoin and the colón stand in their letters' bodies, and the cedi in
+    the C's and a little more, its stroke the least white off the C's stem
+    and beaks at Black; a bar's reach past its letter is the Regular's past
+    it (currency.bar_out), as the bar is; the sheqel's four stems are a
+    stack of parts."""
+    from arris.glyphs.currency import bar_out
+    regular, black = params(400), params(900)
+    assert bar_out(black) == bar_out(regular) and bar_out(params(300)) <= bar_out(regular)
+    same = {'sterling': 'E', 'lira': 'E', 'uni20B8': 'T', 'uni20AE': 'T', 'uni20BF': 'B', 'colonmonetary': 'C'}
+    for name, letter in same.items():
+        for w in (400, 700, 900):
+            assert _wide(name, params(w)) == pytest.approx(_wide(letter, params(w)), abs=0.02), (name, w)
+    at_regular = {'uni20A6': 1.40, 'uni20A9': 1.75, 'uni20B4': 1.32, 'uni20BD': 1.16, 'franc': 1.11, 'Euro': 1.17,
+                  'uni20B1': 1.19, 'uni20AD': 1.24, 'uni20B3': 1.45}
+    for name, share in at_regular.items():
+        assert _wide(name, regular) == pytest.approx(share, abs=0.02), name      # the Regular as it was
+        for w in (700, 900):
+            assert share - 0.12 <= _wide(name, params(w)) <= share + 0.01, (name, w)
+    from arris.glyphs.letterframe import least_white
+    for w in (400, 700, 900):
+        p = params(w)
+        assert _wide('uni20B5', p) <= 1.14, w                                    # the cedi (it was 1.27 at Black)
+        stem, stroke = _runs(_ink('uni20B5', p), y=p.cap / 2)
+        assert stroke[0] - stem[1] >= 0.95 * least_white(p), w
+    assert _wide('uni20AA', regular) == pytest.approx(1.24, abs=0.02)
+    assert max(_wide('uni20AA', params(w)) for w in (700, 900)) <= 1.46
+    for w in (400, 700, 900):
+        assert 0.85 <= _wide('currency', params(w)) <= 1.0, w                    # (it was 0.70 at Regular)
+
+
+def test_the_ellipsis_keeps_near_its_length_and_its_line():
+    """Its dots stand the Regular's white apart past it (punct.dot_step):
+    0.95 of the H's ink across at Regular, 1.20 at Bold, 1.35 at Black (it
+    was 1.48 and 1.78; twenty-one families' heaviest 1.29, none over 1.62).
+    In the monospaced cell its three dots are drawn for the cell
+    (punct.ellipsis_dot) and stand on the baseline at every weight: fitted
+    to it, they stood 89 units over the line at Bold."""
+    from arris.instances import mono_weight, narrow_weight
+    from arris.italic import italic
+    assert _wide('ellipsis', params(400)) == pytest.approx(0.95, abs=0.02)
+    assert _wide('ellipsis', params(700)) <= 1.25 and _wide('ellipsis', params(900)) <= 1.40
+    assert _wide('uni22EF', params(900)) == pytest.approx(_wide('ellipsis', params(900)), abs=0.01)
+    _, y0, _, y1 = _ink('uni22EE', params(900)).bounds
+    assert y0 >= -0.1 * params(900).cap and y1 <= 1.1 * params(900).cap      # (it was -0.25 to 1.25)
+    cuts = {'mono': lambda w: params(mono_weight(w)).with_(mono=True),
+            'mono italic': lambda w: italic(params(mono_weight(w)).with_(mono=True)),
+            'narrow': lambda w: params(narrow_weight(w)).with_(mono=True, narrow=True)}
+    for cut, at in cuts.items():
+        for w in (300, 400, 450, 500, 600, 700):
+            p = at(w)
+            dots = sorted(_ink('ellipsis', p).geoms, key=lambda q: q.bounds[0])
+            assert len(dots) == 3, (cut, w)
+            for d in dots:
+                assert d.bounds[1] == pytest.approx(0.0, abs=0.5), (cut, w)
+            sizes = [d.bounds[3] - d.bounds[1] for d in dots]
+            assert min(sizes) >= 0.5 * p.dot(), (cut, w)
+            whites = [b.bounds[0] - a.bounds[2] for a, b in itertools.pairwise(dots)]
+            assert min(whites) >= 0.8 * max(sizes), (cut, w)

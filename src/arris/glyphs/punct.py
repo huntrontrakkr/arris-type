@@ -945,11 +945,51 @@ def periodcentered(g):
     dot(g, p.dot() / 2, p.xh / 2 - p.dot() / 2)
 
 
-@punct('ellipsis', '…', 8, width=dot_w(3 + 2 * 1.2))
+DOTS_WHITE = 1.2        # white between the dots of an ellipsis, in dots
+
+
+def dot_step(p):
+    """From one dot of an ellipsis to the next (and of ⋮ ⋯ ⋰ ⋱): a dot and
+    DOTS_WHITE dots of white, the Regular's dots past it. With the white
+    1.2 of the weight's own dot the ellipsis was 0.95 of the H's ink across
+    at Regular, 1.48 at Bold and 1.78 at Black, where twenty-one families'
+    stand 1.19 at Regular and 1.29 at their heaviest and none over 1.62,
+    and ⋮ stood from a quarter of the cap height under the line to a
+    quarter over the capitals."""
+    from ..draw import held_at
+    return p.dot() + DOTS_WHITE * min(p.dot(), held_at(p).dot())
+
+
+MONO_DOTS_WHITE = 0.85  # ... in the monospaced cell, at least
+
+
+def ellipsis_dot(p):
+    """The ellipsis's dot: the period's; in the monospaced cell as large as
+    leaves MONO_DOTS_WHITE of a dot between three of them across the cell's
+    body. Drawn with the period's dots and fitted to the cell
+    (symkit._mono_fit), Arris Mono's was drawn smaller about the math axis
+    from Medium up and left the baseline: 24 units over it at Medium, 59
+    at SemiBold, 89 at Bold."""
+    if p.mono:
+        return min(p.dot(), p.fig_w / (3 + 2 * MONO_DOTS_WHITE))
+    return p.dot()
+
+
+def ellipsis_w(p):
+    return p.fig_w if p.mono else p.dot() + 2 * dot_step(p)
+
+
+@punct('ellipsis', '…', 8, width=ellipsis_w)
 def ellipsis(g):
     p = g.p
+    s = ellipsis_dot(p)
+    step = (g.W - s) / 2
     for i in range(3):
-        dot(g, p.dot() / 2 + i * 2.2 * p.dot(), 0)
+        x = s / 2 + i * step
+        if s < p.dot():                                     # a smaller dot, broken in proportion
+            g.lay((x, 0, s), (x, s), c=p.c * s / p.dot())
+        else:
+            g.stroke((x, 0, s), (x, s))
 
 
 def _guil_reach(p):
