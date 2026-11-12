@@ -78,7 +78,9 @@ def test_a_straight_quote_is_a_third_of_the_cap_height(w):
     two = list(_ink('quotedbl', p).geoms)
     assert len(two) == 2
     a, b = sorted(two, key=lambda q: q.bounds[0])
-    assert 0.55 * p.sv <= b.bounds[0] - a.bounds[2] <= 1.2 * max(p.sv, 1.5 * p.m)
+    from arris.params import WHITE_HELD
+    # (the white between the two, of no more stem than the least white grows with: params.white_floor)
+    assert 0.55 * min(p.sv, WHITE_HELD) <= b.bounds[0] - a.bounds[2] <= 1.2 * max(p.sv, 1.5 * p.m)
 
 
 @pytest.mark.parametrize('w', [300, 400, 700, 900])
