@@ -15,7 +15,7 @@ import arris.glyphs  # noqa: F401  (the registry)
 from arris.draw import REGISTRY, draw
 from arris.glyphs import lower
 from arris.glyphs.letterframe import heft, narrowed, own_width, zone
-from arris.instances import drawn, params
+from arris.instances import drawn, mono_weight, params
 from arris.italic import italic
 
 CMAP = {chr(s.unicode): n for n, s in REGISTRY.items() if s.unicode}
@@ -75,11 +75,11 @@ def test_the_italic_gives_as_the_upright_does(w):
 def test_arris_mono_and_the_watchs_own_drawing_give_nothing(w):
     """Mono's letters fill one cell at every weight, and the watch's own
     drawing (WTCH 100) keeps its modules: neither takes the narrowing."""
-    mono, watch = params(w).with_(mono=True), params(900, watch=1.0)
+    mono, watch = params(mono_weight(w)).with_(mono=True), params(900, watch=1.0)
     for p in (mono, mono.with_(narrow=True), italic(mono), watch):
         assert p.white_low == p.white_cap == 1.0
     assert watch.fig_w == watch.fig_own
-    assert params(w).with_(mono=True).fig_w == pytest.approx(min(max(params(w).fig_own, 9 * 60.0), 600.0), abs=60.0)
+    assert mono.fig_w == pytest.approx(min(max(mono.fig_own, 9 * 60.0), 600.0), abs=60.0)
 
 
 def test_a_set_drawn_smaller_gives_as_its_font_does():
@@ -138,13 +138,13 @@ def test_f_and_t_give_on_the_arms_side(w):
     comes off the arm and the foot, down to ARM_LEAST stems past the stem:
     a quarter of it came off the stub, which is no longer than its two
     cuts, and at ExtraBold they came apart in a kink."""
-    p = drawn(w)                                                        # (the watch's weights: its 650 is Arris's Bold)
+    p = drawn(w)                                                        # (the watch's weights)
     own = own_width(lower.NARROW, 1)(p) + heft(p)
     whole = (own - p.sv) / 4
     d = lower.stub(p)
     assert d == pytest.approx(whole) if w <= 600 else d < 0.7 * whole
-    assert lower.stub(params(600)) == pytest.approx((own_width(lower.NARROW, 1)(params(600)) + heft(params(600)) - params(600).sv) / 4)
-    assert drawn(650).same(params(700))
+    assert lower.stub(params(500)) == pytest.approx((own_width(lower.NARROW, 1)(params(500)) + heft(params(500)) - params(500).sv) / 4)
+    assert drawn(650).sv == 130 < params(600).sv                        # (Arris's SemiBold is past it)
     body = REGISTRY['t'].width(p)
     with zone('lower'):
         arm = max(own * narrowed(p) - whole - p.sv, lower.ARM_LEAST * p.sv)   # as a one-stem letter gives, the stub aside
@@ -204,10 +204,62 @@ def test_the_dot_in_a_lunate_sigma_is_no_speck(w):
         assert dot[0] == p.dot() if w == 400 else dot[0] >= 0.45 * p.sv, name
 
 
-@pytest.mark.parametrize('w', [800, 850, 900])
-def test_the_j_keeps_a_break_of_white_in_its_hook(w):
+@pytest.mark.parametrize('w', [100, 400, 700, 800, 900])
+def test_the_j_stands_on_the_ls_foot(w):
+    """The j is the l run down under the line: its body the l's, and its
+    foot the l's own, turned to the left and set on the descender line,
+    point for point (the owner, 2026-11-12, of the j that turned into a
+    hook with a beak: "It should look more like the l with the same foot
+    as our l and just kind of descend"; and of a bare stem: "I didn't want
+    you to make it look like an i ... a small little crook at the bottom
+    with a foot"). Arris Mono's j keeps its flag and its hook."""
     p = params(w)
-    assert REGISTRY['j'].width(p) == REGISTRY['uni0237'].width(p) >= 2 * p.sv + lower.J_SLOT * p.c - 1e-9
+    W = REGISTRY['l'].width(p)
+    assert REGISTRY['j'].width(p) == REGISTRY['uni0237'].width(p) == W
+
+    def foot(name, turned, drop):
+        ring = max(draw(name, p).rings(), key=len)
+        return sorted((round(W - x if turned else x, 2), round(y + drop, 2)) for x, y in ring if y + drop < p.xh / 2)
+    theirs = foot('l', False, 0.0)
+    for name in ('j', 'uni0237'):
+        ours = foot(name, True, p.desc)
+        assert len(ours) == len(theirs), name
+        for a, b in zip(ours, theirs):                      # (to the three units the l's optical centre lifts its cut, in the x-height)
+            assert a == pytest.approx(b, abs=3.5), (name, a, b)
+    assert min(y for r in draw('j', p).rings() for _, y in r) == pytest.approx(-p.desc, abs=0.5)
+    assert len(draw('j', p).rings()) == 2 and len(draw('uni0237', p).rings()) == 1        # a stem and its dot
+    mono = params(w).with_(mono=True)                       # (Arris Mono's: a flag, a stem and a hook)
+    assert len(max(draw('j', mono).rings(), key=len)) > len(max(draw('j', p).rings(), key=len))
+
+
+@pytest.mark.parametrize('w', [400, 900])
+def test_cv03_gives_the_hooked_j_back(w):
+    """The owner, of the j on the l's foot: "you can have the old j using
+    some type of rule that can be turned on, but I like the way it is right
+    now". cv03 swaps the j, the dotless j and the accented j's for the
+    hooked ones: the hooked j's body (lower.j_width), its hook ended in a
+    beak that turns up. In the italic and in Arris Mono, whose j is the
+    hooked one, the variant is their own j."""
+    from arris.glyphs.features import fea
+    from arris.glyphs.ligatures import HOOKED_J
+    from arris.italic import italic
+    assert HOOKED_J == ['j', 'uni0237', 'jcircumflex', 'uni01F0']
+    for mono in (False, True):
+        text = fea(mono)
+        assert 'feature cv03' in text and all(f'sub {n} by {n}.cv03;' in text for n in HOOKED_J)
+    p = params(w)
+    assert REGISTRY['j.cv03'].width(p) == REGISTRY['uni0237.cv03'].width(p) == pytest.approx(lower.j_width(p))
+    assert REGISTRY['j.cv03'].width(p) > REGISTRY['j'].width(p)
+    hooked = max(draw('j.cv03', p).rings(), key=len)
+    x0 = min(x for x, _ in hooked)
+    tip = max(y for x, y in hooked if x < x0 + p.sv / 2)                # the beak's end, at the hook's left
+    assert tip > -p.desc + p.sh * p.low + 0.5 * p.c                     # turned up over the hook's bar
+    assert len(hooked) > len(max(draw('j', p).rings(), key=len))
+    for name in ('j', 'uni0237'):
+        for q in (italic(p), p.with_(mono=True)):
+            a, b = draw(name, q).rings(), draw(f'{name}.cv03', q).rings()
+            assert [len(r) for r in a] == [len(r) for r in b], (name, q.mono)
+            assert all(u == pytest.approx(v, abs=0.01) for ra, rb in zip(a, b) for u, v in zip(ra, rb)), (name, q.mono)
 
 
 @pytest.mark.parametrize('w', [700, 750, 800])

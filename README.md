@@ -49,7 +49,8 @@ alignment (`- + *` drop beside lowercase, `:` rises beside capitals, `x` is
 Fira Code's optional sets under Fira's tags (`ss07` `=~` as ≈, `ss08`
 gapped equality, `ss09` `>>=` `|=` as arrows, `ss10` `fi` `ft`…, `cv20`
 `<=` as ⇐, `cv21` `=<` as ⩽, `cv22` `=<` as ≤, `cv25` `.-`, `cv26` `:-`, `cv27` `[]`,
-`cv28` `{.` `.}`, `cv32` `.=`; `docs/DESIGN.md`, section 8), `cv01`, `cv02`, and
+`cv28` `{.` `.}`, `cv32` `.=`; `docs/DESIGN.md`, section 8), `cv01`, `cv02`,
+`cv03` (the hooked j Arris had until 1.017), and
 in Mono Italic the italic's descending f, looped k and the y that runs on
 into its descender, drawn into the cell, and an underscore that runs into
 the f's tail (`is_fresh` as one line), all by default; `ss04`, "Plain

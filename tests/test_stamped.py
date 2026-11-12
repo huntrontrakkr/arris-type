@@ -12,7 +12,7 @@ from shapely.geometry import Polygon, box
 import arris.glyphs  # noqa: F401  (the registry)
 from arris import draw as D
 from arris.geom import Thickness, ink
-from arris.instances import params
+from arris.instances import mono_weight, params
 
 
 def _rings(g):
@@ -31,14 +31,14 @@ def test_finished_ink_a_clip_leaves_whole_is_kept_as_it_was():
 
 @pytest.mark.parametrize('w', [400, 700])
 def test_mono_accented_letter_keeps_its_letter(w):
-    p = params(w).with_(mono=True)
+    p = params(mono_weight(w)).with_(mono=True)
     base, accented = _rings(D.draw('oslash', p)), _rings(D.draw('oslashacute', p))
     assert all(r in accented for r in base)
 
 
 def test_mono_bold_oslashacute_does_not_turn_on_a_float():
     # the stamped ø moved by a hair: the same outline, point for point
-    p = params(700).with_(mono=True)
+    p = params(mono_weight(700)).with_(mono=True)
     orig = D.Glyph.add_glyph
     outs = []
     try:

@@ -26,7 +26,7 @@ from ..draw import AUTO_SHARE, REGISTRY, B, Opening, _counter_white, glyph
 from ..params import SQRT2, inner_leg, outer_leg
 from .figures import jog
 from .letterframe import Frame, letter_width as _letter_width, own_width, ungiving, white_scale
-from .lower import _dot, crotch_butt, hook, shoulder, shoulder_enter
+from .lower import _dot, crotch_butt, hook, hook_span, shoulder, shoulder_enter
 
 TAIL = 1.75      # modules of white an exit tail reaches past its stem
 FLAG = 1.5       # modules an entry flag reaches left of its stem (and down)
@@ -384,6 +384,23 @@ def j_ital(g):
     _dot(g, f, f.X(5))
 
 
+@ital('uni0237', 6, 1, width=j_width)
+def dotlessj_ital(g):
+    """The italic's j without its dot, for its accents (ĵ ǰ): the upright's
+    dotless j, slanted, stood in for it while the two were the same letter."""
+    from .figures import beak_depth
+    f = Frame(g, 6, 'asc', top=g.p.asc + g.p.sv)
+    p = f.p
+    _free(g)
+    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    entry(g, f, f.X(5))
+
+
+# cv03 (the hooked j: lower.j_cv03) changes nothing in the italic, whose j is the hooked one
+for _n in ('j', 'uni0237'):
+    glyph(f'{_n}.cv03.ital', None, j_width, kind='lower')(REGISTRY[f'{_n}.ital'].fn)
+
+
 @ital('l', 6, 1)
 def l_ital(g):
     f = Frame(g, 6, 'asc')
@@ -574,7 +591,7 @@ def y_ital(g):
     arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=BOWL_DROP)
     g.stroke(f.P(1, 9), *reversed(turned(f.W, f.p.xh, arch)), end=cut)
     entry(g, f, f.X(1))
-    hook(g, f)
+    hook(g, f, span=hook_span(f.p))                         # the g's own hook (lower.hook_span)
     g.butt += crotch_butt(g, f.Y(1))                    # the foot meets the descender square (lower.crotch_butt)
 
 

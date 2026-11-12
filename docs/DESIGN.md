@@ -902,7 +902,11 @@ neighbours is the slashed Ø's, 15 units at Bold.
 In the monospaced cut the hyphen sits on the math axis, in line with
 `+ = < >` and the arrows it grows into. `ss03` turns `<=` `>=` back into their characters (for languages where
 they are arrows); `cv01` is the single-storey a (both cuts), `cv02` the
-plain zero.
+plain zero. `cv03` is the hooked j: Arris's j is the l run down under the
+line, a stem and the l's foot turned to the left on the descender line;
+until 1.017 it turned into a hook that ended in a beak, the g's in little,
+and `cv03` gives that one back (j, ȷ, ĵ, ǰ). Arris Mono's j and the
+italic's are the hooked one, and `cv03` changes nothing there.
 
 ## 9. Metrics
 

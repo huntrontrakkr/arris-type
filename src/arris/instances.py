@@ -2,7 +2,7 @@
 
 Axes:
   wght  100-900  stem weight; the watch's heritage weight is Arris Watch's
-                 SemiBold (STEMS, WATCH_STEMS)
+                 SemiBold (STEMS, WATCH_STEMS; Arris Mono's: MONO_STEMS)
   GRAD  -100-100 grade: strokes up to a fifth thinner or thicker in the same
                  widths and spacing, for light-on-dark text (docs/DESIGN.md);
                  a positive grade fades out toward Black (GRAD_TAPER)
@@ -36,23 +36,44 @@ NARROW_LIGHTER = 50
 
 
 def narrow_weight(wght: float) -> float:
-    """The weight Arris Mono Narrow draws a weight at (NARROW_LIGHTER)."""
-    return wght if wght <= MONO_WEIGHTS[0] else max(MONO_WEIGHTS[0], wght - NARROW_LIGHTER)
+    """The weight Arris Mono Narrow draws a weight at (NARROW_LIGHTER), as
+    the engine is asked for it (mono_weight)."""
+    return mono_weight(wght if wght <= MONO_WEIGHTS[0] else max(MONO_WEIGHTS[0], wght - NARROW_LIGHTER))
+
+
+def mono_weight(wght: float) -> float:
+    """The weight of Arris that has the stem Arris Mono draws a weight with
+    (MONO_STEMS): what the engine is asked for to draw Arris Mono's
+    ``wght``. To the Regular the same."""
+    return _rung(STEMS, _ladder(MONO_STEMS, wght))
+
+
 # The watch's own weights: the stems the design was drawn on, its figures' at SemiBold (two modules).
 # Arris Watch and the watch's end of the variable font (WTCH 100) keep them, and every rule of the engine
 # that names a weight means one of these (``drawn``): the measured optics' ends, the weight a cut's forms
 # are chosen at, the weights a heavier one is held against.
 WATCH_STEMS = {100: 24, 200: 44, 300: 66, 400: 90, 500: 105, 600: 120, 700: 140, 800: 158, 900: 175}
-# Arris and Arris Mono. To the Regular the watch's; past it each weight adds to the Regular's stem four
-# fifths of what the watch's adds (PAST_REGULAR), so Black draws the stem of the watch's ExtraBold and Bold
-# that of its 650. At the watch's Black, in the widths the letters have past the Regular
-# (white_given), the n's counter was narrower than its stems (164 units for 175: 184 for 158 at
-# ExtraBold), and every repair of that round was there: the j's hook shut, the k's loop all but, the
-# f's and the t's crossing a knot (the owner, 2026-11-11, to dropping it: "we should do that but we need
-# to rescale everything after regular"; and of the watch's weights: "Watch cut keeps its weights").
-# Nothing is drawn that was not: a weight of Arris is the drawing of the watch's weight with its stem.
-PAST_REGULAR = 0.8
-STEMS = {100: 24, 200: 44, 300: 66, 400: 90, 500: 102, 600: 114, 700: 130, 800: 144.4, 900: 158}
+# Arris. To the Regular the watch's; past it each weight has the stem that gives a line of its lowercase the
+# colour other families' weight of that name has. Sixty grotesque, geometric and squared families were read at
+# every weight they have (the ink of a line of lowercase in the band of its x-height: 2026-11-11). Their Regular
+# stands at 0.33 (the middle half 0.31 to 0.35) and so does Arris's. Their Medium 0.39, SemiBold 0.45, Bold 0.50
+# (0.48 to 0.52), ExtraBold 0.55, Black 0.61 (0.57 to 0.65); on the ladder Arris had until then (102 114 130 144
+# 158) it stood at 0.37, 0.40, 0.44, 0.47 and 0.51: its Bold their SemiBold, its Black their Bold (the owner: "a
+# true bold at the same color as other sets and a true black"). On these stems 0.39, 0.45, 0.50, 0.55, 0.60.
+#
+# Black is heavier than any weight of the watch's. The watch's Black (175) had failed in Arris's widths with the
+# watch's corners: the bowl's outside cut grew with the stem and its inside stayed cut, so a counter two thirds of
+# a stem wide was a diamond (see _params: the outside cut holds the Regular's size, as the cut families that have a
+# Black do, and the inside goes square).
+STEMS = {100: 24, 200: 44, 300: 66, 400: 90, 500: 110, 600: 133, 700: 155, 800: 178, 900: 200}
+# Arris Mono and Arris Mono Narrow keep the stems Arris drew until then (to Bold: MONO_WEIGHTS). In a 600 cell
+# its Bold already has Fira Code Bold's colour (0.41 for 0.43, read the same way), and a third stem of 155 has
+# no room in the m (mono_weight).
+MONO_STEMS = {100: 24, 200: 44, 300: 66, 400: 90, 500: 102, 600: 114, 700: 130, 800: 144.4, 900: 158}
+# The stems the engine draws, by the weights its rules name: the watch's, and one rung past the watch's Black for
+# the stems only Arris has (its ExtraBold and Black). No font carries the name; drawn, watch_weight and draw._cut
+# read a stem's place on it.
+DRAWN_STEMS = {**WATCH_STEMS, 1000: STEMS[900]}
 NAMES = {100: 'Thin', 200: 'ExtraLight', 300: 'Light', 400: 'Regular', 500: 'Medium',
          600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black'}
 
@@ -99,7 +120,9 @@ def _ladder(table: dict, wght: float) -> float:
     for a, b in zip(ks, ks[1:]):
         if wght <= b:
             t = (wght - a) / (b - a)
-            return table[a] + (table[b] - table[a]) * t
+            # (to a billionth of a unit: a weight asked for by its stem, mono_weight, has the ladder's own number,
+            # where 114 came back 114.00000000000001 and an outline began on another of its points)
+            return round(table[a] + (table[b] - table[a]) * t, 9)
     return table[ks[-1]]
 
 
@@ -126,8 +149,9 @@ def stem(wght: float, watch: float = 0.0) -> float:
 
 
 def watch_weight(sv: float) -> float:
-    """The watch's weight that draws a stem: the weight the engine's rules name."""
-    return _rung(WATCH_STEMS, sv)
+    """The watch's weight that draws a stem: the weight the engine's rules
+    name (past the watch's Black, DRAWN_STEMS' last rung)."""
+    return _rung(DRAWN_STEMS, sv)
 
 
 def weight_of(sv: float, watch: float = 0.0) -> float:
@@ -239,7 +263,7 @@ def drawn(wght: float, grad: float = 0, base: Params = Params(), watch: float = 
     for when they name a weight (draw._cut), whatever the font calls it. In
     Arris the watch's ExtraBold is its Black; the watch's Black, which no
     weight of Arris draws, is still where a cut's forms are chosen."""
-    sv = _ladder(WATCH_STEMS, wght)
+    sv = _ladder(DRAWN_STEMS, wght)
     k = grade_k(wght if watch == 1.0 else weight_of(sv, watch), grad) if grad else 1.0
     return _made(sv, wght, k, grad, OPTICS, base, watch)
 
@@ -289,12 +313,29 @@ def _params(sv, optics, base, optical=1.0):
         fig_w += (regular + FIG_GIVEN * (sv - STEMS[400]) - fig_w) * optical
     sh = sv * optics.h_ratio(sv)
     low = low_share(sv)
+    leg = optics.leg
+    if optical and sv > STEMS[400]:
+        leg -= (_cut_out(sv, optics) - _cut_out(STEMS[400], optics)) * optical
     return base.with_(fig_w=fig_w, fig_adv=fig_w + (base.fig_adv - base.fig_w), fig_own=fig_own,
                       white_low=white_given(sv, base.m, LOWER_GIVEN, optical),
                       white_cap=white_given(sv, base.m, CAP_GIVEN, optical),
                       past=max(0.0, sv - STEMS[400]) * optical, sv=sv, sh=sh, sd=sv * optics.d_ratio(sv),
-                      ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=optics.leg, low=low,
+                      ss=sv * optics.s_ratio(sv), c=sv * optics.c_ratio, leg=leg, low=low,
                       desc=descender_line(base, sv, sh))
+
+
+# A bowl's corner is cut on its centreline (Optics.leg, a module and a half), and the stroke round it puts the
+# outside cut further out and the inside one further in: at the Regular 117 units outside and 62 inside. With one
+# centreline leg at every weight the outside cut grew with the stem (140 units at a stem of 155, 156 at 200) while
+# the counter it stood round shrank, and the inside stayed cut: at a stem of 200 the o's counter, 134 units wide,
+# gave 50 to each corner and was a diamond, the e's eye and the a's bowl with it. The cut families that have a
+# Black (Tektur, Tomorrow) keep the outside cut one size from Regular to Black and their insides are square by
+# Bold. Past the Regular Arris's outside cut holds the Regular's size; the inside one is what the strokes leave
+# of it, down to the corner rule's fill (draw.fill_leg). The watch's own drawing keeps its leg.
+def _cut_out(sv: float, optics: Optics) -> float:
+    """How far outside its centreline's a bowl's outer cut stands, at a
+    stem (params.outer_leg less the leg)."""
+    return (sv + sv * optics.h_ratio(sv)) / 2 - sv * optics.d_ratio(sv) / SQRT2
 
 
 

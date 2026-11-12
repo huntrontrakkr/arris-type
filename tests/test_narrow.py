@@ -15,7 +15,13 @@ from shapely.geometry import Polygon
 import arris.glyphs  # noqa: F401  (the registry)
 from arris.draw import ARCH, ARCH_MODULES, REGISTRY, body_width
 from arris.font import place
-from arris.instances import MONO_WEIGHTS, NARROW_LIGHTER, narrow_weight, params
+from arris.instances import (
+    MONO_WEIGHTS,
+    NARROW_LIGHTER,
+    mono_weight,
+    narrow_weight,
+    params,
+)
 from arris.italic import flatten, italic
 from arris.params import MONO_BODY, MONO_CELL, MONO_NARROW
 
@@ -71,7 +77,7 @@ def test_the_arch_letters_and_what_is_made_from_them(w):
 
 def test_arris_mono_is_as_it_was():
     for w in MONO_WEIGHTS:
-        p = params(w).with_(mono=True)
+        p = params(mono_weight(w)).with_(mono=True)
         assert not p.narrow and MONO_BODY[0] * p.m <= p.fig_w <= MONO_BODY[1] * p.m
 
 
@@ -91,8 +97,9 @@ def test_each_weight_from_regular_up_is_drawn_lighter():
     cell as Fira Code's; its Light keeps its own weight."""
     assert narrow_weight(MONO_WEIGHTS[0]) == MONO_WEIGHTS[0]
     for w in MONO_WEIGHTS[1:]:
-        assert narrow_weight(w) == w - NARROW_LIGHTER
-        assert narrow(w).sv == params(w - NARROW_LIGHTER).sv < params(w).with_(mono=True).sv
+        # (the weight the engine is asked for: Arris's that has Mono's stem, mono_weight)
+        assert narrow_weight(w) == mono_weight(w - NARROW_LIGHTER)
+        assert narrow(w).sv == params(mono_weight(w - NARROW_LIGHTER)).sv < params(mono_weight(w)).with_(mono=True).sv
     drawn = [narrow_weight(w) for w in MONO_WEIGHTS]
     assert drawn == sorted(set(drawn))
 

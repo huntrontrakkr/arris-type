@@ -161,10 +161,22 @@ def white_own(r: float) -> float:
     return 1 - 0.25 * (r - 1) if r >= 1 else 1 + 0.4 * (1 - r)
 
 
-def white_floor(m: float, sv: float) -> float:
+# The least white grows with the stem to a stem of 158, Arris's Black until its weights took other families'
+# colour, and in Arris stays what it is there, 95 units, to the Black of 200: under half a stem. Sixty families'
+# Blacks keep 0.41 of a stem in the e's eye, 0.30 between the s's bars and 0.37 over the a's bowl (their middle
+# ones, 2026-11-11): the white a reader needs does not grow with the stem, and at 0.6 of it, 120 units at Black,
+# the g's hook and the white over it no longer stood on the descender line. The watch's own drawing keeps 0.6 of
+# its stem to its Black.
+WHITE_HELD = 158.0
+
+
+def white_floor(m: float, sv: float, optical: float = 1.0) -> float:
     """The least white between two parts of a letter: a module, or 0.6 of
-    a stem toward Black (letterframe.least_white)."""
-    return max(m, 0.6 * sv)
+    a stem toward Black, and in Arris (``optical``: its share, 0 in the
+    watch's own drawing) no more than at a stem of WHITE_HELD
+    (letterframe.least_white)."""
+    own = 0.6 * sv
+    return max(m, own - (own - 0.6 * min(sv, WHITE_HELD)) * optical)
 
 
 def descender_line(base: Params, sv: float, sh: float) -> float:
@@ -174,7 +186,7 @@ def descender_line(base: Params, sv: float, sh: float) -> float:
     and y had gone deeper alone from Bold (their hooks making room, 205
     units at Bold and 250 at Black) and left p q j at 180, so a line of
     text stood on two descender lines."""
-    return min(base.deep, max(base.desc, sh + white_floor(base.m, sv)))
+    return min(base.deep, max(base.desc, sh + white_floor(base.m, sv, 0.0)))        # (the hook's white: lower.hook_white)
 
 
 def outer_leg(p: Params, sv: float | None = None, sh: float | None = None) -> float:

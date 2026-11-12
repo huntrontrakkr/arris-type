@@ -262,7 +262,10 @@ def _q_open(g):
     return g.counter_size() + min(max(0.0, Q_OPEN * p.sv - half), half * (1 / p.white_cap - 1))
 
 
-@cap('Q', 10, 2, openings=[Opening(_q_open, 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=Q_OPEN)])
+# (own: its counter is kept open by its tail alone, and its bowl is the O's at every weight. The closed
+# counters' rule thinned its bars besides, to 0.7 of the weight's own from a stem of 190, and at Black the Q
+# stood on bars of 119 units beside an O on 170.)
+@cap('Q', 10, 2, openings=[Opening(_q_open, 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=Q_OPEN, own=True)])
 def Q(g):
     f = Frame(g, 10)
     p = f.p

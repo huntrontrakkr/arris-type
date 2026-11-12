@@ -637,6 +637,25 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
     g.defaults['sh_auto'] = 1.0
     if spec.kind == 'lower' and not p.slant:
         g.zone_k = p.low                    # (the italic keeps its own strokes: its letters are drawn for them)
+        if p.optical and spec.name not in ZONE_SETTERS:
+            # The zone's bar is the one the a's and the e's hooks hang from (lower.hook_ref): where those
+            # thin it with their closed end's bar, from ExtraBold, every bar of the lowercase thins with
+            # them, and the counters of o, c, b, n and the rest stand on the lines the a's and the e's do
+            # (the owner, 2026-11-12, of the c brought onto their lines and the o left on its own, 23 units
+            # thicker at Black: "o needs to open up a little bit more. Let's make sure that we're extremely
+            # consistent like this across everything").
+            from .glyphs.lower import hook_ref
+            ref = hook_ref(p)
+            if ref is not None:
+                g.zone_k = ref[0] / p.sh
+    elif spec.kind in ('cap', 'fig') and p.optical and not p.slant and spec.name not in CAP_SETTERS:
+        # The capitals and the figures the same: one bar on the cap height, the one the 5, the 6 and the 9
+        # keep where their mouths hold them (from ExtraBold: 147 units to Black). Each letter thinned for
+        # itself, and at Black the O and the E stood on bars of 170 units, the S on 154, the 5, 6 and 9 on
+        # 147 and the Q on 119.
+        bar = _cap_bar(p)
+        if bar is not None:
+            g.zone_k = min(1.0, bar / p.sh)
     if cell and p.mono and _DEPTH[0] == 0 and _cell_kind(spec):
         # Mono: no ink past the cell (the body sits centred in it). A letter
         # is fitted into it (_cell_fit); anything else that would run on is
@@ -847,8 +866,10 @@ _FIGS = ('zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
 # the figures' cell (name.tnum: glyphs.features). In Arris Mono all share
 # the cell.
 PROPORTIONAL_FIGS = _FIGS + ('zero.zero', 'zero.dot', 'five.ss02')
+EVEN_MIDDLE = {'a', 'e'}    # letters whose one closed counter is the same size at Black (_optical)
 OPTICAL = {
-    'names': set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') | set(_FIGS),
+    # (j.cv03: the hooked j was the j until 1.017, and is Arris Mono's still)
+    'names': set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') | set(_FIGS) | {'j.cv03'},
     # optical centre: the middle rises until the top counter of a three-bar
     # letter (B E 8) is this share of the bottom one; calibrated so that at
     # Regular the middle rises 2.5% of the cap height. As the bars thicken the
@@ -883,13 +904,68 @@ def _bowl_side(rings, y_line, inward, p):
     return flats > 0
 
 
+CAP_SETTERS = {'five', 'six', 'nine', 'three'}     # the figures the cap height's bar is taken from (_cap_bar), and the 3, which thins its own
+_CAP_BAR: dict = {}
+
+
+def _cap_bar(p):
+    """The bar of the cap height at ``p``: the 5's, as its mouth leaves it."""
+    if p not in _CAP_BAR:
+        if len(_CAP_BAR) > 512:
+            _CAP_BAR.clear()
+        _CAP_BAR[p] = None                                  # (while the 5 is drawn: what it stamps keeps the weight's own)
+        _CAP_BAR[p] = draw('five', p).sh
+    return _CAP_BAR[p]
+
+
+ZONE_SETTERS = {'a', 'e', 's'}  # the letters the lowercase's bar is taken from, and the s, which shares its own out (_start)
+HOOKS_WITH = {'c', 's'}     # letters whose hooks are the a's and the e's (lower.hook_ref): they move with theirs (_optical)
+_HOOK_WARPS: dict = {}
+
+
+def _hook_warps(p):
+    """(the a's warp, the e's): what the optical corrections do to the two
+    letters the hooks of the x-height are taken from."""
+    if p not in _HOOK_WARPS:
+        if len(_HOOK_WARPS) > 512:
+            _HOOK_WARPS.clear()
+        _HOOK_WARPS[p] = tuple(getattr(draw(n, p), 'warp', None) for n in 'ae')
+    return _HOOK_WARPS[p]
+
+
+class Joined:
+    """Two warps, one under ``m`` and one from it up (either may be None:
+    nothing moves there)."""
+
+    def __init__(self, low, high, m):
+        self.low, self.high, self.m = low, high, m
+
+    def __call__(self, y):
+        f = self.low if y < self.m else self.high
+        return y if f is None else f(y)
+
+
 def _optical(g, spec, p):
     from .geom import Node, Stroke
     from .vision import overshoot_need
     H = p.xh if spec.kind == 'lower' else p.cap
+    if spec.name in HOOKS_WITH and not p.slant:
+        # The c and the s hang the a's hook over the middle and the e's under it (lower.hook_ref), and are
+        # moved as those two are, the upper half as the a and the lower as the e: with a rise of their own
+        # (the a's and the e's fades from Bold, EVEN_MIDDLE; an overshoot is each letter's own) the c's hooks
+        # ended 2.5 units off theirs at Black, both of them higher.
+        high, low = _hook_warps(p)
+        g.warp = Joined(low, high, H / 2) if (low is not None or high is not None) else None
+        return
     r = OPTICAL['counters']
     A = max(H / 2 - 1.5 * g.sh, 0.0)                         # a counter's height with the middle centred
     dc = A * (1 - r) / (1 + r) * p.optical
+    if spec.name in EVEN_MIDDLE:
+        # (the a and the e: one closed counter each, the e's over its bar and the a's under it, so the rise
+        # that makes the upper the smaller made the e's eye 0.87 of the a's bowl, at Black 93 units by 107,
+        # side by side in a word; from Bold to Black the rise fades out and at Black the two are one size)
+        from .instances import STEMS
+        dc *= 1.0 - min(1.0, max(0.0, (p.sv / p.grade_k - STEMS[700]) / (STEMS[900] - STEMS[700])))
     rings0 = g.rings()
     top, bot = overshoot_need(rings0, H)
     cap_ = OPTICAL['over_max'] * H
@@ -1623,7 +1699,10 @@ def _opened(spec, p, ot, ob, width, nest=True):
         ratio = _heritage_ratio(spec, k)
         if op.max_ratio is not None:
             ratio = min(ratio, op.max_ratio)
-        target = ratio * p.sv * (given_across(spec, p) if op.across else 1.0)
+        # (a share of the stem, and in Arris of no more stem than the least white grows with, 158 units:
+        # params.white_floor. At a stem of 200 the 3's mouth was held to 150 units, the letters' bays to 57)
+        from .params import WHITE_HELD
+        target = ratio * (p.sv - max(0.0, p.sv - WHITE_HELD * p.grade_k) * p.optical) * (given_across(spec, p) if op.across else 1.0)
         if op.free not in g.defaults:                       # this drawing does not use it (a cell's upright form)
             continue
         measure = op.measure

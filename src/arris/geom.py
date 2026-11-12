@@ -268,6 +268,9 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
             if a_ != b_ and abs(a_[0] - b_[0]) < SAME and abs(a_[1] - b_[1]) < SAME:
                 verts[(i + 1) % len(verts)] = a_
 
+    if not closed and not NO_DESPIKE:
+        _despike(left, right)
+
     if closed:
         rings = [left, right]
         polys = [Polygon(r) for r in rings]
@@ -301,6 +304,48 @@ def _stroke_polygon(stroke: Stroke, thick: Thickness, c: float, repair: bool = F
             edges.append((left[0], right[0], ('cap', 0)))
             edges.append((left[-1], right[-1], ('cap', 1)))
     return poly
+
+
+NO_DESPIKE = False
+
+
+def _despike(left: list, right: list) -> None:
+    """Take the spikes out of an open stroke's outline (its left side, its
+    end, its right side back, its start): a point the outline runs out to
+    and straight back from, on one line, moves onto the nearer of its two
+    neighbours, and the outline is the same shape without it.
+
+    A stroke cut along another's edge makes one where there is no room
+    (lower.shoulder, an end cut along its arch's underside): in the a's
+    bowl at Black, 134 units wide inside, the foot's diagonal met the foot's
+    own top 27 units behind the wall's inside corner, and the top ran back
+    from the corner to that point and forward again under the end's cut.
+    The spike has no area, and whether it outlived the union of the
+    letter's strokes hung on the last bit of its ends: when it did the
+    corner rule took the corner for an outside one and cut it, and the
+    counter had a notch of white 27 units into its wall, at some grades
+    and not at others."""
+    ring = [(left, i) for i in range(len(left))] + [(right, i) for i in reversed(range(len(right)))]
+    n = len(ring)
+    for _ in range(n):
+        pts = [side[i] for side, i in ring]
+        for s in range(n):
+            if pts[s] == pts[s - 1]:
+                continue                                    # (inside a run of one point: taken from the run's start)
+            e = s
+            while e - s < n - 1 and pts[(e + 1) % n] == pts[s]:
+                e += 1
+            a, b, q = pts[s - 1], pts[s], pts[(e + 1) % n]
+            u, v = _sub(b, a), _sub(q, b)
+            lu, lv = _len(u), _len(v)
+            if lu > 1e-9 and lv > 1e-9 and abs(_cross(u, v)) <= 1e-7 * lu * lv and _dot(u, v) < 0:
+                to = a if lu <= lv else q
+                for j in range(s, e + 1):
+                    side, i = ring[j % n]
+                    side[i] = to
+                break
+        else:
+            return
 
 
 def _dir_class(u) -> str:
@@ -568,6 +613,13 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
     # one way or the other as the last bits of a float fell (a stamp moved
     # by 1e-13 of a unit turned it), so two builds of one code differed
     done = [q for f in finished for q in getattr(f, 'geoms', [f]) if isinstance(q, Polygon) and q.area > 1e-9]
+    # A step is a miss where it is shorter than an edge break, and no longer than a fill and a half where the
+    # fill is held (Arris past the Regular: a break and a half of the Regular's, 34 units): a drawn step does not
+    # grow with the stem as a break does. Over the f's and the t's crossbar the stem's side shows between the
+    # cut of its end and the cut of the crossbar's bump (lower.stub), 61 units at Bold, 49 at ExtraBold and 38 at
+    # Black, where a break is 50: taken for a miss from a stem of 185, the two cuts went into one and the bump's
+    # face stood 44 units taller at once.
+    jog = JOG * c if fill is None else JOG * min(c, JOG_FILLS * fill)
     for poly in u.geoms:
         poly = orient(poly, sign=1.0)
         if any(abs(poly.area - f.area) <= 1e-6 * max(f.area, 1.0)
@@ -577,11 +629,11 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
                 if r is poly.exterior or Polygon(r).area >= min_hole:
                     rings.append(pts)
             continue
-        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
+        rings.append(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), jog, moved, even))
         for hole in poly.interiors:
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), JOG * c, moved, even))
+            rings.append(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), jog, moved, even))
     if overlay:
         rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, crotch)
     if rec is not None and moved:
@@ -754,6 +806,7 @@ def _name_edges(ring, segs, tol=1e-3):
 
 MIN_COUNTER = 0.2   # pinholes (under a fifth of a stem, squared) fill in
 JOG = 1.0           # a step between parallel edges shorter than this share of the chamfer leg is closed (_close_jogs)
+JOG_FILLS = 1.5     # ... and no longer than this many legs of the fill, where the fill is held under the chamfer's (ink)
 STRAY = 3.0         # degrees: a vertex bending less than this between two long edges goes (_close_jogs)
 POLISH = 0.25       # edges shorter than this share of the chamfer leg are slivers: two lines missing each other by a few units
 FACET = 0.5         # a wall of white between two cuts shorter than this share of the chamfer leg closes to a point (_polish)

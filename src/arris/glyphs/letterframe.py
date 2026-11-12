@@ -146,8 +146,9 @@ def letter_width(wm: float, stems: float, arm: float = ARM):
 def least_white(p) -> float:
     """The least white across a closed counter or between two parts of a
     sign: a module, or 0.6 of a stem toward Black (white narrower than half
-    a stroke is no white at all: draw.white_features)."""
-    return white_floor(p.m, p.sv)
+    a stroke is no white at all: draw.white_features), in Arris no more
+    than at a stem of 158 (params.white_floor)."""
+    return white_floor(p.m, p.sv, p.optical)
 
 
 def heft(p) -> float:

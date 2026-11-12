@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import functools
 
-from ..draw import B, Opening, glyph
-from ..params import inner_leg, outer_leg, white_own
+from ..draw import REGISTRY, B, Opening, glyph
+from ..params import inner_leg, outer_leg, white_floor, white_own
 from .figures import BAY_WHITE, STACK_MIN, beak_depth, jog
 from .letterframe import ARM, Frame, k_arms, least_white, letter_width, narrowed, own_width, share_width, white_scale, zone
 
@@ -67,6 +67,9 @@ def bowl_join(g, f, stem_left, at_top):
     g.stroke(*placed(f.W, f.p.xh, pts, mirror=not stem_left, flip=not at_top), start=cut)
 
 
+EVEN = 0.9      # the closed end's bar as a share of the open end's, at least (bars3)
+
+
 def bars3(g):
     """(outer, inner, outer): the three horizontals of a letter that stacks
     three in the x-height (a e s). Where three no longer fit at the zone's
@@ -78,15 +81,87 @@ def bars3(g):
     alike."""
     stacked = g.sh
     lead = g.sh0
-    return lead, max(STACK_MIN * g.sh0, 2 * stacked - lead), stacked
+    inner = max(STACK_MIN * g.sh0, 2 * stacked - lead)
+    if g.p.optical and stacked < EVEN * lead:
+        # Past ExtraBold the inner bar is at its least and the closed end gave alone: at a stem of 200 the e's
+        # top was 89 units over a bar of 104 and an arm of 148, 0.44 of a stem beside 0.74, and the a's foot
+        # the same (the owner, 2026-11-12: "at black the e. And the a in the middle needs to be about the
+        # same size too"). The two outer bars share it from there, the closed end EVEN of the open one, as
+        # the e's top is of its foot in other families' Blacks (0.92, sixty of them).
+        # (and the three take no more than the stack shares out: where the inner bar stood at its least the
+        # open end's whole weight came off the two whites)
+        rest = min(lead + stacked, 3 * stacked - inner)
+        lead = rest / (1 + EVEN)
+        stacked = rest - lead
+        g.sh_k *= stacked / g.sh                            # (the letter's own horizontal is the closed end's: what is drawn without a width)
+    return lead, inner, stacked
+
+
+@functools.lru_cache(maxsize=512)
+def hook_ref(p):
+    """(bar, reach, corner's leg) of the hook the a and the e are drawn
+    with at ``p``: the bar it hangs from (the open end's, bars3, as their
+    closed counters' rule leaves it) and how far its end stands from the
+    line the bar lies on (beak_in). The c and the s take it from them, so
+    the four hang their hooks from one bar and end them on one line (the
+    owner, 2026-11-12, of c a e s side by side at ExtraBold and Black: "all
+    these letters have hooks and none of them are completely aligned ... a
+    couple points off from each other", and of which was to move: "a and e
+    are perfect. C needs to change"). None where the letters keep the
+    zone's own bar (the watch's drawing)."""
+    if not p.optical or p.slant:                            # (the italic keeps its own strokes: draw._start)
+        return None
+    from ..draw import draw
+    return draw('e', p).hook
+
+
+def spine3(g):
+    """(top, spine, foot, white): the s, whose two ends are both open. In
+    Arris both arms are the bar the a's and the e's hooks hang from
+    (hook_ref), each bay is what its beak needs where the stack's white is
+    less (the beak's rise and BAY_WHITE of the least white beyond its
+    end), and the spine is what they leave, no thicker than an arm. Where
+    that is under the inner bar's least (STACK_MIN) the spine gives half of
+    what is missing and the two bays the other half. Until 1.017 the upper
+    arm kept the zone's weight and the lower took the stack's, 12 units
+    thinner than the c's at ExtraBold."""
+    top, mid, foot = bars3(g)
+    p = g.p
+    white = (p.xh - top - mid - foot) / 2
+    ref = hook_ref(p)
+    if ref is None:
+        return top, mid, foot, white
+    arm, reach, _ = ref
+    w = max(white, reach - arm + BAY_WHITE * least_white(p))
+    spine = min(arm, p.xh - 2 * arm - 2 * w)
+    floor = STACK_MIN * g.sh0
+    if spine < floor:
+        spine = floor - (floor - spine) / 2
+    return arm, spine, arm, (p.xh - 2 * arm - spine) / 2
+
+
+BEAK_OVER = 1.5     # legs of the fill (the Regular's edge break past the Regular): the least a beak rises over its bar
+
+
+def beak_least(g, w) -> float:
+    """The least reach of a beak on a bar ``w`` thick: BEAK_OVER over the
+    bar. A shorter step between the bar's edge and the beak's end is not a
+    drawn one (geom.JOG_FILLS: the outline's finish closes it)."""
+    from ..draw import fill_leg
+    return w + BEAK_OVER * fill_leg(g.p)
 
 
 def beak(g, w):
     """How far the c's beak reaches from the line its bar lies on, for a
     bar ``w`` thick: the corner's outer flank alone, an edge break under
     the cut (the shortest beak: an open mouth tells c from o, a from d, e
-    from o)."""
-    return outer_leg(g.p, sh=w) + g.p.c
+    from o), and in Arris no less than beak_least. Past the Regular the
+    outer cut keeps its size (instances._params) while the bar goes on
+    growing, and the flank alone stood 30 units over the bar at Bold, 21 at
+    ExtraBold and 9 at Black, where the outline's finish took it for a
+    miss and the arm ended flat."""
+    least = beak_least(g, w) if g.p.optical else 0.0
+    return max(outer_leg(g.p, sh=w) + g.p.c, least)
 
 
 def beak_in(g, w, room):
@@ -114,10 +189,31 @@ def beak_in(g, w, room):
     at Black now: it stops closing where the families' middle stands."""
     p = g.p
     d = min(beak(g, w), w + room - BAY_WHITE * least_white(p))
-    return d, min(p.leg, d - p.c - (p.sv + w) / 2 + p.sd / 2 ** 0.5)
+    least = beak_least(g, w)
+    if p.optical and d < least - 1e-6:
+        # The least beak holds where the bay is short of both, and the bay keeps what the room leaves (the
+        # owner, 2026-11-12, of the ends that went flat: "anything that goes flat like that ... needs to be
+        # like a little hump"): between a stem of 160 and one of 180 the two were 0.6 of a unit more than the
+        # white between the bars, and a, e and s ended flat there, with a beak at Bold and one again at Black.
+        # Only where the room is not twice the beak's rise (a beak and as much white beyond it) does the arm
+        # end on its bar's own edge.
+        d = least if room >= 2 * (least - w) else w
+    # (the corner's flank ends an edge break short of the beak's end at every reach: where the least beak
+    # is longer than the weight's corner leaves it, the corner is cut that much longer, and the end stays
+    # the point it is to Bold. With the weight's own leg the end kept an upright face under its cut, 13
+    # units tall on the a at Black)
+    leg = d - p.c - (p.sv + w) / 2 + p.sd / 2 ** 0.5
+    return d, max(0.0, leg if p.optical and d > w else min(p.leg, leg))
 
 
 A_RISE = 0.6    # the most the a's bowl rises into its stem, as a share of the bowl's white
+
+
+def a_like_e(p) -> float:
+    """How far the a has taken the e's corners (a): nothing to Bold, all of
+    them at Black, in Arris."""
+    from ..instances import STEMS
+    return min(1.0, max(0.0, (p.sv / p.grade_k - STEMS[700]) / (STEMS[900] - STEMS[700]))) * p.optical
 
 
 @low('a', 8, 2)
@@ -135,15 +231,33 @@ def a(g):
     corner), over a white two thirds of the bowl's (0.65), thinned with the
     other bars from Bold. It had none of the font's corners, and no room."""
     g.stack(3, g.p.xh, ratio=0.75)
-    f = Frame(g, 8, 'lower')
     p = g.p
     arm, inner, foot = bars3(g)
+    f = Frame(g, 8, 'lower')                                # (after the bars are shared out: its rows stand on the foot's thickness)
     low = (p.xh - arm - inner - foot) / 2                   # the bowl's white, and the open storey's
     ya = p.xh - arm / 2
     yb = foot + low + inner / 2
     g.defaults_used.update(arm=ya, bowl=yb)
     d, leg = beak_in(g, arm, low)
-    g.stroke((f.X(1), p.xh - d), B(f.X(1), ya, leg, arm), B(f.X(7), ya), f.P(7, 0))
+    g.hook = (arm, d, leg)                                  # (hook_ref: the c and the s take theirs from here)
+    # At Black the a is the e turned half round, all but the notch at the foot of its stem (the owner,
+    # 2026-11-12: "at black, the e and the lowercase a should practically be identical flipped, aside from
+    # the smallest little notch on a at the bottom"; "maybe bold and extra bold can use a little bit of
+    # adjustment too ... it shouldn't mess up any of ... the lighter weights"). Their bars and their
+    # counters are one size there already (bars3, draw.EVEN_MIDDLE); two corners were not: the foot of the
+    # a's stem kept an edge break where the e's back turns through a corner's cut, 50 units by 88, and the
+    # bowl's shoulder was a corner's cut where the e's bar ends in an edge break, 84 by 50. Both come in
+    # from Bold with the middles (like): nothing at Bold, whole at Black.
+    k = p.sd / 2 ** 0.5
+    stem = [f.P(7, 0)]
+    shoulder_leg = None
+    if like := a_like_e(p):
+        cut = p.c + (p.leg + (p.sv + foot) / 2 - k - p.c) * like          # the e's back's own cut at Black
+        # (the stem turned through that cut into its foot, which ends on the stem's own inside: no ink but
+        # the corner's is changed)
+        stem = [B(f.X(7), foot / 2, max(0.0, cut - (p.sv + foot) / 2 + k)), (f.X(7) - p.sv / 2, foot / 2)]
+        shoulder_leg = p.leg + (p.c - (p.sv + inner) / 2 + k - p.leg) * like
+    g.stroke((f.X(1), p.xh - d), B(f.X(1), ya, leg, arm), B(f.X(7), ya), *stem)
     # The bowl's foot comes into the stem as the u's does, the n's shoulder
     # turned half round: at 45 degrees, with its notch at the foot of the
     # stem (the owner, 2026-11-10). It rises no more than A_RISE of the
@@ -151,7 +265,7 @@ def a(g):
     # 1.017 the bowl ran square into the stem on the baseline.
     drop = min(BOWL_DROP, A_RISE * low / (f.Y(8) - f.Y(7)))
     arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=drop)
-    g.stroke((f.X(7), yb, inner), B(f.X(1), yb), *reversed(turned(f.W, p.xh, arch)), end=cut)
+    g.stroke((f.X(7), yb, inner), B(f.X(1), yb, shoulder_leg), *reversed(turned(f.W, p.xh, arch)), end=cut)
 
 
 @low('b', 8, 2)
@@ -169,12 +283,20 @@ def c(g):
 def c_shape(g, foot_leg=None):
     """The c. ``foot_leg``: the leg of the foot's corners (the default: the
     parameter leg); ҫ's drop hangs between them (cyrillic_ext.drop_leg)."""
+    # Its hooks are the a's and the e's (hook_ref): their reach and their corner, on the bar the whole
+    # lowercase takes from them (draw._start).
+    ref = hook_ref(g.p)
     f = Frame(g, 8, 'lower')
     # The shortest beaks (the outer flank alone): an open mouth tells c from o.
     p = f.p
     d = beak(g, g.sh)                                       # by the zone's own bar (thinner than the capitals' from Bold)
-    g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 1), foot_leg), B(*f.P(7, 1), foot_leg),
-             (f.X(7), d))
+    # (its corner's flank an edge break short of its end, where the least beak is longer than the weight's
+    # corner leaves it: beak_in)
+    leg = max(p.leg, d - p.c - (p.sv + g.sh) / 2 + p.sd / 2 ** 0.5) if p.optical else None
+    if ref is not None:
+        d, leg = ref[1], ref[2] or None
+    g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8), leg), B(*f.P(1, 8)), B(*f.P(1, 1), foot_leg),
+             B(*f.P(7, 1), leg if foot_leg is None else foot_leg), (f.X(7), d))
 
 
 @low('d', 8, 2)
@@ -202,9 +324,9 @@ def e(g):
     (the open storey 0.64 of the closed one), raised only as the weight
     closed it."""
     g.stack(3, g.p.xh, ratio=0.75)
-    f = Frame(g, 8, 'lower')
     p = g.p
     arm, bar, top = bars3(g)
+    f = Frame(g, 8, 'lower')
     open_ = (p.xh - arm - bar - top) / 2                    # the white over the arm, and the bowl's
     y1 = arm / 2
     yb = arm + open_ + bar / 2
@@ -212,6 +334,7 @@ def e(g):
     g.defaults_used.update(bar=yb, arm=y1)
     g.stroke((f.X(1), yb, bar), (f.X(7), yb), B(f.X(7), yt), B(f.X(1), yt), closed=True)
     d, leg = beak_in(g, arm, open_)
+    g.hook = (arm, d, leg)                                  # (hook_ref: the c and the s take theirs from here)
     g.stroke((f.X(1), yb), B(f.X(1), y1, None, arm), B(f.X(7), y1, leg), (f.X(7), d))
 
 
@@ -416,29 +539,67 @@ def hook_fit(p, sh, white=None):
     horizontals at Regular (57 units to the bowl's 79) and 0.7 from Medium
     up, with 123 units of white over it, a stem and a third. It read as a
     mistake (and the j's hook, with nothing over it, kept its weight)."""
-    white = least_white(p) if white is None else white
+    white = hook_white(p) if white is None else white
     extra = min(hook_room(p), max(0.0, sh + white - p.desc))
     w = min(sh, max(STACK_MIN * sh, p.desc + extra - white))
     return w, extra
 
 
+def hook_white(p) -> float:
+    """The white a hook keeps under what stands over it: a module, or 0.6
+    of the stem, at every weight (the descender line is set for it:
+    params.descender_line). Not the least white the letters keep inside
+    the x-height, which in Arris stops growing at a stem of 158
+    (params.white_floor): the owner, of the g at a stem of 200 with 102
+    units over its hook, "the black letter g does not have enough
+    space"."""
+    return white_floor(p.m, p.sv, 0.0)
+
+
+def hook_stack(g, white=None):
+    """The horizontals of a letter that stands on a hook (the g's three,
+    the y's two) thin together where the hook, as heavy as they are, has
+    not its white on the descender line and the line is the font's
+    deepest: by 2% at a stem of 189 and 12% at Black, where the hook is 130
+    units under 120 of white. The hook alone gave before (hook_fit), and
+    to 1.016 at every weight, which read as a mistake; with all three as
+    heavy as each other the letter is one weight and has its room."""
+    w, _ = hook_fit(g.p, g.sh, white)
+    if w < g.sh - 1e-9:
+        g.sh_k *= w / g.sh
+
+
+def hook_span(p) -> float:
+    """From the centre of the stem a hook hangs from to the centre of its
+    end: the g's, on every letter that carries the hook. Each ran its own
+    body's width, and the y's, a wider letter than the g past the Regular
+    and a narrower one to it, was 19 units the shorter at Regular and 34
+    the longer at Bold, 65 at Black (the owner, 2026-11-12: "The g and the
+    y don't have the same descender at bold ... They need to look exactly
+    the same")."""
+    from ..draw import drawn_spec
+    return drawn_spec('g', p).width(p) - p.sv
+
+
 BEAK_WHITE = 0.75   # the white a hook's beak keeps under the bowl, as a share of the least white (hook)
 
 
-def hook(g, f, x_stem=7, x_end=1, white=None, turn=True):
+def hook(g, f, x_stem=7, x_end=1, white=None, turn=True, span=None):
     """The descending hook of g, y and the italic y: the stem down from the
     body into a bowl corner and a horizontal back under it, as thick as the
     letter's other horizontals (hook_fit), on the weight's descender line.
     (The owner's rule: a feature weight would swallow grows or makes room
-    by the smallest change that keeps it.)"""
+    by the smallest change that keeps it.) ``span``: how far its end stands
+    from its stem, where that is not the frame's (hook_span)."""
     p = g.p
     w, extra = hook_fit(p, g.sh, white)
     yh = -(p.desc + extra) + w / 2
+    xe = f.X(x_end) if span is None else f.X(x_stem) - span
     if extra:
         x0, y0, x1, y1 = g.clip
         g.clip = (x0, min(y0, -(p.desc + extra)), x1, y1)
     if p.slant or not turn:
-        g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), (f.X(x_end), yh))
+        g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), (xe, yh))
         return
     # The hook ends as the c's arms do, in a beak: a cut corner and a short
     # terminal turned up, so the swoop is cut at both ends, as the top of
@@ -449,19 +610,28 @@ def hook(g, f, x_stem=7, x_end=1, white=None, turn=True):
     # flat as before.
     bottom = -(p.desc + extra)
     over = max(0.0, outer_leg(p, sh=g.sh) - p.sv)           # the bowl's cut corner, over the beak's inner edge
-    d = min(beak(g, w), over - bottom - BEAK_WHITE * (least_white(p) if white is None else white))
+    room = hook_white(p) if white is None else white
+    d = min(beak(g, w), over - bottom - BEAK_WHITE * room)
+    if p.optical and d < beak_least(g, w):
+        # (the least beak, where the room leaves it a bay's white under the bowl: the hook ends in a hump
+        # and not flat; the owner, 2026-11-12: "anything that goes flat like that ... needs to be like a
+        # little hump")
+        d = min(beak_least(g, w), over - bottom - BAY_WHITE * room)
     # the corner's cut ends an edge break under the beak's end, as the c's
     # does (beak), so the rule turns that flank into a point at every weight
     leg = min(p.leg, d - p.c - (p.sv + w) / 2 + p.sd / 2 ** 0.5)
-    if leg < p.c:
-        g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), (f.X(x_end), yh))
+    # (flat where the corner would be cut under an edge break on the watch's leg, a module and a half, or the
+    # beak would rise under its least over the hook)
+    if leg < p.c - (1.5 * p.m - p.leg) or (p.optical and d < beak_least(g, w) - 1e-6):
+        g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), (xe, yh))
         return
-    g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), B(f.X(x_end), yh, leg), (f.X(x_end), bottom + d))
+    g.stroke(f.P(x_stem, 9), B(f.X(x_stem), yh, None, w), B(xe, yh, leg), (xe, bottom + d))
 
 
 def g_strokes(g, white=None):
     """The g: its bowl and its hook (``white``: the room the hook leaves
     under the bowl, for a g that carries something there: ǥ's bar)."""
+    hook_stack(g, white)
     f = Frame(g, 8, 'lower')
     bowl_join(g, f, stem_left=False, at_top=False)          # (the italic's too; its hook ends flat: hook)
     hook(g, f, white=white)
@@ -510,9 +680,17 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     and the counter's top is the arch's alone; where the notch over it
     would be (the diagonal's top entering the stem less than a break and a
     half under the arch's: SHOULDER_NOTCH), the arch leaves the stem
-    square. So the shoulder goes as the X's step does: the n keeps both to
-    Bold, the notch alone at ExtraBold, and is square at Black, as the m is
-    from SemiBold. ``joined``: the stem is another arch's (the m's second),
+    square. So in the watch's own drawing the shoulder goes as the X's step
+    does: the n keeps both to Bold, the notch alone at ExtraBold, and is
+    square at Black, as the m is from SemiBold. In Arris the notch is kept
+    at every weight (NOTCH_KEPT: a break and a half of the weight's own
+    down the stem's side, a bowl's three quarters of that): where the
+    shoulder has not the room to rise that far its cut meets the arch
+    further along. Arris's Bold, ExtraBold and Black are heavier than the
+    weights the rule was made on, and by it the n, the h and every bowl
+    left their stems square from a stem of 160 (the owner: "arches keep
+    their notch depth"; "if we're going to do it on the a and the u, then
+    we need to do it on all the bowls"). ``joined``: the stem is another arch's (the m's second),
     and the notch is the V the two meet in, kept at every weight: with no
     room to rise at all the arch still starts on its cut (in the narrower
     body Arris Mono Italic's m is drawn in, from Medium, it began square on
@@ -579,9 +757,20 @@ def shoulder(g, f, xs, x_right, top=8, drop=None, notch=True, joined=False):
     step = rise - g.sh / 2                                  # the diagonal's cut, below the arch's underside
     if upright and step < p.c:
         over = g.sh / 2 + rise - (1 - r) * (p.sv / 2 + k) - r * p.c   # the diagonal's top at the stem's side, below the arch's
-        if not joined and over < SHOULDER_NOTCH * p.c:
-            return plain
-        meet = max(x0 + rise, notch_meet(g, xs, g.sh / 2)) if joined else x0 + rise
+        if joined:
+            meet = max(x0 + rise, notch_meet(g, xs, g.sh / 2))
+        elif p.optical and not p.mono:
+            # (Arris: the notch keeps NOTCH_KEPT; where the shoulder has not the room to rise that far, its cut
+            # meets the arch that much further along, as a joined arch's does. Arris Mono's arches, in their cell,
+            # keep the rule they had)
+            least = NOTCH_KEPT * p.c * (1.0 + drop / SHOULDER_DROP) / 2 * p.optical
+            if over < SHOULDER_NOTCH * fill_leg(p) and not least:
+                return plain
+            meet = x0 + rise + max(0.0, least - over)
+        else:
+            if over < SHOULDER_NOTCH * fill_leg(p):
+                return plain
+            meet = x0 + rise
         return [(meet - g.sh / 2, y_top - g.sh / 2), (meet, y_top), B(x_right, y_top)], 'h'
     if p.slant and drop >= SHOULDER_DROP:
         # An arch in the italic too: the cursive's branch (deeper than the upright's shoulder,
@@ -610,8 +799,14 @@ SHOULDER_DROP = 2.0     # modules below the arch where an arch's shoulder leaves
 STEP_KEPT = 1.1         # edge breaks: the flat a shoulder's cut keeps past its fill (over geom.JOG, so the outline keeps the step)
 KINK_STEP = 0.999       # edge breaks: the most a shoulder kept for its kink alone rises past the arch's underside (under one: no step is drawn)
 BOWL_DROP = 1.0         # the same for a bowl's join to its stem
+NOTCH_KEPT = 1.5        # edge breaks, the weight's own: the notch an arch keeps over its shoulder at every weight of Arris (a
+                        # bowl's, three quarters of it)
 SHOULDER_NOTCH = 1.5    # the least notch over a shoulder, in edge breaks down the stem's side: a break deep where the stem
-                        # stops at the arch (n), and where it goes on (h) a break of it is the corner's own fill
+                        # stops at the arch (n), and where it goes on (h) a break of it is the corner's own fill. The
+                        # break is the inside's (draw.fill_leg: the Regular's past the Regular, as every inside corner
+                        # keeps): counted in the weight's own, which is twice that at Black, the notch was gone from a
+                        # stem of 160 and the n, the h, the b and the u left their stems square at ExtraBold and Black
+                        # (the owner: "arches keep their notch depth")
 
 
 def notch_meet(g, xs, half) -> float:
@@ -643,8 +838,21 @@ def shoulder_room(g, xs, x_right, full):
     so the rise it has room for is its own share of what is left.)"""
     p = g.p
     k = p.sd / 2 ** 0.5
-    counter = (x_right - p.sv / 2 - inner_leg(p, g.sh)) - (xs + p.sv / 2)
+    counter = (x_right - p.sv / 2 - inside_cut(g)) - (xs + p.sv / 2)
     return (counter - p.c - k + p.sv / 2 + g.sh / 2) / (1 + (p.sv / 2 + k - p.c) / full)
+
+
+def inside_cut(g) -> float:
+    """The cut of a bowl's inside corner as it is drawn: what the strokes
+    leave of the centreline's leg, and no less than the corner rule's fill
+    (geom.stroke_polygon; draw.fill_leg, the Regular's edge break past the
+    Regular). params.inner_leg keeps the weight's own break for its least,
+    which the inside had until 1.017; past the Regular, where the outside
+    cut holds its size (instances._params), the inside is at the fill from
+    Bold, half that at Black."""
+    from ..draw import fill_leg
+    p = g.p
+    return max(fill_leg(p), p.leg - (p.sv + g.sh) / 2 + p.sd / 2 ** 0.5)
 
 
 @low('h', 8, 2)
@@ -683,20 +891,49 @@ def i(g):
     _dot(g, f, f.X(1))
 
 
-J_FRAME = 5     # the j's frame, in modules: its hook three modules of white across, room for its two corners
-J_SLOT = 1.0    # edge breaks: the least white between the j's stem and the end of its hook
+J_FRAME = 5     # the hooked j's frame, in modules (Arris Mono's, the double-struck ⅉ's): its hook three modules of white across
+J_SLOT = 1.0    # edge breaks: the least white between a hooked j's stem and the end of its hook
 
 
 def j_width(p):
-    """The j's body: a one-stem letter's (letter_width), giving past the
-    Regular no more than leaves J_SLOT breaks of white between its stem
-    and the end of its hook: narrower, the fill of that crotch shrank to a
-    chord of 4 units at Black, a crumb on the stem's side."""
+    """A hooked j's body (Arris Mono's j in its cell, ⅉ): a one-stem
+    letter's (letter_width), giving past the Regular no more than leaves
+    J_SLOT breaks of white between its stem and the end of its hook:
+    narrower, the fill of that crotch shrank to a chord of 4 units at
+    Black, a crumb on the stem's side."""
     return max(letter_width(J_FRAME, 1)(p), 2 * p.sv + J_SLOT * p.c)
 
 
-@low('j', J_FRAME, 1, width=j_width)
+def j_body(p):
+    """The j's body: the l's, a stem and its cut (l_width)."""
+    return l_width(p)
+
+
+def _j_strokes(g, f):
+    """The j's stem, from the x-height down to the l's foot turned to the
+    left on the descender line: the same corner, the same cut two breaks
+    thick landing as the k's leg does, the body's clip taking what hangs
+    under the line (see l). Returns the stem's centre."""
+    p = f.p
+    xs = g.W - p.sv / 2
+    h, t, leg = _kick(p, g.sh)
+    y = -p.desc + h - t / 2
+    g.stroke((xs, p.xh), B(xs, y, leg, t), (0.0, y))
+    g.clip = (0, -p.desc, g.W, f.Y(13) + p.sv)
+    return xs
+
+
+@low('j', 3, 1, width=j_body)
 def j(g):
+    """The l run down under the line: a stem, its dot, and the l's foot at
+    the descender line, turned to the left, where a j turns. Until 1.017 it
+    turned into a hook that ended in a beak, the g's in little (the owner,
+    2026-11-12: "the j with a little hook. It shouldn't look like that. It
+    should look more like the l with the same foot as our l and just kind
+    of descend"; and shown a bare stem: "I didn't want you to make it look
+    like an i. I wanted you to make it look like our l, where it has a
+    small little crook at the bottom with a foot"). Arris Mono's j keeps
+    its flag and its hook in its cell. The italic's j is its own."""
     if g.p.mono:
         f = Frame(g, 9, 'asc', top=g.p.asc + g.p.sv)
         p, u = f.p, g.W / 9
@@ -704,11 +941,8 @@ def j(g):
         g.stroke((x - 3 * u, f.Y(8)), (x, f.Y(8)), B(x, f.Y(-2)), B(f.X(1), f.Y(-2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
         _dot(g, f, x)
         return
-    f = Frame(g, J_FRAME, 'asc', top=g.p.asc + g.p.sv)
-    p = f.p
-    xs = f.X(J_FRAME - 1)
-    g.stroke((xs, f.Y(9)), B(xs, f.Y(-2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
-    _dot(g, f, xs)
+    f = Frame(g, 3, 'asc', top=g.p.asc + g.p.sv)
+    _dot(g, f, _j_strokes(g, f))
 
 
 @low('k', 8, 1)
@@ -732,12 +966,43 @@ def _toe(p, sh):
 END = 2.0       # edge breaks: how thick the l's cut is at its end, the k's leg's: its lower cut and its upper, a point between
 
 
+def _kick_inside(p, sh):
+    """How much the inside of the l's corner is short of the fill every
+    inside corner keeps (draw.fill_leg), in Arris: nothing to a stem of
+    160. Past it the corner's leg, shorter by what a bowl's outside cut is
+    held from the Regular (instances._params), left the inside of the turn
+    less than the fill and at Black inside out: the corner rule then filled
+    a square corner at one end of the cut's top while the end's own break
+    took the other, the two sharing a top no longer than both, and the l
+    ended in a bent cut at ExtraBold and an upright face 14 units tall at
+    Black. The corner's leg and the body grow by this much, and the cut's
+    upper edge is one line from its point to the stem at every weight."""
+    from ..draw import fill_leg
+    h = min(END * p.c, sh)
+    t = max(h, p.floor)
+    reach = _toe(p, sh)
+    inside = p.leg + (sh - reach) / 2 - (reach - h) / 2 + (t - h) / 2 - (p.sv + t) / 2 + p.sd / 2 ** 0.5
+    return max(0.0, fill_leg(p) - inside) * p.optical
+
+
+def _kick(p, sh):
+    """The l's cut at its end: how tall it is (END), how thick it is drawn
+    (the stroke floor's, toward Thin) and the leg of the corner the stem
+    turns through into it."""
+    reach = _toe(p, sh)                                     # the thickness the body is measured for (kick_reach)
+    h = min(END * p.c, sh)
+    # (toward Thin two breaks are under the stroke floor: the end is drawn a floor thick with its top
+    # where it belongs, and the body's clip takes what hangs under the baseline, as it takes the k's leg)
+    t = max(h, p.floor)
+    return h, t, p.leg + (sh - reach) / 2 - (reach - h) / 2 + (t - h) / 2 + _kick_inside(p, sh)
+
+
 def kick_reach(p, sh):
     """From the l's stem's centre to the end of its cut: the stem's end
     turned through the one cut a corner takes and stopped there (measured
     for an end an edge break tall over its own break, _toe: the body it
     had before its end took the k's leg's form)."""
-    return sh / 2 + p.leg + p.sd / 2 ** 0.5 - _toe(p, sh) + p.c
+    return sh / 2 + p.leg + p.sd / 2 ** 0.5 - _toe(p, sh) + p.c + _kick_inside(p, sh)
 
 
 def l_width(p):
@@ -786,12 +1051,8 @@ def l(g):
     # upright face between them; the corner's leg is shorter by half of
     # that, so the body and the cut's thickness are what they were and the
     # cut stands a break lower on the stem.
-    reach = _toe(p, g.sh)                                   # the thickness the body is measured for (kick_reach)
-    h = min(END * p.c, g.sh)
-    # (toward Thin two breaks are under the stroke floor: the end is drawn a floor thick with its top
-    # where it belongs, and the body's clip takes what hangs under the baseline, as it takes the k's leg)
-    t = max(h, p.floor)
-    g.stroke((xs, p.asc), B(xs, h - t / 2, p.leg + (g.sh - reach) / 2 - (reach - h) / 2 + (t - h) / 2, t), (g.W, h - t / 2))
+    h, t, leg = _kick(p, g.sh)
+    g.stroke((xs, p.asc), B(xs, h - t / 2, leg, t), (g.W, h - t / 2))
     g.clip = (0, 0, g.W, p.asc)
 
 
@@ -917,10 +1178,12 @@ def s(g):
     g.stack(3, g.p.xh, ratio=0.75)
     f = Frame(g, 8, 'lower')
     p = g.p
-    top, mid, foot = bars3(g)
-    white = (p.xh - top - mid - foot) / 2
+    top, mid, foot, white = spine3(g)
     y1, ym, yt = foot / 2, foot + white + mid / 2, p.xh - top / 2
     (dt, lt), (df, lf) = beak_in(g, top, white), beak_in(g, foot, white)
+    ref = hook_ref(p)
+    if ref is not None and white >= 2 * (ref[1] - ref[0]):
+        dt, lt = df, lf = ref[1], ref[2]                    # the a's and the e's own, at both ends
     g.stroke((f.X(7), p.xh - dt), B(f.X(7), yt, lt, top), B(f.X(1), yt), B(f.X(1), ym, None, mid),
              B(f.X(7), ym), B(f.X(7), y1, None, foot), B(f.X(1), y1, lf), (f.X(1), df))
 
@@ -1151,6 +1414,7 @@ def y(g):
     run on as a tail, after Turret Road's ("the y does not have chamfering
     on its lower portion"); until 1.017 a bowl open at the top, its left
     corner cut all the way across to a flat a module short of the stem."""
+    hook_stack(g)
     f = Frame(g, 8, 'lower')
     p = f.p
     xl, y1 = f.X(1), f.Y(1)
@@ -1159,7 +1423,7 @@ def y(g):
     join = turned(f.W, p.xh, arch)[:-1]                     # (the notch's cut,) where the foot leaves the flat
     d = min(ya + gable_run(p, g.W) - y1, join[-1][0] - xl - p.c)
     g.stroke((xl, p.xh), (xl, y1 + d), (xl + d, y1), *reversed(join), end=cut)
-    hook(g, f)
+    hook(g, f, span=hook_span(p))                           # the g's own hook, to the unit
     g.butt += crotch_butt(g, f.Y(1))
 
 
@@ -1190,9 +1454,43 @@ def dotlessi(g):
     g.stroke(f.P(1, 0), f.P(1, 9))
 
 
-@glyph('uni0237', '\u0237', j_width, kind='lower')
-def dotlessj(g):
-    f = Frame(g, J_FRAME, 'lower')
+def _hooked_j(g, f):
+    """The j's stem turned left under the line into a hook that ends in a
+    beak: Arris's own j until 1.017, Arris Mono's dotless j, and the j of
+    cv03. Returns the stem's centre."""
     p = f.p
     xs = f.X(J_FRAME - 1)
     g.stroke((xs, f.Y(9)), B(xs, f.Y(-2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
+    return xs
+
+
+@glyph('uni0237', '\u0237', lambda p: j_body(p), kind='lower')
+def dotlessj(g):
+    if g.p.mono:                                            # (Arris Mono's j, hooked: see j)
+        _hooked_j(g, Frame(g, J_FRAME, 'lower'))
+        return
+    f = Frame(g, 3, 'asc', top=g.p.asc + g.p.sv)
+    _j_strokes(g, f)
+    g.clip = (0, -g.p.desc, g.W, g.p.xh)
+
+
+# cv03, "Hooked j": the j Arris had until 1.017, for whoever wants it back (the owner, 2026-11-12, of the j on the
+# l's foot: "you can have the old j using some type of rule that can be turned on, but I like the way it is right
+# now"). In Arris Mono, whose j never changed, these are its own.
+def _cv03_width(name):
+    """The hooked j's body, and in Arris Mono its own j's."""
+    return lambda p: REGISTRY[name].width(p) if p.mono else j_width(p)
+
+
+@glyph('j.cv03', None, _cv03_width('j'), kind='lower')
+def j_cv03(g):
+    if g.p.mono:
+        REGISTRY['j'].fn(g)
+        return
+    f = Frame(g, J_FRAME, 'asc', top=g.p.asc + g.p.sv)
+    _dot(g, f, _hooked_j(g, f))
+
+
+@glyph('uni0237.cv03', None, _cv03_width('uni0237'), kind='lower')
+def dotlessj_cv03(g):
+    _hooked_j(g, Frame(g, J_FRAME, 'lower'))

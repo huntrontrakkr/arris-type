@@ -117,6 +117,12 @@ def dse(g):
     _inner(g, ds_x(p, f.X(1)), f.Y(1), f.Y(8))
 
 
+def _hooked_j(p):
+    """The body ⅉ's hook is drawn in: the hooked j's (lower.j_width), which Arris's own j no longer has."""
+    from .lower import j_width
+    return j_width(p)
+
+
 @sign('uni2148', 'ⅈ', lambda p: p.sv + ds_extra(p), kind='lower')
 def dsi(g):
     """The i's stem and an inner stroke beside it, the dot over both."""
@@ -131,7 +137,7 @@ def dsi(g):
     g.clip = None
 
 
-@sign('uni2149', '\u2149', lambda p: REGISTRY['uni0237'].width(p) + ds_extra(p), kind='lower')
+@sign('uni2149', '\u2149', lambda p: _hooked_j(p) + ds_extra(p), kind='lower')
 def dsj(g):
     """The j doubled: its stem, and a lighter stroke on its right that turns
     into the j's hook under both; the dot over the two."""

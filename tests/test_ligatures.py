@@ -13,7 +13,7 @@ from arris.draw import REGISTRY
 from arris.font import place
 from arris.geom import rings_to_shapely
 from arris.glyphs.ligatures import LIGATURES
-from arris.instances import params
+from arris.instances import mono_weight, params
 from arris.italic import italic
 from arris.topology import faults
 
@@ -111,7 +111,7 @@ def _line(names, p):
 @pytest.mark.parametrize('w', [300, 700])
 @pytest.mark.parametrize('kind, lines', [('hyphen', 1), ('equal', 2), ('underscore', 1)])
 def test_a_run_is_one_line_however_long(kind, lines, w):
-    p = params(w).with_(mono=True)
+    p = params(mono_weight(w)).with_(mono=True)
     ink = _line([f'{kind}.seq.s'] + [f'{kind}.seq.m'] * 3 + [f'{kind}.seq.e'], p)
     assert len(getattr(ink, 'geoms', [ink])) == lines
 
@@ -122,7 +122,7 @@ def test_a_run_is_one_line_however_long(kind, lines, w):
 def test_the_joins_are_one_shape(name, pieces, w, it):
     """Fira Code's joins (one contour in its font) are joined here too: the
     w's of `www`, the &'s of `&&`, the ?'s of `??` and `#?` (their dots apart)."""
-    p = params(w).with_(mono=True)
+    p = params(mono_weight(w)).with_(mono=True)
     if it:
         p = italic(p).with_(cursive=True)
     ink = rings_to_shapely(place(name, p)[0])
@@ -131,7 +131,7 @@ def test_the_joins_are_one_shape(name, pieces, w, it):
 
 @pytest.mark.parametrize('w, it', [(300, False), (700, False), (400, True)])
 def test_the_ligatures_and_run_pieces_are_clean(w, it):
-    p = params(w).with_(mono=True)
+    p = params(mono_weight(w)).with_(mono=True)
     if it:
         p = italic(p).with_(cursive=True)
     names = [n for n, _ in LIGATURES] + [n for n in REGISTRY if '.seq.' in n][::3]

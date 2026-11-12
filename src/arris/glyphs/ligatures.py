@@ -1181,6 +1181,13 @@ def a_cv01(g):
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
 
 
+# cv03: the hooked j (lower.j_cv03), and the accented j's on it
+HOOKED_J = ['j', 'uni0237', 'jcircumflex', 'uni01F0']
+for _n, _mark in (('jcircumflex', '\u0302'), ('uni01F0', '\u030c')):
+    from . import marks as _marks
+    _marks._register(f'{_n}.cv03', None, 'uni0237.cv03', 'j', _mark)
+
+
 @glyph('zero.cv02', None, 'fig_w', kind='fig')
 def zero_cv02(g):
     """The plain zero, without the monospaced cut's dot."""
@@ -1376,6 +1383,8 @@ def alternates_fea(mono: bool) -> str:
                 f'    }};\n    {sub}\n}} {tag};')
     out = [cv('cv01', 'Single-storey a', 'sub a by a.cv01;'),
            cv('cv02', 'Plain zero', 'sub zero by zero.cv02;')]
+    # (in Arris Mono, whose j is the hooked one, cv03 changes nothing: one setting gives the family one j)
+    out.append(cv('cv03', 'Hooked j', '\n    '.join(f'sub {n} by {n}.cv03;' for n in HOOKED_J)))
     if mono:
         subs = '\n'.join(f'    sub {n}.liga by {n}.ss03;' for n in PLAIN)
         out.append(f'feature ss03 {{\n    featureNames {{ name "Plain comparisons"; }};\n{subs}\n}} ss03;')

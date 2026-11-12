@@ -14,7 +14,7 @@ import pytest
 
 import arris.glyphs  # noqa: F401  (the registry)
 from arris import draw as D
-from arris.instances import params
+from arris.instances import mono_weight, params
 from arris.italic import italic
 
 SAMPLE = ['d', 'b', 'O', 'zero', 'three', 'Uhorn', 'ohorn', 'uni1EE8', 'dcaron', 'lcaron', 'uni1ED1',
@@ -24,7 +24,7 @@ SLACK = 2.0     # font units: the fit's own tolerance and a horn's measure of it
 
 
 def _mono(w, ital):
-    p = params(w).with_(mono=True)
+    p = params(mono_weight(w)).with_(mono=True)
     return italic(p).with_(cursive=True) if ital else p
 
 

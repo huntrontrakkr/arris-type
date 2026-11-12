@@ -30,6 +30,25 @@ def frame(g):
     return p, W, H, u, v, xl, xr, yb, yt
 
 
+def _inside(p, sh):
+    """The inside cut of the corner a beak hangs from, as it is drawn
+    upright in Arris: what the strokes leave of the centreline's leg, no
+    less than the corner rule's fill (lower.inside_cut). The weight's own
+    edge break was its least until the fill was held at the Regular's, and
+    stayed the beak's measure: past the Regular the beak stood a break and
+    its flank past a bar whose inside is cut half a break, 100 units into a
+    bay of 105 on the 3 at a stem of 200, and the 3's upper storey was shut
+    (the owner, 2026-11-12: "you need the black three to look like the
+    original one a little bit better"). The italic's and the watch's own
+    keep the break (their corners' curves and the pixel rule)."""
+    if p.slant or not p.optical:
+        return inner_leg(p, sh)
+    from ..draw import fill_leg
+    drawn = max(fill_leg(p), p.leg - (p.sv + sh) / 2 + p.sd / SQRT2)
+    own = inner_leg(p, sh)
+    return own - (own - min(own, drawn)) * p.optical
+
+
 def beak_depth(p, sh=None, low=False):
     """How far a beak terminal reaches below the bowl's top (or above its
     bottom). Its outer flank under the corner chamfer is one edge break long,
@@ -42,7 +61,7 @@ def beak_depth(p, sh=None, low=False):
     sh = p.sh if sh is None else sh
     if _small_italic(p) or (low and p.slant):
         return outer_leg(p, sh=sh) + p.c
-    d = sh + inner_leg(p, sh) + _flank(p)
+    d = sh + _inside(p, sh) + _flank(p)
     if p.slant:
         d = min(d, (p.cap - p.c) / 2)                   # two beaks across a height never meet
     return max(_shortest(p, sh), d)
@@ -75,7 +94,7 @@ def bay_stack(g, frame, rows):
     "where it meets the bottom storey or where it does not meet. That gap
     ..."; of the italic's: "let's go ahead and fix all those things")."""
     p = g.p
-    least = BAY_WHITE * white_floor(p.m, p.sv)
+    least = BAY_WHITE * white_floor(p.m, p.sv, p.optical)
     k1 = g.sh_k
 
     def spare(k):
@@ -110,7 +129,7 @@ def off_the_beak(g, f, x_beak, x_end, row, top, bottom, d=None):
     in its italic at Black). The bar's end steps back; the beak and its
     curves are as they were."""
     p = g.p
-    least = BAY_WHITE * white_floor(p.m, p.sv)
+    least = BAY_WHITE * white_floor(p.m, p.sv, p.optical)
     d = beak_depth(p, g.sh) if d is None else d
     over = (f.Y(top) + g.sh / 2 - d) - (f.Y(row) + g.sh / 2)       # white between the upper beak's end and the bar's top
     under = (f.Y(row) - g.sh / 2) - (f.Y(bottom) - g.sh / 2 + d)    # and between the bar's underside and the lower beak's
@@ -317,7 +336,22 @@ def two(g):
              (yj + a_lo, yj), (yb + a_lo, yb), end='h')
 
 
+def _heavy_stack(p):
+    """How far a figure's bars may thin for its mouth alone: not at all to
+    a stem of 158, the heaviest the figures were drawn at until Arris's
+    weights took other families' colour, and to the stack's least
+    (STACK_MIN) at 200."""
+    t = min(1.0, max(0.0, (p.sv / p.grade_k - 158.0) / (200.0 - 158.0)))
+    return 1.0 - (1.0 - STACK_MIN) * t * p.optical
+
+
+# The 3's waist bar pulls its end in and its beak shortens where the mouth between them runs short. Past a stem
+# of 158 that was all there was: at 200 the bar's end stood on the middle of the figure, a nub on the stem's
+# side, the beak had no rise left, and the 3 was a 7's top over a foot (the owner, 2026-11-12: "you need the
+# black three to look like the original one a little bit better"). There the three bars thin first, as the
+# stack's bars do for the upper bowl, and the waist and the beak keep what the Regular's have.
 @glyph('three', '3', 'fig_w', openings=[_stacked(_upper_bowl),
+                                       Opening(_mouth_gap, 'sh_k', _heavy_stack, max_ratio=MOUTH_SHARE),
                                        Opening(_mouth_gap, 'bar_x', lambda p: p.fig_w / 2, max_ratio=MOUTH_SHARE),
                                        _mouth(_mouth_gap)])
 def three(g):
