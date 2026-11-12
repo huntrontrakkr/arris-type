@@ -531,6 +531,23 @@ The six causes:
     stroke from Bold: a slash under a bar. It starts at 0.45 of the
     sign's height, at the steep 2:1 (368 fonts: 0.50); ∛ ∜ with it, their
     tick as high as leaves the index room.
+- Small signs that grew with the stem, from the same reading. Of the
+  H's ink across, at Black, against twenty-one families' heaviest: the
+  “ 1.16 (theirs 0.77, 0.91 at the outside), the bullet 0.79 (0.51,
+  0.77), the brace 1.04 (0.56, 0.71), the bracket 0.66 (0.45, 0.54), the
+  multiplication sign 0.95 (0.78, 0.93). Past the Regular a quotation
+  mark's dot and the bullet take half of what the weight's would gain,
+  as an accent does (`punct.quote_dot`, `bullet_width`): “ ” „ ‘ ’ ‚ 0.84
+  and 0.36 at Black, the bullet 0.57. A bracket's arm stands out a
+  little over half a stem past its spine at least (it was a whole one):
+  0.51. The brace's arm stands out as the bracket's, its point is as
+  deep as the Regular's and half the stem's gain, and what of the point
+  would stand out further than the Regular's is cut off flat
+  (`punct._brace_cut`): 0.62, and the engine draws it a fifth lighter
+  at Black to keep its bays, as it does the parenthesis. The
+  multiplication sign's arms ran corner to corner of the plus's square,
+  root two as long as the plus's: 0.85 of the square across at every
+  weight (0.81 of the H). The comma and the semicolon are as they were.
 - Arris Mono Narrow, read through after these changes (the owner:
   "sometimes it will break"). Its six fonts built and checked whole:
   - Bold Italic's ą and Ą carried a scrap of the ogonek's join, three

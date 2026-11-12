@@ -931,7 +931,12 @@ its stroke and two of them stand a bar and that white apart, one in the
 other's bays (`operators.stack`); a sign of dots (÷ ∶ ∷ ∴ ∵) is as tall as
 the plus, its dots' outer edges where the plus's arms end
 (`operators.dot_reach`); the radical's tick starts at 0.45 of its height,
-at the steep 2:1 as its rise (`symbols.radical_tick`); the brace is told from ( by a square bracket's ends (flat arms,
+at the steep 2:1 as its rise (`symbols.radical_tick`); past the Regular
+the small signs hold near the share of the line they have there (a
+quotation mark's dot and the bullet take half of what the weight's would
+gain, `punct.quote_dot`; a bracket's and a brace's arms stand out a little
+over half a stem, and the brace's point is cut flat where it would stand
+out past the Regular's); the brace is told from ( by a square bracket's ends (flat arms,
 square corners, as long as the bracket's) and from [ by a point at its
 waist, a stem deep on the shallow 2:1, where ( has only its 45° ends. In
 the monospaced cut, dots (. , : ; and the tittles) are half

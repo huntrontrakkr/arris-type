@@ -198,17 +198,37 @@ def quotedbl(g):
         g.stroke((x, p.cap - tick(p)), (x, p.cap))
 
 
-@punct('quoteright', '’', 3, width=dot_w(1.5))
+QUOTE_GAIN = 0.5    # of what the dot gains past the Regular, the share a quotation mark's takes
+
+
+def quote_dot(p):
+    """A quotation mark's dot: the weight's to the Regular, and past it the
+    Regular's and half of what the weight's has gained, as an accent's
+    strokes (marks.MARK_GAIN). At the weight's own dot the marks grew with
+    the stem and “ stood 1.16 of the H's ink wide at Black with an advance
+    1.12 of the H's, where twenty-one families' heaviest stand 0.77 and
+    0.72 (0.91 and 0.86 at the outside): 0.62 at Regular, 0.84 at Black."""
+    from ..draw import held_at
+    q = held_at(p)
+    return p.dot() if q is p else q.dot() + QUOTE_GAIN * (p.dot() - q.dot())
+
+
+def quote_w(n):
+    return lambda p: n * quote_dot(p)
+
+
+@punct('quoteright', '’', 3, width=quote_w(1.5))
 def quoteright(g):
     f = Frame(g, 3, 'lower', top=g.p.cap)
-    _comma(g, f, g.W - g.p.dot() / 2, g.p.cap)
+    s = quote_dot(g.p)
+    _comma(g, f, g.W - s / 2, g.p.cap, s=s)
 
 
-@punct('quoteleft', '‘', 3, width=dot_w(1.5))
+@punct('quoteleft', '‘', 3, width=quote_w(1.5))
 def quoteleft(g):
     f = Frame(g, 3, 'lower', top=g.p.cap)
     p = g.p
-    s = p.dot()
+    s = quote_dot(p)
     # the comma turned half round: tail up-right, dot below
     x = s / 2
     y_bot = p.cap - 2.25 * s
@@ -216,37 +236,38 @@ def quoteleft(g):
     g.stroke((x, y_bot, s), (x, y_turn, s * p.sd / p.sv), (x + 0.75 * s, y_turn + 0.75 * s), end='h')
 
 
-@punct('quotedblright', '”', 7, width=dot_w(3.5))
+@punct('quotedblright', '”', 7, width=quote_w(3.5))
 def quotedblright(g):
     f = Frame(g, 7, 'lower', top=g.p.cap)
-    s = g.p.dot()
+    s = quote_dot(g.p)
     for x in (s, g.W - s / 2):
-        _comma(g, f, x, g.p.cap)
+        _comma(g, f, x, g.p.cap, s=s)
 
 
-@punct('quotedblleft', '“', 7, width=dot_w(3.5))
+@punct('quotedblleft', '“', 7, width=quote_w(3.5))
 def quotedblleft(g):
     f = Frame(g, 7, 'lower', top=g.p.cap)
     p = g.p
-    s = p.dot()
+    s = quote_dot(p)
     for x in (s / 2, s / 2 + 2 * s):
         y_bot = p.cap - 2.25 * s
         y_turn = y_bot + 1.5 * s
         g.stroke((x, y_bot, s), (x, y_turn, s * p.sd / p.sv), (x + 0.75 * s, y_turn + 0.75 * s), end='h')
 
 
-@glyph('quotesinglbase', '‚', dot_w(1.5), kind=('punct', comma_sides))
+@glyph('quotesinglbase', '‚', quote_w(1.5), kind=('punct', comma_sides))
 def quotesinglbase(g):
     f = Frame(g, 3, 'lower')
-    _comma(g, f, g.W - g.p.dot() / 2, g.p.dot())
+    s = quote_dot(g.p)
+    _comma(g, f, g.W - s / 2, s, s=s)
 
 
-@glyph('quotedblbase', '„', dot_w(3.5), kind=('punct', comma_sides))
+@glyph('quotedblbase', '„', quote_w(3.5), kind=('punct', comma_sides))
 def quotedblbase(g):
     f = Frame(g, 7, 'lower')
-    s = g.p.dot()
+    s = quote_dot(g.p)
     for x in (s, g.W - s / 2):
-        _comma(g, f, x, s)
+        _comma(g, f, x, s, s=s)
 
 
 def _paren(g, f, mirror=False):
@@ -274,11 +295,17 @@ def parenright(g):
     _paren(g, f, mirror=True)
 
 
+BRACKET_ARM = 0.55      # of a stem: the least a bracket's (and a brace's) arm stands out past its spine
+
+
 def bracket_width(p):
-    """Four modules and a stem, but at heavy weights arms as long as the
-    brace's (a stem and a half from the spine's centre): shorter, the arm's
-    end chamfer and its inside corner's nearly meet."""
-    return max(letter_width(4, 1)(p), p.sv / 2 + 1.5 * p.sv)
+    """Four modules and a stem, and at heavy weights arms that stand out
+    BRACKET_ARM of a stem past the spine at least (shorter, the arm's end
+    chamfer and its inside corner's nearly meet). At a stem and a half
+    from the spine's centre the bracket stood 0.66 of the H's ink wide at
+    Black, where twenty-one families' heaviest stand 0.45 (0.54 at the
+    outside)."""
+    return max(letter_width(4, 1)(p), (1 + BRACKET_ARM) * p.sv)
 
 
 def _bracket(g, mirror=False):
@@ -309,14 +336,36 @@ def _brace_parts(p, sh):
     from the spine's centre (two and a half modules at least, so a light
     brace keeps them), a point a stem deep on the shallow 2:1, whose ink
     runs on past it by its stroke's own reach."""
-    from ..draw import _thickness
+    from ..draw import _thickness, held_at
     t = _thickness(p, sh)((2, 1))
-    return max(1.5 * p.sv, 2.5 * p.m), max(BEAK * p.sv, 1.5 * p.m), t / (2 * math.sin(SLOPE))
+    q = held_at(p)
+    if q is p:
+        return max(1.5 * p.sv, 2.5 * p.m), max(BEAK * p.sv, 1.5 * p.m), t / (2 * math.sin(SLOPE))
+    # past the Regular the arm stands out as the bracket's does and the point is as deep as the Regular's
+    # and half of what the stem has gained: at a stem and a half and a stem they grew with the stem, and
+    # the brace stood 1.04 of the H's ink wide at Black (twenty-one families' heaviest 0.56, 0.71 at
+    # the outside)
+    return (max((0.5 + BRACKET_ARM) * p.sv, 2.5 * p.m), max(BEAK * (q.sv + QUOTE_GAIN * (p.sv - q.sv)), 1.5 * p.m),
+            t / (2 * math.sin(SLOPE)))
+
+
+def _brace_cut(p, sh):
+    """How much of the brace's point is cut off flat: what stands out past
+    the spine further than the Regular's point does (its stroke's reach
+    grows with the stroke, and at Black the point alone was a third of the
+    sign)."""
+    from ..draw import held_at
+    q = held_at(p)
+    if q is p:
+        return 0.0
+    _, d, tip = _brace_parts(p, sh)
+    _, d0, tip0 = _brace_parts(q, sh * q.sh / p.sh)
+    return max(0.0, (d + tip - p.sv / 2) - (d0 + tip0 - q.sv / 2))
 
 
 def brace_width(p):
     hook, d, tip = _brace_parts(p, p.sh)
-    w = hook + d + tip
+    w = hook + d + tip - _brace_cut(p, p.sh)
     return min(w, p.fig_w) if p.mono else w
 
 
@@ -330,7 +379,7 @@ def _brace(g, mirror=False):
     top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     mid = (top + bot) / 2
     hook, d, tip = _brace_parts(p, g.sh)
-    xs = max(W - hook, tip + d)                             # the spine (the arm gives way in a narrow cell)
+    xs = max(W - hook, tip + d - _brace_cut(p, g.sh))       # the spine (the arm gives way in a narrow cell)
     xp = xs - d                                             # the point
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
     # the arms leave the spine on the shallow 2:1 for half their length, then
@@ -473,13 +522,20 @@ def equal(g):
         g.stroke((0, y), (W, y))
 
 
+MULTIPLY = 0.85     # the multiplication sign across, of the plus's
+
+
 @punct('multiply', '×', 8, 1, width=OPERATOR)
 def multiply(g):
     p, W = g.p, g.W
-    a, h = axis(p), W / 2
-    g.stroke((0, a - h), (W, a + h), start='v', end='v')
-    g.stroke((0, a + h), (W, a - h), start='v', end='v')
-    g.clip = (0, a - h, W, a + h)
+    # its arms MULTIPLY of the plus's square across: corner to corner of the whole square they are
+    # root two as long as the plus's, and the sign stood 0.95 of the H's ink wide at Black with 0.69 of
+    # its ink (twenty-one families' heaviest 0.78 and 0.44, 0.93 and 0.55 at the outside)
+    a, h = axis(p), MULTIPLY * W / 2
+    x0, x1 = W / 2 - h, W / 2 + h
+    g.stroke((x0, a - h), (x1, a + h), start='v', end='v')
+    g.stroke((x0, a + h), (x1, a - h), start='v', end='v')
+    g.clip = (x0, a - h, x1, a + h)
 
 
 DIVIDE_WHITE = 0.45     # of a bar: the least white between the division sign's bar and a dot
@@ -864,7 +920,18 @@ def degree(g):
     g.stroke(B(x0, y0, leg, th), B(x1, y0, leg, t), B(x1, y1, leg, th), B(x0, y1, leg, t), closed=True)
 
 
-@punct('bullet', '\u2022', 4, width=lambda p: 2.4 * p.sv)
+def bullet_width(p):
+    """The bullet: 2.4 stems across to the Regular, and past it the
+    Regular's and half of what the weight's would gain (as a quotation
+    mark's dot, quote_dot). At 2.4 of the weight's stem it stood 0.79 of
+    the H's ink wide at Black with 0.73 of its ink, where twenty-one
+    families' heaviest stand 0.51 and 0.25 (0.77 and 0.57 at the outside)."""
+    from ..draw import held_at
+    q = held_at(p)
+    return 2.4 * (p.sv if q is p else q.sv + QUOTE_GAIN * (p.sv - q.sv))
+
+
+@punct('bullet', '\u2022', 4, width=bullet_width)
 def bullet(g):
     """A large dot on the x-height's centre: a square, chamfered."""
     p, W = g.p, g.W

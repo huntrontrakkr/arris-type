@@ -567,3 +567,37 @@ def test_the_radical_has_its_tick(w):
         x0, y0, x1, y1 = main.bounds
         tick = max(y for x, y in main.exterior.coords if x <= x0 + 0.1 * (x1 - x0))
         assert (0.40 if n == "radical" else 0.28) <= (tick - y0) / (y1 - y0) <= 0.60, (n, w, (tick - y0) / (y1 - y0))
+
+
+def _wide(name, p):
+    """A glyph's ink across, over the H's."""
+    from arris.font import place
+    a, h = (rings_to_shapely(place(n, p)[0]).bounds for n in (name, 'H'))
+    return (a[2] - a[0]) / (h[2] - h[0])
+
+
+def test_small_signs_keep_near_their_share_of_the_line():
+    """Quotation marks, the bullet, brackets, braces and the multiplication
+    sign grew with the stem and stood outside every family measured at
+    Black (of the H's ink across: “ 1.16, • 0.79, { 1.04, [ 0.66, × 0.95;
+    twenty-one families' heaviest at the outside 0.91, 0.77, 0.71, 0.54,
+    0.93). Past the Regular a quotation mark's dot and the bullet take half
+    of what the weight's would gain (punct.quote_dot, bullet_width), a
+    bracket's arm stands out a little over half a stem (BRACKET_ARM), the
+    brace's point is no longer than the Regular's (_brace_cut), and the
+    multiplication sign is 0.85 of the plus across at every weight."""
+    from arris.glyphs.punct import MULTIPLY, quote_dot
+    regular, black = params(400), params(900)
+    assert quote_dot(regular) == regular.dot()
+    assert quote_dot(black) == pytest.approx(regular.dot() + 0.5 * (black.dot() - regular.dot()))
+    at_regular = {'quotedblleft': 0.62, 'quotedblbase': 0.62, 'bullet': 0.42, 'braceleft': 0.61, 'bracketleft': 0.44}
+    most = {'quotedblleft': 0.91, 'quotedblbase': 0.91, 'bullet': 0.77, 'braceleft': 0.71, 'bracketleft': 0.54}
+    for name, share in at_regular.items():
+        assert _wide(name, regular) == pytest.approx(share, abs=0.02), name      # the Regular as it was
+        for w in (700, 900):
+            assert _wide(name, params(w)) <= most[name], (name, w)
+            assert _wide(name, params(w)) >= share - 0.02, (name, w)             # and none shrinks
+    for w in (400, 700, 900):
+        p = params(w)
+        assert _wide('multiply', p) == pytest.approx(MULTIPLY * _wide('plus', p), abs=0.02), w
+        assert _wide('braceright', p) == pytest.approx(_wide('braceleft', p)), w
