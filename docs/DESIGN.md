@@ -161,18 +161,24 @@ balances.
 height: a SemiBold. The other weights were drawn around it, 24 units at
 Thin, 90 at Regular, 175 at Black (`instances.WATCH_STEMS`), and Arris
 Watch keeps them, its SemiBold the watch's figures. Arris and Arris Mono
-share them to the Regular. Past it each weight adds to the Regular's stem
-four fifths of what the watch's adds (`instances.STEMS`): 102, 114, 130,
-144 and 158 units from Medium to Black for the watch's 105, 120, 140, 158
-and 175. At 175, in the widths the letters have past the Regular (below),
-the n's counter was narrower than its stems, 164 units; at 158 it is 184,
-and at every weight of Arris a counter is wider than the stems beside it.
-No weight draws what the watch's ladder does not have: Black is its
-ExtraBold, Bold its 650, and a rule of the engine that names a weight (the
-measured optics' ends, the weight a cut's forms are chosen at, the weights
-a heavier one is held against) names the watch's, whose stem the font's
-weight has (`instances.drawn`). Along the watch axis the variable font goes
-from Arris's stem to the watch's.
+share them to the Regular. Past it Arris has the stem that gives a line of
+its lowercase the colour other families' weight of that name has
+(`instances.STEMS`): 110, 133, 155, 178 and 200 units from Medium to Black,
+read on sixty grotesque, geometric and squared families at every weight
+they have (the ink of a line of lowercase in the band of its x-height:
+0.39, 0.45, 0.50, 0.55 and 0.60 for their 0.39, 0.45, 0.50, 0.55 and 0.61).
+Black is heavier than any weight of the watch's, and what let it be drawn
+is the corner: past the Regular a bowl's outside cut holds the Regular's
+size and its inside goes square, where the watch's cut grew with the stem
+and a counter two thirds of a stem wide was a diamond. Arris Mono keeps a
+lighter ladder (`instances.MONO_STEMS`: 102, 114, 130, 144 and 158, four
+fifths of what the watch's adds past the Regular): in a 600 cell its Bold
+already has Fira Code Bold's colour, and a third stem of 155 has no room in
+the m. A rule of the engine that names a weight (the measured optics' ends,
+the weight a cut's forms are chosen at, the weights a heavier one is held
+against) names the watch's, whose stem the font's weight has
+(`instances.drawn`). Along the watch axis the variable font goes from
+Arris's stem to the watch's.
 
 **Strokes, not pixels** (`arris.geom`). A glyph is drawn as centrelines. Each
 segment is offset by half its thickness, and the thickness depends only on
@@ -427,6 +433,21 @@ detail, so it is no reason to change a diagonal's weight at text or watch
 size; the ratio is practice, which offsets the darkening where diagonals
 meet other strokes.
 
+**One bar for a height, and one middle.** Past the Regular a letter's
+horizontals give for its own whites (below), and left to that each letter
+stood on a bar of its own: at Black the O on 170 units, the S on 154, the 5
+on 147. A height has one bar. Every letter of the lowercase stands on the
+bar the a's and the e's hooks hang from (`lower.hook_ref`), every capital
+and figure on the 5's (`draw._cap_bar`), upright and italic, and what a
+letter still thins for itself is its inner bar (the a's, the e's, the s's
+spine, the 3's waist). The hooks of c, a, e and s hang from that bar and
+end on one line, and a beak is measured from the bar its letter draws. The
+middle bar of H E B S 8 3 e a s stands on the centre of its height: 37
+families measured put it 1.3% over at Regular and 1.0% at Bold, Arris had
+2.5%, and with halves of one width its ink's centre of mass is on the
+centre as theirs is (`draw.OPTICAL['counters']`, which is every letter's
+alike and fades out from Bold if it is set again).
+
 **Overshoot, where a bowl turns at a cut corner.** Round letters usually
 rise above and dip below the flat ones (about 1.3–1.6% in the neutral
 faces), because a curve looks shorter than a flat edge of the same height.
@@ -445,14 +466,20 @@ clip cuts (A's apex, v's foot), and a side the drawing already carries past
 its line (v's point) keeps what it was drawn with. In 1.002, at Regular, S,
 C, 8 and o reach 3 units past their lines at the top and the bottom, O
 1; at Thin S 4 and o 5; at Black S 2 and o 1. H and x stay on the line at
-every weight.
+every weight. Since 1.017 a height has one overshoot: every letter and
+figure that stands over its line stands over it by the o's on the x-height
+and the O's on the cap height (`draw._zone_over`: 1.3 units at Regular, 0.4
+at Black), where each had taken what its own outline asked.
 
 **Optical centre.** People bisect a vertical line about 1% high, and type
 sets its middles higher than that: measured crossbars sit at 0.50–0.51 of
-the cap height in chamfered faces and 0.51–0.53 in neutral ones. Arris
-raises the middle of its letters and figures (`draw.OPTICAL`) until the top
-counter of a three-bar letter (B, E, 8) is 0.86 of the bottom one,
-calibrated so that at Regular the middle rises 2.5% of the cap height
+the cap height in chamfered faces and 0.51–0.53 in neutral ones. Since
+1.017 Arris's middles stand on the centre (above: one bar for a height,
+and one middle); what follows is the correction as it was until then, and
+as it works if a rise is set again. Arris
+raised the middle of its letters and figures (`draw.OPTICAL`) until the top
+counter of a three-bar letter (B, E, 8) was 0.86 of the bottom one,
+calibrated so that at Regular the middle rose 2.5% of the cap height
 (B's: 17.5 units). As the bars thicken the counters shrink, and the rise
 with them, so a heavy top bowl never pinches: B's middle is 20 units up at
 Light and 10.5 at Black. At Thin, where the strokes are the stroke floor,
@@ -537,7 +564,7 @@ its edges.
 
 A positive grade fades out from SemiBold to Black (`instances.GRAD_TAPER`):
 at Black it adds nothing, so the heaviest stroke a cut draws is its own
-Black's (158 units in Arris, 175 in Arris Watch). Past the watch's Black
+Black's (200 units in Arris, 175 in Arris Watch, 158 in Arris Mono). Past the watch's Black
 the drawings had no room. With a fifth more, some
 three hundred glyphs fused, kinked or lost a terminal between 750 and 900
 (the ? its hook's stub, the ‡ its bars, the $ its counters), and the
@@ -918,7 +945,8 @@ italic's are the hooked one, and `cv03` changes nothing there.
 | ascender | 780 | 13 |
 | descender | -180 | -3 |
 | hhea / typo ascender / descender | 950 / -250 | |
-| stem at Regular / Bold / Black | 90 / 130 / 158 | 1.5 / 2.2 / 2.6 |
+| stem at Regular / Bold / Black | 90 / 155 / 200 | 1.5 / 2.6 / 3.3 |
+| Arris Mono: stem at Regular / Bold | 90 / 130 | 1.5 / 2.2 |
 | Arris Watch: stem at SemiBold (the watch's) / Black | 120 / 175 | 2 / 2.9 |
 
 ## 10. Beyond the letters

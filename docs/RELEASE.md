@@ -54,7 +54,83 @@ before a commercial distribution if wanted.
 How the letters stand together. Six causes, each measured, and five
 letters redrawn.
 
-- Black draws a stem of 158 units, where it drew 175, and every weight
+Not released. The owner holds the next font until the whole of version 2
+is done (2026-11-12: "we're not going to put out another font until we
+get a version 2"). The first group below was added after the six causes,
+on the same branch, and where it differs from them it is the one that
+stands.
+
+- A true Bold and a true Black. Past the Regular each weight has the stem
+  that gives a line of its lowercase the colour other families' weight of
+  that name has (`instances.STEMS`: Medium 110, SemiBold 133, Bold 155,
+  ExtraBold 178, Black 200), read on sixty families at every weight they
+  have. On the ladder of the next entry (130 at Bold, 158 at Black)
+  Arris's Bold had their SemiBold's colour and its Black their Bold's (the
+  owner: "a true bold at the same color as other sets and a true black").
+  Past the Regular a bowl's outside cut holds the Regular's size and its
+  inside goes square, which is what the counters lacked at 175. Arris Mono
+  keeps the next entry's stems, Arris Watch the watch's.
+- One bar for a height. Every letter of the lowercase stands on the bar
+  the a's and the e's hooks hang from (`lower.hook_ref`), every capital
+  and figure on the 5's (`draw._cap_bar`), upright and italic. Each had
+  thinned for itself: at Black the O and the E stood on 170 units, the S
+  on 154, the 5 on 147, the 3 and the Q on 119 (the owner: "Let's make
+  sure that we're extremely consistent like this across everything").
+- The hooks of c, a, e and s hang from that bar and end on one line, at
+  every weight, in Arris and Arris Mono; the a and the e are as they were
+  and the c and the s moved ("a and e are perfect. C needs to change").
+  The a's and the e's outer bars are one thickness, the s is drawn on
+  their three bars, and at Black the a is the e turned half round, all
+  but its notch (`lower.a_like_e`, from Bold).
+- One overshoot for a height: the o's on the x-height, the O's on the cap
+  height, for every letter and figure that stands over its line
+  (`draw._zone_over`). Each had taken what its own outline asked, the C
+  3.3 units at Regular by the O's 1.3.
+- Every middle bar stands on the centre of its height (H E B S 8 3 e a
+  s). It stood 2.5% over it at Regular, about twice what 37 families
+  measured do, and the a and the e alone let it go toward Black; the
+  owner, shown the options: "I trust your feeling about this". A rise, if
+  one is set again, is every letter's alike and fades out from Bold
+  (`draw.OPTICAL['counters']`).
+- A beak hangs from the bar its letter draws. C, G, Э, Є, the euro and
+  thirty more measured it from the weight's own bar, 170 units at Black
+  where the capitals stand on 147, and the C's beak ended 23 units under
+  the S's and the 2's.
+- The Q's square corner is cut as the O's are from Bold, and at Black the
+  Q is the O with its tail. The 3's top and foot are the height's bar and
+  its waist alone thins, to a notch (the owner, shown it on full bars:
+  "Don't fix the italic 3 or the old three. I like the way that it
+  notches"). The j stands on the l's foot, turned left, and the hooked j
+  is `cv03`; the l and the j end in one cut at every weight; the g's and
+  the y's hooks are one hook; an arm's end keeps a small beak at every
+  weight.
+- The italic at the new weights. Its capitals and figures stand on the
+  height's bar too, and an italic capital's bars give a little past the
+  stack's least for its bays (the S's, 20 units wide at Black, are 54).
+  The cursive q, g and y keep the bowls' notch to Black
+  (`lower.BOWL_NOTCH_ITAL`: it was gone from ExtraBold), and their join
+  no longer cuts the bar it joins (the q's foot was 137 units for its
+  top's 168 at Black). A mouth's own rule never draws its beak out (the
+  italic Ә and Ҽ stood 31 units open at Black for 55; the Ҩ, 5). The
+  cursive j's body keeps 0.85 of a break inside its hook.
+- The letters built on the 3. The Ze stands on the height's bar, as the Э,
+  the Є and the Ҙ: thinned under the squint, which gives all or nothing,
+  its three bars stood at seven tenths of the others' from Bold and its
+  waist came to a point (the owner, of the italic's at 850: "The middle
+  thing just looks so crappy here. It's super thin"). Its small capital
+  and the small Ҙ keep the squint, their bays having no room without it.
+  The ezh and the Abkhasian dze thin their bars for the wedge under their
+  diagonal (`figures.wedge_bars`): in the italic the small ezh's two bars
+  met at Black and the diagonal's end stood out of the join in teeth.
+- Outlines. A stroke's outline that runs out and straight back loses the
+  spike (`geom._despike`: a notch in the Black a's counter); rings and
+  their points come out in one order whatever the float noise (the Mono
+  Bold ø was drawn two ways).
+
+The six causes:
+
+- (Arris Mono's ladder now; Arris's is the one above.) Black draws a stem
+  of 158 units, where it drew 175, and every weight
   past the Regular is rescaled to it: each adds to the Regular's stem four
   fifths of what it added (`instances.STEMS`: Medium 102, SemiBold 114,
   Bold 130, ExtraBold 144, Black 158, for 105, 120, 140, 158 and 175). At
