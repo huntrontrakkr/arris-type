@@ -158,7 +158,7 @@ def test_the_open_storey_of_a_and_e(w):
     lower, bowl = _whites('e', p)
     assert bowl / lower == pytest.approx(ae, abs=0.08)
     lower, upper = _whites('s', p)
-    assert upper / lower == pytest.approx(r, abs=0.08)
+    assert upper / lower == pytest.approx(ae, abs=0.08)                 # (the s moves as the a and the e do: its hooks are theirs)
     if w == 900:
         def counter(name):
             hole = min(draw(name, p).rings(), key=len)

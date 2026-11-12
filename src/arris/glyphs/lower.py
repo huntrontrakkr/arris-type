@@ -67,7 +67,7 @@ def bowl_join(g, f, stem_left, at_top):
     g.stroke(*placed(f.W, f.p.xh, pts, mirror=not stem_left, flip=not at_top), start=cut)
 
 
-EVEN = 0.9      # the closed end's bar as a share of the open end's, at least (bars3)
+EVEN = 1.0      # the closed end's bar as a share of the open end's, at least (bars3): the two are one thickness
 
 
 def bars3(g):
@@ -86,8 +86,12 @@ def bars3(g):
         # Past ExtraBold the inner bar is at its least and the closed end gave alone: at a stem of 200 the e's
         # top was 89 units over a bar of 104 and an arm of 148, 0.44 of a stem beside 0.74, and the a's foot
         # the same (the owner, 2026-11-12: "at black the e. And the a in the middle needs to be about the
-        # same size too"). The two outer bars share it from there, the closed end EVEN of the open one, as
-        # the e's top is of its foot in other families' Blacks (0.92, sixty of them).
+        # same size too"). The two outer bars share it from there, and share it alike (EVEN): the bar the a's
+        # hook hangs from is the bar every letter of the lowercase stands on (draw._start), and with the closed
+        # end at nine tenths of it, as the e's top is of its foot in other families' Blacks, the a's foot and
+        # the e's top stood 12 units thinner than the bars of the o, the c and the s beside them (the owner,
+        # 2026-11-12, of o c e a s: "it's no longer aligned appropriately. Is that because it's not divvied up
+        # correctly between its top and the bottom ...? And if so, everything needs to be rebalanced").
         # (and the three take no more than the stack shares out: where the inner bar stood at its least the
         # open end's whole weight came off the two whites)
         rest = min(lead + stacked, 3 * stacked - inner)
