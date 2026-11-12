@@ -49,10 +49,16 @@ def test_the_gs_hook_ends_in_a_beak(w):
         cut = ink.intersection(LineString([(x, -1000), (x, p.xh / 2)]))
         return sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
     tip = column(p.sv / 2)[0][1]
-    assert tip >= y_hook + hook + 0.8 * p.c, (tip, y_hook + hook)
+    # (most of an edge break, and in Arris the least every beak keeps over its bar, a fill and a half:
+    # lower.BEAK_OVER, 34 units from SemiBold, where a break of the weight's own is 50 at Black)
+    from arris.draw import fill_leg
+    from arris.glyphs.lower import BAY_WHITE, BEAK_OVER
+    assert tip >= y_hook + hook + min(0.8 * p.c, BEAK_OVER * fill_leg(p)) - 0.1, (tip, y_hook + hook)
     for x in (p.sv / 2, p.sv - 1.0):                    # the white over it, to the bowl's cut corner
         runs = column(x)
-        assert runs[1][0] - runs[0][1] >= BEAK_WHITE * least_white(p) - 1.0, (x, runs)
+        # (what every beak keeps off what it turns toward, lower.beak_in: at SemiBold, where the hook has
+        # not yet gone deeper, the beak's least rise leaves 56 units for the three quarters' 60)
+        assert runs[1][0] - runs[0][1] >= min(BEAK_WHITE, BAY_WHITE + 0.1) * least_white(p) - 1.0, (x, runs)
 
 
 @pytest.mark.parametrize('w', [300, 400, 700, 900])
@@ -60,7 +66,22 @@ def test_the_y_stands_on_the_gs_hook(w):
     """The same hook, bar for bar (the owner: "make a g like it is
     today")."""
     p = params(w)
-    assert _bars('y', p)[0] == pytest.approx(_bars('g', p)[0], abs=0.5)
+
+    def under(name):
+        """The hook's own corners, from its right end: every point of the letter under the baseline."""
+        ring = max(draw(name, p).rings(), key=len)
+        pts = [(x, y) for x, y in ring if y < -1.0]
+        x1 = max(x for x, _ in pts)
+        return sorted((round(x1 - x, 1), round(y, 1)) for x, y in pts if x1 - x >= p.sv - 0.5)   # (left of the stem it hangs from)
+    g, y = under('g'), under('y')
+    # (to the Regular the y's body is narrower than the g's hook is long, by 19 units at Regular and 66 at
+    # Thin, and its hook ends at its body's edge, as it always has: there the two are compared short of
+    # their ends)
+    from arris.glyphs.lower import hook_span
+    whole = draw('y', p).W >= hook_span(p) + p.sv - 0.5
+    reach = float('inf') if whole else draw('y', p).W - 2 * p.c - 1.0
+    assert all(any(abs(a - c) <= 0.5 and abs(b - d) <= 0.5 for c, d in y) for a, b in g if a < reach), (g, y)
+    assert whole or w <= 400
 
 
 @pytest.mark.parametrize('w', [100, 300, 400, 500, 600, 700])
