@@ -457,16 +457,40 @@ def _digraph(name, ch, a, b, kind):
         if p.mono:
             # two letters in one cell: both drawn small, strokes and all, at
             # the size where they fit side by side in their own widths (a Z's
-            # diagonal cannot be squeezed into half a cell)
+            # diagonal cannot be squeezed into half a cell), those widths
+            # the ones they are drawn in: the italic's l and j are its
+            # cursive ones, twice as wide as the upright's. Between them a
+            # module of white, and more where the first's ink reaches for
+            # the second's: never nearer than half a sidebearing, as the
+            # proportional digraph's (_digraph_gap), or than that module
+            # where it is the less (the cursive n's tail ran into the j's
+            # hook)
+            from shapely import affinity
+
+            from ..draw import drawn_spec
+            from ..font import light
+            from ..geom import rings_to_shapely
             p0 = p.with_(mono=False)
             gp = 1.0 * p.m
-            s = min(1.0, g.W / (REGISTRY[a].width(p0) + REGISTRY[b].width(p0) + gp))
-            q = p0.with_(m=s * p.m, cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.desc, under=s * p.under, deep=s * p.deep, leg=s * p.leg,
-                         sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
-            sa, sb = draw(a, q), draw(b, q)
-            x0 = (g.W - (sa.W + s * gp + sb.W)) / 2
+            s = min(1.0, g.W / (drawn_spec(a, p0).width(p0) + drawn_spec(b, p0).width(p0) + gp))
+            for _ in range(4):
+                q = p0.with_(m=s * p.m, cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.desc, under=s * p.under, deep=s * p.deep,
+                             leg=s * p.leg, sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
+                sa, sb = draw(a, q), draw(b, q)
+                ia, ib = rings_to_shapely(sa.rings()), rings_to_shapely(sb.rings())
+                need, out = min(0.5 * light(q.ungraded()), s * gp), s * gp
+                for _ in range(6):
+                    d = ia.distance(affinity.translate(ib, sa.W + out))
+                    if d >= need - 0.5:
+                        break
+                    out += need - d
+                over = (sa.W + out + sb.W) / g.W
+                if over <= 1.0 + 1e-6:
+                    break
+                s /= over
+            x0 = (g.W - (sa.W + out + sb.W)) / 2
             g.add_glyph(sa, x0)
-            g.add_glyph(sb, x0 + sa.W + s * gp)
+            g.add_glyph(sb, x0 + sa.W + out)
             return
         x, wa, wb = _digraph_x(p, a, b)
         g.add_glyph(draw(a, p, width=wa))

@@ -856,7 +856,17 @@ def _fill_slits(u, eps):
     if eps <= 0 or u.is_empty:
         return u
     closed = u.buffer(eps, join_style='mitre').buffer(-eps, join_style='mitre')
-    gaps = closed.difference(u)
+    try:
+        gaps = closed.difference(u)
+    except shapely.errors.GEOSException:
+        # The closing can fold on itself where two parts stand just nearer than twice eps: it bridges
+        # them at a point, and the outline it leaves crosses itself there (a caron 29 units over its
+        # letter with eps 15: the italic ǎ at 850, grade 100, on the watch's ladder, drawn without the
+        # jog closing as the variable font tries it; that build stopped on it). The fold taken out,
+        # the white between the two is measured as any other, and left: filling it would join them.
+        mended = shapely.make_valid(closed)
+        closed = shapely.union_all([g for g in getattr(mended, 'geoms', [mended]) if isinstance(g, (Polygon, MultiPolygon))])
+        gaps = closed.difference(u)
     # a counter (white enclosed by ink) is never filled here: its topology
     # must be the same at every weight, for the variable font
     filled = shapely.union_all([Polygon(g.exterior) for g in getattr(u, 'geoms', [u]) if isinstance(g, Polygon)])

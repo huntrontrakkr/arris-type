@@ -317,6 +317,27 @@ The six causes:
   tried 59 units wide with a stem of 108, folded on itself and the union
   of its strokes raised). `geom.ink` mends such an outline before the
   union, and the fit goes on to a body it can be drawn in.
+- The variable italic's build stopped on the ǎ. To find hairlines of
+  white the ink is closed by a share of the chamfer (`geom._fill_slits`);
+  two parts standing just nearer than twice that share are bridged at a
+  point, and the closed outline crosses itself there. The italic ǎ at
+  850, grade 100, on the watch's ladder has its caron 29 units over the
+  letter with a share of 15, and drawn without the jog closing, as the
+  variable font tries a glyph it cannot interpolate well, the measure of
+  its white raised. The fold is taken out and the white measured as any
+  other. No drawing the fonts carry changes: only one that could not be
+  made.
+- Two letters in one cell (ǆ ǉ ǌ ǳ and their capitals, in Arris Mono)
+  are drawn small, at the size where their bodies fit side by side. The
+  size was taken from the upright's bodies, and the italic draws its
+  cursive l and j, twice as wide as the upright's since those were
+  narrowed: in Arris Mono Italic the ǉ ran out of its cell on both sides
+  (30 and 38 units at Light, 3 at Regular). And nothing kept the first
+  letter's tail off the second: the ǌ's n ran into its j's hook, the ǆ's
+  and ǳ's d into their z. The size is now the bodies' as drawn, and the
+  two inks stand half a sidebearing apart, as the proportional digraph's
+  do (`latin_plus._digraph`). The upright Mono digraphs are unchanged to
+  the unit.
 - Past the Regular the letters give white to their stems, as the letters
   of other families do. Arris got bolder outward: almost every unit a stem
   gained went onto the letter's width. Read at one boldness and one

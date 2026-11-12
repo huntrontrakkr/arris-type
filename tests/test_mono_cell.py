@@ -60,6 +60,36 @@ def test_the_y_with_a_dot_below_stands_in_its_cell(w, narrow):
             assert x0 >= -0.5 and x1 <= adv + 0.5, (name, ital, round(x0, 1), round(x1, 1))
 
 
+@pytest.mark.parametrize('narrow', [False, True], ids=['mono', 'narrow'])
+@pytest.mark.parametrize('w', [300, 400, 450, 500, 600, 700])
+def test_two_letters_in_one_cell_stand_in_it_and_apart(w, narrow):
+    """A digraph's two letters share one cell, drawn small at the size where
+    their bodies fit side by side. The size was taken from the upright's
+    bodies, and the italic draws its cursive l and j, twice as wide as the
+    upright's since those were narrowed: in Arris Mono Italic the ǉ's ink ran
+    30 units out of the cell on the left and 38 on the right at Light, and 3
+    at Regular. And nothing kept the first letter's tail from the second:
+    the ǌ's n ran into its j's hook. The size is the drawn bodies', and the
+    two inks stand apart, in every cut."""
+    from arris.font import place
+    from arris.geom import rings_to_shapely
+    from arris.instances import narrow_weight
+    from arris.italic import polylines
+    p = params(narrow_weight(w) if narrow else mono_weight(w)).with_(mono=True, narrow=narrow)
+    for q, ital in ((p, False), (italic(p).with_(cursive=True), True)):
+        for cp in (0x1C4, 0x1C5, 0x1C6, 0x1C7, 0x1C8, 0x1C9, 0x1CA, 0x1CB, 0x1CC, 0x1F1, 0x1F2, 0x1F3):
+            name = f'uni{cp:04X}'
+            rings, adv = place(name, q)
+            ink = rings_to_shapely(polylines(rings) if ital else rings)
+            x0, _, x1, _ = ink.bounds
+            assert x0 >= 0.5 and x1 <= adv - 0.5, (chr(cp), ital, round(x0, 1), round(x1, 1))
+            # two letters, never one blot: the caron and the dots are pieces
+            # of their own, so a pair fused shows as too few pieces
+            pieces = len(getattr(ink, 'geoms', [ink]))
+            marks = (cp in (0x1C4, 0x1C5, 0x1C6)) + (chr(cp)[-1:] in 'ǈǉǋǌ')
+            assert pieces >= 2 + marks, (chr(cp), ital, pieces)
+
+
 def test_a_sign_drawn_smaller_is_drawn_smaller_whole():
     # ©'s ring is drawn to its body: drawn smaller to fit the italic's cell,
     # ring and letter shrink together, and its strokes are never a hairline
