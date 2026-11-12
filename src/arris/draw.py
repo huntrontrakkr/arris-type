@@ -648,7 +648,7 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
             ref = hook_ref(p)
             if ref is not None:
                 g.zone_k = ref[0] / p.sh
-    elif spec.kind in ('cap', 'fig') and p.optical and not p.slant and spec.name not in CAP_SETTERS and not _OWN_BAR[0]:
+    elif spec.kind in ('cap', 'fig') and p.optical and spec.name not in CAP_SETTERS and not _OWN_BAR[0]:
         # The capitals and the figures the same: one bar on the cap height, the one the 5, the 6 and the 9
         # keep where their mouths hold them (from ExtraBold: 147 units to Black). Each letter thinned for
         # itself, and at Black the O and the E stood on bars of 170 units, the S on 154, the 5, 6 and 9 on
