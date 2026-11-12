@@ -203,7 +203,9 @@ def test_the_dot_in_a_lunate_sigma_is_no_speck(w):
         dot = min((box(r) for r in g.rings()), key=lambda b: b[0] * b[1])
         counter = g.W - 2 * p.sv
         assert dot[0] == pytest.approx(dot[1]) == pytest.approx(min(p.dot(), counter - 2 * min(p.sv / 2, counter / 4))), name
-        assert dot[0] == p.dot() if w == 400 else dot[0] >= 0.45 * p.sv, name
+        # (and where the counter is less than two stems wide, at ExtraBold and Black, half the counter: 67
+        # units in a counter of 134 at Black, a third of a stem and as much as the counter holds)
+        assert dot[0] == p.dot() if w == 400 else dot[0] >= min(0.45 * p.sv, counter / 2) - 0.1, name
 
 
 @pytest.mark.parametrize('w', [100, 400, 700, 800, 900])

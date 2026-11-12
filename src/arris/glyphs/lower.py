@@ -417,7 +417,12 @@ def stub(p) -> float:
         # (no deeper than two legs of its crotch's fill: half of it is its end's cut and half the fill, and
         # past that the fill, which stops growing at the Regular, no longer runs on in the cut's line: a
         # kink of a unit in the bump's side at Black)
-        return min(0.5 * _stub(p, held) / (held / 4) * p.c, 2 * fill_leg(p))
+        # (the fill by the grade this weight's stems take: it is the Regular's, and a positive grade grows the
+        # Regular's a fifth where it may grow a stem of 178 a fifteenth; held to two legs of that, the stub by
+        # its stem went up a fortieth at the first step of grade and down again, where every rule runs one way)
+        from ..instances import grade_k
+        with_stems = min(1.0, p.grade_k / grade_k(400, p.grad)) if p.grad else 1.0
+        return min(0.5 * _stub(p, held) / (held / 4) * p.c, 2 * fill_leg(p) * with_stems)
     return between(p, own, _stub(p))
 
 
