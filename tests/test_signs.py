@@ -115,8 +115,10 @@ def test_a_row_of_strokes_gives_way_a_gap_at_a_time():
 
 
 def test_the_at_signs_a_moves_by_steps_no_longer():
-    """Four uprights cross the at sign and four bars stack up it; where one
-    white ran short the whole row used to go even at once. At Medium the
+    """Uprights cross the at sign (four until version 2, three since: see
+    test_the_at_sign_is_one_line_round_its_a) and four bars stack up it;
+    where one white ran short the whole row used to go even at once. At
+    Medium the
     inner a stood 60 units higher in its ring than at Regular or SemiBold,
     and along the grade the sign changed by a hundred squares of an edge
     break in one step of a twentieth (the grade axis, gone across step by
@@ -791,3 +793,66 @@ def test_the_ellipsis_keeps_near_its_length_and_its_line():
             assert min(sizes) >= 0.5 * p.dot(), (cut, w)
             whites = [b.bounds[0] - a.bounds[2] for a, b in itertools.pairwise(dots)]
             assert min(whites) >= 0.8 * max(sizes), (cut, w)
+
+
+AT_CUTS = {'upright': lambda w: params(w), 'italic': lambda w: _italic(params(w)),
+           'watch': lambda w: params(w, watch=1.0)}
+
+
+@pytest.mark.parametrize('cut', list(AT_CUTS))
+def test_the_at_sign_is_one_line_round_its_a(cut):
+    """After Tektur's (the owner, 2026-11-12: "our at symbol and the
+    ligatures involved with that symbol should look a little bit more like
+    [Tektur's] at symbol"): one line from the foot, open at the right, along
+    the bottom, up the left side, over the top and down the right side into
+    the a's bowl. One piece with one counter; three uprights across the
+    bowl; the foot a fifth of the cap height under the baseline; nothing
+    between the foot and the bowl at the right. Until version 2 an a in a
+    ring on the baseline, four uprights across it."""
+    from arris import topology
+    from arris.font import place
+    from arris.glyphs.punct import AT_DROP
+    for w in (100, 300, 400, 500, 700, 900):
+        p = AT_CUTS[cut](w)
+        rings, _ = place('at', p)
+        assert not topology.faults(rings, p.c, bool(p.slant)), (cut, w)
+        g = draw('at', p)
+        assert g.p.light == 1.0, (cut, w)                    # in its weight's own strokes
+        bowl, line = g.strokes
+        ink = rings_to_shapely(g.rings())
+        assert ink.geom_type == 'Polygon' and len(ink.interiors) == 1, (cut, w)
+        x0, y0, x1, y1 = ink.bounds
+        assert y0 == pytest.approx(-AT_DROP * p.cap, abs=2.0) and y1 == pytest.approx(p.cap, abs=2.0), (cut, w)
+        yb, ya = bowl.nodes[0].y, bowl.nodes[2].y              # the bowl's two bars, on their centre lines
+        skew = p.slant * (yb + ya) / 2
+        assert len(_runs(ink, y=(yb + ya) / 2)) == 3, (cut, w)  # the left side, the bowl's, the stem
+        yf = line.nodes[0].y                                   # the foot's bar
+        under = _runs(ink, y=(yf + g.sh / 2 + yb - g.sh / 2) / 2)
+        assert len(under) == 1 and under[0][1] < x0 + 0.4 * (x1 - x0) + abs(skew), (cut, w, under)
+
+
+def test_the_at_sign_stands_in_every_monospaced_cut():
+    """Arris Mono, Mono Italic, Mono Narrow and Mono Narrow Italic draw the
+    same sign in their cells, and the `~@` ligature runs the tilde over its
+    top and down into the a, with no left side and no foot hanging from the
+    join: one piece and one counter each, and a clean outline."""
+    from arris import topology
+    from arris.font import place
+    from arris.instances import mono_weight, narrow_weight
+    cuts = {'mono': lambda w: params(mono_weight(w)).with_(mono=True),
+            'mono italic': lambda w: _italic(params(mono_weight(w)).with_(mono=True)).with_(cursive=True),
+            'narrow': lambda w: params(narrow_weight(w)).with_(mono=True, narrow=True),
+            'narrow italic': lambda w: _italic(params(narrow_weight(w)).with_(mono=True, narrow=True)).with_(cursive=True)}
+    for cut, at in cuts.items():
+        for w in (300, 400, 700):
+            p = at(w)
+            for name in ('at', 'asciitilde_at.liga'):
+                rings, _ = place(name, p)
+                assert not topology.faults(rings, p.c, bool(p.slant)), (cut, w, name)
+                ink = rings_to_shapely(rings)
+                assert ink.geom_type == 'Polygon' and len(ink.interiors) == 1, (cut, w, name)
+                assert ink.bounds[3] == pytest.approx(p.cap, abs=0.06 * p.cap), (cut, w, name)
+            sign = rings_to_shapely(place('at', p)[0])
+            assert sign.bounds[1] <= -0.12 * p.cap, (cut, w)       # under the baseline (fitted a little smaller, leaned)
+            liga = rings_to_shapely(place('asciitilde_at.liga', p)[0])
+            assert liga.bounds[1] >= -1.0, (cut, w)                # the ligature has no foot

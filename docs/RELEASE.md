@@ -627,6 +627,17 @@ The six causes:
     dots and fitted to the cell, it was drawn smaller about the math
     axis from Medium up and left the line: 24 units over it at Medium,
     59 at SemiBold, 89 at Bold (since 1.015).
+- The at sign is one line round an a, after Tektur's (the owner: "our at
+  symbol and the ligatures involved with that symbol should look a little
+  bit more like [Tektur's] at symbol"): from its foot, open at the right,
+  along the bottom, up the left side, over the top and down the right
+  side, which is the a's stem, the a's bowl hanging on it (`punct.at`).
+  Three uprights cross it where four did, in a body a module narrower,
+  and its foot stands a fifth of the cap height under the baseline, as
+  most families' does. It was an a in a ring open at its foot, on the
+  baseline. One drawing for every cut: Arris and its italic, Arris Mono
+  and Mono Narrow and their italics, and the `~@` ligature, whose tilde
+  runs over the sign's top and down into the a.
 - Arris Mono Narrow, read through after these changes (the owner:
   "sometimes it will break"). Its six fonts built and checked whole:
   - Bold Italic's ą and Ą carried a scrap of the ogonek's join, three

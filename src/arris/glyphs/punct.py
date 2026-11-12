@@ -790,44 +790,60 @@ def spread(at, least):
     return out
 
 
-@punct('at', '@', 12, 3, width=lambda p: max(letter_width(12, 3)(p), 4 * p.sv + 3 * least_white(p)))
+AT_DROP = 0.2       # how far the at sign's foot stands under the baseline, of the cap height
+AT_BOWL = 0.39      # where the a's bowl begins, of the way from the sign's left side to its right
+
+
+def at_width(p):
+    """The at sign's body: eleven modules and three stems, or three stems
+    and the least white between them."""
+    return max(letter_width(11, 3)(p), 3 * p.sv + 2 * least_white(p))
+
+
+@punct('at', '@', 11, 3, width=at_width)
 def at(g):
-    """An a in a ring open at its foot. Four uprights cross it (the ring's
-    sides, the a's bowl and stem); the white between them is the frame's,
-    and where at heavy weights one would drop under least_white (the a's
-    counter would close to a pinhole) it takes what it lacks from the
-    others (spread), until the sign is wider and the four stand evenly
-    spaced. Up its height, the same with four bars."""
-    p = g.p
-    # four bars stack up the height (the ring's, the a's): where their white
-    # would drop under three quarters of a bar they thin, as tight stacks do
-    g.stack(4, p.cap, 0.75)
-    f = Frame(g, 12, 'cap')
-    xs = spread([f.X(1), f.X(4.5), f.X(8), f.X(11)], p.sv + least_white(p))
-    xa, xs8 = xs[1], xs[2]
-    # inner a: bowl and stem, kept a stroke's white inside the ring
-    yb = max(f.Y(3), f.Y(1) + g.sh + max(p.m, 0.5 * p.sv))
-    ys = spread([f.Y(1), yb, f.Y(7.5), f.Y(11)], 1.75 * g.sh)
-    yb, ya = ys[1], ys[2]
+    """One line round an a, after Tektur's (the owner, 2026-11-12: "our at
+    symbol and the ligatures involved with that symbol should look a little
+    bit more like [Tektur's] at symbol"): from its foot, open at the right,
+    along the bottom, up the left side, over the top and down the right
+    side, which is the a's stem; the a's bowl hangs on that stem, a closed
+    stroke of its own. Three uprights cross the sign (its left side, the
+    bowl's, the stem) and four bars stack up it (the foot, the bowl's two,
+    the top): where at heavy weights a white between them would drop under
+    the least a sign keeps it takes what it lacks from the others (spread),
+    and the bars thin as tight stacks do. The foot stands AT_DROP of the
+    cap height under the baseline, as most families' does.
+
+    Until version 2 it was an a in a ring open at its foot, on the
+    baseline: four uprights, the a's own stem inside the ring's right side,
+    in a body a module wider."""
+    p, W = g.p, g.W
+    y0 = -AT_DROP * p.cap
+    g.stack(4, p.cap - y0, 0.75)
+    sv, sh = p.sv, g.sh
+    xl, xb, xr = spread([sv / 2, sv / 2 + (W - sv) * AT_BOWL, W - sv / 2], sv + least_white(p))
+    yf, yt = y0 + sh / 2, p.cap - sh / 2
+    yf, yb, ya, yt = spread([yf, yf + (yt - yf) / 3, yf + 2 * (yt - yf) / 3, yt], 1.75 * sh)
     # the bowl's corners as large as its counter allows: a full leg on a
     # counter under a stroke and a half across leaves it a diamond
-    leg = min(p.leg, max(p.m / 2, (min(xs8 - xa, ya - yb) - 1.5 * p.sv) / 2))
-    g.stroke((xs8, yb), B(xa, yb, leg), B(xa, ya, leg), (xs8, ya), closed=True)
-    # stem, then out along the bottom and round the outside, open at the foot
-    g.stroke((xs8, ya), (xs8, yb), B(f.X(11), yb, p.m / 2), f.P(11, 7))
+    leg = min(p.leg, max(p.m / 2, (min(xr - xb, ya - yb) - 1.5 * sv) / 2))
+    g.clip = (0, y0, W, p.cap)
+    # the bowl is a closed stroke, its right side the stem's lower end (one
+    # line that ran on into its own side folded there)
+    g.stroke(B(xr, yb, leg), B(xb, yb, leg), B(xb, ya, leg), (xr, ya), closed=True)
+    side = [B(xr, yt), (xr, ya)]
     lead = getattr(g, 'lead', None)
     if lead is None:
-        g.stroke(f.P(11, 6), B(*f.P(11, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(10, 1))
+        g.stroke((W, yf), B(xl, yf), B(xl, yt), *side)
         return
     # a lead-in (the `~@` ligature: the tilde, in this frame, its last point
-    # where it rises): it climbs at the steep 2:1 from there to the ring's
-    # top and on over it, so the ring is one line from the lead-in over the
-    # top and down the right into the a's stem; the ring's left side and its
-    # foot, which would hang from where the lead-in meets it, are not drawn
-    top = f.Y(11)
+    # where it rises): it climbs at the steep 2:1 from there to the sign's
+    # top and on over it, so the sign is one line from the lead-in over the
+    # top and down into the a's stem; the left side and the foot, which
+    # would hang from where the lead-in meets it, are not drawn
     lx, ly = lead[-1]
-    xt = lx + (top - ly) / 2
-    g.stroke(f.P(11, 6), B(*f.P(11, 11)), (xt, top), *reversed(lead), end='v')
+    xt = lx + (yt - ly) / 2
+    g.stroke(*lead, (xt, yt), *side, start='v')
 
 
 SPOKE = math.atan2(1, 2)       # the asterisk's slanted spokes: the shallow 2:1

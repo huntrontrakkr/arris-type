@@ -558,7 +558,7 @@ least white (`letterframe.least_white`: a module, or 0.6 of a stem) or
 their own stroke across. The degree sign's ring, like the ring accent's,
 stops thickening at two modules and keeps three quarters of its stroke
 inside; ¤ widens to hold its counter; the ring below is drawn wider than
-high; the @ stands its four uprights evenly, and thins its four bars as a
+high; the @ stands its three uprights evenly, and thins its four bars as a
 tight stack does, where its a would close; small figures, like small
 letters, are never heavier than 2.6 of their own modules, so the small
 8 keeps both counters. The dollar's stem runs above and below the S at
@@ -839,7 +839,8 @@ characters on the cell grid):
   up into the tilde's first stroke where it crosses the axis, in `~-` the
   tilde's downstroke turns along it; `~>` `~~>` `<~` `<~~` `<~>` run the
   tilde's wave into the arrows' heads; in `~@` the tilde's rise becomes the
-  @'s ring, nothing hanging below the join.
+  @'s line over its top and down into its a, nothing hanging below the
+  join.
 * **Equality**: `==` `===` run the bars of = through, at ='s own white;
   `!=` `/=` `!==` `=/=` strike them; `:=` `=:` `::=` raise the colon onto
   the bars; in `^=` the caret's arm runs down onto the top bar.
