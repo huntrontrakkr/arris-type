@@ -68,6 +68,7 @@ def beak_depth(p, sh=None, low=False):
 
 
 BAY_WHITE = 0.6     # the white a beak keeps off the bar it turns toward, as a share of the least white (lower.beak_in, bay_stack)
+BAY_STACK_MIN = 0.64    # the least an italic capital's bars thin to for its bays, of the height's bar (bay_stack: past STACK_MIN, at Black)
 
 
 def bay_stack(g, frame, rows):
@@ -104,6 +105,10 @@ def bay_stack(g, frame, rows):
     k = k1
     if spare(k1) < 0:
         k, thick = STACK_MIN * k1, k1               # (the thinner the bars, the more room: the most bar that leaves it)
+        if spare(k) < 0 and p.optical and p.slant:
+            # (the italic's capitals at a stem of 200, whose beak is the longer: at the stack's least the S's
+            # bays still stood 44 units wide for 54, and its bars give as far as BAY_STACK_MIN for them)
+            k = BAY_STACK_MIN * k1
         if spare(k) >= 0:
             for _ in range(24):
                 mid = (k + thick) / 2
