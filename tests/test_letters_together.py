@@ -207,7 +207,7 @@ def _throat(ink, sv):
     return None
 
 
-@pytest.mark.parametrize('w', [100, 300, 400, 500, 600, 700, 750, 800, 850, 900])
+@pytest.mark.parametrize('w', list(range(100, 901, 50)))
 @pytest.mark.parametrize('mono', [False, True])
 def test_the_hooks_of_c_a_e_and_s_stand_on_one_line(w, mono):
     """The four hang their hooks from one bar and end them on one line,
@@ -228,7 +228,8 @@ def test_the_hooks_of_c_a_e_and_s_stand_on_one_line(w, mono):
             if side is None:
                 continue
             through_hook = x1 - p.c - 10 if side == 'R' else x0 + p.c + 10
-            past_it = x0 + p.sv + p.c + 20 if side == 'R' else x1 - p.sv - p.c - 20      # the bar alone, over the counter
+            clear = p.sv + max(p.c, p.leg) + 20                                         # past the wall and its corner's inside cut
+            past_it = x0 + clear if side == 'R' else x1 - clear                         # the bar alone, over the counter
             for part, x in (('end', through_hook), ('bar', past_it)):
                 cut = ink.intersection(LineString([(x, y0 - 5), (x, y1 + 5)]))
                 runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 0.5)
@@ -254,6 +255,13 @@ def test_one_bar_and_one_overshoot_on_each_height(w):
     p = params(w)
     bar = hook_ref(p)[0]
     assert {round(draw(ch, p).sh0, 6) for ch in 'obdpqgnhmucrz'} == {round(bar, 6)}
+    # the a, the e and the s are one set of bars: the two outer ones that bar, the inner one theirs alike (the
+    # owner, 2026-11-12, of the a's foot and the e's top at nine tenths of it: "it's not divvied up correctly
+    # between its top and the bottom ... everything needs to be rebalanced")
+    a, e, s = (draw(ch, p) for ch in 'aes')
+    assert a.sh == pytest.approx(bar) and e.sh == pytest.approx(bar)    # (their own bar is the closed end's)
+    assert a.hook == pytest.approx(e.hook)
+    assert [n.w for n in s.strokes[0].nodes if n.w] == pytest.approx([bar, a.hook[3], bar])
     cap = draw('five', p).sh
     assert {round(draw(CMAP[ch], p).sh0, 6) for ch in 'OCGQSEBDPRZT02378'} == {round(cap, 6)}
     assert draw('S', p).sh == pytest.approx(cap) and draw('Q', p).sh == pytest.approx(cap)

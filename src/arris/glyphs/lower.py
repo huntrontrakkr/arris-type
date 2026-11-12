@@ -103,10 +103,10 @@ def bars3(g):
 
 @functools.lru_cache(maxsize=512)
 def hook_ref(p):
-    """(bar, reach, corner's leg) of the hook the a and the e are drawn
-    with at ``p``: the bar it hangs from (the open end's, bars3, as their
-    closed counters' rule leaves it) and how far its end stands from the
-    line the bar lies on (beak_in). The c and the s take it from them, so
+    """(bar, reach, corner's leg, inner bar) of the hook the a and the e
+    are drawn with at ``p``: the bar it hangs from (the open end's, bars3,
+    as their closed counters' rule leaves it), how far its end stands from
+    the line the bar lies on (beak_in), and the bar between their storeys. The c and the s take it from them, so
     the four hang their hooks from one bar and end them on one line (the
     owner, 2026-11-12, of c a e s side by side at ExtraBold and Black: "all
     these letters have hooks and none of them are completely aligned ... a
@@ -121,27 +121,18 @@ def hook_ref(p):
 
 def spine3(g):
     """(top, spine, foot, white): the s, whose two ends are both open. In
-    Arris both arms are the bar the a's and the e's hooks hang from
-    (hook_ref), each bay is what its beak needs where the stack's white is
-    less (the beak's rise and BAY_WHITE of the least white beyond its
-    end), and the spine is what they leave, no thicker than an arm. Where
-    that is under the inner bar's least (STACK_MIN) the spine gives half of
-    what is missing and the two bays the other half. Until 1.017 the upper
-    arm kept the zone's weight and the lower took the stack's, 12 units
-    thinner than the c's at ExtraBold."""
+    Arris it is drawn on the a's and the e's bars (hook_ref): both arms
+    the bar their hooks hang from, the spine their inner bar, and so its
+    two whites theirs: the three stand on one set of lines at every
+    weight. Until 1.017 the upper arm kept the zone's weight and the lower
+    took the stack's, 12 units thinner than the c's at ExtraBold."""
     top, mid, foot = bars3(g)
     p = g.p
-    white = (p.xh - top - mid - foot) / 2
     ref = hook_ref(p)
     if ref is None:
-        return top, mid, foot, white
-    arm, reach, _ = ref
-    w = max(white, reach - arm + BAY_WHITE * least_white(p))
-    spine = min(arm, p.xh - 2 * arm - 2 * w)
-    floor = STACK_MIN * g.sh0
-    if spine < floor:
-        spine = floor - (floor - spine) / 2
-    return arm, spine, arm, (p.xh - 2 * arm - spine) / 2
+        return top, mid, foot, (p.xh - top - mid - foot) / 2
+    arm, inner = ref[0], ref[3]
+    return arm, inner, arm, (p.xh - 2 * arm - inner) / 2
 
 
 BEAK_OVER = 1.5     # legs of the fill (the Regular's edge break past the Regular): the least a beak rises over its bar
@@ -243,7 +234,7 @@ def a(g):
     yb = foot + low + inner / 2
     g.defaults_used.update(arm=ya, bowl=yb)
     d, leg = beak_in(g, arm, low)
-    g.hook = (arm, d, leg)                                  # (hook_ref: the c and the s take theirs from here)
+    g.hook = (arm, d, leg, inner)                           # (hook_ref: the c and the s take theirs from here)
     g.arm = arm                                             # (draw._optical: the bar on its line)
     # At Black the a is the e turned half round, all but the notch at the foot of its stem (the owner,
     # 2026-11-12: "at black, the e and the lowercase a should practically be identical flipped, aside from
@@ -339,7 +330,7 @@ def e(g):
     g.defaults_used.update(bar=yb, arm=y1)
     g.stroke((f.X(1), yb, bar), (f.X(7), yb), B(f.X(7), yt), B(f.X(1), yt), closed=True)
     d, leg = beak_in(g, arm, open_)
-    g.hook = (arm, d, leg)                                  # (hook_ref: the c and the s take theirs from here)
+    g.hook = (arm, d, leg, bar)                             # (hook_ref: the c and the s take theirs from here)
     g.arm = arm                                             # (draw._optical: the bar on its line)
     g.stroke((f.X(1), yb), B(f.X(1), y1, None, arm), B(f.X(7), y1, leg), (f.X(7), d))
 
