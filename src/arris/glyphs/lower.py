@@ -240,7 +240,7 @@ def a(g):
     # 2026-11-12: "at black, the e and the lowercase a should practically be identical flipped, aside from
     # the smallest little notch on a at the bottom"; "maybe bold and extra bold can use a little bit of
     # adjustment too ... it shouldn't mess up any of ... the lighter weights"). Their bars and their
-    # counters are one size there already (bars3, draw.EVEN_MIDDLE); two corners were not: the foot of the
+    # counters are one size there already (bars3, draw.OPTICAL); two corners were not: the foot of the
     # a's stem kept an edge break where the e's back turns through a corner's cut, 50 units by 88, and the
     # bowl's shoulder was a corner's cut where the e's bar ends in an edge break, 84 by 50. Both come in
     # from Bold with the middles (like): nothing at Bold, whole at Black.

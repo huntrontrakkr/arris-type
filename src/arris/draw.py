@@ -866,15 +866,26 @@ _FIGS = ('zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
 # the figures' cell (name.tnum: glyphs.features). In Arris Mono all share
 # the cell.
 PROPORTIONAL_FIGS = _FIGS + ('zero.zero', 'zero.dot', 'five.ss02')
-EVEN_MIDDLE = {'a', 'e'}    # letters whose one closed counter is the same size at Black (_optical)
 OPTICAL = {
     # (j.cv03: the hooked j was the j until 1.017, and is Arris Mono's still)
     'names': set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') | set(_FIGS) | {'j.cv03'},
     # optical centre: the middle rises until the top counter of a three-bar
-    # letter (B E 8) is this share of the bottom one; calibrated so that at
-    # Regular the middle rises 2.5% of the cap height. As the bars thicken the
-    # counters shrink and the rise with them, so heavy top bowls never pinch.
-    'counters': 0.8615,
+    # letter (B E 8) is this share of the bottom one. 1.0: no rise, the middle
+    # bar of every letter and figure on the centre of its height. One rule for
+    # all of them, and one number: until 1.017 it was 0.8615 (the middle 2.5%
+    # of the height over the centre at Regular), and the a and the e alone
+    # let it go toward Black. Measured on 37 families the middle bar of H E B
+    # S 8 3 e a s stands 1.3% over the centre at Regular and 1.0% at Bold
+    # (0.928 here), from none to 5%, and the ink's centre of mass on the
+    # centre, for their lower halves are the wider; Arris's halves are one
+    # width, and with the bars centred its centre of mass is on the centre
+    # too, where 0.8615 held it half a percent over. Centred, the a is the e
+    # turned half round, the s and the 8 their own half turn and the c's two
+    # hooks one length at every weight (the owner, 2026-11-12: "it doesn't
+    # have to be symmetric across the horizontal. It just has to follow the
+    # same rules", and of centred against half the rise: "I trust your
+    # feeling about this").
+    'counters': 1.0,
     # overshoot: each glyph's own, measured (vision.overshoot_need: its hull
     # under a blur calibrated on a circle to a 1.5% overshoot), at most this
     # share of the zone height
@@ -973,7 +984,7 @@ def _optical(g, spec, p):
     if spec.name in HOOKS_WITH and not p.slant:
         # The c and the s hang the a's hook over the middle and the e's under it (lower.hook_ref), and are
         # moved as those two are, the upper half as the a and the lower as the e: with a rise of their own
-        # (the a's and the e's fades from Bold, EVEN_MIDDLE; an overshoot is each letter's own) the c's hooks
+        # (an overshoot was each letter's own) the c's hooks
         # ended 2.5 units off theirs at Black, both of them higher.
         high, low = _hook_warps(p)
         g.warp = Joined(low, high, H / 2) if (low is not None or high is not None) else None
@@ -986,10 +997,10 @@ def _optical(g, spec, p):
     outer = max(g.sh, getattr(g, 'arm', 0.0))
     A = max(H / 2 - outer - g.sh / 2, 0.0)                   # a counter's height with the middle centred
     dc = A * (1 - r) / (1 + r) * p.optical
-    if spec.name in EVEN_MIDDLE:
-        # (the a and the e: one closed counter each, the e's over its bar and the a's under it, so the rise
-        # that makes the upper the smaller made the e's eye 0.87 of the a's bowl, at Black 93 units by 107,
-        # side by side in a word; from Bold to Black the rise fades out and at Black the two are one size)
+    if dc:
+        # (a rise, where OPTICAL sets one, is every letter's alike, and gone at Black, where there is no room
+        # for it: from Bold it fades out. The e's closed counter is over its bar and the a's under it, so a
+        # rise makes the e's eye the smaller of the two, at Black 93 units by 107, side by side in a word)
         from .instances import STEMS
         dc *= 1.0 - min(1.0, max(0.0, (p.sv / p.grade_k - STEMS[700]) / (STEMS[900] - STEMS[700])))
     rings0 = g.rings()

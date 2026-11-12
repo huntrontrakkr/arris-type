@@ -140,14 +140,15 @@ def _whites(ch, p, at=0.5):
 
 @pytest.mark.parametrize('w', [300, 400, 700, 900])
 def test_the_open_storey_of_a_and_e(w):
-    """The a, e and s stack their three bars with one white, and the optical
-    centre raises the middle: the a's open storey is seven eighths of its
-    bowl, the e's a seventh more than its bowl (until 1.017 both two
-    thirds, the a's the tighter). From Bold the a's and the e's rise fades,
-    and at Black the e's eye and the a's bowl are one size (the owner,
-    2026-11-12: "at black the e. And the a in the middle needs to be about
-    the same size too. Or exactly the same": the e's eye stood 93 units
-    tall by the a's 107)."""
+    """The a, e and s stack their three bars with one white, and their
+    middle bar stands where the optical centre puts every letter's
+    (draw.OPTICAL): on the centre of the height, so the open storey and the
+    closed one are one size (until 1.017 the middle stood over the centre,
+    the a's open storey seven eighths of its bowl and the e's a seventh
+    more than its bowl; the owner, 2026-11-12: "at black the e. And the a
+    in the middle needs to be about the same size too. Or exactly the
+    same", the e's eye 93 units tall by the a's 107; and of the rule: "it
+    just has to follow the same rules")."""
     from arris.instances import STEMS
     p = params(w)
     r = OPTICAL['counters']
