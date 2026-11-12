@@ -480,7 +480,10 @@ def interrobang(g):
         # toward Black that stem shortens to nothing and the bowl's return ends at its centre line: the
         # stroke, thinner than it, moves over to stand on the return's end and not past it
         x = xs + (t / 2) * (1.0 - min(1.0, stub / (own / 2))) if t < own else xs
-        return (x, p.cap), (x, f.Y(6))
+        # it runs on down into that stem, half its length: ended on the return's centre line, its end's
+        # break met the break of the corner the return turns into the stem on, and at the Regular and
+        # lighter, where the two are one width, the italic's curve there left an edge half a unit long
+        return (x, p.cap), (x, f.Y(6) - stub / 2)
     lay_bar(g, ends, direction=(0.0, 1.0))
 
 

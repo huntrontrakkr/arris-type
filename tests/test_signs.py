@@ -635,7 +635,7 @@ def test_struck_and_wavy_arrows_keep_near_their_length():
             assert len(getattr(_ink(name, params(w)), 'geoms', [0])) == 1, (name, w)
 
 
-@pytest.mark.parametrize('w', [400, 600, 700, 800, 900])
+@pytest.mark.parametrize('w', [300, 400, 600, 700, 800, 900])
 def test_the_interrobang_is_a_question_mark_with_a_stroke_through_it(w):
     """Its exclamation stroke is added to the question mark: past the
     Regular it holds the Regular's weight, laid over. At the weight's own it
@@ -658,6 +658,13 @@ def test_the_interrobang_is_a_question_mark_with_a_stroke_through_it(w):
     # and it stands on the bowl's return: nothing of it shows under the bowl's left end
     low = _runs(ink, y=laid.nodes[-1].y - 0.4 * g.sh)
     assert all(x0 >= b0 - p.sv for x0, _ in low), low
+    # its outline is clean, the italic's too (ended on the return's centre line, the stroke's end met the
+    # corner the return turns into the stem on: an edge half a unit long in the italic at Light and Regular)
+    from arris import topology
+    from arris.font import place
+    for q in (p, _italic(p)):
+        rings, _ = place('uni203D', q)
+        assert not topology.faults(rings, q.c, bool(q.slant)), (w, bool(q.slant))
 
 
 def test_a_column_of_dots_keeps_its_dots():

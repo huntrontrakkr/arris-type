@@ -563,8 +563,9 @@ The six causes:
     1.98).
   - The interrobang's exclamation stroke is added to the question mark:
     past the Regular it holds the Regular's weight, laid over
-    (`draw.lay_bar`), standing on the end of the bowl's return where the
-    question mark's own stem has gone. At the weight's own it filled the
+    (`draw.lay_bar`), running on down into the question mark's own stem
+    and, where that stem has gone, standing on the end of the bowl's
+    return. At the weight's own it filled the
     bowl's left half by Bold, the whole mark was lightened to 0.8 to
     keep the counter that was left, and it read as a P.
   - ⁝ ⁞ keep 0.55 of the Regular's stem between their dots past it, and
