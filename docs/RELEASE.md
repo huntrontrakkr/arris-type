@@ -663,6 +663,43 @@ The six causes:
     with 0.6 of its ink, the × 0.82 and 0.68). They are fitted to Arris
     Mono's body (`symkit.sign_room`) and stand as they do in Arris Mono
     Italic.
+- The cursive e's eye is the upright e's in little (the owner: "There's
+  gotta be a way to make the italic e black have a bigger hole"). Its bar
+  rises at 45 degrees and stands 1.4 of its own thickness tall on the
+  back, 182 units at Black where the upright's level bar is 104, and the
+  eye, the triangle over it, had 0.56 of the upright e's area at the
+  Regular, 0.39 at Bold and 0.24 at Black: 3,000 square units, 73 a side,
+  beside a stem of 200. It now keeps 0.55 of the upright's from the
+  Regular to Black (`italic_forms.EYE_OF_UPRIGHT`): 6,800 square units at
+  Black, 2.3 times what it was, and 8,800 at Bold for 6,200.
+  - The head reaches to the right, by 7 units at Medium, 21 at Bold and
+    37 at Black, and the bar, which runs into its corner, leaves the back
+    as much lower (`_e_strokes`, ``reach``). Both legs of the eye grow by
+    the reach; the top, the bar, the back and the foot are as thick as
+    they were, and the advance is what it was. The mouth gives what the
+    eye gains (the channel under the bar, 110 units across at Black, is
+    84), and the reach stops where the eye's inscribed circle would be as
+    wide as the channel.
+  - Nothing moves at the Regular or lighter, nor in Arris Mono Italic and
+    Mono Narrow Italic, whose e, in its cell, has an eye the upright's
+    size.
+  - The æ's eye is the e's at every weight. At Black it had shut, the
+    rule that keeps it read the smallest counter left, the a's bowl, and
+    stood by, and the eye came back at 1,650 square units by the topology
+    lock lightening the whole letter. An opening that holds a counter's
+    area now reads none where its own measure finds the counter shut
+    (`draw._opened`).
+  - Read every ten units of weight from 400 to 900, at the corners of
+    grade and watch, and in ℯ: a clean outline everywhere. Only Arris
+    Italic from Medium up moves, and in it only e, æ, ℯ, œ and what is
+    stamped from them (é ę ё …).
+  - A trial variable italic of e, æ and ℯ: the small faults of the
+    outline across the design space fall (2,888 places to 435 on the e,
+    3,936 to 1,526 on the æ) and the mean difference from the drawings
+    is what it was (worst 6.9 units for 7.3), but 19 places stand over 3
+    units where 4 did, and the æ has one point 68 units off its drawing
+    at ExtraBold, halfway along the watch axis: new, and not yet looked
+    into.
 - No bar ends in an arrowhead (the owner, of the 3's top bar in Arris
   Italic Black: "Sharp pointy 3 top? I never want to see this shape in
   our typefaces"). The corner rule cut both corners of a stroke's flat

@@ -962,6 +962,51 @@ def test_the_cursive_e_gives_only_its_top_and_bar_for_its_eye():
         assert end >= y1 + EXIT_OVER * p.c - 1.5, w
 
 
+def test_the_cursive_es_eye_is_the_upright_es_in_little():
+    """italic_forms._eye_of_upright: from the Regular to Black the cursive
+    e's eye is 0.55 of the upright e's by area, its share at the Regular
+    (the owner: "There's gotta be a way to make the italic e black have a
+    bigger hole"). The head reaches to the right for it and the bar leaves
+    the back as much lower (_e_strokes): no stroke is thinner than it was.
+    Until 2.0 the eye fell to 0.39 of the upright's at Bold and 0.24 at
+    Black, 3,000 square units; and the æ's, which shut at Black where its
+    rule read the a's bowl for it, came back at 1,650 by the whole letter
+    lightening."""
+    from arris.glyphs.italic_forms import EYE_OF_UPRIGHT, _eye_area, _upright_eye
+    from arris.instances import mono_weight
+    from arris.italic import italic
+    last = 0.0
+    for w in (300, 400, 500, 600, 700, 800, 900):
+        p = italic(params(w))
+        e, ae = draw('e', p), draw('ae', p)
+        share = _eye_area(e) / _upright_eye(p)
+        assert share >= EYE_OF_UPRIGHT - 0.002, (w, share)
+        reach = e.free('reach', 0.0)
+        if w <= 400:
+            assert reach == 0.0 and share < 0.6, (w, reach, share)         # as it stood: the Regular's share is the rule's
+        else:
+            assert share == pytest.approx(EYE_OF_UPRIGHT, abs=0.002), (w, share)    # no more than it asks
+            assert reach >= last - 2.0, (w, reach, last)                    # (a unit back where the bar starts to thin)
+        last = reach
+        # the æ's eye is the e's, and the æ its own weight
+        assert _eye_area(ae, 2) == pytest.approx(_eye_area(e), rel=0.01), w
+        assert getattr(ae, 'lightened', None) is None and ae.free('reach', 0.0) == pytest.approx(reach, abs=0.5), w
+        # the eye's inscribed circle is no wider than the mouth it took the white from: the channel between
+        # the bar's underside and the exit, read where the exit's top begins
+        ink = rings_to_shapely(e.rings())
+        x = max(q[0] for r in e.rings() for q in r if q[1] < p.xh / 2) - 2 * p.c
+        col = ink.intersection(LineString([(x, -50), (x, p.xh + 50)]))
+        runs = sorted(s.bounds[1::2] for s in getattr(col, 'geoms', [col]) if s.length > 1)
+        if len(runs) >= 2:
+            mouth = (runs[1][0] - runs[0][1]) / 2 ** 0.5                    # across the channel, which runs at 45 degrees
+            assert min(e.counters()) <= mouth + 1.0, (w, min(e.counters()), mouth)
+    assert draw('e', italic(params(900))).free('reach', 0.0) == pytest.approx(37.0, abs=3.0)
+    # Arris Mono's italic e, in its cell, has an eye the upright's size: the rule stands by
+    for w in (400, 700):
+        p = italic(params(mono_weight(w)).with_(mono=True)).with_(cursive=True)
+        assert draw('e', p).free('reach', 0.0) == 0.0, w
+
+
 @pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
 def test_b_and_d_and_p_and_q_are_mirrors(w):
     from shapely import affinity

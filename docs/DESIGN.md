@@ -733,7 +733,17 @@ the upright already makes (`arris.glyphs.italic_forms`):
   whose spine is a 45-degree diagonal with the 2's notch; the e whose bar is
   a 45-degree diagonal rising into the top right corner, the eye the
   triangle above it, leaving on an upstroke. The e's bar thins and the k's
-  loop deepens at heavy weights, so their counters keep half a stem.
+  loop deepens at heavy weights, so their counters keep half a stem. And
+  the e's eye stays the upright e's in little: 0.55 of its area, the share
+  it has at the Regular, at every weight from there to Black. A bar at 45
+  degrees stands 1.4 of its thickness tall on the back, where the
+  upright's level bar stands one, and the triangle over it fell to a
+  quarter of the upright's eye at Black. So past the Regular the head
+  reaches to the right, 37 units at Black, and the bar, which runs into
+  its corner, leaves the back as much lower: both legs of the eye grow by
+  the reach and no stroke is thinner for it. The mouth gives what the eye
+  gains, and the reach stops where the two are as wide
+  (`italic_forms._eye_of_upright`).
 * *Cyrillic*: и is written as a u, п as an n, т as an m, д as a g; ш, щ
   and ц are u's with three stems or a descender (а е р у come through the
   Latin forms).

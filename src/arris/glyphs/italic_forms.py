@@ -627,6 +627,53 @@ def s_ital(g):
 
 EYE = 0.6          # the least share of their own thickness the cursive e's top and bar keep, thinned for its eye
 EXIT_OVER = 1.5    # edge breaks: the least the cursive e's exit stands over its foot
+EYE_OF_UPRIGHT = 0.55   # the least the cursive e's eye is of the upright e's, by area: its share at the Regular (_eye_of_upright)
+
+_UPRIGHT_EYE: dict = {}
+
+
+def _eye_area(g, n: int = 1) -> float:
+    """The area of a drawing's eye: of its n counters the one furthest to the
+    right (the e's one; the æ's second), and none if one of them has shut.
+    On the drawing before its curves, which moves evenly with the weight
+    where the curved outline's steps."""
+    from shapely.geometry import Polygon
+
+    from ..geom import rings_to_shapely
+    poly = rings_to_shapely(g.rings())
+    holes = [Polygon(h) for part in getattr(poly, 'geoms', [poly]) for h in part.interiors]
+    return max(holes, key=lambda h: h.centroid.x).area if len(holes) >= n else 0.0
+
+
+def _upright_eye(p) -> float:
+    """The area of the upright e's eye where the italic stands: its weight,
+    its grade, its watch, its cut."""
+    q = p.with_(slant=0.0, cursive=False)
+    if q not in _UPRIGHT_EYE:
+        from ..draw import draw
+        _UPRIGHT_EYE[q] = _eye_area(draw('e', q))
+    return _UPRIGHT_EYE[q]
+
+
+def _eye_of_upright(g, n: int = 1) -> float:
+    """The cursive e's eye (of a drawing's n counters: _eye_area) as a share
+    of the upright e's, in an opening's units (the stem its share is taken
+    of: draw._opened).
+
+    The upright e is where the family says how much eye a weight affords:
+    its bar is level, a horizontal's thickness tall, and its eye and mouth
+    share what is left. The cursive e's bar rises at 45 degrees and stands
+    1.4 of its thickness tall on the back, so its eye, the triangle over
+    the bar, had 0.56 of the upright's at the Regular, 0.39 at Bold and
+    0.24 at Black: 73 units a side between a stem of 200 and a bar 182
+    tall (the owner: "There's gotta be a way to make the italic e black
+    have a bigger hole"). It keeps the Regular's share, EYE_OF_UPRIGHT, by
+    reaching (_e_strokes)."""
+    from ..params import WHITE_HELD
+    p = g.p
+    stem = p.sv - max(0.0, p.sv - WHITE_HELD * p.grade_k) * p.optical
+    up = _upright_eye(p)
+    return stem * _eye_area(g, n) / up if up > 0 else stem
 
 
 def _e_strokes(g, f, xl, xr, x_exit):
@@ -639,6 +686,10 @@ def _e_strokes(g, f, xl, xr, x_exit):
     opening, draw._opened) and no further. The back and the foot are the
     alphabet's strokes at every weight, and the exit stands over the foot
     by EXIT_OVER breaks at least.
+
+    Past that the eye keeps its share of the upright e's (_eye_of_upright)
+    by the head's ``reach``: the top and the bar's upper end stand that far
+    further right, in units, and the bar leaves the back as much lower.
 
     Until 1.017 the eye was kept by thinning all the letter's horizontals,
     the foot with the top, and then the bar: from SemiBold the foot was 0.70
@@ -653,29 +704,43 @@ def _e_strokes(g, f, xl, xr, x_exit):
     p = g.p
     full = max(g.sh0 * g.sh_k, p.floor)                     # the alphabet's horizontal here
     k = g.free('eye', 1.0)
+    reach = g.free('reach', 0.0)
     # (the top gives with the bar once the bar has come down to it: on the height's bar, which the italic's
     # lowercase stands on past the Regular, draw._start, it is the thinner of the two to begin with, and
     # thinned by the bar's share it stood at 101 units at Black under a bar of 144)
     top, bar = min(full, max(p.sh * g.sh_k, p.floor) * k), p.sd * k
     yt, yf = p.xh - top / 2, full / 2
+    if reach > 0:
+        # The head reaches to the right, and the bar, which runs into its corner, leaves the back as much
+        # lower: the eye's two legs each grow by the reach and no stroke is thinner for it (the owner, of
+        # the thinning: "it's also important that we remain uniform in thickness"). What the eye gains the
+        # mouth gives, the channel between the bar's underside and the exit: the reach stops where the
+        # eye's inscribed circle is as wide as the channel, so neither white is the letter's pinch.
+        leg = (xr - xl) - p.sv / 2 - top / 2 - bar / SQRT2      # the eye's legs, drawn
+        gap = (x_exit - xr) + (yt - yf) - (bar + p.sd) / SQRT2  # the bar's underside over the exit's top, upright
+        even = (gap / SQRT2 - (2 - SQRT2) * leg) / ((2 - SQRT2) + 1 / SQRT2)
+        xr += max(0.0, min(reach, even))
     g.stroke((xl, yt - (xr - xl), bar), (xr, yt))
     L = max(_reach(p, FLAG), full / 2 + EXIT_OVER * p.c)
     g.stroke((xr, yt, top), B(xl, yt), B(xl, yf, None, full), (x_exit, yf), (x_exit + L, yf + L), end='h')
 
 
-@ital('e', 8, 2, openings=[Opening(_one_counter, 'eye', lambda p: EYE, max_ratio=AUTO_SHARE, hold=True, across=True)])
+@ital('e', 8, 2, openings=[Opening(_one_counter, 'eye', lambda p: EYE, max_ratio=AUTO_SHARE, hold=True, across=True),
+                           Opening(_eye_of_upright, 'reach', lambda p: p.xh, max_ratio=EYE_OF_UPRIGHT)])
 def e_ital(g):
     """The cursive e: its bar a 45-degree stroke rising from the left side
     into the top right corner, the eye the triangle above it; the lower arm
     leaves on a 45-degree upstroke, a hand's exit. At heavy weights the top
-    and the bar thin so the eye stays open (_e_strokes)."""
+    and the bar thin so the eye stays open, and the head reaches to the
+    right so it stays the upright e's eye in little (_e_strokes)."""
     f = Frame(g, 8, 'lower')
     _free(g)
     _e_strokes(g, f, f.X(1), f.X(7), f.X(6))
 
 
 @ital('ae', 14, 3, width=lambda p: REGISTRY['a.ital'].width(p) + REGISTRY['e.ital'].width(p) - p.sv,
-      openings=[Opening(lambda g: _counter_white(g, 2), 'eye', lambda p: EYE, max_ratio=AUTO_SHARE, hold=True, across=True)])
+      openings=[Opening(lambda g: _counter_white(g, 2), 'eye', lambda p: EYE, max_ratio=AUTO_SHARE, hold=True, across=True),
+                Opening(lambda g: _eye_of_upright(g, 2), 'reach', lambda p: p.xh, max_ratio=EYE_OF_UPRIGHT)])
 def ae_ital(g):
     """The single-storey a and the cursive e on one stem: the a's bowl on
     its left, the e's eye and exit on its right."""

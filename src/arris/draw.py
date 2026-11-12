@@ -1818,7 +1818,13 @@ def _opened(spec, p, ot, ob, width, nest=True):
         if op.hold:
             held = _engaged(spec, k, ratio, p, ot, ob, overrides, width)
             if held is not None:
-                measure, target = _counter_area, held
+                # (the held counter's area, and none where the opening's own measure finds its counter shut:
+                # the smallest counter left is then another one. The cursive æ's eye shut at Black, its a's
+                # bowl was the smallest counter there was, far over the held area, and the rule stood by:
+                # the eye came back at 1,650 square units, half the e's, by the topology lock lightening the
+                # whole letter)
+                own = op.measure
+                measure, target = (lambda h, own=own: _counter_area(h) if own(h) > 0 else 0.0), held
         if measure(g) >= target - 1e-6:
             continue
         a0 = a = g.defaults[op.free]
