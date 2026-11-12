@@ -375,7 +375,7 @@ BUTT_TOL = 1e-6
 
 
 def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch: float = 2.0,
-               fill: float | None = None):
+               fill: float | None = None, end: float | None = None):
     """The corner rule on one ring (ink on the left of travel), as the watch's
     pixel rule behaves:
 
@@ -388,6 +388,12 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
     * a convex corner where a 2:1 edge meets a cap: a chord of leg c;
     * anything else (135-degree turns, the bends of gables): left alone;
     * a corner on a butt line (``butt``, see ``ink``): left square.
+
+    A cut is no longer than the edges it stands on allow, and two cut
+    corners on one edge share it (_share): a stroke's end keeps a face
+    between its two cuts, never a point. ``end``: the share of a stroke's
+    end either cut may take, where it is not END_CUT (a drawing whose end
+    is its two cuts' meeting: the l's foot, draw.Glyph.end_cut).
 
     ``crotch``: how far along the axis edge the fill of a concave 45-degree
     corner reaches, in breaks. The pixel rule's chord there is as long as a
@@ -464,8 +470,8 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
         u_in, u_out = _unit(e_in), _unit(e_out)
         k = kinds[i]
         # How much of each adjacent edge this corner may use.
-        room_in = _len(e_in) * (0.5 if kinds[i - 1] else 1.0)
-        room_out = _len(e_out) * (0.5 if kinds[(i + 1) % n] else 1.0)
+        room_in = _len(e_in) * _share(kinds, turns, i, i - 1, end)
+        room_out = _len(e_out) * _share(kinds, turns, i, (i + 1) % n, end)
         if k in ('right', 'steep'):
             r = min(c if turns[i] > 0 else f, room_in, room_out)
             out += [_sub(b, _mul(u_in, r)), _add(b, _mul(u_out, r))]
@@ -491,6 +497,47 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
     if len(clean) > 1 and _len(_sub(clean[0], clean[-1])) < 1e-6:
         clean.pop()
     return clean
+
+
+END_CUT = 1.0 / 3.0   # the most of a stroke's end either of its two corner cuts may take (_share)
+
+
+def _share(kinds, turns, i, j, end: float | None = None) -> float:
+    """How much of the edge between corners i and j the corner i may use
+    (_ring_rule). All of it where the other corner is not cut, half where
+    it is: a cut and a fill either side of a short step lie on one line,
+    two fills meet in the white's own corner, and a cut meets the chord
+    that squares a diagonal's end in the point the l's tail and the k's leg
+    stand on. But a third, END_CUT, where both are right angles cut off
+    the ink (or a steep stroke's cap's): the edge is the flat end of a
+    stroke, and its face stays as long as either cut's leg.
+
+    On a half each, an end narrower than two breaks came to a point: the
+    3's top bar in the italic at Black, 104 units on a break of 50, an
+    arrowhead on a bar (the owner: "I never want to see this shape in our
+    typefaces"), with the ze's middle arm, the question mark's hook, the
+    number sign's eight ends, the double-struck letters' hairlines and the
+    ogoneks' tabs: at Black 56 glyphs of the upright and 86 of the italic.
+    One a little wider kept a face a few units long between two full cuts,
+    which reads the same: the z's, the f's and the t's bars at Black, 18
+    units between two cuts of 50, with 138 glyphs of the upright there and
+    308 of the italic. Now the cuts give way before the face does, and an
+    end with no room for two breaks and a face is an even three: cut,
+    face, cut.
+
+    (Not a hook's beak, the a's, c's, e's and s's: a bowl corner's chamfer
+    drawn in the stroke and one cut meeting it, which is the hook's own
+    shape.)
+
+    ``end``: another share for such an end, in a drawing that asks for it
+    (draw.Glyph.end_cut): a half each, and the l's foot is two cuts and
+    the point between them, as its owner drew it after the k's leg."""
+    if not kinds[j]:
+        return 1.0
+    flat = ('right', 'steep')
+    if turns[i] > 0 and turns[j] > 0 and kinds[i] in flat and kinds[j] in flat:
+        return END_CUT if end is None else end
+    return 0.5
 
 
 def _stepped_crotches(pts, kinds, turns, c, crotch) -> dict:
@@ -543,7 +590,7 @@ def _stepped_crotches(pts, kinds, turns, c, crotch) -> dict:
 
 def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | None = None, butt=(),
         tags: list | None = None, extra_edges=(), finished=(), overlay=(), crotch: float = 2.0,
-        facet: float | None = None, fill: float | None = None):
+        facet: float | None = None, fill: float | None = None, end_cut: float | None = None):
     """Union the strokes (and any extra polygons), intersect with ``clip``
     (a polygon, if given) and apply the corner rule.
 
@@ -648,11 +695,11 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
                 if r is poly.exterior or Polygon(r).area >= min_hole:
                     rings.append(pts)
             continue
-        rings.append(ordered(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), jog, moved, even)))
+        rings.append(ordered(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill, end_cut), POLISH * c, moved, facet and facet * c), jog, moved, even)))
         for hole in (sorted(poly.interiors, key=lambda h: low(h.bounds)) if done else poly.interiors):
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(ordered(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill), POLISH * c, moved, facet and facet * c), jog, moved, even)))
+            rings.append(ordered(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill, end_cut), POLISH * c, moved, facet and facet * c), jog, moved, even)))
     if overlay:
         rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, crotch)
     if rec is not None and moved:

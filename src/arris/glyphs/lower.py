@@ -939,6 +939,7 @@ def _j_strokes(g, f):
     h, t, leg = _kick(p, g.sh)
     y = -p.desc + h - t / 2
     g.stroke((xs, p.xh), B(xs, y, leg, t), (0.0, y))
+    g.end_cut = POINTED
     g.clip = (0, -p.desc, g.W, f.Y(13) + p.sv)
     return xs
 
@@ -984,6 +985,10 @@ def _toe(p, sh):
 
 
 END = 2.0       # edge breaks: how thick the l's cut is at its end, the k's leg's: its lower cut and its upper, a point between
+POINTED = 0.5   # the share of such an end each of its two cuts takes: all of it between them (Glyph.end_cut). Everywhere else
+                # a stroke's flat end keeps a face a third of it between its cuts (geom._share: no bar ends in an arrowhead);
+                # the l's foot and the j's are the k's leg's landing, drawn to a point on the owner's word (see l), and the
+                # r's arm ends as its owner has it, a short face over the shoulder's underside ("don't fix the R")
 
 
 def _kick_inside(p, sh):
@@ -1073,6 +1078,7 @@ def l(g):
     # cut stands a break lower on the stem.
     h, t, leg = _kick(p, g.sh)
     g.stroke((xs, p.asc), B(xs, h - t / 2, leg, t), (g.W, h - t / 2))
+    g.end_cut = POINTED
     g.clip = (0, 0, g.W, p.asc)
 
 
@@ -1180,6 +1186,7 @@ def r(g):
         rise = min(rise, max(0.0, f.X(8) - (k - g.sh / 2) - 2 * p.c - x6))
     x6 -= shoulder_enter(p) - p.c                           # and deeper by what its crotch's fill is short (shoulder_enter)
     g.stroke((x6, y8 - rise), (x6 + rise, y8), f.P(8, 8), start='h')
+    g.end_cut = POINTED                                     # (the arm's end as its owner has it: see POINTED)
     if p.mono:                                              # a foot, as the 1's
         u = g.W / 9
         g.stroke((xs - 2.5 * u, f.Y(1)), (xs + 2.5 * u, f.Y(1)))

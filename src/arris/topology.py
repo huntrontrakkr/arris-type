@@ -25,6 +25,11 @@ Faults, on a contour as a polyline (the italic's curves sampled):
   not on: ink or white narrower than the design draws anywhere, a
   cluster of points that should be one.
 
+And one the outline's form may not take, read on a drawing before its
+curves and slant (``stroke_ends``; ``tools/end_scan.py`` reads every glyph
+of every cut): a stroke's end that comes to a point, or keeps a face too
+short to see between its two cuts.
+
 Checked on the built variable fonts (``python -m arris.topology
 build/Arris[GRAD,WTCH,wght].ttf ...``), at every glyph's own masters
 and halfway between neighbouring ones on each axis (every fault), and
@@ -320,6 +325,68 @@ def faults(contours, c: float, italic: bool = False, every: bool = True, tiny: b
 
 
 # --- scanning a variable font -------------------------------------------------
+
+END_FACE = 0.5    # an end's face shorter than this share of its cuts' leg reads as a point (stroke_ends)
+END_ALIKE = 1.25  # two cuts are a pair where the longer is no more than this many of the shorter (stroke_ends)
+
+
+def stroke_ends(rings, c: float) -> list[tuple[str, float, float, float]]:
+    """The ends of strokes that come to a point, or all but: (kind, x, y,
+    size) each. Read on a drawing's rings as ``Glyph.rings`` gives them
+    (ink on the left, before the italic's curves and slant).
+
+    A stroke's end is where its two sides, running opposite ways, are
+    joined: by the corner rule a cut, a face and a cut (``geom._share``).
+
+    * ``point``: no face, two cuts of one length meeting: an arrowhead on
+      a bar (the 3's top in the italic at Black, until 2.0; the owner: "I
+      never want to see this shape in our typefaces"). Its size: the
+      longer cut, in font units, and no arrowhead larger than three
+      breaks a side is taken for an end (a diamond is a drawing).
+    * ``thin``: a face shorter than END_FACE of the leg of the two cuts
+      beside it, which reads as a point. Its size: face over leg.
+    * ``beak``: a long chamfer and a short cut meeting, the terminal of a
+      hook (the a's, c's, e's, s's), as drawn: listed, not a fault. Its
+      size: long over short.
+
+    A diagonal's end, cut square to it, is none of these: its corner
+    stands between a cut and the stroke's own side. Nor is a dot: the
+    sides of an end run level, upright or steep, and its cuts at 45
+    degrees to them, where a dot's eight edges read either way."""
+    def side(a, b):                                         # a stroke's side: not a 45-degree edge
+        return not 35 < math.degrees(math.atan2(abs(b[1] - a[1]), abs(b[0] - a[0]))) < 55
+
+    out = []
+    for ring in rings:
+        pts = [(q[0], q[1]) for q in ring]
+        n = len(pts)
+        if n < 5:
+            continue
+        t = []
+        for i in range(n):
+            a, b, q = pts[i - 1], pts[i], pts[(i + 1) % n]
+            u, v = (b[0] - a[0], b[1] - a[1]), (q[0] - b[0], q[1] - b[1])
+            t.append(math.degrees(math.atan2(u[0] * v[1] - u[1] * v[0], u[0] * v[0] + u[1] * v[1])))   # + : into the ink
+        for i in range(n):
+            h, j, k = (i - 1) % n, (i + 1) % n, (i + 2) % n
+            a, b, q = pts[h], pts[i], pts[j]
+            cut = lambda m: 30 < t[m] < 60                    # noqa: E731  (a cut's end: half a right angle)
+            if 75 <= t[i] <= 105 and cut(h) and cut(j) and abs(t[h] + t[i] + t[j] - 180) < 12:
+                l1, l2 = math.dist(a, b), math.dist(b, q)
+                if min(math.dist(pts[i - 2], a), math.dist(q, pts[k])) > 0.5 * min(l1, l2) \
+                        and side(pts[i - 2], a) and side(q, pts[k]):                          # sides, not more cuts
+                    if max(l1, l2) > END_ALIKE * min(l1, l2):
+                        out.append(('beak', b[0], b[1], max(l1, l2) / min(l1, l2)))
+                    elif max(l1, l2) <= 3.0 * c:
+                        out.append(('point', b[0], b[1], max(l1, l2)))
+            if cut(h) and cut(i) and cut(j) and cut(k) and abs(t[h] + t[i] + t[j] + t[k] - 180) < 12 \
+                    and side(pts[i - 2], a) and side(pts[k], pts[(k + 1) % n]):
+                l1, l2 = math.dist(a, b), math.dist(q, pts[k])
+                leg = min(l1, l2) / math.sqrt(2)
+                if max(l1, l2) <= END_ALIKE * min(l1, l2) and leg <= 1.6 * c and math.dist(b, q) < END_FACE * leg:
+                    out.append(('thin', b[0], b[1], math.dist(b, q) / leg))
+    return out
+
 
 def _mid(values: Sequence[float]) -> list[float]:
     out = list(values)

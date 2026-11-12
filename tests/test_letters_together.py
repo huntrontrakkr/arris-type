@@ -693,7 +693,8 @@ def test_inside_corners_stop_growing_at_the_regular():
     ell = [(0, 0), (300, 0), (300, 100), (100, 100), (100, 300), (0, 300), (0, 0)]    # ink on the left
     out = _ring_rule(ell, 40, +1, fill=20)
     assert near(out, (120, 100)) and near(out, (100, 120))              # the inside corner, filled 20
-    assert near(out, (260, 0)) and near(out, (300, 40))                 # an outside corner, cut 40
+    assert near(out, (40, 0)) and near(out, (0, 40))                    # an outside corner, cut 40
+    assert near(out, (300, 100 / 3)) and near(out, (300, 200 / 3))      # (the arm's end, 100 thick: a third each, _share)
     assert near(_ring_rule(ell, 40, +1), (140, 100))                    # one leg where no fill is given
 
 
@@ -1099,7 +1100,8 @@ def test_no_letter_keeps_a_crumb(w):
                 # (an edge on the outside by the break, and past the Regular by what the outline's finish takes
                 # for a drawn step, a fill and a half: geom.JOG_FILLS. What keeps the Regular's scale is not
                 # a crumb for the weight's break having outgrown it: the face of a lowercase bar's end at
-                # Black, 18 units between two cuts of 50 on a bar of 118)
+                # Black was 18 units between two cuts of 50 on a bar of 118, until a flat end kept a third of
+                # itself for its face: geom._share)
                 if 0.5 < math.hypot(*e) < 0.45 * (fill_leg(p) if inside else min(p.c, JOG_FILLS * fill_leg(p))):
                     short.append(round(math.hypot(*e), 1))
             assert not short, (ch, w, short)
@@ -1136,6 +1138,76 @@ def test_a_step_between_two_equal_cuts_closes_evenly():
     assert any(abs(x) < 1e-6 and abs(y - 106) < 1e-6 for x, y in out) and any(abs(x - 92) < 1e-6 and abs(y - 14) < 1e-6 for x, y in out)
     assert _close_jogs(stub, 40, {}) == stub
     assert _close_jogs(stub, 40, {}, even=10) == stub      # a flat of half a break or more is a flat
+
+
+def test_a_strokes_flat_end_keeps_a_face_between_its_cuts():
+    """geom._ring_rule (_share): the two cuts of a stroke's flat end take a
+    third of it each at most, so its face is never shorter than either; a
+    cut and a fill either side of a short step still take half each and lie
+    on one line; and a drawing may ask for the halves (Glyph.end_cut: the
+    l's foot, two cuts and the point between them)."""
+    from arris.geom import _ring_rule
+
+    def bar(w):                                             # a bar 600 long and w thick, ink on the left
+        return [(0, 0), (600, 0), (600, w), (0, w), (0, 0)]
+    for w, cut in ((200, 50), (150, 50), (120, 40), (104, 104 / 3), (30, 10)):
+        out = _ring_rule(bar(w), 50, +1)
+        assert len(out) == 8, (w, out)
+        for x in (0, 600):
+            assert sorted(q[1] for q in out if abs(q[0] - x) < 1e-6) == pytest.approx([cut, w - cut]), w
+    pointed = _ring_rule(bar(100), 50, +1, end=0.5)
+    assert len(pointed) == 6 and any(q == pytest.approx((600, 50)) for q in pointed)
+    step = [(0, 0), (300, 0), (300, 30), (400, 30), (400, 300), (0, 300), (0, 0)]
+    out = _ring_rule(step, 50, +1)
+    for q in ((285, 0), (300, 15), (315, 30)):
+        assert any(o == pytest.approx(q) for o in out), (q, out)
+
+
+@pytest.mark.parametrize('style', ['upright', 'italic'])
+def test_no_bar_ends_in_an_arrowhead(style):
+    """The owner, of the 3's top bar in the italic at Black, its two cuts
+    meeting in a point: "I never want to see this shape in our typefaces".
+    No stroke's flat end comes to a point, nor keeps a face under half its
+    cuts' leg, which reads as one (topology.stroke_ends): the 3, the bars
+    of z t f E F 2 5 7 at Black, the number sign's eight ends, the question
+    mark's hook, the ze's middle arm, the double-struck letters' hairlines
+    and an ogonek's tab. Until 2.0, at Black, 56 glyphs of the upright and
+    86 of the italic had the point and 138 and 308 the short face
+    (tools/end_scan.py reads every glyph of every cut)."""
+    from arris.italic import italic
+    from arris.topology import stroke_ends
+    for w in (100, 400, 700, 850, 900):
+        p = italic(params(w)) if style == 'italic' else params(w)
+        for ch in '3ztfEF257#?*{з\u2119\u2148\u0119':
+            ends = [(k, round(x), round(y), round(s, 2)) for k, x, y, s in stroke_ends(draw(CMAP[ch], p).rings(), p.c)
+                    if k != 'beak']
+            assert not ends, (ch, w, ends)
+    # the 3's top bar at Black: cut, face and cut, a third of the bar each
+    p = italic(params(900)) if style == 'italic' else params(900)
+    ring = max(draw('three', p).rings(), key=len)
+    x0 = min(x for x, y in ring if y > 0.75 * p.cap)
+    face = sorted(y for x, y in ring if abs(x - x0) < 0.5 and y > 0.75 * p.cap)
+    assert len(face) == 2, face
+    bar = (p.cap - face[0]) + (p.cap - face[1])             # the bar's thickness: the cuts are alike
+    assert face[1] - face[0] >= 0.3 * bar and face[1] - face[0] >= 0.9 * (p.cap - face[1])
+
+
+def test_the_ls_foot_and_the_rs_arm_end_as_their_owner_has_them():
+    """What the rule for flat ends leaves alone, each on its owner's word:
+    the l's foot and the j's are two cuts and the point between them, the
+    k's leg's landing ("The L should follow the form that K sets"), and
+    the r's arm ends in a short face over the shoulder's underside ("It
+    looks great ... don't fix the R"). Their drawings ask for it
+    (lower.POINTED)."""
+    from arris.glyphs.lower import POINTED
+    for name in ('l', 'j', 'r'):
+        for w in (400, 900):
+            assert draw(name, params(w)).end_cut == POINTED, (name, w)
+    for w in (400, 700, 900):
+        p = params(w)
+        ring = max(draw('l', p).rings(), key=len)
+        x1 = max(x for x, _ in ring)
+        assert len([y for x, y in ring if x > x1 - 0.5]) == 1, w
 
 
 def _under_the_arches(name, p):

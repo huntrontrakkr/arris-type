@@ -43,7 +43,17 @@ sharp edge a chamfer removes.
 * a 45° angle between a straight edge and a diagonal (the end of a
   diagonal stroke, or the crotch where one meets a stem) gets a chord
   square to the diagonal;
-* 135° turns are left alone.
+* 135° turns are left alone;
+* a cut is never longer than the edge it stands on, and the two cuts of a
+  stroke's flat end take a third of it each at most: a bar too thin for
+  two full breaks and a face between them ends in an even three (cut,
+  face, cut), never in a point (`geom._share`). The owner, of the 3's top
+  bar in the italic at Black, 104 units thick on a break of 50, its two
+  cuts meeting: "I never want to see this shape in our typefaces". Two
+  ends are points on their owner's word and ask for it
+  (`lower.POINTED`): the l's foot and the j's, which land as the k's leg
+  does; and the r's arm keeps the end it has. A hook's beak (a c e s) is
+  not an end of this kind: a bowl corner's chamfer and one cut.
 
 **Diagonals as wide across as a stem.** A pixel staircase is two pixels
 wide in every row, so a 45° stroke is only 1/√2 of a stem measured square to

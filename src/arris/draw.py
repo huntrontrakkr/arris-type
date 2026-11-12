@@ -230,6 +230,7 @@ class Glyph:
     zone_k: float = 1.0   # the zone's share of the weight's horizontals: the lowercase's are thinner toward Black (Params.low)
     clip: tuple[float, float, float, float] | None = None   # keep ink inside (x0, y0, x1, y1)
     butt: tuple = ()   # lines ('x' or 'y', value) the ink meets flush: no edge breaks there (geom.ink)
+    end_cut: float | None = None   # the share of a stroke's flat end either of its cuts may take, where not a third (geom._share): a half, and the two meet in a point (the l's foot)
     overrides: dict = field(default_factory=dict)
     defaults: dict = field(default_factory=dict)
     parts: dict = field(default_factory=dict)        # name -> stroke indices
@@ -444,7 +445,8 @@ class Glyph:
                                                  for src in self.extra_src)]
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished,
-                    overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p), fill=fill_leg(p))
+                    overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p), fill=fill_leg(p),
+                    end_cut=getattr(self, 'end_cut', None))
         rec = (rec or []) + self.extra_chamfers if record else []
         if record and getattr(self, 'square', False):
             # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)

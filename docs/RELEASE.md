@@ -663,6 +663,53 @@ The six causes:
     with 0.6 of its ink, the × 0.82 and 0.68). They are fitted to Arris
     Mono's body (`symkit.sign_room`) and stand as they do in Arris Mono
     Italic.
+- No bar ends in an arrowhead (the owner, of the 3's top bar in Arris
+  Italic Black: "Sharp pointy 3 top? I never want to see this shape in
+  our typefaces"). The corner rule cut both corners of a stroke's flat
+  end by the weight's full break, each taking up to half of the end: an
+  end thinner than two breaks came to a point, and one a little thicker
+  kept a face of a few units between two full cuts, which reads the
+  same. The italic thins the 3's bars to 104 units at Black, on a break
+  of 50. Now the two cuts of a flat end take a third of it each at most
+  (`geom._share`, `END_CUT`), and an end with no room for two breaks and
+  a face is an even three: cut, face, cut.
+  - With the 3 went the same point on the number sign's eight ends (from
+    Bold), the question mark's hook (ExtraBold), the brace's nib, the
+    Cyrillic з's middle arm and ʒ's, Æ's middle bar at Black, the
+    double-struck ℕ ℙ ℝ ⅆ ⅈ ⅉ at every weight, and the ogonek's tab in
+    the italic: of 2,432 glyphs, 6 of the upright and 20 of the italic at
+    Regular, 20 and 20 at Bold, 56 and 86 at Black. And the short face (under half its cuts'
+    leg) on the asterisk's arms and on the lowercase bars at Black, the
+    z's, the t's and the f's, 18 units between two cuts of 50: now 39,
+    39 and 39: 4 glyphs and 6 at Regular, 13 and 24 at Bold, 138 and 308
+    at Black.
+  - Nothing else moves in the letters and figures below ExtraBold. From
+    there a flat end of the capitals' and figures' bars loses a unit of
+    its cuts (50, 47, 50 on the E's arm: now 49 each).
+  - Three ends keep what their owner gave them and ask for it
+    (`lower.POINTED`, `Glyph.end_cut`): the l's foot and the j's, two
+    cuts and the point between them, the k's leg's landing ("The L
+    should follow the form that K sets"), and the r's arm ("don't fix
+    the R"). A hook's beak (a c e s g) is not an end of this kind: a bowl
+    corner's chamfer and one cut, the hook's own shape. Nor are the
+    italic's entry strokes.
+  - `topology.stroke_ends` reads a drawing for the shape and
+    `tools/end_scan.py` reads every glyph of every cut at its ladder of
+    weights: 2,432 glyphs at 47 places, 114,304 drawings, and no flat end
+    comes to a point or keeps a face under half its cuts. Six signs it
+    names apart are older faults of another kind, not yet redrawn: the
+    ҏ's tick at Bold and ExtraBold (a diagonal's end between two level
+    edges), and five signs of the monospaced cuts whose inner part shuts
+    at one weight (⊜ and ⊎ in Arris Mono Narrow at SemiBold and Bold; ⎋,
+    ⌦ and ⌫ in Arris Mono Italic at SemiBold and Medium).
+  - A trial variable font of the changed glyphs (3 z # ? * { з), upright
+    and italic: nothing folds that did not; the italic brace stands up
+    to 7 units off its drawing at Black with grade (the question mark's
+    fold of 8 there has gone; the italic z's spike at 875 with grade and
+    watch at 90 is older and stands).
+  - The figures' nearest approach may be half a unit under 0.3 of a
+    standard gap: the 2 by the 7 at Black is 0.2997 (0.304), their bars'
+    ends a little fuller.
 - The ≠ stands on the equals' bars. The rule that lightens a sign to
   keep its whites counted the wedges between the ≠'s slash and its bars,
   outside the bars: six whites at the Regular for the two a reader sees.
