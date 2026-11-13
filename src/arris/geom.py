@@ -429,14 +429,16 @@ def _ring_rule(coords, c, convex_sign, rec: list | None = None, butt=(), crotch:
     """
     f = c if fill is None else min(fill, c)
     pts = [tuple(p) for p in coords[:-1]]
-    # drop duplicate and collinear points
+    # drop duplicate and collinear points, and spikes: a point the outline runs on to and back from along
+    # one line (where two strokes' edges fell exactly on one line the union left one, of no width, at one
+    # weight and not a tenth either side: the italic ρ at 500, the k at Bold with grade -100)
     changed = True
     while changed and len(pts) > 3:
         changed = False
         for i in range(len(pts)):
             a, b, q = pts[i - 1], pts[i], pts[(i + 1) % len(pts)]
             e1, e2 = _sub(b, a), _sub(q, b)
-            if _len(e1) < 1e-6 or (abs(_cross(e1, e2)) < 1e-6 * max(_len(e1), 1) * max(_len(e2), 1) and _dot(e1, e2) > 0):
+            if _len(e1) < 1e-6 or abs(_cross(e1, e2)) < 1e-6 * max(_len(e1), 1) * max(_len(e2), 1):
                 del pts[i]
                 changed = True
                 break
@@ -695,11 +697,11 @@ def ink(strokes, thick: Thickness, c: float, extra=(), clip=None, rec: list | No
                 if r is poly.exterior or Polygon(r).area >= min_hole:
                     rings.append(pts)
             continue
-        rings.append(ordered(_close_jogs(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill, end_cut), POLISH * c, moved, facet and facet * c), jog, moved, even)))
+        rings.append(ordered(_unjogged(_polish(_ring_rule(list(poly.exterior.coords), c, +1, rec, butt, crotch, fill, end_cut), POLISH * c, moved, facet and facet * c), jog, moved, c, even)))
         for hole in (sorted(poly.interiors, key=lambda h: low(h.bounds)) if done else poly.interiors):
             if Polygon(hole).area < min_hole:                # a counter too small to see is ink
                 continue
-            rings.append(ordered(_close_jogs(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill, end_cut), POLISH * c, moved, facet and facet * c), jog, moved, even)))
+            rings.append(ordered(_unjogged(_polish(_ring_rule(list(hole.coords), c, +1, rec, butt, crotch, fill, end_cut), POLISH * c, moved, facet and facet * c), jog, moved, c, even)))
     if overlay:
         rings = _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, crotch)
     if rec is not None and moved:
@@ -736,10 +738,10 @@ def _lay_over(rings, overlay, thick, c, clip, rec, butt, moved, min_hole, segs, 
             if not isinstance(q, Polygon) or q.area <= 1e-9:
                 continue
             q = orient(q, sign=1.0)
-            out = _close_jogs(_polish(_ring_rule(list(q.exterior.coords), c_ov, +1, rec, butt, crotch),
-                                      POLISH * c_ov, moved), JOG * c_ov, moved)
-            holes = [_close_jogs(_polish(_ring_rule(list(h.coords), c_ov, +1, rec, butt, crotch), POLISH * c_ov, moved),
-                                 JOG * c_ov, moved) for h in q.interiors]
+            out = _unjogged(_polish(_ring_rule(list(q.exterior.coords), c_ov, +1, rec, butt, crotch),
+                                    POLISH * c_ov, moved), JOG * c_ov, moved, c_ov)
+            holes = [_unjogged(_polish(_ring_rule(list(h.coords), c_ov, +1, rec, butt, crotch), POLISH * c_ov, moved),
+                               JOG * c_ov, moved, c_ov) for h in q.interiors]
             pieces.append(Polygon(out, holes))
     if not pieces:
         return rings
@@ -958,6 +960,19 @@ def _past(q, far, near) -> bool:
     ``far`` (seen from ``near``): a point slid along the edge near-far has
     run off its end."""
     return _dot(_sub(q, far), _sub(near, far)) <= 1e-9
+
+
+TINY_EDGE = 1.0     # font units: an edge shorter than this is a point (topology.TINY)
+
+
+def _unjogged(pts, eps, moved, c, even=None):
+    """_close_jogs, then the edges of less than TINY_EDGE it leaves where it
+    moved an edge onto its neighbour's line (_polish on those alone): a wall
+    under a unit between two cuts, at the corner where the italic Ң Ҷ Ԥ Ҭ Ӌ
+    turn their descender into its tick at Black. Never more than the first
+    polish's reach on the chamfer leg ``c`` (a drawing in modules, the
+    watch's heritage, has steps of half a unit)."""
+    return _polish(_close_jogs(pts, eps, moved, even), min(TINY_EDGE, POLISH * c), moved)
 
 
 def _close_jogs(pts, eps, moved, even=None):

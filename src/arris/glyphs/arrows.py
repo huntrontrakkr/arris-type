@@ -962,7 +962,9 @@ class LArrow(Framed):
             full = p.cap if leg_vertical else min(letter_width(11, 1)(p), cell)
             V = max(full - th_shaft / 2 - (h + kb), h + kb + p.sv)
         else:
-            Ls = min(letter_width(11, 1)(p), cell) - kb - th_leg / 2
+            # (the shaft no shorter than leaves the head's barb on the leg's side WHITE of a stem from the leg:
+            # drawn to the letter's width alone, the head grew into the leg, ↵ and ⏎ shut at 850 and Black)
+            Ls = max(min(letter_width(11, 1)(p), cell) - kb - th_leg / 2, h + kb + WHITE * p.sv + th_leg / 2)
             V = h + kb + 1.5 * p.sv
         s = 1 if self.up else -1
         eps = 0.01 * ctx.ts

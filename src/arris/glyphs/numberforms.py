@@ -120,23 +120,29 @@ def _rings(g, n):
     """n concentric octagons and a stem through them all. Their bars thin
     (to 0.7 of the weight's) before the sign outgrows the cap height; where
     even that cannot hold every bar and its white, it grows above and below
-    the cap height, about the axis."""
+    the cap height, about the axis. In a body narrower than its stems and
+    whites take (the monospaced cell: ↈ's seven stems and six whites want
+    1176 units at the Regular, the cell gives 540), stems, whites and bars
+    are drawn lighter together, in proportion; at the weight's own stems
+    the whites came to nothing and ↈ was a block from Arris Mono Regular,
+    ↂ from SemiBold."""
     p, W = g.p, g.W
-    w = _ring_white(p)
-    wx = (W - (2 * n + 1) * p.sv) / (2 * n)                  # white across: what the body leaves, shared
+    s = min(1.0, W / ((2 * n + 1) * p.sv + 2 * n * _ring_white(p)))
+    t, w = s * p.sv, s * _ring_white(p)                     # the stems and the white, both ways
+    wx = (W - (2 * n + 1) * t) / (2 * n)                     # white across: what the body leaves, shared
     bars = 2 * n
-    g.sh_k = min(1.0, max(0.7, (p.cap - (bars - 1) * w) / (bars * p.sh)))
+    g.sh_k = min(s, max(0.7, (p.cap - (bars - 1) * w) / (bars * p.sh)))
     sh = g.sh
     H = max(p.cap, bars * sh + (bars - 1) * w)
     y0 = (p.cap - H) / 2
     for i in range(n):
-        dx = i * (p.sv + wx)
+        dx = i * (t + wx)
         dy = i * (sh + w)
-        x0, x1 = dx + p.sv / 2, W - dx - p.sv / 2
+        x0, x1 = dx + t / 2, W - dx - t / 2
         ya, yb = y0 + dy + sh / 2, y0 + H - dy - sh / 2
-        leg = _inner_leg(p, p.leg, i * (p.sv + min(w, wx)))
-        g.stroke(B(x0, ya, leg), B(x1, ya, leg), B(x1, yb, leg), B(x0, yb, leg), closed=True)
-    g.stroke((W / 2, y0 + sh / 2), (W / 2, y0 + H - sh / 2))
+        leg = _inner_leg(p, s * s * p.leg, i * (t + min(w, wx)))
+        g.stroke(B(x0, ya, leg), B(x1, ya, leg, t), B(x1, yb, leg), B(x0, yb, leg, t), closed=True)
+    g.stroke((W / 2, y0 + sh / 2, t), (W / 2, y0 + H - sh / 2))
 
 
 @sign('uni2180', 'ↀ', _rings_width(1), kind='cap')

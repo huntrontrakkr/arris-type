@@ -333,8 +333,12 @@ def Q(g):
         corner = B(*f.P(9, 1), max(0.0, p.c + (p.leg + own - p.c) * like - own))
     g.stroke(B(*f.P(1, 1)), corner, B(*f.P(9, 11)), B(*f.P(1, 11)), closed=True)
     ct = (f.X(9) - p.sv / 2) + (f.Y(1) + g.sh / 2) - p.c   # tail: x + y = ct
-    y0 = g.free('tail', f.Y(5))
     w = p.sd * (1 - (1 - Q_TAIL) * min(1.0, heft(p) / (175.0 - 90.0)))
+    # (and its upper end clear of the counter's left wall by a break: run on to the wall, from 850 the tail
+    # shut off the counter's corner under it, a pinhole beside the counter; kept half a stem off, it was a
+    # stub sunk in the floor at Black, and the owner keeps "the little bit in the middle" there)
+    clear = f.X(1) + p.sv / 2 + 0.5 * p.c + w / 2 ** 0.5
+    y0 = min(g.free('tail', f.Y(5)), ct - clear)
     g.stroke((ct - y0, y0, w), (ct - f.Y(1), f.Y(1)), start='h')
 
 

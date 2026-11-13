@@ -76,6 +76,7 @@ def glyph_contours(name: str, p: Params, tune=None):
 # units from the K and 141 from the O.
 SPACE = 0.27
 DEPTH = 0.125
+HANG = 1.5      # modules: a piece that comes into the spacing zone from outside sets the body's edge in the measure it is tall, wholly from this (spacing._edges)
 PUNCT_SIDE = 0.9   # punctuation bearings, as a share of the letters' light
 
 
@@ -237,7 +238,7 @@ def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: li
     else:
         zone = (0.0, p.xh) if spec.kind == 'lower' else (0.0, p.cap)
         lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * p.xh,
-                                        floor=-0.25 * p.m)
+                                        floor=-0.25 * p.m, hang=HANG * p.m)
         # Parts outside the zone (a j's hook, a descender's tail) may hang
         # into the neighbour's space, but by no more than half its light.
         fx0 = min(x for r in rings for x, _ in r)

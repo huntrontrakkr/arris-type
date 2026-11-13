@@ -140,8 +140,18 @@ def kappa_symbol(g):
     curl = [(x0, yt - d), B(x0, yt), (xa, yt), (xa + run, yb), B(x1, yb), (x1, yb + d)]
     if _draws(g, curl):
         g.stroke(*curl)
-    else:                                                   # flats too short to curl (a crowded cell)
-        g.stroke((x0, yt), (xa, yt), (xa + run, yb), (x1, yb))
+    else:
+        # the same path in three strokes, each curl to the diagonal's end, the diagonal cut level at both:
+        # in one, its outline crossed itself at the diagonal's foot from 840, and the letter fell back to
+        # flats without their curls (701 units wide at 830, 517 at 840)
+        hooks = [[(x0, yt - d), B(x0, yt), (xa, yt)], [(xa + run, yb), B(x1, yb), (x1, yb + d)]]
+        if all(_draws(g, h) for h in hooks):
+            for h in hooks:
+                g.stroke(*h)
+            e = g.sh / 2                                    # (cut level with the flats' outer edges, on its own 2:1 line)
+            g.stroke((xa - e / 2, yt + e), (xa + run + e / 2, yb - e), start='h', end='h')
+        else:                                               # flats too short to curl (a crowded cell)
+            g.stroke((x0, yt), (xa, yt), (xa + run, yb), (x1, yb))
     x0 = W / 2 - p.xh / 4
     g.stroke((x0, 0), (x0 + p.xh / 2, p.xh), start='h', end='h')
 

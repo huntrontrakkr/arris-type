@@ -353,14 +353,21 @@ def _brace_cut(p, sh):
     """How much of the brace's point is cut off flat: what stands out past
     the spine further than the Regular's point does (its stroke's reach
     grows with the stroke, and at Black the point alone was a third of the
-    sign)."""
+    sign). Just past the Regular, from the Regular's point as it stands:
+    the corner rule cuts its tip back by its break on the 2:1 (a face as
+    tall as the cut leaves here), and that allowance fades out over half a
+    stem's gain, after which the point is cut from its full reach as it
+    was. Cut from the full reach at once, the cut began a unit past the
+    Regular at nothing: the tip stood 20 units further out, near sharp, and
+    the brace a fifth of a stem wider at 401 than at 400."""
     from ..draw import held_at
     q = held_at(p)
     if q is p:
         return 0.0
     _, d, tip = _brace_parts(p, sh)
     _, d0, tip0 = _brace_parts(q, sh * q.sh / p.sh)
-    return max(0.0, (d + tip - p.sv / 2) - (d0 + tip0 - q.sv / 2))
+    fade = max(0.0, 1.0 - (p.sv - q.sv) / (0.5 * q.sv))
+    return max(0.0, (d + tip - p.sv / 2) - (d0 + tip0 - q.sv / 2 - fade * q.c * math.cos(SLOPE)))
 
 
 def brace_width(p):

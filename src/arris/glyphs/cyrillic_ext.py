@@ -22,7 +22,7 @@ x with a descender). Accented letters are composed from their marks
 """
 from __future__ import annotations
 
-from ..draw import B, REGISTRY, Opening, draw, glyph
+from ..draw import B, REGISTRY, Opening, draw, glyph, lay_bar
 from ..params import SQRT2, outer_leg
 from .caps import big
 from .cyrillic import ALIASES as RU_ALIASES, ZE_BOWLS, ccap, mirror, sc, smallcap
@@ -534,21 +534,44 @@ def Kahook(g):
 
 @ccap('uni049C', 'Ҝ', 10, 2)
 def Kavertical(g):
-    """K with a short stem through its arm. The stem stands two modules of
-    white clear of K's stem, and stops half a stem clear of the leg."""
+    """K with a short stem through its arm: a stroke added to the letter,
+    the Regular's thickness at every heavier weight and laid over it
+    (draw.lay_bar). It crosses the arm where arm and leg have parted enough
+    for it to show KV_SHOW of its thickness below the arm (a stem at most)
+    with its foot's near corner half its thickness clear of the leg, and
+    shows as much above
+    the arm, up to the cap height; two modules of white from K's stem at
+    least. Where the arm is too thick for that (ҝ toward Black) it shows
+    less on both sides, never under KV_LEAST below the arm, and above it
+    what the x-height leaves. Two modules from the stem, at
+    the weight's own thickness, it stood where the arm meets the leg: from
+    SemiBold it was a bump on the arm with no white under it, and ҝ's
+    nothing at Black."""
     f = Frame(g, 10)
     p = g.p
     g.stroke(f.P(1, 0), f.P(1, 12))
     for pts, a, b in k_arms(g, f.X(1), f.W, p.cap):
         g.stroke(*pts, start=a, end=b)
-    x = f.X(1) + p.sv + 2 * room(p)
     k = p.sd / SQRT2
-    y_arm = x - (f.W - p.cap + p.c - k)
-    y_leg = (f.W + p.c - k) - x
-    e = max(p.sv, 1.5 * p.m)                                # it shows a stem's length past the arm
-    lo = max(y_arm - k - e, y_leg + k + 0.5 * p.sv)
-    hi = min(y_arm + k + e, f.Y(11))
-    g.stroke((x, lo), (x, hi))
+    a_arm = f.W - p.cap + p.c - k                           # the arm's centre: x - y = a_arm
+    a_leg = f.W + p.c - k                                   # the leg's: x + y = a_leg
+
+    def ends(t, own):
+        gap = t                                             # (at its centre: its near corner half of it, the leg rising to it at 45°)
+        e = max(KV_LEAST * t, min(KV_SHOW * t, p.sv, (p.cap - 4 * k - gap) / 3))
+        x_lo = (a_arm + a_leg + 2 * k + e + gap) / 2        # e below the arm, gap over the leg
+        x_hi = a_arm + p.cap - k - e                        # e above the arm, under the cap height
+        x = max(f.X(1) + p.sv + 2 * room(p), x_lo)
+        if x > x_hi:                                        # (the arm too thick: it keeps the white under it)
+            x = max(x_hi, x_lo)
+        lo = max(x - a_arm - k - e, a_leg - x + k + gap)
+        hi = min(x - a_arm + k + e, p.cap)
+        return (x, lo), (x, hi)
+    lay_bar(g, ends, direction=(0.0, 1.0))
+
+
+KV_SHOW = 1.5     # Ҝ: its short stem shows this many of its thicknesses past the arm, each side ...
+KV_LEAST = 0.5    # ... and never fewer than this
 
 
 @ccap('uni04B8', 'Ҹ', 11, 3)
@@ -606,7 +629,6 @@ def Koppa(g):
 def Hastroke(g):
     """X with a bar across its crossing, the body's width less half a module
     each side, so it reaches past the diagonals at every weight."""
-    from ..draw import lay_bar
     REGISTRY['X'].fn(g)
     f = Frame(g, 10)
     lay_bar(g, lambda t, own: ((f.X(0.5) - (own - t) / 2, f.Y(6)), (f.X(9.5) + (own - t) / 2, f.Y(6))))
@@ -926,7 +948,6 @@ def ertick(g):
 
 @glyph('uni04FF', 'ӿ', letter_width(8, 2), kind='lower')
 def hastroke(g):
-    from ..draw import lay_bar
     REGISTRY['x'].fn(g)
     f = Frame(g, 8, 'lower')
     lay_bar(g, lambda t, own: ((f.X(0.5) - (own - t) / 2, f.Y(4.5)), (f.X(7.5) + (own - t) / 2, f.Y(4.5))))
@@ -948,7 +969,6 @@ def kastroke(g):
     from ..draw import _build
     p = g.p
     dx = room(p)
-    from ..draw import lay_bar
     g.add_glyph(_build(REGISTRY['k'], p, 0.0, 0.0, {}, g.W - dx), dx)
     y = (p.xh + p.asc) / 2 + p.m / 2
     lay_bar(g, lambda t, own: ((-(own - t) / 2, y), (dx + p.sv + room(p), y)))

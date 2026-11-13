@@ -333,10 +333,20 @@ TONOS = {0x0386: 'A', 0x0388: 'E', 0x0389: 'H', 0x038A: 'I', 0x038C: 'O', 0x038E
 
 def _tonos_width(p):
     """The room a capital's tonos takes beside it: the accent's own (the
-    Regular's past it: marks.mark_params)."""
+    Regular's past it: marks.mark_params), and in the italic half a break
+    more (_italic_room)."""
     from .marks import mark_params, size
+    room = _italic_room(p)
     p = mark_params(p)
-    return size(p, 'uc') + 0.6 * p.sv + 0.5 * p.m
+    return size(p, 'uc') + 0.6 * p.sv + 0.5 * p.m + room
+
+
+def _italic_room(p):
+    """The italic rounds the capital's top left corner, out toward the
+    tonos beside it, the more the heavier: Έ Ή Ί Ύ kept 9 units of white
+    at the Regular and met their tonos from SemiBold. Half a break more
+    between them keeps 20 at every weight (the upright's 13 to 19)."""
+    return 0.5 * p.c if p.slant else 0.0
 
 
 for cp, base in TONOS.items():
@@ -352,5 +362,5 @@ for cp, base in TONOS.items():
             return
         t = _tonos_width(p)
         stamp(g, base, t)
-        kept(g, acute, t / 2 - 0.1 * p.m, p.cap - a, 'uc')
+        kept(g, acute, (t - _italic_room(p)) / 2 - 0.1 * p.m, p.cap - a, 'uc')
     glyph(f'uni{cp:04X}', chr(cp), lambda p, b=base: REGISTRY[b].width(p) + _tonos_width(p), kind='cap')(fn)

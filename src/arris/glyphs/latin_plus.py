@@ -492,9 +492,13 @@ def _digraph(name, ch, a, b, kind):
             g.add_glyph(sa, x0)
             g.add_glyph(sb, x0 + sa.W + out)
             return
+        # each letter at its own width, centred in its ungraded body, as a letter alone is set at a grade
+        # (font._place): drawn to the ungraded body with the grade's strokes, the l's and the j's feet came
+        # to a point at grade -100 (ǈ ǉ ǋ ǌ at every weight)
         x, wa, wb = _digraph_x(p, a, b)
-        g.add_glyph(draw(a, p, width=wa))
-        g.add_glyph(draw(b, p, width=wb), x)
+        ga, gb = draw(a, p), draw(b, p)
+        g.add_glyph(ga, (wa - ga.W) / 2)
+        g.add_glyph(gb, x + (wb - gb.W) / 2)
     glyph(name, ch, width, kind=kind)(fn)
 
 
@@ -513,13 +517,50 @@ def _digraph_x(p, a, b):
     xs = [x for r in sb.rings() for x, _ in r] or [0.0]
     x = sa.W + _digraph_gap(p.with_(slant=0.0), a, b) - min(0.0, min(xs))
     ia, ib = rings_to_shapely(sa.rings()), rings_to_shapely(sb.rings())
+    lean = None
     need = 0.5 * light(q)
+    if p.slant:
+        need += 0.5 * q.c                                   # (measured before the italic curves its corners)
+        # (measured slanted, as they stand: the slant carries a descender's hook back under the letter
+        # before it, and upright the j's hook kept its distance from the l's foot and ran into it slanted,
+        # ǉ ǌ from 850, ǈ at Bold with grade)
+        import math
+        lean = math.atan(p.slant)
+        ia, ib = (affinity.skew(i, xs=lean, use_radians=True, origin=(0, 0)) for i in (ia, ib))
     for _ in range(6):
         d = ia.distance(affinity.translate(ib, x))
         if d >= need - 0.5:
             break
         x += need - d
+    # and as far as the heaviest grade needs, each letter at its own width in its body (_digraph): grade moves
+    # nothing, and the grade's strokes grew into the white between them (the italic ǈ ǉ ǌ met at Bold and 850
+    # with grade 100)
+    heavy = _graded(q, 100.0)
+    if heavy is not None:
+        ha, hb = draw(a, heavy), draw(b, heavy)
+        ia, ib = rings_to_shapely(ha.rings()), rings_to_shapely(hb.rings())
+        if p.slant:
+            ia, ib = (affinity.skew(i, xs=lean, use_radians=True, origin=(0, 0)) for i in (ia, ib))
+        ia = affinity.translate(ia, (sa.W - ha.W) / 2)
+        for _ in range(6):
+            d = ia.distance(affinity.translate(ib, x + (sb.W - hb.W) / 2))
+            if d >= need - 0.5:
+                break
+            x += need - d
     return x, sa.W, sb.W
+
+
+def _graded(q, grad):
+    """q (ungraded) at a grade: its strokes and breaks scaled as the grade
+    scales them at its weight (instances.params: the weight the stem is
+    on its own cut's ladder, the watch's toward its drawing); None where
+    the grade leaves them as they are."""
+    from ..instances import grade_k, weight_of
+    k = grade_k(weight_of(q.sv, 1.0 - q.optical), grad)
+    if k == 1.0:
+        return None
+    return q.with_(sv=q.sv * k, sh=q.sh * k, sd=q.sd * k, ss=q.ss * k, c=q.c * k, grade_k=k, grad=grad,
+                   pregrade=(q.sv, q.sh, q.sd, q.ss, q.c))
 
 
 for _cp, _a, _b, _k in ((0x01C4, 'D', 'Zcaron', 'cap'), (0x01C5, 'D', 'zcaron', 'cap'),

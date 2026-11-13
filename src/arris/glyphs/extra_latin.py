@@ -111,10 +111,22 @@ def oslash(g):
 
 @glyph('Dcroat', 'Đ', width_of('D', 1.5), kind='cap')
 def Dcroat(g):
+    """D with a bar through its stem, two modules and a half into the
+    counter, and never nearer the bowl's inside than the least white
+    (letterframe.least_white): in Arris Mono Narrow at Bold, the D drawn
+    narrow for its cell, the bar ran on to the bowl and cut the counter in
+    two."""
+    from shapely.geometry import LineString
     p = g.p
     dx = 1.5 * p.m
     stamp(g, 'D', dx, width=g.W - dx)
-    _bar(g, 0, dx + p.sv + 2.5 * p.m, p.cap / 2)
+    x1 = dx + p.sv + 2.5 * p.m
+    y = p.cap / 2
+    cut = g.extra[-1].intersection(LineString([(dx + p.sv + 1.0, y), (g.W + p.m, y)]))
+    walls = [q.bounds[0] for q in getattr(cut, 'geoms', [cut]) if not q.is_empty]
+    if walls:
+        x1 = min(x1, min(walls) - least_white(p))
+    _bar(g, 0, x1, y)
 
 
 @glyph('Eth', 'Ð', width_of('D', 1.5), kind='cap')

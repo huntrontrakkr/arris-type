@@ -700,6 +700,108 @@ The six causes:
     units where 4 did, and the æ has one point 68 units off its drawing
     at ExtraBold, halfway along the watch axis: new, and not yet looked
     into.
+- Every glyph along every cut, character by character (the owner: "go
+  through character by character and try different weights and different
+  combinations and try to fix them"). Each glyph drawn every 50 units of
+  weight from 100 to 900 upright and italic, at grade ±100 at Thin,
+  Regular, Bold and Black, and at the six weights of the four monospaced
+  cuts (175,000 drawings), and read for faults, pointed ends, pieces and
+  counters that come and go between neighbouring weights, outlines and
+  advances that jump from one weight to the next, and counters closing.
+  Fixed so far:
+  - The ogonek (ą ę į ų ǫ ǭ Ą Ę Į Ų Ǫ Ǭ): its joined fills, cut a hair
+    clear of the letter and the hook, lay beside them and met them at a
+    point, a ring of their own, at every weight in ę ǫ Ę Ų and from Medium
+    in į ą ų Ą Į; at 450 one was a diamond off the stem's side. They are
+    grown back over the hair, and only a fill at the join is kept (above
+    it was the letter finished again, a sliver up the Į's whole stem at
+    600, a wedge that leaned the Ą's right leg at Bold).
+  - The brace's point is cut, just past the Regular, from where the
+    Regular's stands, its tip cut back by its break, an allowance that
+    fades out over half a stem's gain (`punct._brace_cut`): read from the
+    point's full reach at once, the cut began a unit past the Regular at
+    nothing, the tip stood 20 units further out and near sharp, and the
+    brace was a fifth of a stem wider at 401 than at 400. At Black it is
+    as wide as it was.
+  - The Q's tail keeps half a break of white from the counter's left wall:
+    from 850 it ran on to the wall and shut off a pinhole under it.
+  - ↵ and ⏎ keep their shaft long enough for the head's barb to stand
+    half a stem from the leg (`arrows.LArrow`): drawn to the letter's
+    width alone, the head grew into the leg at 850 and Black.
+  - ϰ keeps its curls at every weight: drawn in one stroke its outline
+    crossed itself at the diagonal's foot from 840, and the letter fell
+    back to flats without them, 701 units wide at 830 and 517 at 840. Where
+    the one stroke fails it is drawn in three, the same path.
+  - ť's apostrophe reads the t's stem from its crossbar's top: from a bar's
+    thickness over it, the stem stood under the line from 850 and was read
+    as none, then at 890 as a sliver of its top, and the apostrophe jumped
+    49 units right.
+  - The digraphs (Ǆ ǅ ǆ Ǉ ǈ ǉ Ǌ ǋ ǌ Ǳ ǲ ǳ) set each letter at its own
+    width, centred in its ungraded body, as a letter alone is set at a
+    grade: drawn to the ungraded body with the grade's strokes, the l's and
+    the j's feet came to a point at grade -100, at every weight. Their
+    second letter's place is measured slanted in the italic (the slant
+    carries the j's hook back under the l's foot: ǉ ǌ met from 850, with
+    half a break more for the corners the italic curves) and against the
+    heaviest grade's strokes as well as the ungraded ones, so grade still
+    moves nothing and the white holds at grade 100.
+  - ↈ and ↂ in the monospaced cuts: their stems and whites want more
+    than the cell (ↈ's seven stems and six whites 1176 units at the
+    Regular, the cell 540), and at the weight's own stems the whites came
+    to nothing: ↈ was a block from Arris Mono Regular, ↂ from SemiBold. In
+    a body that narrow stems, whites, bars and the corners' legs are drawn
+    lighter together, in proportion (`numberforms._rings`); Arris and Arris
+    Italic, where the body is as wide as they take, draw them as they were.
+  - Ҝ ҝ: the short stem through the arm is a stroke added to the K, held
+    at the Regular and laid over it as every added stroke is
+    (`draw.lay_bar`), and crosses the arm where arm and leg have parted
+    enough for it to show a stem and a half of itself under the arm, its
+    foot's near corner half its thickness clear of the leg, as much above,
+    up to the cap
+    height (`cyrillic_ext.Kavertical`). Two modules from K's stem at the
+    weight's own thickness, it stood where arm and leg meet: from SemiBold
+    a bump on the arm with no white under it, the Ҝ a block at Black and
+    the ҝ's stem gone; in Arris Mono a stub on the ҝ's arm at Light and
+    Regular. The ҝ from Bold has too little x-height for its arm and a stem
+    across it: the stem keeps the white under it and shows above the arm
+    only what the x-height leaves.
+  - A point where the outline runs back on itself goes with the collinear
+    ones before the corners are broken (`geom._ring_rule`): where two edges
+    fell exactly on one line the union left a spike of no width along it,
+    at one weight and not a tenth either side. The italic ρ ϱ ₯ had one at
+    Medium (500), k ķ ǩ at Bold with grade -100, ӌ at 850, its advance 8
+    units short for it.
+  - The jog closer, moving an edge onto its neighbour's line, could leave a
+    wall under a unit between two cuts; the polish now closes those as it
+    closes any micro-flat (`geom._unjogged`): the italic Ң Ҷ Ԥ Ҭ Ӌ where the
+    descender turns into its tick at Black, ε and έ at 850, the small italic
+    3 of ¾ ⅓ ⅔ and the superiors at SemiBold, ↈ ₢ ⎶ in Arris Mono Italic.
+  - Έ Ή Ί Ύ in the italic: the italic rounds the capital's top left corner
+    out toward its tonos, the more the heavier; they kept 9 units of white
+    at the Regular and met from SemiBold. Half a break more between them
+    keeps 20 at every weight, the upright's 13 to 19 (`greek._italic_room`).
+  - Đ Ð: the bar stops the least white short of the bowl's inside
+    (`extra_latin.Dcroat`): in Arris Mono Narrow at Bold, the D drawn
+    narrow for its cell, it ran on to the bowl and cut the counter in two;
+    at Black in Arris it came 39 units nearer the bowl than that.
+  - The rule that lightens a sign to keep its whites (`draw.white_features`)
+    acts from the cut's Regular on, as it says (Arris Mono Narrow's is its
+    own, `draw._lighter_than_regular`): at the lighter weights, where no
+    white closes, a count that fell short (a white that came apart, a
+    pinch) lightened the sign as far as the rule goes and let go at the next
+    weight: ↯ at 0.8 to 362 and whole from 364, ⌦ ⌫ to 372, ⇜ ⇝ to 176.
+  - Spacing: a piece of ink that comes into the spacing zone from
+    outside (a tail's tip over the baseline, one stroke with a larger
+    piece there; or a piece of its own that only dips into the zone, the
+    ŉ's apostrophe under the x-height) sets the body's edge in the measure
+    it is tall, wholly from a module and a half (`spacing._edges`,
+    `font.HANG`). Counted whole at a unit's height, it moved the edge onto
+    itself at the weight where it first came into the zone: the italic
+    ȷ's advance jumped 51 units between 350 and 360, the ℘'s 44 between
+    230 and 240, the ŉ's 60 between 360 and 370. An arm that reaches into
+    the zone (the ℞'s cross, a module and a half and more) sets it as it
+    did. The italic j's tail hangs under the letter before it at the
+    Regular as it did at the light weights (56 units tighter at 400).
 - The outline faults the end scan named, and their kin (the owner:
   "Start fixing").
   - The ҏ's tick (and Ҏ's) ended in a point at Bold and ExtraBold: a

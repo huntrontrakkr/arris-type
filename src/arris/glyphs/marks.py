@@ -144,9 +144,15 @@ def kept(g, fn, *args, joined=False, gain=None, apart=False):
         # is no corner's fill, and stamped in it met the letter at a point: the italic ç at Black, grade
         # 100, on the watch's ladder, a unit and a half across; Arris Mono Narrow Bold Italic's ą and Ą, a
         # piece three units by four)
-        g.extra += [q_ for q_ in getattr(more, 'geoms', [more])
+        # (and grown back over the hair it was cut clear of the two by: cut clear, a fill lay beside them and
+        # met them at a point, a ring of its own, ę ǫ Ę Ų at every weight and į ą ų Ą Į from Medium)
+        # (and at the join: no higher than two breaks over the mark's top. Above it is no fill but the
+        # letter finished again on the mark's breaks, a sliver up the stem: the whole of the Į's at 600, a
+        # wedge that leaned the Ą's right leg at Bold)
+        top = mark.bounds[3] + 2 * q.c
+        g.extra += [q_.buffer(0.1, join_style='mitre') for q_ in getattr(more, 'geoms', [more])
                     if q_.area > 1.0 and q_.distance(letter) < 1.0 and q_.distance(mark) < 1.0
-                    and not q_.buffer(-JOIN_FILL / 2).is_empty]
+                    and not q_.buffer(-JOIN_FILL / 2).is_empty and q_.bounds[3] <= top]
 
 
 def size(p, case):
@@ -865,8 +871,10 @@ def _caron_apostrophe(g, base):
             p = _scaled(p, k)
     top = p.cap if base.isupper() else p.asc
     gap = tight * max(p.m, 0.6 * p.sv)
-    # the stem: the base's ink above the x-height and its bars
-    stem = ink.intersection(box(-1e4, p.xh + g.sh, 1e4, top + 1))
+    # the stem: the base's ink above the x-height and its bars (from the bar's top: from a bar's thickness
+    # over it, the t's stem stood under the line from 850 and was read as none, then at 890 as a sliver of
+    # its top, and the apostrophe jumped 49 units right)
+    stem = ink.intersection(box(-1e4, p.xh + g.sh / 2 + 1.0, 1e4, top + 1))
     right = stem.bounds[2] if not stem.is_empty else p.sv
     reach = 0.75 * p.sv + p.sd / SQRT2                      # the tail's far edge, left of the stub's centre
     x = right + gap + reach

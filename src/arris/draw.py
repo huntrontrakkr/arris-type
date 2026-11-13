@@ -1744,6 +1744,14 @@ SQUINT_SLACK = 0.02   # what the Regular reference allows for the raster
 _REG_SV: dict = {}
 
 
+def _lighter_than_regular(p) -> bool:
+    """Whether p is a weight of a font's own cut lighter than that cut's
+    Regular (hold_weight: Arris Mono Narrow's is narrow_weight(400)). A set
+    derived from one (small capitals, a sign fitted to Mono's cell) is not."""
+    cut = _cut(p)
+    return cut is not None and cut[0] < hold_weight(p) - 1e-6
+
+
 def _regular_sv(p) -> float:
     """The Regular's stem in the same cut (the squint rule for counters is
     for weights heavier than it)."""
@@ -2178,7 +2186,10 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
             overrides[sq.free] = v
             g = _build(spec, p, ot, ob, overrides, width)
     # (the heritage drawing is never lightened; composites rely on their parts' own rules)
-    if _is_symbol(spec) and p.floor and g.strokes and not g.extra:
+    # (past the Regular only: a lighter weight's strokes close no white, and where its count fell short of the
+    # Regular's, as a white the Regular holds came apart into two or ran to a pinch, it was lightened as far as
+    # the rule goes, and let go at once at the next weight: ↯ at 0.8 to 362 and whole from 364, ⌦ to 372)
+    if _is_symbol(spec) and p.floor and g.strokes and not g.extra and not _lighter_than_regular(p):
         want = _white_reference(spec, p)
         if want and white_features(g.rings(), p, g) < want:
             a, b = 1.0, LIGHTEN_MIN
