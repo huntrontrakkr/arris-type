@@ -16,14 +16,7 @@ import sys
 from multiprocessing import Pool
 
 # Read as an end and not one, or one still to redraw: named here, listed apart, and not counted.
-KNOWN = {
-    'uni048F': "the tick's end at Bold and ExtraBold: a diagonal's end, cut square, between two level edges",
-    'uni229C': 'Arris Mono Narrow at SemiBold: the equals in the ring has shut to two slivers (older; to redraw)',
-    'uni228E': 'Arris Mono Narrow at Bold: the plus in the cup has shut to a star (older; to redraw)',
-    'uni238B': "Arris Mono Italic at SemiBold: the ring's open end, cut by the arrow's white (older; to redraw)",
-    'uni2326': 'Arris Mono Italic at Medium: the cross in the key has shut to a lozenge (older; to redraw)',
-    'uni232B': 'Arris Mono Italic at Medium: the cross in the key has shut to a lozenge (older; to redraw)',
-}
+KNOWN: dict[str, str] = {}    # (2.0: none; the six it named once, ҏ's tick and ⊜ ⊎ ⎋ ⌦ ⌫ in the monospaced cuts, redrawn)
 LADDER = (100, 200, 300, 400, 500, 600, 700, 800, 850, 900)
 MONO = (300, 400, 450, 500, 600, 700)
 

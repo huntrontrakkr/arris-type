@@ -936,16 +936,52 @@ def smallcontains(g):
 
 @op(u(0x228E), '⊎', width=growing_width(9, 1, 3.5))
 def multisetunion(g):
-    """The union with a plus inside its cup."""
+    """The union with a plus inside its cup: the plus's two bars both the
+    horizontals' thickness (as the plus sign's), reaching INNER_ARM of it
+    from the centre at least; where the cup's room is short they thin, to
+    INNER_THIN of it, then keep less white from the cup. The upright bar
+    was a stem thick, and from Bold the plus was a square."""
     p = g.p
     a = axis(p)
     r = box_r(g)
     cup(g, a, r)
-    clear = max(0.5 * p.sv, 0.75 * p.m)
-    arm = min((g.W - 2 * p.sv) / 2 - clear - g.sh / 2, 0.75 * r)
+    clear0 = max(0.5 * p.sv, 0.75 * p.m)
+    if p.mono:
+        _small_plus_in_cup(g, a, r, clear0)
+        return
+    t0 = g.sh
+    t_min = max(INNER_THIN * t0, 1.12 * p.floor)
+    for k in (1.0, 0.9, 0.8, 0.7, INNER_CLEAR):
+        clear = k * clear0
+        room = (g.W - 2 * p.sv) / 2 - clear                     # from the centre to the white's edge, across
+        t = max(t_min, min(t0, room / (INNER_ARM + 0.5)))
+        arm = min(room - t / 2, 0.75 * r)
+        if arm >= INNER_ARM * t:
+            break
+    arm = max(arm, INNER_ARM * t)
     yc = a - r + g.sh / 2 + clear + arm
-    g.stroke((g.W / 2 - arm, yc), (g.W / 2 + arm, yc))
-    g.stroke((g.W / 2, yc - arm), (g.W / 2, yc + arm))
+    g.stroke((g.W / 2 - arm, yc, t), (g.W / 2 + arm, yc))
+    g.stroke((g.W / 2, yc - arm, t), (g.W / 2, yc + arm))
+
+
+def _small_plus_in_cup(g, a, r, clear):
+    """⊎ in the monospaced cell: the plus is the plus sign drawn small, every
+    measure of it in proportion, its breaks and fills too, as wide as the
+    cup's inside leaves less its white. Drawn at the weight's own breaks a
+    plus that small was a diamond (its arms a little over their thickness
+    past the crossing, the breaks of a sign three times its size taking
+    them). Its bars no lighter than INNER_THIN of the horizontals'."""
+    import copy
+    p = g.p
+    half = (g.W - 2 * p.sv) / 2 - clear                         # the plus's ink, from its centre to its end
+    k = half / (REGISTRY['plus'].width(p) / 2)
+    s = max(k, INNER_THIN * g.sh / p.sh if p.sh else k)
+    q = p.with_(mono=False, narrow=False, m=k * p.m, cap=k * p.cap, fig_w=k * p.fig_w, fig_adv=k * p.fig_adv,
+                leg=k * p.leg, sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
+    sub = copy.copy(draw('plus', q))
+    sub.finished = True
+    yc = a - r + g.sh / 2 + clear + sub.W / 2
+    g.add_glyph(sub, g.W / 2 - sub.W / 2, yc - axis(q))
 
 
 # --- Logic -----------------------------------------------------------------------------
@@ -1243,15 +1279,60 @@ def _circled(g, inner, square=False):
     inner(g, cx, cy, r, leg)
 
 
-def _free(g, r, y=0.0, L=None):
+def _free(g, r, y=0.0, L=None, t=None, clear=1.0):
     """How far a bar inside a ring reaches (its centreline), at y from the
     centre, when it keeps clear of the ring's inside (its upright side, or
-    its chamfer) by half a stem, or three quarters of a module, of white."""
+    its chamfer) by half a stem, or three quarters of a module, of white
+    (``clear`` of that). ``t``: the bar's thickness, the horizontals' if
+    not given."""
     p = g.p
+    t = g.sh if t is None else t
     L = 0.586 * r if L is None else L
     k = p.sd / SQRT2
-    inner = min(r - p.sv / 2, 2 * r - L - k - (abs(y) + g.sh / 2))
-    return inner - max(0.5 * p.sv, 0.75 * p.m) - g.sh / 2
+    inner = min(r - p.sv / 2, 2 * r - L - k - (abs(y) + t / 2))
+    return inner - clear * max(0.5 * p.sv, 0.75 * p.m) - t / 2
+
+
+INNER_ARM = 1.5     # a sign inside another reaches at least this many of its own strokes' thickness from its centre
+INNER_THIN = 0.6    # ... and keeps at least this share of its own thickness while it makes room (_inner_equals, multisetunion)
+INNER_CLEAR = 0.6   # ... and at least this share of its white to the sign round it
+
+
+def _inner_equals(g, x, y, r, L):
+    """The equal sign's two bars inside a ring: as long as the ring's room
+    allows, and never shorter than INNER_ARM of their thickness from the
+    centre each way. Where the room falls short the bars first come
+    together, to the least white between them (the equal sign's own white
+    is for a sign standing alone), then thin, to INNER_THIN of their own,
+    then keep less white from the ring, to INNER_CLEAR of it. Drawn at
+    the room the ring left, ⊜'s bars were 86 units long for 79 thick at
+    the Regular, two dots, and in Arris Mono Narrow at Bold had no length
+    at all."""
+    p = g.p
+    t0, gap0 = g.sh, eq_gap(g)
+    t_min = max(INNER_THIN * t0, 1.12 * p.floor)
+    room = r - p.sv / 2 - max(0.5 * p.sv, 0.75 * p.m)            # from the centre to the white's edge, up and down
+    best = None
+    for clear in (1.0, 0.9, 0.8, 0.7, INNER_CLEAR):
+        for i in range(41):
+            t = t0 - (t0 - t_min) * i / 40
+            gap = min(gap0, max(least_white(p), 0.8 * t))
+            if t + gap / 2 > room * (2 - clear):                 # (the stack keeps inside the ring's white)
+                continue
+            half = _free(g, r, (t + gap) / 2, L, t, clear) + t / 2
+            best = (t, gap, half)
+            if half >= INNER_ARM * t:
+                break
+        else:
+            continue
+        break
+    if best is None:
+        best = (t_min, max(least_white(p), 0.8 * t_min), INNER_ARM * t_min)
+    t, gap, half = best
+    half = max(half, INNER_ARM * t)
+    off = (t + gap) / 2
+    for yy in (y - off, y + off):
+        g.stroke((x - half, yy, t), (x + half, yy))
 
 
 CIRCLED = {
@@ -1263,7 +1344,7 @@ CIRCLED = {
     0x2299: (u(0x2299), lambda g, x, y, r, L: cdot(g, x, y)),
     0x229A: (u(0x229A), lambda g, x, y, r, L: _inner_ring(g, x, y, r)),
     0x229B: (u(0x229B), lambda g, x, y, r, L: _inner_asterisk(g, x, y, _free(g, r, L=L) + g.sh / 2)),
-    0x229C: (u(0x229C), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r, (g.sh + eq_gap(g)) / 2, L) + g.sh / 2, 2, r)),
+    0x229C: (u(0x229C), lambda g, x, y, r, L: _inner_equals(g, x, y, r, L)),
     0x229D: (u(0x229D), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r, 0.0, L) + g.sh / 2, 1)),
 }
 SQUARED = {
@@ -1300,13 +1381,24 @@ def _inner_bars(g, x, y, half, n, r=None):
 
 
 def _inner_asterisk(g, x, y, half):
-    """Six spokes, the asterisk's: the vertical and the shallow 2:1 slopes."""
+    """Six spokes, the asterisk's: the vertical and the shallow 2:1 slopes,
+    lightened as the asterisk's own are where the white between two spokes
+    would begin outside the inner half of their length (punct.asterisk,
+    SPOKE_WHITE). At the stems' weight they met in a knot at every weight:
+    ⊛ was a ring round a blot."""
     import math
-    from .punct import SPOKE
+
+    from ..draw import _thickness
+    from .punct import SPOKE, SPOKE_WHITE
+    from .shapes import slanted
+    p = g.p
+    t_max = 2 * math.sin(SPOKE) * (1 - SPOKE_WHITE) * half
+    th = _thickness(p, g.sh)
     c, s = half * math.cos(SPOKE), half * math.sin(SPOKE)
-    g.stroke((x, y - half), (x, y + half))
-    g.stroke((x - c, y - s), (x + c, y + s))
-    g.stroke((x - c, y + s), (x + c, y - s))
+    g.stroke((x, y - half, slanted(g, min(max(p.sv, p.floor), t_max), (0, 1))), (x, y + half))
+    for sy in (1, -1):
+        d = (2, sy)
+        g.stroke((x - c, y - sy * s, slanted(g, min(th(d), t_max), d)), (x + c, y + sy * s))
 
 
 for cp, (nm, inner) in CIRCLED.items():

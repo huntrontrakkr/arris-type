@@ -700,6 +700,68 @@ The six causes:
     units where 4 did, and the æ has one point 68 units off its drawing
     at ExtraBold, halfway along the watch axis: new, and not yet looked
     into.
+- The outline faults the end scan named, and their kin (the owner:
+  "Start fixing").
+  - The ҏ's tick (and Ҏ's) ended in a point at Bold and ExtraBold: a
+    diagonal's end cut between two level edges, 12 units of face at Bold.
+    The tick now stops two breaks short of where its diagonal meets the
+    level (`cyrillic_ext.TICK_END`) and keeps the least length that is
+    still a tick (`_tick_least`), so its end is flat and fully cut. The
+    counters are what they were.
+  - A sign inside another keeps its own shape (`operators.INNER_ARM`):
+    an arm reaches at least 1.5 of its thickness past the centre, and the
+    inner sign is drawn lighter, to 0.6 of the stem, before it gives that
+    up. ⊜'s bars were dots, 86 units long for 81 thick at the Regular,
+    and in the monospaced cuts from SemiBold a sliver (4 units in Arris
+    Mono Italic): now 187 for 62 at the Regular and 143 to 194 in the
+    monospaced cuts. ⊛'s star filled 0.73 of its box, a blot: now 0.55,
+    white between its spokes at every weight. ⊎'s plus was a square or a
+    lozenge from Bold and in Mono at every weight: it has its four inside
+    corners (in the monospaced cuts the plus sign itself, drawn small,
+    `_small_plus_in_cup`).
+  - The erase keys' x (⌦ ⌫) in the monospaced cuts was a unit across at
+    every weight: the key, drawn to the cell's width, kept its point, and
+    the x was kept to the square part left over, 0.9 units of reach for
+    125 in Arris. Drawn at its weight it was a blot (a lozenge from
+    SemiBold in Arris Mono Italic), at the Regular a hairline cross. Where
+    the square part is short the x now moves toward the point, into the
+    white the point holds (the arm that runs into it ends square to its
+    wall and keeps the gap from it): a reach of 66 in Arris Mono, 52 in
+    Mono Narrow, and its stroke no heavier than leaves each arm 1.5 of
+    its thickness. Arris and Arris Italic draw the keys as they were.
+  - ⎋ is a picture (`technical.picture`), the Regular's drawing at every
+    heavier weight as the clocks and keys are. Drawn at the weight, its
+    arrowhead outgrew the ring (barbs of 200 on a ring of 306 at the
+    Regular, 322 on 331 at Black), the ring opened round it, and from Bold
+    it was a J beside an arrow.
+  - In the monospaced cuts a picture is held at the Regular before it is
+    fitted to the cell, not after (`technical.pictured`,
+    `symkit.mono_fitted`): fitted from the weight's condensed parameters
+    it no longer knew its Regular, and ⎋ was drawn at a stem of 114 in
+    Arris Mono SemiBold for 90, 124 at Bold; the watch 126 for 86 in
+    Mono Italic Bold. Now each stands at its Regular's stem in proportion
+    to the cell's module (⏱ in Arris Mono Italic from SemiBold a little
+    lighter still, where the topology lock keeps its whites).
+  - The keyboard (⌨) in a narrow cell draws its keys smaller, and its
+    frame's corners kept their full leg: the corner key ran into the
+    frame's inside chamfer in Arris Mono Italic and Mono Narrow Italic at
+    every weight, and both top corner keys in Arris Mono and Mono Narrow
+    at Light (11 units of white in Arris Mono where the keys keep 25
+    between them). Where the keys are made smaller the corners now leave
+    the corner keys their gap; Arris draws it as it did.
+  - A sign drawn smaller to fit its cell is drawn smaller toward the
+    baseline when it stands on it (`symkit._on_the_line`), not about the
+    axis: ⁈ and ⁉ stood 8 to 51 units off the line in the monospaced cuts
+    from SemiBold, ⅀ 74 in Arris Mono Italic Bold. They stand on it, and
+    so do the others drawn smaller there: the fractions (½ ¾ ⅛ … ↉), ‰ ‱
+    № ℀ ℁ ℅ ℆ ⅍ √ ∛ ∜ ⁇ ⁒ ⁙ ⁛ ↯ ₠ ₪.
+  - The polish that closes slivers left by unions and clips closed the
+    face of a stroke's flat end too, where the end was thinner than the
+    break it was cut with: the corner rule left cut, face, cut, a third
+    each, and the face, under a quarter of the break, went, two cuts and
+    a point. It leaves a flat end's face (`geom._end_face`): the spokes
+    of the star in ⊛ in Arris Mono Narrow Italic Bold.
+  - `tools/end_scan.py` names nothing apart now (`KNOWN` is empty).
 - No bar ends in an arrowhead (the owner, of the 3's top bar in Arris
   Italic Black: "Sharp pointy 3 top? I never want to see this shape in
   our typefaces"). The corner rule cut both corners of a stroke's flat
@@ -734,11 +796,9 @@ The six causes:
     `tools/end_scan.py` reads every glyph of every cut at its ladder of
     weights: 2,432 glyphs at 47 places, 114,304 drawings, and no flat end
     comes to a point or keeps a face under half its cuts. Six signs it
-    names apart are older faults of another kind, not yet redrawn: the
-    ҏ's tick at Bold and ExtraBold (a diagonal's end between two level
-    edges), and five signs of the monospaced cuts whose inner part shuts
-    at one weight (⊜ and ⊎ in Arris Mono Narrow at SemiBold and Bold; ⎋,
-    ⌦ and ⌫ in Arris Mono Italic at SemiBold and Medium).
+    named apart were older faults of another kind, redrawn in the next
+    entry: the ҏ's tick at Bold and ExtraBold, and ⊜ ⊎ ⎋ ⌦ ⌫ in the
+    monospaced cuts.
   - A trial variable font of the changed glyphs (3 z # ? * { з), upright
     and italic: nothing folds that did not; the italic brace stands up
     to 7 units off its drawing at Black with grade (the question mark's

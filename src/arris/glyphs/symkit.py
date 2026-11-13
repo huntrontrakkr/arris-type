@@ -416,6 +416,8 @@ def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
     q = _condensed(p, k) if k < 1 else p
     q = _scaled(q, s) if s < 1 else q
     dx, dy = 0.0, (1 - s) * p.cap / 2
+    if s < 1 and _on_the_line(fn, p, cell, look):
+        dy = 0.0                                            # (drawn smaller toward the line it stands on)
     body = _drawn_body(width, q, cell, kind) if (k < 1 or s < 1) else cell
     if k < 1 or s < 1:
         from ..draw import _ink_x as carried
@@ -426,6 +428,21 @@ def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
         dx = (cell - (a + b)) / 2
     _FIT[(key, p, look)] = (k, s, dx, dy, body)
     return _FIT[(key, p, look)]
+
+
+ON_LINE = 0.5    # modules: a sign whose ink comes down to within this of the baseline (above or below) stands on it
+
+
+def _on_the_line(fn, p, cell, look):
+    """Whether a sign stands on the baseline as it is drawn (its ink comes
+    down to it, ON_LINE): drawn smaller to fit its cell, it is drawn
+    smaller toward the line, not about the axis (_mono_fit). About the
+    axis, the punctuation drawn on the line stood off it: ⁈ ⁉ 8 units in
+    Arris Mono at SemiBold and 22 in Mono Narrow, ⅀ as far."""
+    g = _glyph(p, cell, look)
+    fn(g)
+    ys = [q[1] for r in g.rings() for q in r]
+    return bool(ys) and abs(min(ys)) <= ON_LINE * p.m
 
 
 def _drawn_body(width, q, cell, kind):
@@ -463,11 +480,22 @@ def mono_fitted(name, fn, width, kind):
     """(drawing, body) for a symbol in the monospaced cut: as drawn, unless
     its ink would run out of the cell (mono_overflows); then fitted as a
     sign is (_mono_fit: condensed, or drawn smaller, and centred)."""
+    def held(p):
+        # (a picture, technical.pictured: held at its Regular before it is fitted)
+        if p.mono and getattr(fn, 'picture', False):
+            from ..draw import held_at
+            return held_at(p)
+        return p
+
     def body(p):
         n = width(p)
-        return min(n, sign_room(p)) if p.mono and mono_overflows(name, fn, width, p) else n
+        return min(n, sign_room(p)) if p.mono and mono_overflows(name, fn, width, held(p)) else n
 
     def wrapped(g):
+        q = held(g.p)
+        if q is not g.p:
+            g.p = q
+            g.pictured = True                               # (technical.picture's mark: the white rule reads its own strokes)
         p = g.p
         if not p.mono or not mono_overflows(name, fn, width, p, _look(g)):    # (as its glyph draws it)
             return fn(g)

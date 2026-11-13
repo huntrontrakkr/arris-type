@@ -960,8 +960,12 @@ over half a stem, and the brace's point is cut flat where it would stand
 out past the Regular's; a struck arrow makes the Regular's room for its
 stroke, `arrows.strike_at`, and a wave or a zigzag is measured in the
 Regular's stem, `arrows.pattern_stem`), and a picture (the watch, the
-keyboard, the clocks, the erase keys) is the Regular's drawing at every
-heavier weight (`technical.picture`); a bar across a currency letter
+keyboard, the clocks, the erase keys, the escape key) is the Regular's
+drawing at every heavier weight (`technical.picture`), in the monospaced
+cell held there before it is fitted (`technical.pictured`); a sign inside
+another (⊜ ⊛ ⊎, the erase keys' x) keeps its own shape, each arm reaching
+1.5 of its thickness past the centre, drawn lighter before it gives that
+up (`operators.INNER_ARM`); a bar across a currency letter
 stands out of it as far as at the Regular (`currency.bar_out`) and an
 ellipsis's dots the Regular's white apart (`punct.dot_step`); the brace is
 told from ( by a square bracket's ends (flat arms,
@@ -1048,7 +1052,8 @@ area has a note in `docs/coverage/`, listing what was drawn and why:
   symbol whose ink would run out of its cell (‰ ™ ∭ @ …) is condensed, or
   drawn smaller, to fit (`symkit.mono_fitted`): drawn smaller, it is
   drawn smaller whole, the body it is drawn in with it (©'s ring with its
-  letter), and centred where it stands once raised. Its ink is measured as
+  letter), and centred where it stands once raised; a sign that stands on
+  the baseline (⁈ ⁉ ⅀) is drawn smaller toward it (`symkit._on_the_line`). Its ink is measured as
   the font carries it, slanted in the italic. A letter's sign is fitted
   as it is drawn, upright; in the italic it is drawn narrower in its cell
   as a letter is, and condensed for the slant only if, as narrow as a

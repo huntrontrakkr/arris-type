@@ -34,7 +34,7 @@ from .arrows import chev, kb_of, reach, stack_k, Ctx, Turn
 from .figures import beak_depth
 from .letterframe import STEEP, growing_width, heft, plain_width as letter_width
 from .extra_latin import _split_counters
-from .operators import OPW, cdot, eq_gap, int_span, integral, kd, u
+from .operators import INNER_ARM, OPW, cdot, eq_gap, int_span, integral, kd, u
 from .punct import _ring, axis
 
 
@@ -99,6 +99,16 @@ def picture(g):
     if q is not g.p:
         g.p = q
         g.pictured = True
+
+
+def pictured(fn):
+    """Mark a glyph drawn as a picture (picture): in the monospaced cell
+    it is held at the Regular before it is fitted there (symkit.mono_fitted),
+    not after. Fitted from the weight's own parameters, condensed, a picture
+    no longer knew its Regular and was drawn at the weight: ⎋ in Arris Mono
+    Italic Bold a blot, the erase keys' x a lozenge."""
+    fn.picture = True
+    return fn
 
 
 def line_top(p):
@@ -350,11 +360,23 @@ def _erase(g, right):
     # the x: in the square part, clear of the walls by half a stem
     gap = max(0.5 * p.sv, 0.75 * p.m)
     e = p.sd / (2 * SQRT2)                                   # a diagonal's flat end reaches this far past it
-    t = min(h - g.sh / 2 - gap - e, (x_back - x0) / 2 - p.sv / 2 - gap - e)
     cx = (x0 + x_back) / 2
+    t = min(h - g.sh / 2 - gap - e, (x_back - x0) / 2 - p.sv / 2 - gap - e)
+    # In a narrow cell (Arris Mono) the square part is short, and the x moves toward the point, into the
+    # white the point holds: the arm that runs into it ends square to its wall, and keeps the gap from it.
+    # Kept in the square part, the x in the monospaced cuts was a unit across, a blot of its own weight.
+    left = x0 + p.sv / 2 + gap + e                           # the x's centre is its reach and more past this
+    toward = SQRT2 * (p.sd / 2 + gap)                        # the arm's end from the point's wall, along the arm
+    room = (x_tip - left - toward) / 3                       # the reach at which the two meet
+    if room > t:
+        t = min(h - g.sh / 2 - gap - e, room)
+        cx = min(max(cx, left + t), x_tip - toward - 2 * t)
     if not right:
         cx = W - cx
     xw = max(0.8 * p.sd, 1.12 * p.floor)                     # the x a little lighter, a mark inside the key
+    # (and no heavier than leaves its arms INNER_ARM of their thickness from the centre, operators._inner_equals:
+    # in Arris Mono Italic Bold, the key drawn smaller to fit its cell, the x was a lozenge)
+    xw = max(min(xw, SQRT2 * t / INNER_ARM), 1.12 * p.floor)
     g.stroke((cx - t, a - t, xw), (cx + t, a + t), start='flat', end='flat')
     g.stroke((cx - t, a + t, xw), (cx + t, a - t), start='flat', end='flat')
 
@@ -371,12 +393,14 @@ def _erase_w(p):
 
 
 @tech(u(0x2326), '⌦', _erase_w)
+@pictured
 def eraseright(g):
     picture(g)
     _erase(g, True)
 
 
 @tech(u(0x232B), '⌫', _erase_w)
+@pictured
 def eraseleft(g):
     picture(g)
     _erase(g, False)
@@ -409,6 +433,7 @@ def _kbd_w(p):
 
 
 @tech(u(0x2328), '⌨', _kbd_w)
+@pictured
 def keyboard(g):
     """A frame with two rows of keys and a space bar."""
     picture(g)
@@ -425,6 +450,11 @@ def keyboard(g):
     x0, x1 = p.sv / 2, W - p.sv / 2
     y0, y1 = a - H / 2, a + H / 2
     leg = min(p.leg, 0.25 * H)
+    if k < 1:
+        # (the keys made smaller, the frame's corners no longer than leave the corner keys their gap: the
+        # frame's inside chamfer, its stroke's half past the bevel, and a key's corner cut; at the full leg
+        # the corner key in Arris Mono Italic ran into it, and in Arris Mono kept 11 units of white for 25)
+        leg = min(leg, (p.sv + g.sh) / 2 + 2 * gap + min(p.c, s / 3) - p.sd / SQRT2 - SQRT2 * gap)
     g.stroke(B(x0, y0, leg), B(x1, y0, leg), B(x1, y1, leg), B(x0, y1, leg), closed=True)
     inner0, inner1 = x0 + p.sv / 2 + gap, x1 - p.sv / 2 - gap
     n = KEYS                                                # the same at every weight
@@ -467,11 +497,16 @@ def benzene(g):
     _ring(g, c - r, a - r, c + r, a + r, w=t, leg=0.586 * r)
 
 
-@tech(u(0x238B), '⎋', lambda p: 0.85 * p.cap + p.sv)
+@tech(u(0x238B), '⎋', lambda p: 0.85 * _pict(p).cap + _pict(p).sv)
+@pictured
 def escape(g):
     """The escape key: an octagon broken at its upper left, an arrow running
-    out of the break from its centre."""
-    lighten(g)
+    out of the break from its centre. A picture, the Regular's from there
+    to Black (_pict): drawn at the weight, its arrow's barbs grew faster
+    than the ring (200 units at Regular on a ring of 306, 322 on 331 at
+    Black), the ring opened round them to keep its white, and from Bold
+    it was a J beside an arrow, its ends on its own corners' cuts."""
+    picture(g)
     p = g.p
     a = axis(p)
     W = g.W
@@ -1082,6 +1117,7 @@ def _crown(p):
 
 
 @tech(u(0x231A), '⌚', lambda p: 2 * face_r(_pict(p), 0.3) + _pict(p).sv + _crown(_pict(p)), solid=True)
+@pictured
 def watch(g):
     """The watch: a chamfered case, a little taller than wide, on its
     straps, a crown at the right, hands at twelve and three."""
@@ -1116,6 +1152,7 @@ def _alarm_r(p, W):
 
 
 @tech(u(0x23F0), '⏰', lambda p: 2 * (0.97 * face_r(_pict(p), 0.33) + _alarm_reach(_pict(p))))
+@pictured
 def alarmclock(g):
     """An octagon's face with two bells above its upper chamfers and two
     feet below its lower ones."""
@@ -1144,6 +1181,7 @@ def alarmclock(g):
 
 
 @tech(u(0x23F1), '⏱', clock_w(0.33))
+@pictured
 def stopwatch(g):
     """An octagon's face, a crown on top (a stem and a cap) and a button at
     its upper right, one hand at twelve."""
@@ -1167,6 +1205,7 @@ def stopwatch(g):
 
 
 @tech(u(0x23F2), '⏲', clock_w(0.36), solid=True)
+@pictured
 def timerclock(g):
     """An octagon's face with a mark above it and a hand turned back to
     half past ten."""

@@ -571,7 +571,16 @@ def _tick(g, x_corner, y_corner, inside):
     g.stroke((a - y0, y0), (a - y1, y1), start='h', end='h')
 
 
-_TICK = Opening(lambda g: g.counter_size(), 'tick', lambda p: 0.0, max_ratio=0.85)
+def _tick_least(p):
+    """How short the tick may be drawn inside the bowl (``tick``, above the
+    corner) and still start within the bowl's ink: its start, cut level, is
+    sd·√2 wide about the stroke's centre, and on the corner it stood out of
+    the bowl's side by sd/√2 - sv/2 (16 units at Bold), a ledge over the
+    tick (ҏ at Bold and ExtraBold). A break short of that, at least."""
+    return max(0.0, p.sd / SQRT2 - p.sv / 2 + p.c)
+
+
+_TICK = Opening(lambda g: g.counter_size(), 'tick', _tick_least, max_ratio=0.85)
 
 
 @glyph('uni048E', 'Ҏ', letter_width(9, 2), kind='cap', openings=[_TICK])
@@ -892,13 +901,27 @@ def koppa(g):
     _down(g, TAIL * p.desc)
 
 
+TICK_END = 2.0     # edge breaks: the least the ҏ's tick's end stands upright, cut by the body's clip (ertick)
+
+
 @glyph('uni048F', 'ҏ', letter_width(8, 2), kind='lower', openings=[_TICK])
 def ertick(g):
+    """р with the tick through its bowl's lower corner, as Ҏ's. The tick
+    leaves the bowl a short way, and its end is cut level underneath and
+    upright by the body's clip a module past it: at the Regular a face
+    1.9 breaks tall between the two. That face is held at TICK_END breaks
+    at least: as the tick grew with the weight its end came inside the
+    clip, and from Bold the corner cut took the upright face whole and the
+    end came to a point (the owner, of a pointed end: "I never want to see
+    this shape in our typefaces")."""
     f = Frame(g, 8, 'lower')
     p = g.p
     stamp(g, 'p')
-    g.clip = (-p.cap, -p.desc, g.W + p.m, p.xh)
-    _tick(g, f.X(7), f.Y(1), 1.5 * p.m)
+    inside = 1.5 * p.m
+    x_corner, y_corner = f.X(7), f.Y(1)
+    tip = x_corner + y_corner - (y_corner - inside) + p.sd / SQRT2      # the tick's end, its far corner underneath
+    g.clip = (-p.cap, -p.desc, min(g.W + p.m, tip - TICK_END * p.c), p.xh)
+    _tick(g, x_corner, y_corner, inside)
 
 
 @glyph('uni04FF', 'ӿ', letter_width(8, 2), kind='lower')

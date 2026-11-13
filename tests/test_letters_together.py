@@ -1216,14 +1216,14 @@ def test_no_bar_ends_in_an_arrowhead(style):
     cuts' leg, which reads as one (topology.stroke_ends): the 3, the bars
     of z t f E F 2 5 7 at Black, the number sign's eight ends, the question
     mark's hook, the ze's middle arm, the double-struck letters' hairlines
-    and an ogonek's tab. Until 2.0, at Black, 56 glyphs of the upright and
+    and an ogonek's tab, the ҏ's tick (cyrillic_ext.TICK_END). Until 2.0, at Black, 56 glyphs of the upright and
     86 of the italic had the point and 138 and 308 the short face
     (tools/end_scan.py reads every glyph of every cut)."""
     from arris.italic import italic
     from arris.topology import stroke_ends
     for w in (100, 400, 700, 850, 900):
         p = italic(params(w)) if style == 'italic' else params(w)
-        for ch in '3ztfEF257#?*{з\u2119\u2148\u0119':
+        for ch in '3ztfEF257#?*{зҏҎ\u2119\u2148\u0119':
             ends = [(k, round(x), round(y), round(s, 2)) for k, x, y, s in stroke_ends(draw(CMAP[ch], p).rings(), p.c)
                     if k != 'beak']
             assert not ends, (ch, w, ends)

@@ -12,7 +12,8 @@ import arris.glyphs  # noqa: F401  (the registry)
 from arris.draw import draw
 from arris.geom import rings_to_shapely
 from arris.glyphs.punct import pct, tick
-from arris.instances import params
+from arris.instances import mono_weight, narrow_weight, params
+from arris.italic import italic
 
 
 def _ink(name, p):
@@ -704,13 +705,14 @@ def test_the_tironian_et_is_a_seven(w):
     assert a == pytest.approx(x0, abs=1.0) and b == pytest.approx(x1, abs=p.c + 1.0)
 
 
-@pytest.mark.parametrize('name', ['uni231A', 'uni2328', 'uni23F0', 'uni23F1', 'uni23F2', 'uni2326', 'uni232B'])
+@pytest.mark.parametrize('name', ['uni231A', 'uni2328', 'uni23F0', 'uni23F1', 'uni23F2', 'uni2326', 'uni232B', 'uni238B'])
 def test_a_picture_is_the_regulars_drawing_at_every_heavier_weight(name):
-    """The watch, the keyboard, the clocks and the erase keys
-    (technical.picture). Their whites are the least a drawing may have at
-    the Regular, so every unit a stroke gained past it went to the
+    """The watch, the keyboard, the clocks, the erase keys and the escape
+    key (technical.picture). Their whites are the least a drawing may have
+    at the Regular, so every unit a stroke gained past it went to the
     picture's size: at Black the watch stood 1.68 of the cap height tall
-    for 1.25, the keyboard 1.48 for 0.90."""
+    for 1.25, the keyboard 1.48 for 0.90; and ⎋'s arrowhead outgrew its
+    ring, which opened round it to a J."""
     regular = _ink(name, params(400))
     for w in (500, 700, 900):
         g = draw(name, params(w))
@@ -886,3 +888,109 @@ def test_a_roots_index_is_a_finished_small_figure(cut):
             rings, _ = place(name, p)
             assert not topology.faults(rings, p.c, bool(p.slant)), (name, w)
             assert len(rings_to_shapely(rings).geoms) == 2, (name, w)           # the radical and its index, apart
+
+
+MONO_CUTS = {
+    'mono': lambda w: params(mono_weight(w)).with_(mono=True),
+    'mono italic': lambda w: italic(params(mono_weight(w)).with_(mono=True)).with_(cursive=True),
+    'narrow': lambda w: params(narrow_weight(w)).with_(mono=True, narrow=True),
+    'narrow italic': lambda w: italic(params(narrow_weight(w)).with_(mono=True, narrow=True)).with_(cursive=True),
+}
+
+
+@pytest.mark.parametrize('cut', list(MONO_CUTS))
+def test_a_picture_is_held_before_it_is_fitted_to_its_cell(cut):
+    """symkit.mono_fitted, technical.pictured: in the monospaced cuts a
+    picture is the Regular's drawing at every heavier weight, fitted to its
+    cell or not. Fitted from the weight's own parameters it was drawn at
+    the weight: ⎋ a blot in Arris Mono Italic Bold, the erase keys' x a
+    lozenge."""
+    reg = MONO_CUTS[cut](400)
+    for name in ('uni238B', 'uni2326', 'uni232B', 'uni231A', 'uni23F1'):
+        for w in (500, 600, 700):
+            q = draw(name, MONO_CUTS[cut](w)).p
+            # (in proportion to its module, as fitted: condensed, drawn smaller; and no heavier, where the
+            # topology lock lightens a picture the fit has narrowed further, ⏱ in Mono Italic from SemiBold)
+            assert q.sv <= reg.sv * q.m / reg.m + 1e-6, (name, cut, w)
+            assert q.sv >= 0.8 * reg.sv * q.m / reg.m, (name, cut, w)
+
+
+def _reflex(ring):
+    """How many of a ring's corners turn back into the ink (ink on the left)."""
+    n, out = len(ring), 0
+    for i in range(n):
+        (ax, ay), (bx, by), (cx, cy) = ring[i - 1][:2], ring[i][:2], ring[(i + 1) % n][:2]
+        if (bx - ax) * (cy - by) - (by - ay) * (cx - bx) < -1e-6:
+            out += 1
+    return out
+
+
+def _inner_parts(g):
+    """The pieces of a drawing that stand inside another's counter: the sign
+    inside a ring or a cup."""
+    from shapely.geometry import Polygon
+    ink = rings_to_shapely(g.rings())
+    parts = sorted(getattr(ink, 'geoms', [ink]), key=lambda q: -q.area)
+    outer = Polygon(parts[0].exterior).buffer(1.0)
+    return [q for q in parts[1:] if outer.contains(q)] or [q for q in parts[1:]]
+
+
+@pytest.mark.parametrize('cut', ['upright', 'italic'] + list(MONO_CUTS))
+def test_a_sign_inside_another_reads(cut):
+    """operators.INNER_ARM: the equal sign in ⊜, the asterisk in ⊛ and the
+    plus in ⊎ keep their own shape inside the ring or the cup at every
+    weight. ⊜'s bars are long (they were dots at the Regular, 86 units for
+    79 thick, and nothing at all in Mono Narrow Bold); ⊛'s spokes keep
+    white between them (a blot at every weight); ⊎'s plus has its four
+    inside corners (from Bold, and in the monospaced cuts at every weight,
+    a square or a lozenge); the erase keys' x is an x (in the monospaced
+    cuts a unit across, or a lozenge, kept to the key's square part)."""
+    from arris import topology
+    from arris.italic import italic as ital
+    mk = {'upright': params, 'italic': lambda w: ital(params(w))}.get(cut) or MONO_CUTS[cut]
+    for w in ((300, 400, 700, 900) if cut in ('upright', 'italic') else (300, 400, 600, 700)):
+        p = mk(w)
+        bars = _inner_parts(draw('uni229C', p))
+        assert len(bars) == 2, (cut, w, len(bars))
+        for b in bars:
+            x0, y0, x1, y1 = b.bounds
+            assert x1 - x0 >= 2.5 * (y1 - y0), (cut, w, round(x1 - x0), round(y1 - y0))
+        star, = _inner_parts(draw('uni229B', p))
+        assert star.area <= 0.6 * (star.bounds[2] - star.bounds[0]) * (star.bounds[3] - star.bounds[1]), (cut, w)
+        ends = topology.stroke_ends(draw('uni229B', p).rings(), p.c)    # (geom._end_face: thin spokes keep their ends)
+        assert not [e for e in ends if e[0] in ('point', 'thin')], (cut, w, ends)
+        plus, = _inner_parts(draw('uni228E', p))
+        assert _reflex(list(plus.exterior.coords)[:-1]) >= 4, (cut, w)
+        for key in ('uni2326', 'uni232B'):                      # the erase keys' x: its four crotches, and a size
+            g = draw(key, p)
+            x, = _inner_parts(g)
+            frame = rings_to_shapely(g.rings()).bounds
+            assert _reflex(list(x.exterior.coords)[:-1]) >= 4, (key, cut, w)
+            assert x.bounds[2] - x.bounds[0] >= 0.35 * (frame[3] - frame[1]), (key, cut, w)
+
+
+@pytest.mark.parametrize('cut', list(MONO_CUTS))
+def test_a_sign_on_the_line_stays_on_it_in_its_cell(cut):
+    """symkit._on_the_line: a sign that stands on the baseline, drawn smaller
+    to fit the monospaced cell, is drawn smaller toward the line. Drawn
+    smaller about the axis, ⁈ ⁉ ⅀ stood off the line, up to 74 units in
+    Arris Mono Italic Bold."""
+    from arris.font import place
+    for name in ('uni2048', 'uni2049', 'uni2140', 'exclamdbl'):
+        for w in (300, 400, 600, 700):
+            rings, _ = place(name, MONO_CUTS[cut](w))
+            assert min(q[1] for r in rings for q in r) == pytest.approx(0.0, abs=1.0), (name, cut, w)
+
+
+@pytest.mark.parametrize('cut', ['upright', 'italic'] + list(MONO_CUTS))
+def test_the_keyboards_keys_stand_apart_from_its_frame(cut):
+    """technical.keyboard: ten keys and a space bar, each apart from the
+    frame. In a narrow cell the keys are drawn smaller and the frame's
+    corners shorten with them; at the full leg the corner key ran into the
+    frame's inside chamfer, in Arris Mono Italic and Mono Narrow Italic at
+    every weight and in Arris Mono and Mono Narrow at Light."""
+    from arris.italic import italic as ital
+    mk = {'upright': params, 'italic': lambda w: ital(params(w))}.get(cut) or MONO_CUTS[cut]
+    for w in ((100, 300, 400, 700, 900) if cut in ('upright', 'italic') else (300, 400, 450, 500, 600, 700)):
+        ink = rings_to_shapely(draw('uni2328', mk(w)).rings())
+        assert len(ink.geoms) == 12, (cut, w, len(ink.geoms))

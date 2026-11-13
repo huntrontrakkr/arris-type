@@ -1158,6 +1158,9 @@ def _polish(pts, eps, moved, facet=None):
                 moved[b] = a
                 del pts[j]
         elif turn < 165:                                      # a micro-flat at a corner
+            if _end_face(pts[(h - 1) % n], prev, a, b, nxt, pts[(k + 1) % n]):
+                skip.add((a, b))
+                continue
             q = _meet_pts(prev, a, b, nxt)
             if q is None or _len(_sub(q, _mul(_add(a, b), 0.5))) > 2 * max(eps, facet or 0.0):
                 skip.add((a, b))
@@ -1169,6 +1172,30 @@ def _polish(pts, eps, moved, facet=None):
         else:
             skip.add((a, b))
     return pts
+
+
+def _end_face(pp, prev, a, b, nxt, nn) -> bool:
+    """Whether the edge a-b is the face of a stroke's flat end: the ring (ink
+    on its left) turns left into a cut at both its ends, by 30 to 60
+    degrees each, by two cuts of one length (not a hook's beak, a chamfer
+    and a cut), and the stroke's two sides run on from the cuts, opposite
+    ways and longer than half a cut. Closed as a micro-flat (_polish), it
+    was the arrowhead the corner rule keeps an end from (_share, END_CUT):
+    a spoke of the star in ⊛, thinner than the break it was cut with, in
+    Arris Mono Narrow Italic Bold."""
+    side_in, cut_in, face, cut_out, side_out = _sub(prev, pp), _sub(a, prev), _sub(b, a), _sub(nxt, b), _sub(nn, nxt)
+    if min(_len(side_in), _len(cut_in), _len(face), _len(cut_out), _len(side_out)) < 1e-9:
+        return False
+
+    def turn(u, v):
+        return math.degrees(math.atan2(_cross(_unit(u), _unit(v)), _dot(_unit(u), _unit(v))))
+
+    cuts = min(_len(cut_in), _len(cut_out))
+    if max(_len(cut_in), _len(cut_out)) > 1.25 * cuts:       # a hook's beak, a chamfer and a cut: its own shape
+        return False
+    return all(30 < turn(u, v) < 60 for u, v in ((side_in, cut_in), (cut_in, face), (face, cut_out), (cut_out, side_out))) \
+        and min(_len(side_in), _len(side_out)) > 0.5 * cuts \
+        and _dot(_unit(side_in), _unit(side_out)) < -math.cos(math.radians(10))
 
 
 def _white_facet(prev, a, b, nxt) -> bool:
