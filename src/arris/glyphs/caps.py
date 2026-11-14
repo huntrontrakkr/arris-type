@@ -315,10 +315,13 @@ def Q(g):
     q_drawing(g)
 
 
-def q_drawing(g, inner=0.0):
+def q_drawing(g, inner=0.0, left=None):
     """The Q. ``inner``: the room a stroke standing in its counter beside
     the left stem takes (the double-struck Q's inner stroke and its slit,
-    letterlike.dsQ), which the tail keeps clear of as it does the wall."""
+    letterlike.dsQ), which the tail keeps clear of as it does the wall.
+    ``left``: the left side's thickness where it is not the stem's, its
+    outer edge where the stem's is (ℚ in Mono's cell, its left side split
+    in two lines)."""
     f = Frame(g, 10)
     p = f.p
     # The bowl's lower right corner is square, and the tail runs into it;
@@ -338,7 +341,11 @@ def q_drawing(g, inner=0.0):
     if like:
         own = (p.sv + g.sh) / 2 - p.sd / 2 ** 0.5           # (the cut a corner with no leg has)
         corner = B(*f.P(9, 1), max(0.0, p.c + (p.leg + own - p.c) * like - own))
-    g.stroke(B(*f.P(1, 1)), corner, B(*f.P(9, 11)), B(*f.P(1, 11)), closed=True)
+    if left is None:
+        g.stroke(B(*f.P(1, 1)), corner, B(*f.P(9, 11)), B(*f.P(1, 11)), closed=True)
+    else:
+        xl = f.X(1) - p.sv / 2 + left / 2
+        g.stroke(B(xl, f.Y(1)), corner, B(*f.P(9, 11)), B(xl, f.Y(11), None, left), closed=True)
     ct = (f.X(9) - p.sv / 2) + (f.Y(1) + g.sh / 2) - p.c   # tail: x + y = ct
     w = p.sd * (1 - (1 - Q_TAIL) * min(1.0, heft(p) / (175.0 - 90.0)))
     # (and its upper end clear of the counter's left wall by a break: run on to the wall, from 850 the tail

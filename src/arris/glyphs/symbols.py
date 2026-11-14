@@ -19,7 +19,7 @@ from . import marks
 from .symkit import sign
 from .cyrillic import sc
 from .letterframe import STEEP, Frame, growing_width, least_white, letter_width as arm_width, plain_width as letter_width
-from .punct import _ring, axis, dot, pct, pct_ring, punct
+from .punct import _ring, axis, dot, pct, pct_rings_after, punct
 
 ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyphen', 0x2011: 'hyphen'}
 # (no soft hyphen, U+00AD: where a word may break is the shaper's business, and it is never drawn)
@@ -279,8 +279,9 @@ def _mille_width(p):
 @glyph('perthousand', '‰', _mille_width, kind=('punct', 1.0))
 def perthousand(g):
     """The percent sign and one more of its rings, the least white on."""
-    w = stamp(g, 'percent')
-    pct_ring(g, w + pct(g.p)[5], 0)
+    sub = draw('percent', g.p)
+    g.add_glyph(sub)
+    pct_rings_after(g, sub, 1, pct(sub.p)[5])
 
 
 @glyph('daggerdbl', '‡', lambda p: __import__('arris.glyphs.punct', fromlist=['x']).dagger_width(p), kind=('punct', 1.0))

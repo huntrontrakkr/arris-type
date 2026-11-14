@@ -298,18 +298,38 @@ def _small_letter(p, k=0.55, stroke=0.85):
     return q.with_(xh=q.cap)
 
 
+# ₢'s r, one drawing in one place through each cut: (its height in caps, where it stands in caps, where it starts
+# in modules), the largest that keeps a white off the C at the cut's heaviest weight and grade (from 59 units in
+# Arris to 39 in its italic, whose upper beak hangs lower; in the monospaced cells it moves in as the C narrows)
+CR_PLACE = {(False, False, False): (0.31, 0.29, 4.35), (True, False, False): (0.27, 0.27, 4.35),
+            (False, True, False): (0.31, 0.29, 4.35), (True, True, False): (0.31, 0.29, 3.9),
+            (False, True, True): (0.31, 0.29, 3.9), (True, True, True): (0.27, 0.29, 3.2)}
+CR_STROKE = 0.75     # the r's strokes, of the Regular's
+
+
+def _cruzeiro_place(p):
+    return CR_PLACE[(bool(p.slant), bool(p.mono), bool(p.narrow))]
+
+
+def _cruzeiro_r(p):
+    """₢'s r: one drawing from the Regular on (the Regular's, at one size), drawn apart from the C."""
+    return _small_letter(held_at(p), _cruzeiro_place(p)[0], CR_STROKE).with_(mono=False)
+
+
 @cur('uni20A2', '₢', _c_width(1.0))
 def cruzeiro(g):
-    """C holding a small r: its stem stands on the C's bottom bar, its arm
-    reaches out through the mouth."""
+    """C holding a small r. The r is one drawing in one place at every
+    weight, with white all round it: drawn at the weight's own strokes and
+    set against the C's mouth, the C's lower beak ran into it from Bold and
+    at Black the two were one shape."""
     p = g.p
-    wc = g.W - p.m
-    stamp(g, 'C', width=wc)
-    # the r as tall as leaves a stroke's white under the C's upper beak
-    k = min(0.62, max(0.45, (p.cap - beak_depth(p, draw('C', p).sh) - wmin(p)) / p.cap))
-    pr = _small_letter(p, k, 0.7).with_(mono=False)        # a letter inside a sign: the plain r, not Mono's footed one
-    wr = REGISTRY['r'].width(pr)
-    stamp(g, 'r', dx=g.W - wr - 0.25 * p.m, p=pr)
+    stamp(g, 'C', width=g.W - p.m)
+    _, low, left = _cruzeiro_place(p)
+    r = draw('r', _cruzeiro_r(p))
+    r.finished = True               # kept as drawn: finished again on the C's breaks, it changed with the C's weight
+    n = len(g.extra_chamfers)
+    g.add_glyph(r, left * p.m, low * p.cap)
+    del g.extra_chamfers[n:]        # and the italic rounds none of its corners, which it rounded at the C's weight
 
 
 def _ce_layout(p):
@@ -608,15 +628,19 @@ def _cross_pair(p):
     strokes and not as bumps on the stem)."""
     h = held_at(p)                                          # as every added stroke, the Regular's from there on
     t = h.sd * (1 - 0.4 * heaviness(h))
-    dy = SQRT2 * (t + max(p.m, 0.5 * p.sv))
-    e = 1.4 * p.m + p.sv / 2
+    # the white between them and their reach past the stem held with them (measured on the weight's stem, the
+    # pair spread as the stem grew while its strokes kept the Regular's: ₮'s lower stroke sank through the
+    # baseline from 800 and the left of the pair was one arm)
+    dy = SQRT2 * (t + max(h.m, 0.5 * h.sv))
+    e = 1.4 * h.m + p.sv / 2
     return t, dy, e
 
 
 def _free_arm(p):
     """How far a crossing stroke's arm reaches where nothing is in its way:
     long enough past the stem to read as a stroke, not a bump on it."""
-    return 2.0 * p.m + 0.75 * p.sv
+    h = held_at(p)
+    return 2.0 * h.m + 0.25 * h.sv + p.sv / 2
 
 
 def _cross(g, xs, y_lo, y_hi, t, arms):
@@ -645,28 +669,33 @@ def turkishlira(g):
 
 @cur('uni20AE', '\u20ae', lambda p: REGISTRY['T'].width(p))
 def tugrik(g):
-    """T with two 45-degree strokes across its stem. The upper stroke stays
-    a stroke's white under the bar; at heavy weights the lower one may run
-    out through the baseline, cut flat by it, rather than crowd the stem."""
+    """T with two parallel strokes across its stem, rising one for two
+    across (the slope ∤ and ∦ are struck at), each reaching past the stem
+    alike on both sides, held at the Regular as every added stroke is, the
+    pair centred between the bar and the baseline. At 45 degrees, with arms
+    toward the bar and the line kept short and the others long, there was
+    no room for them past a heavy stem: from 800 the pair stood so low that
+    the lower stroke's left arm went under the baseline and the left of the
+    pair read as one arm."""
     f = Frame(g, 10)
     p = f.p
     g.stroke(f.P(0, 11), f.P(10, 11))
     xs = f.X(5)
     g.stroke((xs, f.Y(11)), (xs, 0))
-    t, dy, e = _cross_pair(p)
-    top = f.Y(11) - g.sh / 2 - wmin(p) - 0.71 * t           # the upper stroke's highest centre point
-    y_hi = min(0.42 * p.cap + dy / 2, top - e)
-    ef = _free_arm(p)
+    h = held_at(p)
+    t = h.sd * (1 - 0.4 * heaviness(h))
+    k = 5 ** 0.5 / 2                                        # a 1:2 stroke's height over its thickness
+    dy = k * (t + max(h.m, 0.5 * h.sv))                     # one stroke over the other: their white, across
+    top = f.Y(11) - g.sh / 2 - wmin(h)                      # the bar's underside, less the (held) white under it
+    a = p.sv / 2 + 2.0 * h.m + 0.25 * h.sv                  # each arm, from the stem's middle: well past it
+    a = max(min(a, top - dy - k * t), p.sv / 2 + 0.75 * h.m)
+    mid = min(max(0.42 * p.cap, dy / 2 + a / 2 + k * t / 2), top - dy / 2 - a / 2 - k * t / 2)
     g.clip = (0, 0, f.W, p.cap)
-    # the arms toward the bar and the baseline kept short; the pair settled a unit or two down where the lower
-    # stroke's underside, cut by the baseline, leaves an edge of half a unit beside the stem's foot in the
-    # italic (at Black on the heavy grade)
-    tt = across(p, t, (1, 1))
 
-    def pair(y_up):
-        return [((xs - el, y - el, tt), (xs + er, y + er), {'start': 'v', 'end': 'v'})
-                for y, el, er in ((y_up - dy, e, ef), (y_up, ef, e))]
-    g.settle([pair(y_hi - d) for d in (0.0, 1.0, 2.0, 4.0)], lay=True)
+    def pair(d):
+        return [((xs - a, y - a / 2, t), (xs + a, y + a / 2), {'start': 'v', 'end': 'v'})
+                for y in (mid - dy / 2 - d, mid + dy / 2 - d)]
+    g.settle([pair(d) for d in (0.0, 1.0, 2.0, 4.0)], lay=True)
 
 
 @cur('uni20A5', '₥', letter_width(12, 3), kind='lower')

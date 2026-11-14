@@ -448,6 +448,10 @@ class Glyph:
                     overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p), fill=fill_leg(p),
                     end_cut=getattr(self, 'end_cut', None))
         rec = (rec or []) + self.extra_chamfers if record else []
+        if getattr(self, 'diagram', False):
+            # a diagram, the same outline in every font (⌬, technical.benzene): the italic curves none of it,
+            # as it slants none of it (a cell)
+            rec = []
         if record and getattr(self, 'square', False):
             # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)
             rec = rec + [('square',) if self.square is True else ('square', self.square)]

@@ -622,14 +622,10 @@ def _ring_w(p):
        kind=('punct', 1.0))
 def pertenthousand(g):
     """The per mille sign with one more ring."""
-    from .punct import pct_ring
-    p = g.p
-    sub = draw('percent', p)
-    w = sub.W
+    from .punct import pct_rings_after
+    sub = draw('percent', g.p)
     g.add_glyph(sub)
-    rw = _ring_w(p)
-    for i in range(2):
-        pct_ring(g, w + _ring_gap(p) + i * (rw + _ring_gap(p)), 0)
+    pct_rings_after(g, sub, 2, _ring_gap(sub.p))
 
 
 # --- Spaces -------------------------------------------------------------------------

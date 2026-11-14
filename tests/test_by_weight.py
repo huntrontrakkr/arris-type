@@ -361,3 +361,203 @@ def test_the_tugrik_has_no_half_unit_edge_at_the_baseline():
             p = italic(params(w, grade))
             rings, _ = place('uni20AE', p)
             assert not topology.faults(rings, p.c, True), (w, grade)
+
+
+def _bars_and_ink(name, p):
+    """The outer edges of a sign's upright bars (read across their tops, under
+    the corners) and its ink's extent, as drawn before the curves and the slant."""
+    from shapely.geometry import LineString
+    ink = rings_to_shapely([[q[:2] for q in r] for r in draw(name, p).rings()]).buffer(0)
+    x0, _, x1, y1 = ink.bounds
+    y = y1 - 1.5 * p.c
+    across = ink.intersection(LineString([(x0 - 10, y), (x1 + 10, y)]))
+    bars = sorted(s.bounds[::2] for s in getattr(across, 'geoms', [across]))
+    return bars, (x0, x1)
+
+
+@pytest.mark.parametrize('cut', list(ALL_CUTS))
+def test_the_struck_bars_are_crossed_through(cut):
+    """operators.negate_across: ∤ and ∦ are struck by the not-equal sign's
+    stroke turned a quarter, reaching past the outer bars as far as an
+    arrow's negation reaches past its shafts. Struck at 2:1 as the not-equal
+    sign is, ∦'s stroke ended inside both bars at every weight and it read
+    as a Cyrillic И. In a cell narrower than the sign the stroke's reach
+    gives way before the white between the bars does."""
+    weights = (300, 400, 500, 600, 700) if cut in MONO_CUTS else (100, 400, 700, 900)
+    for w in weights:
+        p = ALL_CUTS[cut](w)
+        for name, n in (('uni2224', 1), ('uni2226', 2)):
+            bars, (x0, x1) = _bars_and_ink(name, p)
+            assert len(bars) == n, (name, cut, w, bars)
+            assert bars[0][0] - x0 >= 0.5 * p.m and x1 - bars[-1][1] >= 0.5 * p.m, (name, cut, w, bars, x0, x1)
+            rings, _ = place(name, p)
+            assert not topology.faults(rings, p.c, bool(p.slant)), (name, cut, w)
+        plain, _ = _bars_and_ink('uni2225', p)
+        struck, _ = _bars_and_ink('uni2226', p)
+        # (Arris Mono Italic draws it a tenth smaller to fit the cell, as it does any sign whose ink would lean out)
+        assert struck[1][0] - struck[0][1] >= 0.85 * (plain[1][0] - plain[0][1]), (cut, w, plain, struck)
+
+
+@pytest.mark.parametrize('cut', list(ALL_CUTS))
+def test_the_open_headed_arrow_keeps_a_shaft_between_its_heads(cut):
+    """arrows.Spec.depth: the run between ⇿'s two open heads is counted clear
+    of their backs. Counted from the middle of each back, the white between
+    the backs was half a stem from 550 (65 units at Black for a stem of 200,
+    35 in Arris Mono Narrow) and the shaft's two joins met in a pinch."""
+    from shapely.geometry import LineString
+    weights = (300, 400, 500, 600, 700) if cut in MONO_CUTS else (400, 550, 700, 900)
+    for w in weights:
+        p = ALL_CUTS[cut](w)
+        ink = rings_to_shapely([[q[:2] for q in r] for r in draw('uni21FF', p).rings()]).buffer(0)
+        x0, y0, x1, y1 = ink.bounds
+        y = (y0 + y1) / 2 + 0.5 * p.sh + 1.5 * p.c + 2         # just clear of the shaft and its joins
+        across = ink.intersection(LineString([(x0 - 10, y), (x1 + 10, y)]))
+        segs = sorted(s.bounds[::2] for s in getattr(across, 'geoms', [across]))
+        mid = (x0 + x1) / 2
+        white = [b[0] - a[1] for a, b in pairwise(segs) if a[1] <= mid <= b[0]]
+        assert white and white[0] >= 0.7 * p.sv, (cut, w, white, p.sv)
+        rings, _ = place('uni21FF', p)
+        assert not topology.faults(rings, p.c, bool(p.slant)), (cut, w)
+
+
+def test_the_benzene_ring_is_one_drawing_everywhere():
+    """technical.benzene: ⌬ is the textbook ring (a regular hexagon on a
+    point, a bond along every other side), the same outline in every font,
+    at every weight and grade, upright in the italics. Drawn with each
+    weight's strokes and 2:1 slopes, its ring shut in Arris Mono Narrow
+    Italic at 450 and it leaned with the italic."""
+    from shapely import affinity
+
+    def ink(p):
+        rings, _ = place('uni232C', p)
+        assert not topology.faults(rings, p.c, False)
+        shape = rings_to_shapely(polylines(rings) if p.slant else [[q[:2] for q in r] for r in rings]).buffer(0)
+        return affinity.translate(shape, -shape.bounds[0], 0)
+    ref = ink(params(400))
+    parts = getattr(ref, 'geoms', [ref])
+    assert len(parts) == 4 and sum(len(q.interiors) for q in parts) == 1
+    for cut, mk in ALL_CUTS.items():
+        for w in (300, 400, 700) if cut in MONO_CUTS else (100, 400, 900):
+            assert ink(mk(w)).symmetric_difference(ref).area < 1.0, (cut, w)
+    for grade in (-100, 100):
+        for w in (100, 900):
+            assert ink(params(w, grade)).symmetric_difference(ref).area < 1.0, (w, grade)
+            assert ink(italic(params(w, grade))).symmetric_difference(ref).area < 1.0, (w, grade)
+
+
+@pytest.mark.parametrize('cut', list(MONO_CUTS))
+def test_the_hourglass_keeps_its_shape_in_the_cell(cut):
+    """technical._hourglass: in a cell narrower than the glass its sides run
+    steeper (to 4:1), the neck's white narrowing and the strokes lightening
+    only where that does not fit. Kept at 2:1 and shortened, the sides were
+    a third of the glass's height in Arris Mono Narrow at Bold and the white
+    a third of the way up as narrow as at the waist (an I between two bars),
+    and ⏳'s sand was gone there and in the italic cells from Bold."""
+    from shapely.geometry import LineString
+
+    def white_at(ink, y, x0, x1):
+        across = ink.intersection(LineString([(x0 - 5, y), (x1 + 5, y)]))
+        segs = sorted(s.bounds[::2] for s in getattr(across, 'geoms', [across]))
+        mid = (x0 + x1) / 2
+        return next((b[0] - a[1] for a, b in pairwise(segs) if a[1] <= mid <= b[0]), 0.0)
+
+    def pieces(p):
+        rings, _ = place('uni23F3', p)
+        assert not topology.faults(rings, p.c, bool(p.slant)), (cut, p)
+        ink = rings_to_shapely(polylines(rings) if p.slant else [[q[:2] for q in r] for r in rings]).buffer(0)
+        return len(getattr(ink, 'geoms', [ink]))
+    regular = pieces(MONO_CUTS[cut](400))
+    for w in (300, 400, 450, 500, 600, 700):
+        p = MONO_CUTS[cut](w)
+        ink = rings_to_shapely([[q[:2] for q in r] for r in draw('uni231B', p).rings()]).buffer(0)
+        x0, y0, x1, y1 = ink.bounds
+        a, h = (y0 + y1) / 2, (y1 - y0) / 2
+        waist = white_at(ink, a, x0, x1)
+        bulbs = min(white_at(ink, a + h / 3, x0, x1), white_at(ink, a - h / 3, x0, x1))
+        assert waist <= 0.75 * bulbs, (cut, w, waist, bulbs)
+        assert pieces(p) == regular, (cut, w)
+
+
+@pytest.mark.parametrize('cut', list(ALL_CUTS))
+def test_the_per_mille_rings_are_one_size(cut):
+    """punct.pct_rings_after: ‰'s and ‱'s rings after the % are drawn at
+    the measures the % was drawn with. In the monospaced cell the % is
+    fitted to its own cell, its rings drawn smaller, and the rings drawn
+    beside it at the sign's own stood a third larger (Arris Mono Italic at
+    every weight, Mono Narrow from 500)."""
+    weights = (300, 400, 500, 600, 700) if cut in MONO_CUTS else (100, 400, 700, 900)
+    for w in weights:
+        p = ALL_CUTS[cut](w)
+        for name in ('perthousand', 'uni2031'):
+            ink = rings_to_shapely([[q[:2] for q in r] for r in draw(name, p).rings()]).buffer(0)
+            rings = [q for q in getattr(ink, 'geoms', [ink]) if q.interiors]
+            sizes = [(q.bounds[2] - q.bounds[0], q.bounds[3] - q.bounds[1]) for q in rings]
+            lower = [s for q, s in zip(rings, sizes) if q.bounds[1] < 0.25 * p.cap]
+            assert len(lower) >= (2 if name == 'perthousand' else 3), (name, cut, w, sizes)
+            assert max(s[0] for s in lower) - min(s[0] for s in lower) <= 2, (name, cut, w, lower)
+
+
+@pytest.mark.parametrize('cut', list(MONO_CUTS))
+def test_the_caron_apostrophe_stands_apart_in_the_cell(cut):
+    """marks._caron_apostrophe: ď ľ ť Ľ keep a white between the letter and
+    its apostrophe in the monospaced cells, the apostrophe placed by its own
+    ink. Its tail reached past the measure that placed it, and from Arris
+    Mono Regular it ran into the stem."""
+    for name in ('dcaron', 'lcaron', 'tcaron', 'Lcaron'):
+        for w in (300, 400, 500, 600, 700):
+            p = MONO_CUTS[cut](w)
+            rings, _ = place(name, p)
+            ink = rings_to_shapely(polylines(rings) if p.slant else [[q[:2] for q in r] for r in rings]).buffer(0)
+            assert len(getattr(ink, 'geoms', [ink])) == 2, (name, cut, w)
+
+
+@pytest.mark.parametrize('cut', list(CUTS))
+def test_the_tugrik_shows_its_pair_on_both_sides_of_the_stem(cut):
+    """currency.tugrik: two strokes cross the T's stem rising one for two,
+    each reaching past it alike on both sides, centred between the bar and
+    the baseline. At 45 degrees from 800 the pair stood so low that the
+    lower stroke's left arm went under the baseline: one arm left of the
+    stem."""
+    from shapely.geometry import LineString
+    for w in (100, 400, 600, 700, 800, 900):
+        p = CUTS[cut](w)
+        g = draw('uni20AE', p)
+        ink = rings_to_shapely([[q[:2] for q in r] for r in g.rings()]).buffer(0)
+        y = p.cap - g.sh - 0.3 * p.m                       # just under the bar, over the pair
+        x0, _, x1, _ = ink.intersection(LineString([(-1e3, y), (1e4, y)])).bounds
+        for x in (x0 - 0.4 * p.m, x1 + 0.4 * p.m):
+            across = ink.intersection(LineString([(x, 1), (x, y)]))
+            assert len(getattr(across, 'geoms', [across])) == 2, (cut, w, x)
+
+
+@pytest.mark.parametrize('cut', list(ALL_CUTS))
+def test_the_cruzeiro_r_is_one_drawing_apart_from_the_c(cut):
+    """currency.cruzeiro: ₢'s r is drawn apart from the C, one drawing in
+    one place from the Regular to the cut's heaviest weight, with white all
+    round it. Drawn at each weight's strokes against the C's mouth, the C's
+    lower beak ran into it from Bold and at Black the two were one shape."""
+    from shapely import affinity
+    from shapely.geometry import Polygon
+
+    def parts(p):
+        rings, _ = place('uni20A2', p)
+        rr = polylines(rings) if p.slant else [[q[:2] for q in r] for r in rings]
+        ink = sorted((Polygon(r) for r in rr if Polygon(r).exterior.is_ccw), key=lambda q: q.area)
+        assert len(ink) == 2 and len(rr) == 2, (cut, p.sv)
+        r, c = ink
+        assert r.distance(c) >= 30, (cut, p.sv)
+        x0, y0 = r.bounds[:2]
+        return affinity.translate(r, -x0, -y0), (x0 - c.bounds[0], y0)
+
+    def same(a, b):
+        return a[0].hausdorff_distance(b[0]) < 1.0 and abs(a[1][0] - b[1][0]) < 3 and abs(a[1][1] - b[1][1]) < 3
+    mk = ALL_CUTS[cut]
+    heavy = (400, 500, 600, 700) if cut in MONO_CUTS else (400, 600, 800, 900)
+    ref = parts(mk(heavy[0]))
+    for w in (100, 300) + heavy[1:]:
+        r = parts(mk(w))
+        assert w < heavy[0] or same(r, ref), (cut, w)
+    if cut in CUTS:
+        for grade in (-100, 100, 200):
+            p = params(900, grade) if cut == 'upright' else italic(params(900, grade))
+            assert same(parts(p), ref), (cut, grade)

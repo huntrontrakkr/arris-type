@@ -26,9 +26,11 @@ media controls and the watch's own pictographs.
 """
 from __future__ import annotations
 
-from shapely.geometry import Polygon
+import math
 
-from ..draw import B, REGISTRY, _lightened, glyph
+from shapely.geometry import LineString, Polygon
+
+from ..draw import B, REGISTRY, _lightened, _thickness, glyph
 from ..params import SQRT2
 from .arrows import chev, kb_of, reach, stack_k, Ctx, Turn
 from .figures import beak_depth
@@ -468,33 +470,59 @@ def keyboard(g):
     g.stroke((inner0 + step, yb, s), (inner1 - step, yb))
 
 
+BENZENE_R = 280     # ⌬: the hexagon's radius to the middle of its stroke, in units, in every font
+BENZENE_T = 64      # ... its strokes' thickness, the ring's and the bonds'
+BENZENE_GAP = 44    # ... the white between a bond and the side it doubles, and at the bond's ends
+BENZENE_AXIS = 360  # ... its centre's height: the math axis (half the cap height in every cut)
+
+
 def _benzene_w(p):
-    """⌬'s body: three quarters of the cap height, or room for its ring
-    (its counter nine tenths of a stem) with half a stem of white about it."""
-    q = _light(p)
-    return max(0.75 * q.cap, 2 * 2.6 * q.sv) + q.sv
+    """⌬'s body: the hexagon's width across its upright sides."""
+    return 2 * (BENZENE_R * math.cos(math.pi / 6) + BENZENE_T / 2)
 
 
-@tech(u(0x232C), '⌬', _benzene_w)
+@glyph(u(0x232C), '⌬', _benzene_w, kind=('punct', 1.0), cell=True)
 def benzene(g):
-    """A hexagon whose slopes run at 2:1, a ring inside it."""
-    lighten(g)
-    p = g.p
-    a = axis(p)
-    W = g.W
-    w = (W - p.sv) / 2                                      # half width, centreline
-    c = W / 2
-    hh = w                                                  # a 2:1 slope from the point to the top's end
-    g.stroke((c - w, a), (c - w / 2, a + hh), (c + w / 2, a + hh), (c + w, a), (c + w / 2, a - hh),
-             (c - w / 2, a - hh), closed=True)
-    # the ring: clear of the hexagon's top and of its 2:1 sides (where its
-    # upright side ends) by half a stem and more, which the italic's curves need
-    gap = max(0.5 * p.sv, 0.75 * p.m) + 0.25 * p.sv
-    wss = p.ss / STEEP[1]
-    t = max(0.75 * p.sv, 1.12 * p.floor)                    # a lighter ring, as a small one is
-    r = min(max(0.45 * w, 0.9 * p.sv), w - g.sh / 2 - gap - t / 2,
-            (w - wss / 2 - t / 2 - gap) / 1.207)
-    _ring(g, c - r, a - r, c + r, a + r, w=t, leg=0.586 * r)
+    """The benzene ring as a chemistry textbook draws it (Kekulé's): a
+    regular hexagon standing on a point, a bond inside along every other
+    side, as Unicode draws BENZENE RING and every family that has it does
+    (Noto Sans Math and Symbols, FreeMono). It is a diagram, not a letter:
+    the same outline in every font, at every weight, grade and watch,
+    upright in the italics (a cell, as the terminal and bracket pieces
+    are) and small enough for Mono's cell, so nothing in it moves. (The
+    hexagon with a ring inside is ⏣, which Arris does not have; drawn so
+    here, with the weight's strokes and 2:1 slopes, the ring shut in Arris
+    Mono Narrow Italic at 450 and the hexagon leaned with the italic.)"""
+    from shapely import affinity
+    from shapely.geometry import box
+    from ..instances import params
+    q = params(400)                                         # its corners broken as the Regular's, in every font
+    g.p = g.p.with_(c=q.c, leg=q.leg, floor=q.floor, sv=q.sv, sh=q.sh, sd=q.sd, ss=q.ss)
+    g.diagram = True
+    c, a = g.W / 2, BENZENE_AXIS
+    r, t, gap = BENZENE_R, BENZENE_T, BENZENE_GAP
+    inr = r * math.cos(math.pi / 6)                         # the radius to a side's middle
+    corner = [(c + r * math.cos(math.radians(90 + 60 * i)), a + r * math.sin(math.radians(90 + 60 * i)))
+              for i in range(6)]
+
+    def scaled(k):
+        return Polygon([(c + k * (x - c), a + k * (y - a)) for x, y in corner])
+    hole = scaled((inr - t / 2) / inr)
+    g.extra.append(scaled((inr + t / 2) / inr).difference(hole))
+    room = hole.buffer(-gap + 0.5, join_style='mitre')       # (a hair inside: the bond's edge is laid on its line)
+    d = (inr - t - gap) / inr                               # a bond's middle, as a share of a side's
+    for i in (1, 3, 5):                                     # every other side: the upper left, lower left and right
+        (x0, y0), (x1, y1) = corner[i], corner[(i + 1) % 6]
+        ang = math.degrees(math.atan2(y1 - y0, x1 - x0))
+        mx, my = c + ((x0 + x1) / 2 - c) * d, a + ((y0 + y1) / 2 - a) * d
+
+        def bond(half):
+            return affinity.translate(affinity.rotate(box(-half, -t / 2, half, t / 2), ang, origin=(0, 0)), mx, my)
+        lo, hi = 0.0, r / 2                                 # the longest that keeps the white off the ring at its ends
+        for _ in range(40):
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if room.contains(bond(mid)) else (lo, mid)
+        g.extra.append(bond(lo))
 
 
 @tech(u(0x238B), '⎋', lambda p: 0.85 * _pict(p).cap + _pict(p).sv)
@@ -1243,17 +1271,40 @@ def _hg_w(p):
     return 2 * (_hg(pk)[2] + pk.m) + pk.sv * 0
 
 
+HG_STEEPEST = 4.0   # an hourglass's sides in a narrow cell rise at most this much for each unit across
+HG_NECK = 0.5       # ... where that does not fit, its neck's white narrows to this share
+HG_LIGHTEST = 0.75  # ... and then its strokes lighten together to this share
+
+
 def _hourglass(g, sand):
     """An hourglass: two bars, and glass whose sides run at 2:1 into an
     upright neck; with sand, a heap on the lower bar and a band left at the
-    foot of the upper bulb, each following the glass a half stem inside it."""
+    foot of the upper bulb, each following the glass a half stem inside it.
+
+    In a cell narrower than the glass (Arris Mono and Mono Narrow) its sides
+    run steeper, to 4:1, its neck kept as short; where even that does not
+    fit, the neck's white narrows (to half), then its strokes lighten
+    together (to 0.75), and only past that do the sides shorten. Kept at 2:1 and shortened, the
+    sides were a third of the glass's height in Arris Mono Narrow at Bold,
+    the neck an upright channel between them, and the hourglass read as an
+    I between two bars (⏳'s heap went with it)."""
     lighten(g)
     p = g.p
     W = g.W
     top, bot, half_w, dy, neck, w = _hg(p)
-    if half_w > W / 2 - p.m:                                 # a narrow cell: a steeper, shorter glass
-        half_w = W / 2 - p.m
-        dy = min(dy, 2 * (half_w - neck - w / 2))
+    room = W / 2 - p.m
+    if half_w > room:
+        need = dy / HG_STEEPEST                             # the least run across for the glass's sides
+        fn = min(1.0, max(HG_NECK, (room - need - w / 2) / neck))
+        k = min(1.0, (room - need) / (fn * neck + w / 2))
+        if k < 1.0:
+            g.p = p = _lightened(p, max(k, HG_LIGHTEST))
+            top, bot, _, dy, neck, w = _hg(p)
+        neck *= fn
+        half_w = room
+        dy = min(dy, HG_STEEPEST * (half_w - neck - w / 2))
+    run = (half_w - neck - w / 2) / dy                      # across, for each unit up the glass's sides
+    wr = p.ss * (1 + run * run) ** 0.5                      # a side's stroke, measured across
     yt, yb = top - g.sh / 2, bot + g.sh / 2
     g.stroke((0, yt), (W, yt))
     g.stroke((0, yb), (W, yb))
@@ -1264,15 +1315,15 @@ def _hourglass(g, sand):
     if not sand:
         return
     gap = max(0.5 * p.sv, 0.75 * p.m)
-    gh = gap / STEEP[1]                                      # that white, measured across a 2:1 wall
+    gh = gap * (1 + run * run) ** 0.5                        # that white, measured across a side
     yn = yt - dy                                             # the upper bulb's foot
-    lower = lambda y: W / 2 - half_w + (y - yb) / 2 + w / 2 + gh
-    upper = lambda y: W / 2 - (neck + w / 2) - (y - yn) / 2 + w / 2 + gh
+    lower = lambda y: W / 2 - half_w + (y - yb) * run + wr / 2 + gh
+    upper = lambda y: W / 2 - (neck + w / 2) - (y - yn) * run + wr / 2 + gh
     base = yb + g.sh / 2
-    hh = min(0.4 * dy, (W / 2 - lower(base)) * 2 - p.sv)
+    hh = min(0.4 * dy, (W / 2 - lower(base)) / run - p.sv)
     solid(g, [(lower(base), base), (W - lower(base), base), (W - lower(base + hh), base + hh),
               (lower(base + hh), base + hh)])
-    y1 = yn + 2 * (gh - neck + p.sv / 4)
+    y1 = yn + (gh + wr / 2 - (neck + w / 2) + p.sv / 4) / run
     y2 = max(min(y1 + 0.35 * dy, yt - g.sh / 2 - gap), y1 + 0.4 * p.sv)
     solid(g, [(upper(y1), y1), (W - upper(y1), y1), (W - upper(y2), y2), (upper(y2), y2)])
 

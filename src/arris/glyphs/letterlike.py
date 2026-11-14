@@ -100,22 +100,26 @@ _double('uni2119', 'ℙ', 'P', lambda p, sh: (0.0, p.cap - sh / 2))
 _double('uni211D', 'ℝ', 'R', lambda p, sh: (0.0, p.cap - sh / 2))
 
 
-def _dsq_inner(g):
-    """ℚ's inner stroke's thickness. Where ℚ is drawn no wider than the Q
-    (Arris Mono's cell) the inner stroke and its slit stand in the Q's own
-    counter, and the stroke gives way, to the floor, before the tail does:
-    the counter beside it keeps what the Q's rule needs to leave its tail
-    whole (Q_OPEN stems each side, over Q_BOWL), or the Q's own counter
-    where that is less."""
+def _dsq_parts(g):
+    """ℚ's inner stroke and the slit beside it. Where ℚ is drawn no wider
+    than the Q (Arris Mono's cell) the two stand in the Q's own counter,
+    and give way before the tail does: the stroke to the floor, then the
+    slit to the least white, so the counter beside them keeps what the Q's
+    rule needs to leave its tail whole (Q_OPEN stems each side, over
+    Q_BOWL), or the Q's own counter where that is less. (With the slit
+    held, the tail was a stub from Arris Mono Medium and in Mono Narrow.)"""
+    from .letterframe import least_white
     p = g.p
     t, s = ds_t(p), ds_s(p)
     q = min(g.W, REGISTRY['Q'].width(p)) - 2 * p.sv          # the Q's own counter at this width
-    room = g.W - 2 * p.sv - min(q, 2 * Q_OPEN * p.sv / Q_BOWL) - s
-    return max(p.floor, min(t, room))
+    room = g.W - 2 * p.sv - min(q, 2 * Q_OPEN * p.sv / Q_BOWL)   # for the stroke and its slit
+    t = max(p.floor, min(t, room - s))
+    s = max(least_white(p), min(s, room - t))
+    return t, s
 
 
 def _dsq_open(g):
-    return _q_open(g, _dsq_inner(g) + ds_s(g.p))
+    return _q_open(g, sum(_dsq_parts(g)))
 
 
 # (Drawn here and not stamped: the Q's tail is cut back from the counter's left wall by a break, and stamped at
@@ -125,7 +129,20 @@ def _dsq_open(g):
       openings=[Opening(_dsq_open, 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=Q_OPEN, own=True)])
 def dsQ(g):
     p = g.p
-    t, s = _dsq_inner(g), ds_s(p)
+    if p.mono:
+        # In Mono's cell the Q's left side is split in two lines, a slit between them, in the room the stem
+        # takes (more only where two lines and a slit need it): the counter and the tail are the Q's own. An
+        # inner stroke standing in the counter beside the stem, as in Arris, left the tail a stub from Arris
+        # Mono Medium and none in Mono Narrow at Bold.
+        from .letterframe import least_white
+        s = max(least_white(p), 0.3 * p.sv)
+        t = max(p.floor, (p.sv - s) / 2)
+        total = 2 * t + s
+        q_drawing(g, total - p.sv, left=t)
+        x0 = Frame(g, 10).X(1) - p.sv / 2                      # the side's outer edge
+        g.stroke((x0 + t + s + t / 2, g.sh / 2, t), (x0 + t + s + t / 2, p.cap - g.sh / 2))
+        return
+    t, s = _dsq_parts(g)
     q_drawing(g, t + s)
     g.stroke((p.sv + s + t / 2, g.sh / 2, t), (p.sv + s + t / 2, p.cap - g.sh / 2))
 

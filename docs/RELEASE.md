@@ -849,6 +849,83 @@ The six causes:
   - ₮'s pair of strokes is settled a unit or two down where the lower
     one's underside, cut flat by the baseline, left an edge of half a unit
     beside the stem's foot in the italic (Black on the heavy grade).
+  - ∤ and ∦ are struck by the not-equal sign's stroke turned a quarter,
+    rising one for two across (`operators.negate_across`): it meets the
+    bars at the angle the not-equal sign's meets its own, and reaches past
+    the outer bars as far as an arrow's negation reaches past its shafts.
+    Struck at 2:1 as the not-equal sign is, ∦'s stroke ended inside both
+    bars at every weight and the sign read as a Cyrillic И; every family
+    that has them (Noto Sans Math, DejaVu Sans, FreeSans) crosses both bars
+    at a lower angle. In a cell narrower than the sign the stroke's reach
+    gives way before the white between the bars does; Arris Mono Italic
+    draws ∦ a tenth smaller to keep it in its cell, as it does any sign
+    whose ink would lean out. ∦ grows to give the stroke its room (731
+    units of advance for 653 at Medium, 872 for 681 at 850); ∤ keeps its
+    advance.
+  - ⇿'s run between its two open heads is counted clear of the heads'
+    backs (`arrows.Spec.depth`): counted from the middle of each back, the
+    white between the backs was half a stem from 550 (65 units at Black
+    for a stem of 200, 35 in Arris Mono Narrow) and the shaft's two joins
+    met in a pinch. It is 1.2 to 1.5 stems now in every cut, and the
+    advance grows with it, smoothly, to 1,327 units at Black for 1,038.
+    ⇽ ⇾ are as they were.
+  - ⌬ is the benzene ring as a chemistry textbook draws it, Kekulé's
+    (`technical.benzene`): a regular hexagon standing on a point with a
+    bond inside along every other side, as Unicode draws BENZENE RING and
+    Noto Sans Math and Symbols and FreeMono do. It is a diagram, not a
+    letter: one outline in every font, at every weight, grade and watch,
+    upright in the italics and small enough for Mono's cell, so nothing in
+    it moves (a test holds every cut to the Regular's to under a unit).
+    Drawn before with a ring inside (that is ⏣, which Arris does not have),
+    at each weight's strokes and 2:1 slopes, it leaned with the italic and
+    its ring was squeezed in the monospaced cells to under its own stroke:
+    in Arris Mono Narrow Italic the counter shut at 450 and was a dot at
+    500.
+  - ⌛ ⏳ in a cell narrower than the glass (Arris Mono and Mono Narrow)
+    keep its height and run their sides steeper, to 4:1
+    (`technical._hourglass`); where even that does not fit, the neck's
+    white narrows (to half), then the strokes lighten together (to 0.75),
+    and only past that do the sides shorten. Kept at 2:1 and shortened,
+    the sides were a third of the glass's height in Arris Mono Narrow at
+    Bold, the white a third of the way up as narrow as at the waist, and
+    the hourglass read as an I between two bars; ⏳'s sand was gone there
+    from 600 and in both italic cells from Bold. Arris is as it was.
+  - ‰ ‱: the rings after the % are drawn at the measures the % was
+    drawn with (`punct.pct_rings_after`). In the monospaced cell the % is
+    fitted to its own cell, its rings drawn smaller, and the rings beside
+    it, drawn at the sign's own measures, stood a third larger than the
+    %'s (Arris Mono Italic at every weight, Mono Narrow from 500).
+  - ₢ is a C and an r drawn apart (`currency.cruzeiro`). The r is one
+    drawing in one place in each cut from the Regular to Black, at the
+    Regular's strokes, with a white all round it: placed for the cut's
+    heaviest weight and grade, it keeps 59 units off the C at Black in
+    Arris and 36 in its italic, whose upper beak hangs lower. Drawn before
+    at each weight's strokes, standing on the bottom bar against the C's
+    mouth, the C's lower beak ran into the r's stem from Bold and at Black
+    the two were one shape; in the italic the r took the beak's place. The
+    r is kept as drawn (not finished again on the C's breaks, nor rounded
+    by the italic at the C's weight), so it does not change with the C.
+  - ≰ ≱ are struck at 3:1 (`operators._le_strike`, as DejaVu strikes
+    them): at the not-equal sign's 2:1 through a sign twice as tall as it
+    is wide the stroke ran corner to corner, and its top end met the end
+    of ≰'s upper arm, which stood out past it in a notch.
+  - ď ľ ť Ľ: the apostrophe is placed by its ink and keeps the least
+    white off its letter (its tail reaches past the measure that placed
+    it); in Arris Mono it ran into the stem from Regular on. Where the cell
+    has no room for that (ď at Mono Bold Italic) the white closes up with
+    the rest of the squeeze (`marks._squeeze`) as a stack of marks does,
+    and the ink stays in the cell.
+  - ₮'s two strokes cross the stem rising one for two (the slope ∤ ∦ are
+    struck at), each reaching past it alike on both sides and centred
+    between the bar and the baseline, held at the Regular. At 45 degrees,
+    from 800 the pair stood so low that the lower stroke's left arm went
+    under the baseline and the left of the pair read as one arm.
+    ₺, drawn with the same pair of strokes, reaches past its stem alike at
+    Bold and Black too, where its left arms had gone to stubs.
+  - ℚ in Arris Mono: the Q's left side is split in two lines with a slit
+    between them, in the room the stem takes (`letterlike.dsQ`). The inner
+    stroke standing in the counter, as in Arris, left the tail a stub from
+    Arris Mono Medium and none in Mono Narrow at Bold.
   - The rule that lightens a sign to keep its whites (`draw.white_features`)
     acts from the cut's Regular on, as it says (Arris Mono Narrow's is its
     own, `draw._lighter_than_regular`): at the lighter weights, where no

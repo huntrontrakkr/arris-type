@@ -824,6 +824,7 @@ def _caron_apostrophe(g, base):
     from ..draw import Glyph
     from ..geom import rings_to_shapely
     from .figures import heaviness
+    from .letterframe import least_white
     p0 = g.p
     ink = g.extra[0]
     # the Regular's apostrophe from there to Black (mark_params). Not in the
@@ -852,12 +853,19 @@ def _caron_apostrophe(g, base):
 
         def reach_right(s_):
             t, k = _squeeze(s_)
+            t *= min(1.0, k / LIGHTEST)                     # (past LIGHTEST the white shrinks with the mark)
             q = _scaled(p, k)
             top_ = q.cap if base.isupper() else q.asc
-            scratch = Glyph(q, W=g.W)
-            scratch.warp = getattr(bf, 'warp', None)        # (the letter's overshoot moves its marks: in the italic, leaned)
-            _comma(scratch, None, right0 + t * max(q.m, 0.6 * q.sv) + 0.75 * q.sv + q.sd / SQRT2, top_, stub=1.5 * q.sv)
-            return max(_ink_x(scratch, p0)[1], x1f)
+            x_ = right0 + t * max(q.m, 0.6 * q.sv) + 0.75 * q.sv + q.sd / SQRT2
+            for _ in range(8):                              # (placed by its ink, as it is drawn below)
+                scratch = Glyph(q, W=g.W)
+                scratch.warp = getattr(bf, 'warp', None)    # (the letter's overshoot moves its marks: in the italic, leaned)
+                _comma(scratch, None, x_, top_, stub=1.5 * q.sv)
+                dist = rings_to_shapely(scratch.rings()).distance(inkf)
+                if dist >= t * least_white(p0) - 0.5:
+                    break
+                x_ += t * least_white(p0) - dist + 0.5
+            return max(_ink_x(scratch, p0)[1], x1f) + 0.5 * t * least_white(p0)    # (a margin for the letter's own fit)
         if reach_right(0.0) > room:
             # (past LIGHTEST only if LIGHTEST is not enough: _squeeze)
             lo_, hi_ = (0.0, 1.0) if reach_right(1.0) <= room else (1.0, CELL_GIVE)
@@ -868,6 +876,7 @@ def _caron_apostrophe(g, base):
                 else:
                     lo_ = mid
             tight, k = _squeeze(hi_)
+            tight *= min(1.0, k / LIGHTEST)
             p = _scaled(p, k)
     top = p.cap if base.isupper() else p.asc
     gap = tight * max(p.m, 0.6 * p.sv)
@@ -882,9 +891,14 @@ def _caron_apostrophe(g, base):
     floor = below.bounds[3] if not below.is_empty else -1e4
     clear = max(p.c, 0.5 * p.m)
     stub = min(1.5 * p.sv, max(top - floor - clear - 0.75 * p.sv, p.sv / 3))
-    if p is p0:
-        _comma(g, None, x, top, stub=stub)
-    else:
+    # placed by its ink: its tail reaches further than the measure above, and in Mono's cell, where the gap
+    # closes up (_squeeze), it ran into the stem of ď ľ ť Ľ from Regular on; it keeps the least white
+    want = tight * least_white(p0)                          # (in the cell it closes up as the gap does: _squeeze)
+    for _ in range(8):
         target = Glyph(p, W=g.W)
         _comma(target, None, x, top, stub=stub)
-        g.add_glyph(target)
+        dist = rings_to_shapely(target.rings()).distance(ink)
+        if dist >= want - 0.5:
+            break
+        x += want - dist + 0.5
+    g.add_glyph(target)

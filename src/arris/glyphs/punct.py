@@ -774,6 +774,22 @@ def pct_ring(g, x0, y0):
     g.add_glyph(ring)
 
 
+def pct_rings_after(g, sub, n, gap):
+    """n more of the percent's rings in g, after a % drawn as ``sub`` (at
+    the glyph's left, its body sub.W), ``gap`` apart: drawn at the measures
+    the % was drawn with. In the monospaced cell the % is fitted to its own
+    cell, its rings drawn smaller, and rings drawn at the sign's own
+    measures beside it stood larger than its own (‰ ‱ in Arris Mono Italic
+    at every weight, in Mono Narrow from 500)."""
+    from ..draw import Glyph
+    q = sub.p
+    rw = pct(q)[3]
+    rings = Glyph(q, W=g.W)
+    for i in range(n):
+        pct_ring(rings, sub.W + gap + i * (rw + gap), 0)
+    g.add_glyph(rings)
+
+
 @punct('percent', '%', 11, 3, width=pct_width)
 def percent(g):
     """Two rings and the 2:1 slash between them, each ring clear of it by

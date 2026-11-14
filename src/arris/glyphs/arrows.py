@@ -531,6 +531,11 @@ class Spec(Drawing):
         ctx.lead = self.lead
         offs = self.offs(ctx)
         d = head(ctx, self.head, h, offs).depth
+        if self.head == 'open' and self.tail == 'head':
+            # an open head's shaft starts at the middle of its back: the run between two such heads is
+            # counted clear of their backs (counted from their middles, ⇿'s was half a stem from 550, and its
+            # joins met in a pinch); beyond one head the free run is long enough as it is
+            d += ctx.t(0, 1) / 2
         if self.tail == 'head':
             d *= 2
         elif self.tail == 'feather':

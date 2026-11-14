@@ -334,7 +334,7 @@ def le_height(g):
     return Chevron().height(g) + eq_gap(g) + g.sh
 
 
-def negate(g, half=None, x=None, y=None):
+def negate(g, half=None, x=None, y=None, run=0.5):
     """The not-equal sign's 2:1 stroke, crossing at (x, y) and reaching
     ``half`` up and down (default: the not-equal sign's four modules)."""
     from ..draw import NUDGE
@@ -346,7 +346,7 @@ def negate(g, half=None, x=None, y=None):
     # settled a few units across where its edge would pass a hairline off the sign's (∄'s bottom arm at
     # Thin, in the italic)
     t = g.held((1.0, 2.0))
-    g.settle([[((x + d - half / 2, y - half, t), (x + d + half / 2, y + half), {'start': 'h', 'end': 'h'})]
+    g.settle([[((x + d - run * half, y - half, t), (x + d + run * half, y + half), {'start': 'h', 'end': 'h'})]
               for d in NUDGE], curves=True, lay=True)
 
 
@@ -670,10 +670,16 @@ def notgreaterequal(g):
     _le_strike(g)
 
 
+LE_RUN = 1 / 3      # ≰ ≱: their negation's run across for each unit up
+
+
 def _le_strike(g):
-    """The negation of <= and >=: the not-equal sign's stroke from below the
-    bar to above the chevron, crossing both, as tall as the sign needs."""
-    negate(g, half=_neg_half(g))
+    """The negation of <= and >=: a stroke from below the bar to above the
+    chevron, crossing both, as tall as the sign needs; steeper than the
+    not-equal sign's (3:1, LE_RUN), as DejaVu draws it. At 2:1 through a
+    sign twice as tall as it is wide it ran corner to corner: its top end
+    met the end of ≰'s upper arm, which stood out past it in a notch."""
+    negate(g, half=_neg_half(g), run=LE_RUN)
 
 
 @op(u(0x2266), '≦')
@@ -1635,12 +1641,33 @@ def divides(g):
     g.stroke((g.W / 2, a - h), (g.W / 2, a + h))
 
 
-@op(u(0x2224), '∤', width=lambda p: p.sv + 4 * p.m)
+def _past_bars(p):
+    """How far a negation reaches past the bars it crosses: the arrows'
+    (two modules, or the Regular's stem past it)."""
+    from ..draw import held_at
+    return max(2.0 * p.m, held_at(p).sv)
+
+
+def negate_across(g, reach, x=None, y=None):
+    """The negation of upright bars: the not-equal sign's stroke turned a
+    quarter, rising one for two across, so it meets the bars at the angle
+    the not-equal sign's meets its bars, its ends cut upright as those are
+    cut level; ``reach`` across from (x, y) each way."""
+    from ..draw import NUDGE
+    p = g.p
+    x = g.W / 2 if x is None else x
+    y = axis(p) if y is None else y
+    t = g.held((2.0, 1.0))
+    g.settle([[((x - reach, y + d - reach / 2, t), (x + reach, y + d + reach / 2), {'start': 'v', 'end': 'v'})]
+              for d in NUDGE], curves=True, lay=True)
+
+
+@op(u(0x2224), '∤', width=lambda p: p.sv + 2 * _past_bars(p))
 def notdivides(g):
     a = axis(g.p)
     h = _vbar_half(g.p)
     g.stroke((g.W / 2, a - h), (g.W / 2, a + h))
-    negate(g, half=max(3.5 * g.p.m, 1.4 * g.p.sv), x=g.W / 2)
+    negate_across(g, g.W / 2)
 
 
 def _par_gap(p):
@@ -1657,14 +1684,16 @@ def parallel(g):
         g.stroke((x, a - h), (x, a + h))
 
 
-@op(u(0x2226), '∦', width=lambda p: 2 * p.sv + _par_gap(p) + 2 * p.m)
+@op(u(0x2226), '∦', width=lambda p: 2 * p.sv + _par_gap(p) + 2 * _past_bars(p))
 def notparallel(g):
     p = g.p
     a = axis(p)
     h = _vbar_half(p)
-    for x in (p.m + p.sv / 2, g.W - p.m - p.sv / 2):
+    # the strike's reach past the bars gives way first where a cell is narrower than the sign
+    e = max(min(_past_bars(p), (g.W - 2 * p.sv - _par_gap(p)) / 2), 0.75 * p.m)
+    for x in (e + p.sv / 2, g.W - e - p.sv / 2):
         g.stroke((x, a - h), (x, a + h))
-    negate(g, half=max(3 * p.m, 1.2 * p.sv))
+    negate_across(g, g.W / 2)
 
 
 # --- Angles ----------------------------------------------------------------------------------
