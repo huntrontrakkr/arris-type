@@ -15,3 +15,9 @@ Open, small, at the heavy end only:
   Needs a fix for these three alone.
 - ° ✂ ⌀ & ⊫ ⊭ ⊛: each thins its horizontals to 0.7 at one weight. Same pinning in the counter-measure
   branch of draw._draw (bisection keeps AUTO_MIN when no value passes).
+
+Before any release (the owner, 2026-11-14): the website still describes 1.015, and its films,
+specimens and samples show the old drawings. Regenerating the films is a large part of the work:
+see arris-films (branch video-teaser), docs/FILMS.md, for what exists and the plan (Blender on the
+owner's GPU machine). Then check each claim on the site against the version 2 build (version, weight
+and style counts, the Mono ligature count, the Fontbakery line, "Openings").
