@@ -28,7 +28,7 @@ from .caps import big
 from .cyrillic import ALIASES as RU_ALIASES, ZE_BOWLS, ccap, mirror, sc, smallcap
 from .extra_latin import stamp
 from .figures import MOUTH_SHARE, _beak_limit, beak_depth, jog, wedge_bars
-from .letterframe import Frame, k_arms, letter_width, white_scale
+from .letterframe import Frame, k_arms, least_white, letter_width, white_scale
 
 # Code points that are Latin or Russian letters already.
 ALIASES = {
@@ -406,7 +406,10 @@ def Kastroke(g):
     weight as far as it must to keep BAR_WHITE beside it at both ends
     (draw.bar_white): from about 600, to the top of the stem at Black (the
     owner, 2026-11-06)."""
+    from shapely.geometry import LineString
+
     from ..draw import BAR_WHITE, Glyph, _thickness, bar_white
+    from ..geom import rings_to_shapely
     p = g.p
     dx = room(p)
     stamp(g, 'K', dx, width=g.W - dx)
@@ -431,8 +434,23 @@ def Kastroke(g):
     # settled a few units up where its end lands a hairline off the arm (Mono's italic at 550 on the
     # heavy grade), never down into the white it rose for
     run = (_thickness(p, g.sh)((1.0, 0.0)) - t) / 2
-    g.settle([[((-run, y_, t), (x1, y_))] for y_ in sorted({min(y + d, p.cap - t / 2) for d in (0, 2, 4, 8, 12)})],
-             lay=True)
+    letter = rings_to_shapely(g.outline(record=False)[0])
+
+    def ends(y_):
+        # Where it has risen to the top and the arm still comes in under it (Arris Mono Narrow Italic from
+        # 550, whose K stands in a narrow cell), its end stops the least white short of the arm's edge at its
+        # underside, or a module past the stem where that is less: run on, the end's corner met the arm in a
+        # pinch of a third of a unit at 600, and crossed it at 550. Where that is not clean either (the italic
+        # at Black, the arm's root at the bar), it runs on into the arm as before.
+        under = y_ - t / 2 - 0.5
+        wall = letter.intersection(LineString([(dx + p.sv + 1.0, under), (g.W + p.m, under)]))
+        xs = [q.coords[0][0] for q in getattr(wall, 'geoms', [wall]) if not q.is_empty and q.geom_type == 'LineString']
+        short = min([x1] + [x - least_white(p) for x in xs if x > dx + p.sv])
+        short = max(short, dx + p.sv + p.m)
+        return [short, x1] if short < x1 else [x1]
+
+    g.settle([[((-run, y_, t), (x, y_))]
+              for y_ in sorted({min(y + d, p.cap - t / 2) for d in (0, 2, 4, 8, 12)}) for x in ends(y_)], lay=True)
 
 
 @ccap('uni04B4', 'Ҵ', 13, 3)

@@ -19,8 +19,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from ..draw import B, REGISTRY, draw, drawn_spec, glyph
+from ..draw import B, REGISTRY, Opening, draw, drawn_spec, glyph
 from ..params import SQRT2, outer_leg
+from .caps import Q_BOWL, Q_OPEN, _q_open, q_drawing
 from .figures import beak_depth, jog
 from .letterframe import STEEP, Frame, close_slit, heft, least_white, letter_width
 from .lower import hook_room
@@ -97,7 +98,38 @@ def _double(name, ch, base, y_range, side=1, wider=True, kind='cap', dot=False):
 _double('uni2102', 'ℂ', 'C', lambda p, sh: (sh / 2, p.cap - sh / 2))
 _double('uni2119', 'ℙ', 'P', lambda p, sh: (0.0, p.cap - sh / 2))
 _double('uni211D', 'ℝ', 'R', lambda p, sh: (0.0, p.cap - sh / 2))
-_double('uni211A', 'ℚ', 'Q', lambda p, sh: (sh / 2, p.cap - sh / 2))
+
+
+def _dsq_inner(g):
+    """ℚ's inner stroke's thickness. Where ℚ is drawn no wider than the Q
+    (Arris Mono's cell) the inner stroke and its slit stand in the Q's own
+    counter, and the stroke gives way, to the floor, before the tail does:
+    the counter beside it keeps what the Q's rule needs to leave its tail
+    whole (Q_OPEN stems each side, over Q_BOWL), or the Q's own counter
+    where that is less."""
+    p = g.p
+    t, s = ds_t(p), ds_s(p)
+    q = min(g.W, REGISTRY['Q'].width(p)) - 2 * p.sv          # the Q's own counter at this width
+    room = g.W - 2 * p.sv - min(q, 2 * Q_OPEN * p.sv / Q_BOWL) - s
+    return max(p.floor, min(t, room))
+
+
+def _dsq_open(g):
+    return _q_open(g, _dsq_inner(g) + ds_s(g.p))
+
+
+# (Drawn here and not stamped: the Q's tail is cut back from the counter's left wall by a break, and stamped at
+# the wider body its counter ran on under the inner stroke, so from 850 the tail's end met that stroke and shut
+# a pinhole under it in the italic. Here the tail is the Q's own, measured on the counter the inner stroke leaves.)
+@sign('uni211A', 'ℚ', _ds_width('Q'), kind='cap',
+      openings=[Opening(_dsq_open, 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=Q_OPEN, own=True)])
+def dsQ(g):
+    p = g.p
+    t, s = _dsq_inner(g), ds_s(p)
+    q_drawing(g, t + s)
+    g.stroke((p.sv + s + t / 2, g.sh / 2, t), (p.sv + s + t / 2, p.cap - g.sh / 2))
+
+
 _double('uni2145', 'ⅅ', 'D', lambda p, sh: (sh / 2, p.cap - sh / 2))
 _double('uni2146', 'ⅆ', 'd', lambda p, sh: (sh / 2, p.asc), side=-1, kind='lower')
 

@@ -794,6 +794,46 @@ The six causes:
     Crossed at the Regular's place by a stroke as heavy as the leg, the x
     filled in from SemiBold and was a boot under the R from ExtraBold.
     Light and Regular are as they were.
+  - The question mark kept 0.8 of the weight's stem of white over its dot
+    at every weight, 160 units at Black (`punct.dot_gap`), where faces of
+    this kind keep a third of a stem (Tomorrow, Barlow, Kanit, Exo 2,
+    Oxanium, Inter): the dot came up into the bowl, its stem was gone from
+    750, the stroke turned down into its own end as a tail to the right,
+    and at Black it was another drawing again (❔ ❓ ‽ ¿ ⁇ ⁈ ⁉ with it).
+    The white over a dot is now the Regular's past the Regular, never under
+    0.55 of a stem (`punct.DOT_WHITE`: a tenth over the half stroke the
+    white rule reads as white, under which the exclamation mark had none
+    and was lightened); and the bowl's return rises where the dot comes up
+    under it, so a quarter of a stem of the stem shows below it
+    (`punct.question_return`), its bars giving way above as the S's do for
+    its bays (`figures.bay_stack`, which now reads where a rule of the
+    letter's own sets the lower bar). The italic, whose beak hangs two fifths
+    deeper, keeps its stem to ExtraBold and at Black ends the stroke flush
+    with the return. ! and ¡ keep a tighter gap from Bold (110 units at
+    Black for 160). Where a bar leads into the ? in place of its beak (the
+    `#?` and `??` ligatures, `punct.question_lead`), the bowl keeps the
+    beak's white under the bar's underside, the return coming down for it
+    toward the dot; the `??`'s bar comes in where the second ?'s own beak
+    ends (it came in 30 to 86 units lower, measured on bars the ? had
+    thinned). Both shut their bowl in a pinch in the italic from Bold. At
+    ExtraBold and Black `#?` has no room under the # bar for the bowl's
+    white at all, and its bowl closes (it did in the upright before):
+    left for the owner.
+  - ℚ is the Q drawn with its inner stroke (`letterlike.dsQ`), not the Q
+    stamped wider: there its counter ran on under the inner stroke, the
+    tail was measured on that and cut back from the wrong wall, and from
+    850 its end met the inner stroke and shut a pinhole in the italic; in
+    Arris Mono from Bold the two crossed. The tail is now the Q's own,
+    measured on the counter the inner stroke leaves, the same as the Q's
+    in Arris. In the monospaced cell, where ℚ is no wider than the Q, the
+    inner stroke thins toward the floor before the tail gives way (the
+    tail is a stub at Mono Bold, as the Q's own is at Black).
+  - Ҟ in Arris Mono Narrow Italic: the bar through the stem rises to the
+    stem's top and the arm, in the narrow cell, still comes in under it.
+    Its end met the arm in a pinch from 500 and crossed it at 550; it now
+    stops the least white short of the arm (a module past the stem at the
+    least), and where that is not clean either (the italic at Black, the
+    arm's root at the bar) runs on into the arm as it did.
   - The rule that lightens a sign to keep its whites (`draw.white_features`)
     acts from the cut's Regular on, as it says (Arris Mono Narrow's is its
     own, `draw._lighter_than_regular`): at the lighter weights, where no

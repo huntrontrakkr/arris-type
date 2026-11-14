@@ -290,7 +290,7 @@ Q_OPEN = 0.85    # stems: the radius of the largest circle the Q's counter keeps
 Q_BOWL = 0.98    # or this share of half the bowl's own counter, where that is less
 
 
-def _q_open(g):
+def _q_open(g, inner=0.0):
     """How open the tail leaves the Q's counter: the largest circle in it,
     in the measure its opening is held to (Q_OPEN stems). Where the bowl's
     own counter is narrower than that circle, no tail can leave it: the
@@ -302,7 +302,7 @@ def _q_open(g):
     squint for it (0.33 for 0.54), and every horizontal of the letter
     thinned to 0.7 after it."""
     p = g.p
-    half = Q_BOWL * (g.W - 2 * p.sv) / 2
+    half = Q_BOWL * (g.W - inner - 2 * p.sv) / 2
     # (no more than the bowl has given: Arris Mono's Q, narrow for its cell, keeps its tail as it was)
     return g.counter_size() + min(max(0.0, Q_OPEN * p.sv - half), half * (1 / p.white_cap - 1))
 
@@ -312,6 +312,13 @@ def _q_open(g):
 # stood on bars of 119 units beside an O on 170.)
 @cap('Q', 10, 2, openings=[Opening(_q_open, 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=Q_OPEN, own=True)])
 def Q(g):
+    q_drawing(g)
+
+
+def q_drawing(g, inner=0.0):
+    """The Q. ``inner``: the room a stroke standing in its counter beside
+    the left stem takes (the double-struck Q's inner stroke and its slit,
+    letterlike.dsQ), which the tail keeps clear of as it does the wall."""
     f = Frame(g, 10)
     p = f.p
     # The bowl's lower right corner is square, and the tail runs into it;
@@ -337,7 +344,7 @@ def Q(g):
     # (and its upper end clear of the counter's left wall by a break: run on to the wall, from 850 the tail
     # shut off the counter's corner under it, a pinhole beside the counter; kept half a stem off, it was a
     # stub sunk in the floor at Black, and the owner keeps "the little bit in the middle" there)
-    clear = f.X(1) + p.sv / 2 + 0.5 * p.c + w / 2 ** 0.5
+    clear = f.X(1) + p.sv / 2 + inner + 0.5 * p.c + w / 2 ** 0.5
     y0 = min(g.free('tail', f.Y(5)), ct - clear)
     g.stroke((ct - y0, y0, w), (ct - f.Y(1), f.Y(1)), start='h')
 

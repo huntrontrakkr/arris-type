@@ -14,7 +14,7 @@ from __future__ import annotations
 import math
 
 from ..draw import B, Squint, glyph
-from ..params import SQRT2
+from ..params import SQRT2, white_floor
 from .figures import bay_stack, beak_depth, heaviness
 from .letterframe import STEEP, Frame, growing_width, kept_width, least_white, plain_width as letter_width, white_scale
 
@@ -56,8 +56,61 @@ def dot(g, x, y0):
 
 
 def dot_gap(p):
-    """White between a dot and a stroke above it."""
-    return max(0.8 * p.sv, 0.5 * p.m)
+    """White between a dot and a stroke above it: 0.8 of a stem, half a
+    module at the least, and from the cut's Regular on the Regular's
+    (draw.held_at), as the white between a letter's parts gives way to the
+    stems past it. At 0.8 of the weight's own, 160 units at Black, the
+    question mark's dot came up to its bowl from ExtraBold and its stem was
+    gone, the stroke turning down into its own end; faces of this kind
+    leave a third of a stem over the dot at Black (Tomorrow, Barlow, Kanit,
+    Exo 2, Oxanium, Inter: 0.3 to 0.36)."""
+    from ..draw import held_at
+    return max(0.8 * min(p.sv, held_at(p).sv), 0.5 * p.m, DOT_WHITE * p.sv)
+
+
+DOT_WHITE = 0.55    # stems: the least white over a dot, a tenth over the half stroke the white rule reads as white
+                    # (draw.WHITE_OPEN): under it the exclamation mark had none and was lightened to 0.8 from Bold
+QUESTION_NECK = 0.25    # stems: the least of the question mark's stem showing under its bowl's return
+
+
+def question_return(g, f, bay=True):
+    """Where the question mark's bowl returns (the centre line of its
+    lower bar): on the frame's row 6, or higher where the dot and the white
+    over it come up under it, so a quarter of a stem of the stem shows
+    below it (QUESTION_NECK). At the weight's own white over the dot, its
+    stem was gone from ExtraBold, the stroke turned down into its own end,
+    and at Black it was another drawing; the bars give way for the bowl
+    above as the S's do for its bays (figures.bay_stack, which reads where
+    the stem would have it: ``bay`` False). Where they can give no more
+    (the italic at Black, whose beak is the longer), it rises no further
+    than leaves the beak its white over it, and the stem gives the rest:
+    risen on, the beak's end and the return's corner met at a point."""
+    from .figures import BAY_WHITE
+    p = g.p
+    y = max(f.Y(6), p.dot() + dot_gap(p) + QUESTION_NECK * p.sv + g.sh / 2)
+    least = BAY_WHITE * white_floor(p.m, p.sv, p.optical)
+    lead = getattr(g, 'lead', None)
+    if bay and lead is not None:
+        # led in (a ligature's lead-in bar in place of the beak: `#?`'s top bar of #), the bowl keeps the
+        # beak's white under the lead's underside, the return coming down for it toward the dot, its stem
+        # the less: risen to its own row, it met the # bar from Bold in the italic and the bowl shut
+        y_lead, th = question_lead(g, f)
+        return max(p.dot() + dot_gap(p) + g.sh / 2, min(y, y_lead - th / 2 - least - g.sh / 2))
+    if bay:
+        y = max(f.Y(6), min(y, f.Y(11) - beak_depth(p, g.sh) - least))
+    return y
+
+
+def question_lead(g, f):
+    """(height, thickness) of the bar a question mark is led in on (a
+    ligature's: g.lead's last point): a point of its own height, or None
+    for the height its beak ends at, the bar's underside where the beak's
+    end stands (`??`: the second ?'s beak leaves from the first's side)."""
+    p = g.p
+    pt = g.lead[-1]
+    th = pt[2] if len(pt) > 2 else g.sh
+    y = pt[1] if pt[1] is not None else p.cap - beak_depth(p, g.sh) + th / 2
+    return y, th
 
 
 @punct('period', '.', 2, width=dot_w())
@@ -122,17 +175,23 @@ def exclam(g):
 def question(g):
     # (from ExtraBold the stem the bowl returns into stands under the beak: the beak keeps its white
     # off the return, its bars giving as the S's do, figures.bay_stack; 0.23 of a stem in the italic at Black)
-    f = bay_stack(g, lambda: Frame(g, 9, 'cap'), [(6, 11)])
+    f = bay_stack(g, lambda: Frame(g, 9, 'cap'), [(6, 11)], lower=lambda f: question_return(g, f, bay=False))
     p = g.p
     d = beak_depth(p, g.sh)
     # The 2's bowl, its right side turning back into a short stem at the centre.
     xs = f.X(4)
+    yr = question_return(g, f)
     # a lead-in (the `#?` ligature: the top bar of #, in this frame, as (x, y,
     # thickness)): the bar runs on to the bowl's left side, which rises from it
     lead = getattr(g, 'lead', None)
+    if lead is not None:
+        y_lead, _ = question_lead(g, f)
+        lead = [(q[0], y_lead, *q[2:]) if q[1] is None else q for q in lead]
     start = [(f.X(1), p.cap - d)] if lead is None else [*lead, (f.X(1), lead[-1][1])]
-    g.stroke(*start, B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6)), (xs, f.Y(6)),
-             (xs, p.dot() + dot_gap(p)))
+    # (where the stem is left none, the italic at Black, it ends flush with the return's underside: ended in
+    # the return, a few units short of it, its end's breaks cut a nub out of the return's corner)
+    g.stroke(*start, B(*f.P(1, 11)), B(*f.P(8, 11)), B(f.X(8), yr), (xs, yr),
+             (xs, min(p.dot() + dot_gap(p), yr - g.sh / 2)))
     dot(g, xs, 0)
 
 

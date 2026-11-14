@@ -71,7 +71,7 @@ BAY_WHITE = 0.6     # the white a beak keeps off the bar it turns toward, as a s
 BAY_STACK_MIN = 0.64    # the least an italic capital's bars thin to for its bays, of the height's bar (bay_stack: past STACK_MIN, at Black)
 
 
-def bay_stack(g, frame, rows, floor=None):
+def bay_stack(g, frame, rows, floor=None, lower=None):
     """Thin a letter's horizontals where its beaks turn into bays, the
     whites between its bars (the S's two, the Ze's, the reversed E's, the
     epsilon's, the question mark's one), so far that each beak's end keeps
@@ -81,7 +81,10 @@ def bay_stack(g, frame, rows, floor=None):
     horizontals as they stand; ``rows``: each bay's two bars, by their
     frame rows; ``floor``: the lowest the lower bar may come for the bay
     by a rule of its own (the Ҩ's loop, which comes down for its mouth
-    before its bars give). Returns the frame to draw in.
+    before its bars give); ``lower``: where the lower bar stands in a
+    frame, where a rule of its own raises it off its row (the question
+    mark's return, over its stem: punct.question_return). Returns the
+    frame to draw in.
 
     The lowercase a, e and s shorten their beaks for the same white
     (lower.beak_in). A capital's cannot in the italic: there its beak keeps
@@ -103,8 +106,8 @@ def bay_stack(g, frame, rows, floor=None):
     def spare(k):
         g.sh_k = k
         f = frame()
-        return min(f.Y(hi) - (f.Y(lo) if floor is None else min(f.Y(lo), floor)) - g.sh
-                   for lo, hi in rows) - (beak_depth(p, g.sh) - g.sh) - least
+        return min(f.Y(hi) - (lower(f) if lower is not None else f.Y(lo) if floor is None else min(f.Y(lo), floor))
+                   - g.sh for lo, hi in rows) - (beak_depth(p, g.sh) - g.sh) - least
     k = k1
     if spare(k1) < 0:
         k, thick = STACK_MIN * k1, k1               # (the thinner the bars, the more room: the most bar that leaves it)

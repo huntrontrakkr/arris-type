@@ -241,3 +241,85 @@ def test_the_prescription_sign_keeps_its_x(cut):
                 assert len(getattr(cut_, 'geoms', [cut_])) == 2, (cut, w, grade, round(y))
             rings, _ = place('prescription', p)
             assert not topology.faults(rings, p.c, bool(p.slant)), (cut, w, grade)
+
+
+ALL_CUTS = {**CUTS, **MONO_CUTS}
+
+
+@pytest.mark.parametrize('cut', list(ALL_CUTS))
+def test_the_double_struck_q_keeps_its_tail_off_the_inner_stroke(cut):
+    """letterlike.dsQ: ℚ is the Q drawn with its inner stroke, the tail cut
+    back from the inner stroke as the Q's is from the counter's wall, and
+    measured on the counter the inner stroke leaves. Stamped wider, its
+    counter ran on under the inner stroke: from 850 the tail's end met it
+    and shut a pinhole in the italic, and in Arris Mono from Bold the two
+    crossed."""
+    weights = (300, 400, 450, 500, 600, 700) if cut in MONO_CUTS else (400, 700, 800, 850, 900)
+    for w in weights:
+        p = ALL_CUTS[cut](w)
+        rings, _ = place('uni211A', p)
+        assert not topology.faults(rings, p.c, bool(p.slant)), (cut, w)
+        ink = rings_to_shapely(polylines(rings) if p.slant else [[q[:2] for q in r] for r in rings]).buffer(0)
+        assert len(getattr(ink, 'geoms', [ink])) == 1, (cut, w)
+        assert sum(len(q.interiors) for q in getattr(ink, 'geoms', [ink])) == 2, (cut, w)
+
+
+@pytest.mark.parametrize('cut', list(CUTS))
+def test_the_question_mark_keeps_its_stem_over_the_dot(cut):
+    """punct.dot_gap, question_return: the white over a dot is the
+    Regular's past it, never under DOT_WHITE of a stem (the half stroke the
+    white rule reads as white), and the question mark's bowl returns high
+    enough to leave a quarter of a stem of its stem showing, its bars giving
+    way above as the S's do. At 0.8 of the weight's own stem over the dot,
+    the dot came up into the bowl from ExtraBold, the stem was gone and the
+    stroke turned down into its own end; at Black it was another drawing.
+    The italic, whose beak is the longer, keeps its stem to ExtraBold and
+    ends the stroke in the return at Black. The marks are drawn at their
+    weight: at the Regular's white over the dot, the exclamation mark had no
+    white the rule could read and was lightened to 0.8 from Bold."""
+    from arris.glyphs.letterframe import Frame
+    from arris.glyphs.punct import DOT_WHITE, QUESTION_NECK, dot_gap, question_return
+    for w in (400, 600, 700, 800, 850, 900):
+        p = CUTS[cut](w)
+        g = draw('question', p)
+        q = g.p
+        neck = question_return(g, Frame(g, 9, 'cap')) - g.sh / 2 - (q.dot() + dot_gap(q))
+        if cut == 'upright' or w <= 800:
+            assert neck >= 0.8 * QUESTION_NECK * q.sv, (cut, w, round(neck))
+        assert dot_gap(q) >= DOT_WHITE * q.sv - 1e-6
+        rings, _ = place('question', p)
+        assert not topology.faults(rings, p.c, bool(p.slant)), (cut, w)
+        for name in ('exclam', 'question', 'exclamdown', 'questiondown', 'uni203D', 'uni2047', 'uni2048', 'exclamdbl'):
+            assert draw(name, p).p.light == 1.0, (name, cut, w)
+
+
+@pytest.mark.parametrize('cut', list(CUTS))
+def test_a_question_mark_led_in_keeps_its_bay(cut):
+    """punct.question_lead: in `#?` and `??` a bar leads into the ? in
+    place of its beak, and the bowl keeps the beak's white under it (the
+    return comes down for it, its stem the less); the `??`'s bar comes in
+    where the second ?'s own beak ends. Led in below the beak, with the
+    return on its own row, the bowl shut on itself in a pinch in the italic
+    from Bold. (`#?` from ExtraBold has no room under the # bar for the
+    bowl's white at all, and its bowl closes: left for the owner.)"""
+    for name, weights in (('numbersign_question.liga', (400, 600, 700, 750)),
+                          ('question_question.liga', (400, 700, 750, 800, 850, 900))):
+        for w in weights:
+            for grade in (-100, 0, 100):
+                p = params(w, grade)
+                p = italic(p) if cut == 'italic' else p
+                rings, _ = place(name, p)
+                assert not topology.faults(rings, p.c, bool(p.slant)), (name, cut, w, grade)
+
+
+@pytest.mark.parametrize('cut', list(MONO_CUTS))
+def test_the_ka_with_a_stroke_keeps_its_bar_off_the_arm(cut):
+    """cyrillic_ext.Kastroke: where the bar has risen to the top of the stem
+    and the arm still comes in under it, its end stops the least white short
+    of the arm. In Arris Mono Narrow Italic it met the arm in a pinch from
+    500 and crossed it at 550."""
+    for name in ('uni049E',):
+        for w in (300, 400, 450, 500, 550, 600, 700):
+            p = MONO_CUTS[cut](w)
+            rings, _ = place(name, p)
+            assert not topology.faults(rings, p.c, bool(p.slant)), (name, cut, w)

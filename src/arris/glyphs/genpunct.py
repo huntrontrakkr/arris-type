@@ -21,7 +21,7 @@ from shapely.geometry import Polygon
 from ..draw import B, REGISTRY, draw, glyph, lay_bar
 from ..params import SQRT2
 from .letterframe import STEEP, Frame, growing_width, kept_width, plain_width as letter_width
-from .punct import LOW_LINE, _bracket, axis, dash, dot, dot_gap, dot_w, punct, stem_w
+from .punct import LOW_LINE, _bracket, axis, dash, dot, dot_gap, dot_w, punct, question_return, stem_w
 from .symkit import MIRROR, sign, stamp_t
 
 ALIASES = {0x2015: 'emdash', 0x2024: 'period', 0x2027: 'periodcentered',
@@ -474,7 +474,8 @@ def interrobang(g):
     REGISTRY['question'].fn(g)
     f = Frame(g, 9, 'cap')
     p, xs = g.p, f.X(4)
-    stub = max(0.0, f.Y(6) - (p.dot() + dot_gap(p)))       # the question mark's own stem under its bowl
+    yr = question_return(g, f)
+    stub = max(0.0, yr - (p.dot() + dot_gap(p)))            # the question mark's own stem under its bowl
 
     def ends(t, own):
         # toward Black that stem shortens to nothing and the bowl's return ends at its centre line: the
@@ -483,7 +484,7 @@ def interrobang(g):
         # it runs on down into that stem, half its length: ended on the return's centre line, its end's
         # break met the break of the corner the return turns into the stem on, and at the Regular and
         # lighter, where the two are one width, the italic's curve there left an edge half a unit long
-        return (x, p.cap), (x, f.Y(6) - stub / 2)
+        return (x, p.cap), (x, yr - stub / 2)
     lay_bar(g, ends, direction=(0.0, 1.0))
 
 

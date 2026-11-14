@@ -854,13 +854,12 @@ def question_question(g):
     leaving from the first one's right side, as the ? of `#?` leaves the
     bar of #: one stroke from the first ? into the second."""
     from ..draw import Glyph
-    from .figures import beak_depth
     from .letterframe import Frame
     p = g.p
     (q1, x1), (q2, x2) = _run(g, ['question', 'question'], draw=False)
     g.add_glyph(q1, x1, 0.0)
     side = x1 + Frame(Glyph(p, 'question', W=q1.W), 9, 'cap').X(8)
-    g.add_glyph(_led(g, 'question', q2, [(side - x2, p.cap - beak_depth(p))]), x2, 0.0)
+    g.add_glyph(_led(g, 'question', q2, [(side - x2, None)]), x2, 0.0)       # (at its own beak: punct.question_lead)
 
 
 @liga('&&')
