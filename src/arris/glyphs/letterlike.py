@@ -452,17 +452,30 @@ def _rx_width(p):
     return max(a + 0.9 * p.under, a - yc + e) + p.sd
 
 
+RX_CLIMB = 1.2   # ℞: how far the crossing climbs the leg, per unit the leg's thickness has grown past the Regular's
+
+
 @sign('prescription', '\u211e', _rx_width, kind='cap')
 def prescription(g):
     """R whose leg runs on below the baseline, crossed there by a short
-    stroke square to it."""
+    stroke square to it. The R keeps its leg at the weight's own thickness;
+    the cross is a stroke added to it, the Regular's thickness at every
+    heavier weight and laid over the leg (Glyph.held, Glyph.lay), and the
+    crossing climbs the leg as the leg grows (RX_CLIMB), toward the
+    baseline, so the x keeps its four arms to Black. Crossed at the
+    Regular's place with a cross as heavy as the leg, the x filled in from
+    SemiBold and was a boot under the R from ExtraBold (the owner: "not
+    legible at deep black"; "the cross to make the X, that part should be
+    thinned out ... move the cross up on the stem as it gets bolder")."""
+    from ..draw import held_at, held_c
     p = g.p
     wr, a, yc, e = _rx(p)
     stamp(g, 'R', width=wr)
     bot = -0.9 * p.under
     g.stroke((a - p.sv / 2, p.sv / 2), (a - bot, bot), start='flat', end='h')   # (overlapping the leg)
+    yc += RX_CLIMB * max(0.0, p.sd - held_at(p).sd)
     xc = a - yc
-    g.stroke((xc - e, yc - e), (xc + e, yc + e), start='v', end='v')
+    g.lay((xc - e, yc - e, g.held((1, 1))), (xc + e, yc + e), c=held_c(p), start='v', end='v')
     # cut on its own frame: clipped at its body, which in Mono's cell is
     # narrower, the crossing stroke was cut short, and in the italic, as
     # narrow as a letter goes, cut away with the leg's foot

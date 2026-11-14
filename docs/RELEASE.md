@@ -784,6 +784,16 @@ The six causes:
     (`extra_latin.Dcroat`): in Arris Mono Narrow at Bold, the D drawn
     narrow for its cell, it ran on to the bowl and cut the counter in two;
     at Black in Arris it came 39 units nearer the bowl than that.
+  - ℞ (the owner: "the way that it crosses the bottom is not legible at
+    deep black"; "the R will retain its stem, while the cross to make the
+    X, that part should be thinned out ... move the cross up on the stem
+    as it gets bolder"): the R keeps its leg at the weight's own thickness;
+    the stroke across it is held at the Regular and laid over it, as every
+    stroke added to a letter is, and the crossing climbs the leg as the leg
+    grows past the Regular's (`letterlike.RX_CLIMB`), toward the baseline.
+    Crossed at the Regular's place by a stroke as heavy as the leg, the x
+    filled in from SemiBold and was a boot under the R from ExtraBold.
+    Light and Regular are as they were.
   - The rule that lightens a sign to keep its whites (`draw.white_features`)
     acts from the cut's Regular on, as it says (Arris Mono Narrow's is its
     own, `draw._lighter_than_regular`): at the lighter weights, where no

@@ -212,3 +212,32 @@ def test_the_d_with_a_bar_keeps_one_counter(cut):
             rings, _ = place(name, p)
             ink = rings_to_shapely(polylines(rings) if p.slant else [[q[:2] for q in r] for r in rings]).buffer(0)
             assert sum(len(q.interiors) for q in getattr(ink, 'geoms', [ink])) == 1, (name, cut, w)
+
+
+@pytest.mark.parametrize('cut', list(CUTS))
+def test_the_prescription_sign_keeps_its_x(cut):
+    """letterlike.prescription: the R keeps its leg at the weight's own
+    thickness, the cross is held at the Regular and laid over it, and the
+    crossing climbs the leg as the leg grows (RX_CLIMB). Crossed at the
+    Regular's place with a cross as heavy as the leg, the x filled in from
+    SemiBold and was a boot under the R from ExtraBold (the owner: "not
+    legible at deep black"). Its four arms stand apart: two strokes across
+    a line a fifth of the way up from the foot, and two over the
+    crossing."""
+    from shapely.geometry import LineString
+
+    from arris.draw import held_at
+    from arris.glyphs.letterlike import RX_CLIMB, _rx
+    for w in (400, 600, 700, 800, 900):
+        for grade in (0, 100):
+            p = CUTS[cut](w) if not grade else (italic(params(w, grade)) if cut == 'italic' else params(w, grade))
+            g = draw('prescription', p)
+            ink, q = rings_to_shapely(g.rings()), g.p
+            _, a, yc, e = _rx(q)
+            yc += RX_CLIMB * max(0.0, q.sd - held_at(q).sd)
+            bot = -0.9 * q.under
+            for y in (bot + 0.2 * (yc - bot), yc + 0.6 * e):
+                cut_ = ink.intersection(LineString([(a - yc - 1.2 * e, y), (a - yc + 1.2 * e, y)]))
+                assert len(getattr(cut_, 'geoms', [cut_])) == 2, (cut, w, grade, round(y))
+            rings, _ = place('prescription', p)
+            assert not topology.faults(rings, p.c, bool(p.slant)), (cut, w, grade)
