@@ -1541,20 +1541,28 @@ def cellipsis(g):
         cdot(g, p.dot() / 2 + i * step, axis(p))
 
 
+def _diagonal_dots(g, rise):
+    """⋰ (rise 1) and ⋱ (-1): three dots a step apart on a diagonal. Where
+    the cell is narrower than the step across (Arris Mono and Mono Narrow),
+    the step across is what the cell leaves and the step up stays the
+    dots' own: stepped as little up as across, the dots ran into one
+    another in Arris Mono Narrow Italic from 650 (143 units each way for
+    dots 182 across)."""
+    p = g.p
+    up = dot_step(p) / SQRT2
+    across = min(up, (g.W - p.dot()) / 2)
+    for i in (-1, 0, 1):
+        cdot(g, g.W / 2 + i * across, axis(p) + rise * i * up)
+
+
 @op(u(0x22F0), '⋰', width=lambda p: p.dot() + 2 * dot_step(p) / SQRT2)
 def upellipsis(g):
-    p = g.p
-    d = min(dot_step(p) / SQRT2, (g.W - p.dot()) / 2)
-    for i in (-1, 0, 1):
-        cdot(g, g.W / 2 + i * d, axis(p) + i * d)
+    _diagonal_dots(g, 1)
 
 
 @op(u(0x22F1), '⋱', width=lambda p: p.dot() + 2 * dot_step(p) / SQRT2)
 def downellipsis(g):
-    p = g.p
-    d = min(dot_step(p) / SQRT2, (g.W - p.dot()) / 2)
-    for i in (-1, 0, 1):
-        cdot(g, g.W / 2 + i * d, axis(p) - i * d)
+    _diagonal_dots(g, -1)
 
 
 # --- Arithmetic --------------------------------------------------------------------------

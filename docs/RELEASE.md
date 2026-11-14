@@ -815,10 +815,11 @@ The six causes:
     beak's white under the bar's underside, the return coming down for it
     toward the dot; the `??`'s bar comes in where the second ?'s own beak
     ends (it came in 30 to 86 units lower, measured on bars the ? had
-    thinned). Both shut their bowl in a pinch in the italic from Bold. At
+    thinned). The programming ligatures are Arris Mono's alone, which goes
+    to Bold, and there both keep their bowls open; drawn in Arris's ladder
+    for the audit they shut in a pinch in the italic from Bold, and at
     ExtraBold and Black `#?` has no room under the # bar for the bowl's
-    white at all, and its bowl closes (it did in the upright before):
-    left for the owner.
+    white at all.
   - ℚ is the Q drawn with its inner stroke (`letterlike.dsQ`), not the Q
     stamped wider: there its counter ran on under the inner stroke, the
     tail was measured on that and cut back from the wrong wall, and from
@@ -834,6 +835,20 @@ The six causes:
     stops the least white short of the arm (a module past the stem at the
     least), and where that is not clean either (the italic at Black, the
     arm's root at the bar) runs on into the arm as it did.
+  - ⋰ ⋱ in a cell narrower than the step across (Arris Mono and Mono
+    Narrow) step across as the cell leaves and up by the dots' own step
+    (`operators._diagonal_dots`): stepped up as little as across, their
+    dots ran into one in Arris Mono Narrow Italic from 650 (143 units each
+    way for dots 182 across).
+  - δ in the italic: the italic rounds the bowl's top right corner from
+    where its chamfer leaves the top, and at Thin on the heavy grade (85
+    to 120) the round took the short flat beside the neck's foot and the
+    neck's edge with it, and the outline cut across the counter. The neck
+    is settled a few hundredths more upright where that happens
+    (`Glyph.settle` on the italic outline); everywhere else it is as it was.
+  - ₮'s pair of strokes is settled a unit or two down where the lower
+    one's underside, cut flat by the baseline, left an edge of half a unit
+    beside the stem's foot in the italic (Black on the heavy grade).
   - The rule that lightens a sign to keep its whites (`draw.white_features`)
     acts from the cut's Regular on, as it says (Arris Mono Narrow's is its
     own, `draw._lighter_than_regular`): at the lighter weights, where no

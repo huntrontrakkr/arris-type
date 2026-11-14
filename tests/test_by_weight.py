@@ -323,3 +323,41 @@ def test_the_ka_with_a_stroke_keeps_its_bar_off_the_arm(cut):
             p = MONO_CUTS[cut](w)
             rings, _ = place(name, p)
             assert not topology.faults(rings, p.c, bool(p.slant)), (name, cut, w)
+
+
+@pytest.mark.parametrize('cut', list(MONO_CUTS))
+def test_the_diagonal_ellipses_keep_three_dots_in_the_cell(cut):
+    """operators._diagonal_dots: where the cell is narrower than the step
+    across, the step up stays the dots' own. Stepped as little up as across,
+    ⋰'s dots ran into one in Arris Mono Narrow Italic from 650."""
+    for name in ('uni22F0', 'uni22F1'):
+        for w in (300, 400, 500, 600, 700):
+            p = MONO_CUTS[cut](w)
+            rings, _ = place(name, p)
+            ink = rings_to_shapely(polylines(rings) if p.slant else [[q[:2] for q in r] for r in rings]).buffer(0)
+            assert len(getattr(ink, 'geoms', [ink])) == 3, (name, cut, w)
+
+
+def test_the_italic_delta_keeps_its_bowl_whole():
+    """greek.delta: the neck, settled a little more upright where the italic's
+    round of the bowl's top right corner would take the flat beside its
+    foot. At Thin on the heavy grade the round took the flat and the neck's
+    edge with it, and the outline cut across the counter."""
+    for w in (100, 110, 120, 150, 400, 900):
+        for grade in (-100, 0, 90, 100):
+            p = italic(params(w, grade))
+            rings, _ = place('uni03B4', p)
+            assert not topology.faults(rings, p.c, True), (w, grade)
+            ink = rings_to_shapely(polylines(rings)).buffer(0)
+            assert sum(len(q.interiors) for q in getattr(ink, 'geoms', [ink])) == 1, (w, grade)
+
+
+def test_the_tugrik_has_no_half_unit_edge_at_the_baseline():
+    """currency.tugrik: its pair of strokes settled a unit or two down where
+    the lower one's underside, cut by the baseline, left an edge of half a
+    unit beside the stem's foot in the italic at Black on the heavy grade."""
+    for grade in (0, 100):
+        for w in (800, 850, 900):
+            p = italic(params(w, grade))
+            rings, _ = place('uni20AE', p)
+            assert not topology.faults(rings, p.c, True), (w, grade)

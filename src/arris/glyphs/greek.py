@@ -162,7 +162,11 @@ def delta(g):
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
     xl, yt, yb = f.X(1), f.Y(12), f.Y(8)
     s = g.free('neck', 1.0)
-    g.stroke((xl + s * (yt - yb), yb), B(xl, yt), f.P(6, 12), start='h')
+    # (settled, in the italic, a little more upright where the round of the bowl's top right corner would take
+    # the flat between it and the neck's foot: at Thin on the heavy grade it took the flat and the neck's edge
+    # with it, and the outline cut across the counter)
+    steps = (0.0, 0.03, 0.06, 0.1) if p.slant else (0.0,)
+    g.settle([[((xl + (s - d) * (yt - yb), yb), B(xl, yt), f.P(6, 12), {'start': 'h'})] for d in steps])
     g.defaults_used['hook'] = f.X(6) - (xl + s * (yt - yb) / 2 + p.sd * (1 + s * s) ** 0.5 / 2)
 
 

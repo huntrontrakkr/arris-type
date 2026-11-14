@@ -657,8 +657,16 @@ def tugrik(g):
     top = f.Y(11) - g.sh / 2 - wmin(p) - 0.71 * t           # the upper stroke's highest centre point
     y_hi = min(0.42 * p.cap + dy / 2, top - e)
     ef = _free_arm(p)
-    _cross(g, xs, y_hi - dy, y_hi, t, (e, ef, ef, e))           # the arms toward the bar and the baseline kept short
     g.clip = (0, 0, f.W, p.cap)
+    # the arms toward the bar and the baseline kept short; the pair settled a unit or two down where the lower
+    # stroke's underside, cut by the baseline, leaves an edge of half a unit beside the stem's foot in the
+    # italic (at Black on the heavy grade)
+    tt = across(p, t, (1, 1))
+
+    def pair(y_up):
+        return [((xs - el, y - el, tt), (xs + er, y + er), {'start': 'v', 'end': 'v'})
+                for y, el, er in ((y_up - dy, e, ef), (y_up, ef, e))]
+    g.settle([pair(y_hi - d) for d in (0.0, 1.0, 2.0, 4.0)], lay=True)
 
 
 @cur('uni20A5', '₥', letter_width(12, 3), kind='lower')
