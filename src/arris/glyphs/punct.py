@@ -790,6 +790,18 @@ def pct_rings_after(g, sub, n, gap):
     g.add_glyph(rings)
 
 
+def percent_part(g):
+    """The % as drawn into ‰ and ‱: at the glyph's own measures, never
+    fitted to a cell of its own. The sign is fitted to the cell as a whole;
+    drawn as a glyph, the % inside it was fitted again, to its own cell, at
+    some of the measures the fit tries and not at others, and Arris Mono
+    Narrow's ‰ stood a ninth taller at 500 than at 490 (‱ a fifth wider)."""
+    from ..draw import Glyph
+    sub = Glyph(g.p, name='percent', W=pct_width(g.p))
+    percent(sub)
+    return sub
+
+
 @punct('percent', '%', 11, 3, width=pct_width)
 def percent(g):
     """Two rings and the 2:1 slash between them, each ring clear of it by

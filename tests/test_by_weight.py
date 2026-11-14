@@ -489,10 +489,11 @@ def test_the_per_mille_rings_are_one_size(cut):
     for w in weights:
         p = ALL_CUTS[cut](w)
         for name in ('perthousand', 'uni2031'):
+            from shapely.geometry import Polygon
             ink = rings_to_shapely([[q[:2] for q in r] for r in draw(name, p).rings()]).buffer(0)
-            rings = [q for q in getattr(ink, 'geoms', [ink]) if q.interiors]
-            sizes = [(q.bounds[2] - q.bounds[0], q.bounds[3] - q.bounds[1]) for q in rings]
-            lower = [s for q, s in zip(rings, sizes) if q.bounds[1] < 0.25 * p.cap]
+            counters = [Polygon(h) for q in getattr(ink, 'geoms', [ink]) for h in q.interiors]
+            sizes = [(q.bounds[2] - q.bounds[0], q.bounds[3] - q.bounds[1]) for q in counters]
+            lower = [s for q, s in zip(counters, sizes) if q.bounds[1] < 0.25 * p.cap]
             assert len(lower) >= (2 if name == 'perthousand' else 3), (name, cut, w, sizes)
             assert max(s[0] for s in lower) - min(s[0] for s in lower) <= 2, (name, cut, w, lower)
 
@@ -531,21 +532,26 @@ def test_the_tugrik_shows_its_pair_on_both_sides_of_the_stem(cut):
 
 
 @pytest.mark.parametrize('cut', list(ALL_CUTS))
-def test_the_cruzeiro_r_is_one_drawing_apart_from_the_c(cut):
+def test_the_cruzeiro_r_is_one_drawing_standing_in_the_c(cut):
     """currency.cruzeiro: ₢'s r is drawn apart from the C, one drawing in
-    one place from the Regular to the cut's heaviest weight, with white all
-    round it. Drawn at each weight's strokes against the C's mouth, the C's
-    lower beak ran into it from Bold and at Black the two were one shape."""
+    one place from the Regular to the cut's heaviest weight, its stem run
+    down into the C's bottom bar and a white all round it elsewhere. Drawn
+    at each weight's strokes against the C's mouth, the C's lower beak ran
+    into it from Bold and at Black the two were one shape."""
     from shapely import affinity
-    from shapely.geometry import Polygon
+    from shapely.geometry import box
 
     def parts(p):
         rings, _ = place('uni20A2', p)
+        assert len(rings) == 1 and not topology.faults(rings, p.c, bool(p.slant)), (cut, p.sv)
         rr = polylines(rings) if p.slant else [[q[:2] for q in r] for r in rings]
-        ink = sorted((Polygon(r) for r in rr if Polygon(r).exterior.is_ccw), key=lambda q: q.area)
-        assert len(ink) == 2 and len(rr) == 2, (cut, p.sv)
-        r, c = ink
-        assert r.distance(c) >= 30, (cut, p.sv)
+        ink = rings_to_shapely(rr).buffer(0).intersection(box(-1e4, 0.36 * p.cap, 1e4, 1e4))
+        from shapely.ops import unary_union
+        pieces = sorted(getattr(ink, 'geoms', [ink]), key=lambda q: q.area)
+        c = pieces[-1]                                      # (the italic's lower beak rises past the line: a piece)
+        assert len(pieces) >= 2, (cut, p.sv)                # above its foot the r stands apart from the C
+        r = min(pieces[:-1], key=lambda q: q.bounds[0])
+        assert r.distance(unary_union([q for q in pieces if q is not r])) >= 30, (cut, p.sv)
         x0, y0 = r.bounds[:2]
         return affinity.translate(r, -x0, -y0), (x0 - c.bounds[0], y0)
 
@@ -561,3 +567,22 @@ def test_the_cruzeiro_r_is_one_drawing_apart_from_the_c(cut):
         for grade in (-100, 100, 200):
             p = params(900, grade) if cut == 'upright' else italic(params(900, grade))
             assert same(parts(p), ref), (cut, grade)
+
+
+@pytest.mark.parametrize('cut', list(MONO_CUTS))
+def test_the_per_mille_signs_shrink_smoothly_in_the_cell(cut):
+    """punct.percent_part: ‰ ‱ are fitted to the cell as a whole, the %
+    inside them drawn at their measures. Drawn as a glyph, the % was fitted
+    again, to its own cell, at some of the measures the fit tried and not at
+    others: Arris Mono Narrow's ‰ stood a ninth taller at 500 than at 490,
+    and ‱ a fifth wider."""
+    for name in ('perthousand', 'uni2031'):
+        sizes = []
+        for w in (450, 475, 490, 500, 525, 550):
+            rings, _ = place(name, MONO_CUTS[cut](w))
+            rr = polylines(rings) if 'italic' in cut else [[q[:2] for q in r] for r in rings]
+            xs = [q[0] for r in rr for q in r]
+            ys = [q[1] for r in rr for q in r]
+            sizes.append((max(xs) - min(xs), max(ys) - min(ys)))
+        for (w0, h0), (w1, h1) in pairwise(sizes):
+            assert w1 <= w0 + 4 and abs(h1 - h0) < 12, (name, cut, sizes)

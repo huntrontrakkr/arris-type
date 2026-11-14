@@ -318,18 +318,50 @@ def _cruzeiro_r(p):
 
 @cur('uni20A2', '₢', _c_width(1.0))
 def cruzeiro(g):
-    """C holding a small r. The r is one drawing in one place at every
-    weight, with white all round it: drawn at the weight's own strokes and
-    set against the C's mouth, the C's lower beak ran into it from Bold and
-    at Black the two were one shape."""
+    """C holding a small r standing on its bottom bar. The r is one drawing
+    in one place at every weight, its stem run down into the bar and a white
+    all round it elsewhere: drawn at the weight's own strokes and set
+    against the C's mouth, the C's lower beak ran into it from Bold and at
+    Black the two were one shape."""
+    from shapely import affinity
+    from shapely.geometry import LineString
+
+    from ..draw import Glyph
+    from ..geom import rings_to_shapely
     p = g.p
-    stamp(g, 'C', width=g.W - p.m)
+    c = draw('C', p, width=g.W - p.m)
     _, low, left = _cruzeiro_place(p)
-    r = draw('r', _cruzeiro_r(p))
-    r.finished = True               # kept as drawn: finished again on the C's breaks, it changed with the C's weight
-    n = len(g.extra_chamfers)
-    g.add_glyph(r, left * p.m, low * p.cap)
-    del g.extra_chamfers[n:]        # and the italic rounds none of its corners, which it rounded at the C's weight
+    pr = _cruzeiro_r(p)
+    r = draw('r', pr)
+    # its stem runs on down into the C's bottom bar (the owner: "the r needs its stem attached"): the r stands on
+    # the bar, and above it is the same drawing at every weight
+    y = 0.25 * pr.xh
+    rink = rings_to_shapely([[q[:2] for q in ring] for ring in r.rings()]).buffer(0)
+    cut = rink.intersection(LineString([(-1e3, y), (1e4, y)]))
+    x0, _, x1, _ = min(getattr(cut, 'geoms', [cut]), key=lambda q: q.bounds[0]).bounds
+    stem = Glyph(pr, W=r.W)
+    stem.stroke(((x0 + x1) / 2, y, x1 - x0), ((x0 + x1) / 2, c.sh / 2 - low * p.cap))
+    stand = rink.union(rings_to_shapely([[q[:2] for q in ring] for ring in stem.rings()]).buffer(0))
+    # the C, the r and its stem, each finished on its own, only joined: finished again together (the corner
+    # rule and the polish run again over the whole), the r took the C's breaks and its arm met its stem in a
+    # neck of 12 units at Bold, and in the italic it changed with the weight
+    crings, crec = c.outline()
+    whole = rings_to_shapely([[q[:2] for q in ring] for ring in crings]).buffer(0).union(
+        affinity.translate(stand, left * p.m, low * p.cap))
+    g.add_glyph(_as_drawn(p, whole, crec))     # (the italic curves the C's corners as its record names, none of the r's)
+
+
+def _as_drawn(p, shape, record):
+    """A glyph whose outline is ``shape`` as it stands, never finished again, with ``record`` its chamfers."""
+    from ..draw import Glyph
+    done = Glyph(p)
+    done.finished = True
+    out = Glyph(p)
+    out.extra = [shape]
+    out.extra_src = [(shape, done, [], (1.0, 0.0, 0.0, 1.0, 0.0, 0.0))]
+    out.extra_chamfers = list(record)
+    out.finished = True
+    return out
 
 
 def _ce_layout(p):

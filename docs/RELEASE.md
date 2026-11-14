@@ -895,16 +895,18 @@ The six causes:
     fitted to its own cell, its rings drawn smaller, and the rings beside
     it, drawn at the sign's own measures, stood a third larger than the
     %'s (Arris Mono Italic at every weight, Mono Narrow from 500).
-  - ₢ is a C and an r drawn apart (`currency.cruzeiro`). The r is one
-    drawing in one place in each cut from the Regular to Black, at the
-    Regular's strokes, with a white all round it: placed for the cut's
+  - ₢ is a C with a small r standing on its bottom bar
+    (`currency.cruzeiro`). The r is one drawing in one place in each cut
+    from the Regular to Black, at the Regular's strokes, its stem run down
+    into the bar and a white all round it elsewhere: placed for the cut's
     heaviest weight and grade, it keeps 59 units off the C at Black in
     Arris and 36 in its italic, whose upper beak hangs lower. Drawn before
-    at each weight's strokes, standing on the bottom bar against the C's
-    mouth, the C's lower beak ran into the r's stem from Bold and at Black
-    the two were one shape; in the italic the r took the beak's place. The
-    r is kept as drawn (not finished again on the C's breaks, nor rounded
-    by the italic at the C's weight), so it does not change with the C.
+    at each weight's strokes against the C's mouth, the C's lower beak ran
+    into the r's stem from Bold and at Black the two were one shape; in the
+    italic the r took the beak's place. The C, the r and its stem are each
+    finished on their own and only joined: finished again together, the r
+    took the C's breaks, its arm met its stem in a neck of 12 units, and
+    in the italic it changed with the weight.
   - ≰ ≱ are struck at 3:1 (`operators._le_strike`, as DejaVu strikes
     them): at the not-equal sign's 2:1 through a sign twice as tall as it
     is wide the stroke ran corner to corner, and its top end met the end
@@ -926,6 +928,13 @@ The six causes:
     between them, in the room the stem takes (`letterlike.dsQ`). The inner
     stroke standing in the counter, as in Arris, left the tail a stub from
     Arris Mono Medium and none in Mono Narrow at Bold.
+  - ‰ ‱ in Arris Mono: the % inside them is drawn at their own measures
+    and never fitted to a cell of its own (`punct.percent_part`). They are
+    fitted to the cell as a whole; drawn as a glyph, the % inside was
+    fitted again, at some of the measures the fit tried and not at others,
+    and Arris Mono Narrow's ‰ stood a ninth taller at 500 than at 490 (‱ a
+    fifth wider). Their % is now the Mono %, its rings running into the
+    slash, as the % beside them.
   - The rule that lightens a sign to keep its whites (`draw.white_features`)
     acts from the cut's Regular on, as it says (Arris Mono Narrow's is its
     own, `draw._lighter_than_regular`): at the lighter weights, where no
