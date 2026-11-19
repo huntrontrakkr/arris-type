@@ -113,7 +113,7 @@ the pixels, and the rule's outlines beneath them.
 two modules below the arch, and leaves a notch under it: the 1's flag,
 turned. The n, m and h spring from their stems the same way, so the arches
 lean forward, the lowercase reads as one family, and the 1's flag runs
-through every line of text. From 1.017 every bowl meets its stem through
+through every line of text. From 2.001 every bowl meets its stem through
 a shoulder of its own rule, half as deep (`lower.bowl_join`,
 `lower.BOWL_DROP`): under the ascender on b and d, over the descender on
 p, q and g, at the foot on a, u and y. At the arches' two modules, at the
@@ -144,7 +144,7 @@ changed:
 45-degree gable, from the watch's own capitals: at cap height it has
 diagonal enough, and V/U measures 0.52.
 
-In 1.017 the upright v and w went back to the gable, high walls over
+In 2.001 the upright v and w went back to the gable, high walls over
 45-degree points, at the owner's word (the italic keeps the 2:1 arms).
 In eight modules that v measured 0.38 from the u. Its walls now bend
 where the w's do, which makes it as wide as its two arms, nine tenths of
@@ -309,7 +309,7 @@ weight stands on one line, set for the g's hook at its full weight under
 its bowl (a horizontal and the least white over it: three modules to
 SemiBold, 250 units, the font's descent, at Black;
 `params.descender_line`), and the y's tail and the p's, q's and j's
-descenders stand on it too. Until 1.017 the hook thinned first (three
+descenders stand on it too. Until 2.001 the hook thinned first (three
 quarters of the bowl's strokes at Regular) and went deeper alone from
 Bold: a stroke out of weight in a letter, and two descender lines in a
 line of text. Each move is measured on the drawing itself, the
@@ -506,7 +506,7 @@ clip cuts (A's apex, v's foot), and a side the drawing already carries past
 its line (v's point) keeps what it was drawn with. In 1.002, at Regular, S,
 C, 8 and o reach 3 units past their lines at the top and the bottom, O
 1; at Thin S 4 and o 5; at Black S 2 and o 1. H and x stay on the line at
-every weight. Since 1.017 a height has one overshoot: every letter and
+every weight. Since 2.001 a height has one overshoot: every letter and
 figure that stands over its line stands over it by the o's on the x-height
 and the O's on the cap height (`draw._zone_over`: 1.3 units at Regular, 0.4
 at Black), where each had taken what its own outline asked.
@@ -514,7 +514,7 @@ at Black), where each had taken what its own outline asked.
 **Optical centre.** People bisect a vertical line about 1% high, and type
 sets its middles higher than that: measured crossbars sit at 0.50–0.51 of
 the cap height in chamfered faces and 0.51–0.53 in neutral ones. Since
-1.017 Arris's middles stand on the centre (above: one bar for a height,
+2.001 Arris's middles stand on the centre (above: one bar for a height,
 and one middle); what follows is the correction as it was until then, and
 as it works if a rise is set again. Arris
 raised the middle of its letters and figures (`draw.OPTICAL`) until the top
@@ -786,7 +786,7 @@ horizontals.
 
 * `pnum` (default) and `tnum` figures: proportional in text, spaced and
   kerned as letters; `tnum` gives the watch's, the same drawings on one
-  cell (the default until 1.017: on its cell the 1 stood two stems' white
+  cell (the default until 2.001: on its cell the 1 stood two stems' white
   from its neighbours and the others a third of one apart). In Arris Mono
   every figure is on the cell.
 * `locl`, `ccmp`, `mark`, `mkmk`: local forms and mark positioning (section 10).
@@ -1006,7 +1006,7 @@ In the monospaced cut the hyphen sits on the math axis, in line with
 they are arrows); `cv01` is the single-storey a (both cuts), `cv02` the
 plain zero. `cv03` is the hooked j: Arris's j is the l run down under the
 line, a stem and the l's foot turned to the left on the descender line;
-until 1.017 it turned into a hook that ended in a beak, the g's in little,
+until 2.001 it turned into a hook that ended in a beak, the g's in little,
 and `cv03` gives that one back (j, ȷ, ĵ, ǰ). Arris Mono's j and the
 italic's are the hooked one, and `cv03` changes nothing there.
 

@@ -1,8 +1,8 @@
 # Handoff (2026-11-14)
 
 Branch `letters-together`, last commit 675a81d. Release run 66 (no publish) built every font and
-passed every gate (fontbakery, OTS, Fontspector, interpolation, topology, nesting, pytest). Nothing is
-released or published; that waits on the owner's word.
+passed every gate (fontbakery, OTS, Fontspector, interpolation, topology, nesting, pytest). Released as 2.001
+on the owner's word (2026-11-19).
 
 Done in this stretch (docs/RELEASE.md has the detail): ⌬ as the textbook benzene ring, one drawing
 everywhere; ₢'s r one drawing in one place, its stem standing on the C's bar; ∤ ∦ ≰ ≱ strikes; ⇿;
@@ -16,7 +16,7 @@ Open, small, at the heavy end only:
 - ° ✂ ⌀ & ⊫ ⊭ ⊛: each thins its horizontals to 0.7 at one weight. Same pinning in the counter-measure
   branch of draw._draw (bisection keeps AUTO_MIN when no value passes).
 
-Before any release (the owner, 2026-11-14): the website still describes 1.015, and its films,
+The website (the owner, 2026-11-14) still describes 1.015, and its films,
 specimens and samples show the old drawings. Regenerating the films is a large part of the work:
 see arris-films (branch video-teaser), docs/FILMS.md, for what exists and the plan (Blender on the
 owner's GPU machine). Then check each claim on the site against the version 2 build (version, weight

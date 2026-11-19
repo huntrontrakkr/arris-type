@@ -49,16 +49,12 @@ Reserved Font Name. Every font carries the copyright
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
-## 1.017
+## 2.001
 
-How the letters stand together. Six causes, each measured, and five
-letters redrawn.
-
-Not released. The owner holds the next font until the whole of version 2
-is done (2026-11-12: "we're not going to put out another font until we
-get a version 2"). The first group below was added after the six causes,
-on the same branch, and where it differs from them it is the one that
-stands.
+Version 2: how the letters stand together. A true Bold and a true Black,
+one bar for a height, every corner broken by one rule, five letters
+redrawn and the rest checked glyph by glyph along every cut's ladder and
+grade, in Arris, its italic, Arris Watch, Arris Mono and Mono Narrow.
 
 - A true Bold and a true Black. Past the Regular each weight has the stem
   that gives a line of its lowercase the colour other families' weight of
@@ -236,7 +232,7 @@ The six causes:
   pocket. And the first arch's corner, cut deeper than the bar is thick,
   took a wedge out of the middle stem under the second arch, so the
   pocket there was another shape. The upright has had the rule since
-  1.017's first round: nothing of a shoulder is drawn smaller than an
+  2.001's first round: nothing of a shoulder is drawn smaller than an
   edge break. The italic has it now (`lower.shoulder`): a branch that
   would show under a break below its arch is cut along the arch's
   underside, the counter's top the arch's alone; and the cursive m's
