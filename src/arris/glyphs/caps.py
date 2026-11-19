@@ -16,8 +16,9 @@ from __future__ import annotations
 import math
 
 from ..draw import B, Opening, _thickness, glyph
-from .figures import beak_depth, jog
-from .letterframe import STEEP, Frame, k_arms, letter_width
+from .figures import bay_stack, beak_depth, jog
+from ..params import white_own
+from .letterframe import REGULAR_R, STEEP, Frame, heft, k_arms, least_white, letter_width, white_scale
 
 
 def cap(char, wm, stems, width=None, openings=()):
@@ -63,7 +64,7 @@ def c_shape(g, foot_leg=None):
     ``foot_leg``: the leg of the foot's corners (the default: the parameter
     leg); Ҫ's drop hangs between them (cyrillic_ext.drop_leg)."""
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1), foot_leg), B(*f.P(8, 1), foot_leg),
              (f.X(8), d))
 
@@ -72,7 +73,7 @@ def c_shape(g, foot_leg=None):
 def D(g):
     f = Frame(g, 9)
     p = f.p
-    g.stroke(f.P(1, 1), B(*f.P(8, 1), big(p)), B(*f.P(8, 11), big(p)), f.P(1, 11), closed=True)
+    g.stroke(f.P(1, 1), B(*f.P(8, 1)), B(*f.P(8, 11)), f.P(1, 11), closed=True)
 
 
 @cap('E', 8, 1)
@@ -92,9 +93,12 @@ def F(g):
 @cap('G', 9, 2)
 def G(g):
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
-    # the bar below the middle and deep into the bowl, clear of the S and B
-    g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)), f.P(8, 5), f.P(4, 5))
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
+    # the bar below the middle and deep into the bowl, clear of the S and B;
+    # never nearer the bowl's foot than the least white (at Black the white
+    # under it was 79 units, half a stroke: a slit)
+    yb = max(f.Y(5), f.Y(1) + g.sh + least_white(p))
+    g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)), (f.X(8), yb), (f.X(4), yb))
 
 
 @cap('H', 9, 2)
@@ -118,12 +122,29 @@ def I(g):
     g.stroke(f.P(1, 0), f.P(1, 12))
 
 
-@cap('J', 9, 1)
+J_ARM = 3.0    # where the J's top arm starts, in its 7.5 modules: three and a half short of the stem
+
+
+@cap('J', 7.5, 2)
 def J(g):
-    f = Frame(g, 9)
+    """The J: one stroke. An arm along the cap height turns down through a
+    square corner into the stem, and the stem turns through the U's hook
+    into the c's beak. Two strokes across and three and a half modules of
+    white between them, seven tenths of the U's at every weight (it was
+    drawn as a letter of one stem, in a body that did not widen for the
+    beak: 0.70 of the U's white at Regular, 0.57 at Black).
+
+    Until 1.017 it wore the 1's foot on top, a bar three modules either
+    side of the stem: two short ends, each broken at both corners and
+    filled into the stem underneath, at Black a six-sided lump a stem and a
+    half wide with no flat left under it. The arm stands to one side, past
+    the stem by its share of the body and never by less than a stem (from
+    SemiBold), so under it there is always its end's break, a flat and the
+    fill into the stem; the stem's other side is the letter's own."""
+    f = Frame(g, 7.5)
     p = f.p
-    g.stroke(f.P(3, 11), f.P(9, 11))                        # the 1's foot, on top
-    g.stroke(f.P(6, 11), B(*f.P(6, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p)))
+    x_arm = min(f.X(J_ARM), f.X(6.5) - 1.5 * p.sv)          # past the stem by a stem at least
+    g.stroke((x_arm, f.Y(11)), f.P(6.5, 11), B(*f.P(6.5, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p, g.sh)))
 
 
 @cap('K', 9, 1)
@@ -140,8 +161,11 @@ def L(g):
     g.stroke(f.P(1, 12), f.P(1, 1), f.P(8, 1))
 
 
-@cap('M', 12, 2)
+@cap('M', 12, 2, width=letter_width(11, 2))
 def M(g):
+    # Eleven modules for its master's twelve: 1.2 of the H's advance, the
+    # middle of what faces of its kind give it (1.15 to 1.31; it stood at
+    # the top of that, with less ink than any of theirs)
     f = Frame(g, 12)
     p, W, H, k = f.p, f.W, f.p.cap, f.k
     xl, xr = f.X(1), f.X(11)
@@ -166,9 +190,53 @@ def _n_neck(p, sh):
     return N_NECK * max(sh, p.sd)
 
 
+def _n_full(p):
+    """The N's body with its joins a neck deep: two stems, the diagonal's
+    own width across, and its run at 2:1 between the necks."""
+    return 2 * p.sv + p.ss / STEEP[1] + (p.cap - 2 * _n_neck(p, p.sh)) / 2
+
+
+def _h_body(p):
+    return 2 * p.sv + 5 * p.m * white_scale(p, lower=False)
+
+
+_N_SHARE: list = []
+
+
+def n_share():
+    """The N's body as a share of the H's at the Regular: the capital's
+    (1.083) or the small и's (1.0855: the capital at the x-height, in the
+    n's white, cyrillic.sc), whichever is more."""
+    if not _N_SHARE:
+        from ..instances import params
+        p = params(400)
+        _N_SHARE.append(max(_n_full(q) / _h_body(q) for q in (p, p.with_(cap=p.xh, m=p.m * 0.8))))
+    return _N_SHARE[0]
+
+
 def n_width(p):
-    w = p.ss / STEEP[1]                                     # across-width of a 2:1 stroke
-    return 2 * p.sv + w + (p.cap - 2 * _n_neck(p, p.sh)) / 2
+    """The N's body. To the Regular it is what its diagonal makes it: at 2:1
+    between the stems, its joins a neck (_n_neck) from the cap and the
+    baseline. Past the Regular it keeps the share of the H's body it has
+    there (n_share), and the joins deepen instead.
+
+    Held to a neck of one stroke at every weight, the stems and the
+    diagonal each added their whole growth to the width: against the H's
+    advance the N stood 1.06 at Regular, 1.18 at Bold and 1.25 at Black,
+    and the small и the same against its н (1.06, 1.16, 1.23). Sixty-eight
+    families' N stands 1.01 to 1.02 of their H at every weight (the widest
+    1.17), and eighteen families' и 1.00 to 1.01 of their н (the widest
+    1.05). A heavy N's joins are deep in every face: the diagonal and the
+    stem are one block to a third of the height.
+
+    Never so narrow that a counter is under the least white across its open
+    end. The watch's own drawing (``optical`` 0) keeps its master's N, ten
+    modules to the H's nine, and Arris Mono's is its cell's (n_diagonal)."""
+    full = _n_full(p)
+    if p.mono or not p.optical:
+        return full
+    open_end = 2 * p.sv + p.ss / STEEP[1] + 2 * least_white(p) - p.cap / 2      # each counter the least white wide where it opens
+    return full + p.optical * (min(full, max(n_share() * _h_body(p), open_end)) - full)
 
 
 def n_diagonal(g, xa, xb, H):
@@ -217,16 +285,75 @@ def P(g):
     g.stroke(f.P(1, 11), B(*f.P(8, 11)), B(*f.P(8, 6)), f.P(1, 6))
 
 
-@cap('Q', 10, 2, openings=[Opening(lambda g: g.counter_size(), 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=0.85)])
+Q_TAIL = 0.7     # the Q's tail at Black, as a share of the diagonal's own
+Q_OPEN = 0.85    # stems: the radius of the largest circle the Q's counter keeps over its tail
+Q_BOWL = 0.98    # or this share of half the bowl's own counter, where that is less
+
+
+def _q_open(g, inner=0.0):
+    """How open the tail leaves the Q's counter: the largest circle in it,
+    in the measure its opening is held to (Q_OPEN stems). Where the bowl's
+    own counter is narrower than that circle, no tail can leave it: the
+    circle is held to the counter's width instead (Q_BOWL of it), by
+    counting what the bowl cannot give as given. Past the Regular the white
+    gives way to the stems (letterframe.white_scale), and at Black the
+    counter is 1.6 stems across for a circle of 1.7: the tail went to its
+    limit, a stub on the bowl's floor, the counter read worse under the
+    squint for it (0.33 for 0.54), and every horizontal of the letter
+    thinned to 0.7 after it."""
+    p = g.p
+    half = Q_BOWL * (g.W - inner - 2 * p.sv) / 2
+    # (no more than the bowl has given: Arris Mono's Q, narrow for its cell, keeps its tail as it was)
+    return g.counter_size() + min(max(0.0, Q_OPEN * p.sv - half), half * (1 / p.white_cap - 1))
+
+
+# (own: its counter is kept open by its tail alone, and its bowl is the O's at every weight. The closed
+# counters' rule thinned its bars besides, to 0.7 of the weight's own from a stem of 190, and at Black the Q
+# stood on bars of 119 units beside an O on 170.)
+@cap('Q', 10, 2, openings=[Opening(_q_open, 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=Q_OPEN, own=True)])
 def Q(g):
+    q_drawing(g)
+
+
+def q_drawing(g, inner=0.0, left=None):
+    """The Q. ``inner``: the room a stroke standing in its counter beside
+    the left stem takes (the double-struck Q's inner stroke and its slit,
+    letterlike.dsQ), which the tail keeps clear of as it does the wall.
+    ``left``: the left side's thickness where it is not the stem's, its
+    outer edge where the stem's is (ℚ in Mono's cell, its left side split
+    in two lines)."""
     f = Frame(g, 10)
     p = f.p
     # The bowl's lower right corner is square, and the tail runs into it;
-    # heavy weights shorten the tail so the counter stays open.
-    g.stroke(B(*f.P(1, 1)), f.P(9, 1), B(*f.P(9, 11)), B(*f.P(1, 11)), closed=True)
+    # heavy weights shorten the tail so the counter stays open, and thin it:
+    # it stands inside the bowl, and like the inner bar of a stack it gives
+    # as the letter grows (to 0.7 of the diagonal's own at Black, Q_TAIL).
+    # At the diagonal's weight it filled the counter's floor from Bold, and
+    # the bowl's bottom read as twice its thickness.
+    # Toward Black the square corner is cut as the O's are, and at Black the Q is the O with its tail (the
+    # owner, 2026-11-12: "it looks like the O aside from the little bit in the middle. Keep that as it is,
+    # but you're going to need to clip on the corners a little bit more as it reaches black"): from Bold the
+    # corner's cut grows from an edge break to the bowl's own. To Bold it is square, where the tail runs
+    # into it.
+    from ..instances import STEMS
+    like = min(1.0, max(0.0, (p.sv / p.grade_k - STEMS[700]) / (STEMS[900] - STEMS[700]))) * p.optical
+    corner = f.P(9, 1)
+    if like:
+        own = (p.sv + g.sh) / 2 - p.sd / 2 ** 0.5           # (the cut a corner with no leg has)
+        corner = B(*f.P(9, 1), max(0.0, p.c + (p.leg + own - p.c) * like - own))
+    if left is None:
+        g.stroke(B(*f.P(1, 1)), corner, B(*f.P(9, 11)), B(*f.P(1, 11)), closed=True)
+    else:
+        xl = f.X(1) - p.sv / 2 + left / 2
+        g.stroke(B(xl, f.Y(1)), corner, B(*f.P(9, 11)), B(xl, f.Y(11), None, left), closed=True)
     ct = (f.X(9) - p.sv / 2) + (f.Y(1) + g.sh / 2) - p.c   # tail: x + y = ct
-    y0 = g.free('tail', f.Y(5))
-    g.stroke((ct - y0, y0), (ct - f.Y(1), f.Y(1)), start='h')
+    w = p.sd * (1 - (1 - Q_TAIL) * min(1.0, heft(p) / (175.0 - 90.0)))
+    # (and its upper end clear of the counter's left wall by a break: run on to the wall, from 850 the tail
+    # shut off the counter's corner under it, a pinhole beside the counter; kept half a stem off, it was a
+    # stub sunk in the floor at Black, and the owner keeps "the little bit in the middle" there)
+    clear = f.X(1) + p.sv / 2 + inner + 0.5 * p.c + w / 2 ** 0.5
+    y0 = min(g.free('tail', f.Y(5)), ct - clear)
+    g.stroke((ct - y0, y0, w), (ct - f.Y(1), f.Y(1)), start='h')
 
 
 @cap('R', 9, 2)
@@ -259,17 +386,20 @@ def R(g):
 
 @cap('S', 9, 2)
 def S(g):
-    f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    f = bay_stack(g, lambda: Frame(g, 9), [(6, 11), (1, 6)])     # each beak keeps its white off the spine
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 6)), B(*f.P(8, 6)), B(*f.P(8, 1)),
              B(*f.P(1, 1)), (f.X(1), d))
 
 
-@cap('T', 10, 1)
+@cap('T', 8, 1)
 def T(g):
-    f = Frame(g, 10)
-    g.stroke(f.P(0, 11), f.P(10, 11))
-    g.stroke(f.P(5, 11), f.P(5, 0))
+    # Eight modules, the E's: a module wider than the H it was 0.98 of the
+    # H's advance, where faces of this kind give the T 0.79 to 0.84, and
+    # stood in more white than any capital but the Y
+    f = Frame(g, 8)
+    g.stroke(f.P(0, 11), f.P(8, 11))
+    g.stroke(f.P(4, 11), f.P(4, 0))
 
 
 @cap('U', 9, 2)
@@ -296,8 +426,10 @@ def V(g):
     g.stroke((xl, H), (xl, yt), (W / 2, ya), (xr, yt), (xr, H))
 
 
-@cap('W', 14, 3)
+@cap('W', 14, 3, width=letter_width(13, 3))
 def W_(g):
+    # Thirteen modules for its master's fourteen (1.28 of the H's advance;
+    # faces of its kind 1.07 to 1.42, 1.26 between them)
     f = Frame(g, 14)
     H, W = f.p.cap, f.W
     xl, xm, xr = f.X(1), W / 2, f.X(13)
@@ -309,19 +441,9 @@ def W_(g):
 
 @cap('X', 10, 2)
 def X(g):
+    from .lower import x_strokes
     f = Frame(g, 10)
-    p, H, W = f.p, f.p.cap, f.W
-    xl, xr = f.X(1), f.X(9)
-    # Each stroke steps sideways by a jog where they cross: the 2's notch,
-    # twice. Upper halves pass the centre a half jog early, lower halves a
-    # half jog late.
-    J = jog(p)
-    step = min(J, g.sh)
-    up, lo = (W + H - J) / 2, (W + H + J) / 2                # x + y on the falling stroke
-    g.stroke((xl, H), (xl, up - xl), (up - H / 2, H / 2, step), (lo - H / 2, H / 2), (xr, lo - xr), (xr, 0))
-    # the rising stroke, mirrored: x -> W - x
-    g.stroke((xr, H), (xr, up - xl), (W - (up - H / 2), H / 2, step), (W - (lo - H / 2), H / 2),
-             (xl, lo - xr), (xl, 0))
+    x_strokes(g, f.X(1), f.X(9), f.W, f.p.cap)
 
 
 @cap('Y', 10, 2)

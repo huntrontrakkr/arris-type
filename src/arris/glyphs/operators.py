@@ -31,8 +31,8 @@ from __future__ import annotations
 from ..draw import TAB_MATH, B, REGISTRY, draw, glyph
 from ..params import SQRT2
 from .figures import beak_depth, heaviness
-from .letterframe import STEEP, growing_width, letter_width
-from .punct import _ring, axis, dot
+from .letterframe import STEEP, growing_width, kept_width, least_white, plain_width as letter_width
+from .punct import _ring, axis, dot, dot_step
 
 ALIASES = {}
 
@@ -43,7 +43,7 @@ def _mono(width):
 
 
 def op(name, char, width=None, sides=1.0, solid=False):
-    w = _mono(width or letter_width(8, 1))
+    w = _mono(width or kept_width(8, 1))
     TAB_MATH.add(name)                         # on the math advance (draw.TAB_MATH)
     return glyph(name, char, w, kind=('punct', sides), solid=solid)
 
@@ -52,7 +52,7 @@ def u(cp):
     return f'uni{cp:04X}'
 
 
-OPW = letter_width(8, 1)                       # the plus sign's body
+OPW = kept_width(8, 1)                         # the plus sign's body (punct.OPERATOR)
 RINGW = growing_width(8, 1, 2.6)               # circled and squared operators: counters grow with the stroke
 
 
@@ -78,7 +78,7 @@ def kd(p):
 
 def span(p):
     """The brackets' height: big operators span it."""
-    return -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    return -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
 
 
 # --- Components: a height and a drawing centred at yc ---------------------------
@@ -108,7 +108,11 @@ class Bars:
             g.stroke((0 if self.x0 is None else self.x0, y), (g.W if self.x1 is None else self.x1, y))
 
 
-TILDEW = growing_width(8, 1, 1.5)               # tilde signs: room for the step's bays at heavy weights
+TILDEW = growing_width(8, 1, 1.5)               # the tilde alone: room for the step's bays at heavy weights
+                                                # (stacked it rises less and stands in the operators' body)
+TILDE_STACKED = 0.6                             # a stacked tilde's rise, of its stroke
+TILDE_PINCH = 0.35                              # of a stroke: the least white between two tildes where one steps
+TILDES_TALL = lambda p, n: (0.5 + 0.25 * (n - 1)) * p.cap      # the tallest n tildes stand: two 0.75 of the cap height
 
 
 def tilde_rise(g):
@@ -122,7 +126,17 @@ def tilde_rise(g):
     sd, sh = max(th((1, 1)), th((-1, 1))), th((1, 0))
     # a flat's inner edge loses sqrt2 sd - sh to the turns at its ends
     flat = max(0.5 * sh, SQRT2 * sd - sh) + 0.25 * p.sv
-    return min(max(g.W / 4, g.sh + 0.35 * p.sv), (g.W - 2 * flat) / 2)
+    rise = min(max(g.W / 4, g.sh + 0.35 * p.sv), (g.W - 2 * flat) / 2)
+    if getattr(g, 'stacked', False):
+        # over or under another part it rises six tenths of its stroke, and
+        # two tildes stand as two bars do, a bar and the stack's white apart,
+        # one in the other's bays (stack): two of the ~ itself, a quarter of
+        # the body high each and the whole white between their boxes, stood
+        # 0.74 of the cap height tall at Regular and past the capitals both
+        # ways from Bold (twenty-nine families' ≈: half the cap height at
+        # Regular, 0.6 at their heaviest, 0.79 at the outside)
+        rise = min(rise, TILDE_STACKED * g.sh)
+    return rise
 
 
 class Tilde:
@@ -229,19 +243,38 @@ def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
     p = g.p
     centre = axis(p) if centre is None else centre
     gapf = (lambda: eq_gap(g)) if gap is None else (lambda: gap(g))
+    g.stacked = len(comps) > 1
     limit = (tall or TALL)(p)
+    if g.stacked and all(isinstance(c, Tilde) for c in comps):
+        limit = min(limit, TILDES_TALL(p, len(comps)))       # (they thin to it, as any stack does to its own)
+    elif g.stacked and any(isinstance(c, Tilde) for c in comps):
+        limit = min(limit, p.cap)                            # a tilde over bars: in the capitals' height
     flex = [c for c in comps if isinstance(c, Chevron) and c.h is None]
+
+    def whites():
+        """The white under each part but the last: the stack's. Two tildes
+        that step the same way stand a rise closer, the lower in the
+        upper's bays: their flats the stack's white apart, or as far as
+        leaves TILDE_PINCH of a stroke where one has stepped and the other
+        has not."""
+        out = []
+        for a, b in zip(comps, comps[1:]):
+            if isinstance(a, Tilde) and isinstance(b, Tilde) and a.mirror == b.mirror:
+                out.append(max(gapf() - tilde_rise(g), TILDE_PINCH * g.sh))
+            else:
+                out.append(gapf())
+        return out
 
     def fit(k):
         g.sh_k = k
         if flex:
-            fixed = sum(c.height(g) for c in comps if c not in flex) + gapf() * (len(comps) - 1)
+            fixed = sum(c.height(g) for c in comps if c not in flex) + sum(whites())
             room = le_height(g) - fixed
             each = (room / len(flex) - 2 * kv(g)) / 2
             for c in flex:
                 c.h_fit = max(each, 0.75 * p.sv)
         ext = [_extent(c, g) for c in comps]
-        return ext, sum(y1 - y0 for y0, y1 in ext) + gapf() * (len(comps) - 1)
+        return ext, sum(y1 - y0 for y0, y1 in ext) + sum(whites())
 
     # thin the horizontals just as far as the limit needs (continuously, so
     # the variable font interpolates it), never below 0.7
@@ -257,9 +290,14 @@ def stack(g, comps, centre=None, flex=None, gap=None, tall=None):
                     hi = mid
         ext, total = fit(lo)
     y = centre + total / 2
-    for c, (y0, y1) in zip(comps, ext):
+    for c, (y0, y1), white in zip(comps, ext, whites() + [0.0]):
         _draw(c, g, y - y1)
-        y -= (y1 - y0) + gapf()
+        y -= (y1 - y0) + white
+    if g.stacked and g.clip is None and any(isinstance(c, Tilde) and c.x0 == 0.0 and c.x1 is None for c in comps):
+        # a stacked tilde ends at the body's sides, as the bars it stands with do: where its half rise is
+        # too short for an upright cut its ends are cut square to their slope and stood out past the body
+        # (a sixth of it at Black, and the sign's advance grew by as much)
+        g.clip = (0.0, -10 * p.cap, g.W, 10 * p.cap)
 
 
 def _extent(c, g):
@@ -269,6 +307,7 @@ def _extent(c, g):
     from ..draw import Glyph, _thickness
     from ..geom import stroke_polygon
     tmp = Glyph(g.p, W=g.W, sh_k=g.sh_k, sh_auto=g.sh_auto)
+    tmp.stacked = getattr(g, 'stacked', False)
     _draw(c, tmp, 0.0)
     th = _thickness(tmp.p, tmp.sh)
     polys = ([stroke_polygon(s, th, tmp.p.c) for s in tmp.strokes] + list(tmp.extra)
@@ -295,7 +334,7 @@ def le_height(g):
     return Chevron().height(g) + eq_gap(g) + g.sh
 
 
-def negate(g, half=None, x=None, y=None):
+def negate(g, half=None, x=None, y=None, run=0.5):
     """The not-equal sign's 2:1 stroke, crossing at (x, y) and reaching
     ``half`` up and down (default: the not-equal sign's four modules)."""
     from ..draw import NUDGE
@@ -307,7 +346,7 @@ def negate(g, half=None, x=None, y=None):
     # settled a few units across where its edge would pass a hairline off the sign's (∄'s bottom arm at
     # Thin, in the italic)
     t = g.held((1.0, 2.0))
-    g.settle([[((x + d - half / 2, y - half, t), (x + d + half / 2, y + half), {'start': 'h', 'end': 'h'})]
+    g.settle([[((x + d - run * half, y - half, t), (x + d + run * half, y + half), {'start': 'h', 'end': 'h'})]
               for d in NUDGE], curves=True, lay=True)
 
 
@@ -366,50 +405,50 @@ def nottilde(g):
     negate(g, half=_neg_half(g))
 
 
-@op(u(0x2242), '≂', width=TILDEW)
+@op(u(0x2242), '≂')
 def minustilde(g):
     stack(g, [Bar(), Tilde()])
 
 
-@op(u(0x2243), '≃', width=TILDEW)
+@op(u(0x2243), '≃')
 def asymptequal(g):
     stack(g, [Tilde(), Bar()])
 
 
-@op(u(0x2244), '≄', width=TILDEW)
+@op(u(0x2244), '≄')
 def notasymptequal(g):
     stack(g, [Tilde(), Bar()])
     negate(g, half=_neg_half(g))
 
 
-@op('congruent', '≅', width=TILDEW)
+@op('congruent', '≅')
 def congruent(g):
     stack(g, [Tilde(), Bars(2)])
 
 
-@op(u(0x2247), '≇', width=TILDEW)
+@op(u(0x2247), '≇')
 def notcongruent(g):
     stack(g, [Tilde(), Bars(2)])
     negate(g, half=_neg_half(g))
 
 
-@op('approxequal', '≈', width=TILDEW)
+@op('approxequal', '≈')
 def approxequal(g):
     stack(g, [Tilde(), Tilde()])
 
 
-@op(u(0x2249), '≉', width=TILDEW)
+@op(u(0x2249), '≉')
 def notapprox(g):
     stack(g, [Tilde(), Tilde()])
     negate(g, half=_neg_half(g))
 
 
-@op(u(0x224A), '≊', width=TILDEW)
+@op(u(0x224A), '≊')
 def approxorequal(g):
     stack(g, [Tilde(), Tilde(), Bar()])
 
 
-@op(u(0x224B), '≋', width=TILDEW)
+@op(u(0x224B), '≋')
 def tripletilde(g):
     stack(g, [Tilde(), Tilde(), Tilde()])
 
@@ -631,10 +670,16 @@ def notgreaterequal(g):
     _le_strike(g)
 
 
+LE_RUN = 1 / 3      # ≰ ≱: their negation's run across for each unit up
+
+
 def _le_strike(g):
-    """The negation of <= and >=: the not-equal sign's stroke from below the
-    bar to above the chevron, crossing both, as tall as the sign needs."""
-    negate(g, half=_neg_half(g))
+    """The negation of <= and >=: a stroke from below the bar to above the
+    chevron, crossing both, as tall as the sign needs; steeper than the
+    not-equal sign's (3:1, LE_RUN), as DejaVu draws it. At 2:1 through a
+    sign twice as tall as it is wide it ran corner to corner: its top end
+    met the end of ≰'s upper arm, which stood out past it in a notch."""
+    negate(g, half=_neg_half(g), run=LE_RUN)
 
 
 @op(u(0x2266), '≦')
@@ -897,16 +942,52 @@ def smallcontains(g):
 
 @op(u(0x228E), '⊎', width=growing_width(9, 1, 3.5))
 def multisetunion(g):
-    """The union with a plus inside its cup."""
+    """The union with a plus inside its cup: the plus's two bars both the
+    horizontals' thickness (as the plus sign's), reaching INNER_ARM of it
+    from the centre at least; where the cup's room is short they thin, to
+    INNER_THIN of it, then keep less white from the cup. The upright bar
+    was a stem thick, and from Bold the plus was a square."""
     p = g.p
     a = axis(p)
     r = box_r(g)
     cup(g, a, r)
-    clear = max(0.5 * p.sv, 0.75 * p.m)
-    arm = min((g.W - 2 * p.sv) / 2 - clear - g.sh / 2, 0.75 * r)
+    clear0 = max(0.5 * p.sv, 0.75 * p.m)
+    if p.mono:
+        _small_plus_in_cup(g, a, r, clear0)
+        return
+    t0 = g.sh
+    t_min = max(INNER_THIN * t0, 1.12 * p.floor)
+    for k in (1.0, 0.9, 0.8, 0.7, INNER_CLEAR):
+        clear = k * clear0
+        room = (g.W - 2 * p.sv) / 2 - clear                     # from the centre to the white's edge, across
+        t = max(t_min, min(t0, room / (INNER_ARM + 0.5)))
+        arm = min(room - t / 2, 0.75 * r)
+        if arm >= INNER_ARM * t:
+            break
+    arm = max(arm, INNER_ARM * t)
     yc = a - r + g.sh / 2 + clear + arm
-    g.stroke((g.W / 2 - arm, yc), (g.W / 2 + arm, yc))
-    g.stroke((g.W / 2, yc - arm), (g.W / 2, yc + arm))
+    g.stroke((g.W / 2 - arm, yc, t), (g.W / 2 + arm, yc))
+    g.stroke((g.W / 2, yc - arm, t), (g.W / 2, yc + arm))
+
+
+def _small_plus_in_cup(g, a, r, clear):
+    """⊎ in the monospaced cell: the plus is the plus sign drawn small, every
+    measure of it in proportion, its breaks and fills too, as wide as the
+    cup's inside leaves less its white. Drawn at the weight's own breaks a
+    plus that small was a diamond (its arms a little over their thickness
+    past the crossing, the breaks of a sign three times its size taking
+    them). Its bars no lighter than INNER_THIN of the horizontals'."""
+    import copy
+    p = g.p
+    half = (g.W - 2 * p.sv) / 2 - clear                         # the plus's ink, from its centre to its end
+    k = half / (REGISTRY['plus'].width(p) / 2)
+    s = max(k, INNER_THIN * g.sh / p.sh if p.sh else k)
+    q = p.with_(mono=False, narrow=False, m=k * p.m, cap=k * p.cap, fig_w=k * p.fig_w, fig_adv=k * p.fig_adv,
+                leg=k * p.leg, sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
+    sub = copy.copy(draw('plus', q))
+    sub.finished = True
+    yc = a - r + g.sh / 2 + clear + sub.W / 2
+    g.add_glyph(sub, g.W / 2 - sub.W / 2, yc - axis(q))
 
 
 # --- Logic -----------------------------------------------------------------------------
@@ -1204,15 +1285,60 @@ def _circled(g, inner, square=False):
     inner(g, cx, cy, r, leg)
 
 
-def _free(g, r, y=0.0, L=None):
+def _free(g, r, y=0.0, L=None, t=None, clear=1.0):
     """How far a bar inside a ring reaches (its centreline), at y from the
     centre, when it keeps clear of the ring's inside (its upright side, or
-    its chamfer) by half a stem, or three quarters of a module, of white."""
+    its chamfer) by half a stem, or three quarters of a module, of white
+    (``clear`` of that). ``t``: the bar's thickness, the horizontals' if
+    not given."""
     p = g.p
+    t = g.sh if t is None else t
     L = 0.586 * r if L is None else L
     k = p.sd / SQRT2
-    inner = min(r - p.sv / 2, 2 * r - L - k - (abs(y) + g.sh / 2))
-    return inner - max(0.5 * p.sv, 0.75 * p.m) - g.sh / 2
+    inner = min(r - p.sv / 2, 2 * r - L - k - (abs(y) + t / 2))
+    return inner - clear * max(0.5 * p.sv, 0.75 * p.m) - t / 2
+
+
+INNER_ARM = 1.5     # a sign inside another reaches at least this many of its own strokes' thickness from its centre
+INNER_THIN = 0.6    # ... and keeps at least this share of its own thickness while it makes room (_inner_equals, multisetunion)
+INNER_CLEAR = 0.6   # ... and at least this share of its white to the sign round it
+
+
+def _inner_equals(g, x, y, r, L):
+    """The equal sign's two bars inside a ring: as long as the ring's room
+    allows, and never shorter than INNER_ARM of their thickness from the
+    centre each way. Where the room falls short the bars first come
+    together, to the least white between them (the equal sign's own white
+    is for a sign standing alone), then thin, to INNER_THIN of their own,
+    then keep less white from the ring, to INNER_CLEAR of it. Drawn at
+    the room the ring left, ⊜'s bars were 86 units long for 79 thick at
+    the Regular, two dots, and in Arris Mono Narrow at Bold had no length
+    at all."""
+    p = g.p
+    t0, gap0 = g.sh, eq_gap(g)
+    t_min = max(INNER_THIN * t0, 1.12 * p.floor)
+    room = r - p.sv / 2 - max(0.5 * p.sv, 0.75 * p.m)            # from the centre to the white's edge, up and down
+    best = None
+    for clear in (1.0, 0.9, 0.8, 0.7, INNER_CLEAR):
+        for i in range(41):
+            t = t0 - (t0 - t_min) * i / 40
+            gap = min(gap0, max(least_white(p), 0.8 * t))
+            if t + gap / 2 > room * (2 - clear):                 # (the stack keeps inside the ring's white)
+                continue
+            half = _free(g, r, (t + gap) / 2, L, t, clear) + t / 2
+            best = (t, gap, half)
+            if half >= INNER_ARM * t:
+                break
+        else:
+            continue
+        break
+    if best is None:
+        best = (t_min, max(least_white(p), 0.8 * t_min), INNER_ARM * t_min)
+    t, gap, half = best
+    half = max(half, INNER_ARM * t)
+    off = (t + gap) / 2
+    for yy in (y - off, y + off):
+        g.stroke((x - half, yy, t), (x + half, yy))
 
 
 CIRCLED = {
@@ -1224,7 +1350,7 @@ CIRCLED = {
     0x2299: (u(0x2299), lambda g, x, y, r, L: cdot(g, x, y)),
     0x229A: (u(0x229A), lambda g, x, y, r, L: _inner_ring(g, x, y, r)),
     0x229B: (u(0x229B), lambda g, x, y, r, L: _inner_asterisk(g, x, y, _free(g, r, L=L) + g.sh / 2)),
-    0x229C: (u(0x229C), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r, (g.sh + eq_gap(g)) / 2, L) + g.sh / 2, 2, r)),
+    0x229C: (u(0x229C), lambda g, x, y, r, L: _inner_equals(g, x, y, r, L)),
     0x229D: (u(0x229D), lambda g, x, y, r, L: _inner_bars(g, x, y, _free(g, r, 0.0, L) + g.sh / 2, 1)),
 }
 SQUARED = {
@@ -1261,13 +1387,24 @@ def _inner_bars(g, x, y, half, n, r=None):
 
 
 def _inner_asterisk(g, x, y, half):
-    """Six spokes, the asterisk's: the vertical and the shallow 2:1 slopes."""
+    """Six spokes, the asterisk's: the vertical and the shallow 2:1 slopes,
+    lightened as the asterisk's own are where the white between two spokes
+    would begin outside the inner half of their length (punct.asterisk,
+    SPOKE_WHITE). At the stems' weight they met in a knot at every weight:
+    ⊛ was a ring round a blot."""
     import math
-    from .punct import SPOKE
+
+    from ..draw import _thickness
+    from .punct import SPOKE, SPOKE_WHITE
+    from .shapes import slanted
+    p = g.p
+    t_max = 2 * math.sin(SPOKE) * (1 - SPOKE_WHITE) * half
+    th = _thickness(p, g.sh)
     c, s = half * math.cos(SPOKE), half * math.sin(SPOKE)
-    g.stroke((x, y - half), (x, y + half))
-    g.stroke((x - c, y - s), (x + c, y + s))
-    g.stroke((x - c, y + s), (x + c, y - s))
+    g.stroke((x, y - half, slanted(g, min(max(p.sv, p.floor), t_max), (0, 1))), (x, y + half))
+    for sy in (1, -1):
+        d = (2, sy)
+        g.stroke((x - c, y - sy * s, slanted(g, min(th(d), t_max), d)), (x + c, y + sy * s))
 
 
 for cp, (nm, inner) in CIRCLED.items():
@@ -1288,34 +1425,40 @@ def bulletop(g):
     cdot(g, g.W / 2, axis(g.p), 1.5 * g.p.dot())
 
 
-def dot_step(p):
-    """From one dot to the next in a column or row (the ellipsis's)."""
-    return 2.2 * p.dot()
+def dot_reach(p):
+    """From the axis to the centre of a dot that stands over or under it in
+    a sign of dots (∶ ∷ ∴ ∵ ∹): the sign stands as tall as the plus, its
+    dots' outer edges where the plus's arms end. Set by the ellipsis's
+    step, 2.2 dots apart, a sign of dots grew with its dots: the ratio
+    stood from 0.24 to 0.76 of the cap height at Regular and from under
+    the baseline to over the capitals at Black (-0.07 to 1.07), where six
+    families' stands 0.13 to 0.84 and 0.11 to 0.89."""
+    return (OPW(p) - p.dot()) / 2
 
 
 @op(u(0x2236), '∶', width=lambda p: p.dot())
 def ratio(g):
     p = g.p
     for s in (-1, 1):
-        cdot(g, g.W / 2, axis(p) + s * dot_step(p) / 2 * 1.4)
+        cdot(g, g.W / 2, axis(p) + s * dot_reach(p))
 
 
 def _dd(g):
-    """Half the step between a pair of dots: the ellipsis's, or as much as
-    the body holds."""
-    return min(0.7 * dot_step(g.p), (g.W - g.p.dot()) / 2)
+    """Half the step between a pair of dots: the plus's reach (dot_reach),
+    or as much as the body holds."""
+    return min(dot_reach(g.p), (g.W - g.p.dot()) / 2)
 
 
-@op(u(0x2237), '∷', width=lambda p: p.dot() + 1.4 * dot_step(p))
+@op(u(0x2237), '∷', width=lambda p: OPW(p))
 def proportion(g):
     p = g.p
     d = _dd(g)
     for sx in (-1, 1):
         for sy in (-1, 1):
-            cdot(g, g.W / 2 + sx * d, axis(p) + sy * 0.7 * dot_step(p))
+            cdot(g, g.W / 2 + sx * d, axis(p) + sy * dot_reach(p))
 
 
-@op('therefore', '∴', width=lambda p: p.dot() + 1.4 * dot_step(p))
+@op('therefore', '∴', width=lambda p: OPW(p))
 def therefore(g):
     p = g.p
     d = _dd(g)
@@ -1324,7 +1467,7 @@ def therefore(g):
     cdot(g, g.W / 2 + d, axis(p) - d)
 
 
-@op(u(0x2235), '∵', width=lambda p: p.dot() + 1.4 * dot_step(p))
+@op(u(0x2235), '∵', width=lambda p: OPW(p))
 def because(g):
     p = g.p
     d = _dd(g)
@@ -1349,7 +1492,7 @@ def excess(g):
     s = p.dot()
     g.stroke((0, a), (g.W - s - max(0.8 * p.sv, p.m), a))
     for sy in (-1, 1):
-        cdot(g, g.W - s / 2, a + sy * 0.7 * dot_step(p))
+        cdot(g, g.W - s / 2, a + sy * dot_reach(p))
 
 
 @op(u(0x223A), '∺', width=lambda p: OPW(p))
@@ -1404,20 +1547,28 @@ def cellipsis(g):
         cdot(g, p.dot() / 2 + i * step, axis(p))
 
 
+def _diagonal_dots(g, rise):
+    """⋰ (rise 1) and ⋱ (-1): three dots a step apart on a diagonal. Where
+    the cell is narrower than the step across (Arris Mono and Mono Narrow),
+    the step across is what the cell leaves and the step up stays the
+    dots' own: stepped as little up as across, the dots ran into one
+    another in Arris Mono Narrow Italic from 650 (143 units each way for
+    dots 182 across)."""
+    p = g.p
+    up = dot_step(p) / SQRT2
+    across = min(up, (g.W - p.dot()) / 2)
+    for i in (-1, 0, 1):
+        cdot(g, g.W / 2 + i * across, axis(p) + rise * i * up)
+
+
 @op(u(0x22F0), '⋰', width=lambda p: p.dot() + 2 * dot_step(p) / SQRT2)
 def upellipsis(g):
-    p = g.p
-    d = min(dot_step(p) / SQRT2, (g.W - p.dot()) / 2)
-    for i in (-1, 0, 1):
-        cdot(g, g.W / 2 + i * d, axis(p) + i * d)
+    _diagonal_dots(g, 1)
 
 
 @op(u(0x22F1), '⋱', width=lambda p: p.dot() + 2 * dot_step(p) / SQRT2)
 def downellipsis(g):
-    p = g.p
-    d = min(dot_step(p) / SQRT2, (g.W - p.dot()) / 2)
-    for i in (-1, 0, 1):
-        cdot(g, g.W / 2 + i * d, axis(p) - i * d)
+    _diagonal_dots(g, -1)
 
 
 # --- Arithmetic --------------------------------------------------------------------------
@@ -1490,12 +1641,33 @@ def divides(g):
     g.stroke((g.W / 2, a - h), (g.W / 2, a + h))
 
 
-@op(u(0x2224), '∤', width=lambda p: p.sv + 4 * p.m)
+def _past_bars(p):
+    """How far a negation reaches past the bars it crosses: the arrows'
+    (two modules, or the Regular's stem past it)."""
+    from ..draw import held_at
+    return max(2.0 * p.m, held_at(p).sv)
+
+
+def negate_across(g, reach, x=None, y=None):
+    """The negation of upright bars: the not-equal sign's stroke turned a
+    quarter, rising one for two across, so it meets the bars at the angle
+    the not-equal sign's meets its bars, its ends cut upright as those are
+    cut level; ``reach`` across from (x, y) each way."""
+    from ..draw import NUDGE
+    p = g.p
+    x = g.W / 2 if x is None else x
+    y = axis(p) if y is None else y
+    t = g.held((2.0, 1.0))
+    g.settle([[((x - reach, y + d - reach / 2, t), (x + reach, y + d + reach / 2), {'start': 'v', 'end': 'v'})]
+              for d in NUDGE], curves=True, lay=True)
+
+
+@op(u(0x2224), '∤', width=lambda p: p.sv + 2 * _past_bars(p))
 def notdivides(g):
     a = axis(g.p)
     h = _vbar_half(g.p)
     g.stroke((g.W / 2, a - h), (g.W / 2, a + h))
-    negate(g, half=max(3.5 * g.p.m, 1.4 * g.p.sv), x=g.W / 2)
+    negate_across(g, g.W / 2)
 
 
 def _par_gap(p):
@@ -1512,14 +1684,16 @@ def parallel(g):
         g.stroke((x, a - h), (x, a + h))
 
 
-@op(u(0x2226), '∦', width=lambda p: 2 * p.sv + _par_gap(p) + 2 * p.m)
+@op(u(0x2226), '∦', width=lambda p: 2 * p.sv + _par_gap(p) + 2 * _past_bars(p))
 def notparallel(g):
     p = g.p
     a = axis(p)
     h = _vbar_half(p)
-    for x in (p.m + p.sv / 2, g.W - p.m - p.sv / 2):
+    # the strike's reach past the bars gives way first where a cell is narrower than the sign
+    e = max(min(_past_bars(p), (g.W - 2 * p.sv - _par_gap(p)) / 2), 0.75 * p.m)
+    for x in (e + p.sv / 2, g.W - e - p.sv / 2):
         g.stroke((x, a - h), (x, a + h))
-    negate(g, half=max(3 * p.m, 1.2 * p.sv))
+    negate_across(g, g.W / 2)
 
 
 # --- Angles ----------------------------------------------------------------------------------
@@ -1658,7 +1832,7 @@ def partialdiff(g):
     xl, xr = p.sv / 2, W - p.sv / 2
     yb, yt = g.sh / 2, p.cap - g.sh / 2
     ybt = 0.58 * p.cap - g.sh / 2
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     g.stroke(B(xl, yb), B(xr, yb), B(xr, ybt), B(xl, ybt), closed=True)
     # The right side runs on up from the bowl's straight side, so the two are one at every weight,
     # and turns back over the bowl into the 2's beak while that leaves a stem's white above the
@@ -1782,17 +1956,38 @@ def integral(g, x, bot, top):
     g.stroke((x + reach, top - d), B(x + reach, yt), B(x, yt), B(x, yb), B(x - reach, yb), (x - reach, bot + d))
 
 
+def _ints(p, n):
+    """The parameters n integrals side by side are drawn with: a stack of
+    parts, lighter toward Black (arrows.stack_k); one alone is the
+    weight's own."""
+    if n == 1:
+        return p
+    from ..draw import _lightened
+    from .arrows import stack_k
+    k = stack_k(p)
+    return _lightened(p, k) if k != 1.0 else p
+
+
 def int_w(n=1):
-    return lambda p: 2 * (2.5 * p.m + p.sv / 2) + p.sv + (n - 1) * int_step(p)
+    def width(p):
+        q = _ints(p, n)
+        return 2 * (2.5 * q.m + q.sv / 2) + q.sv + (n - 1) * int_step(q)
+    return width
 
 
 def int_step(p):
-    """From one integral to the next: its hook's reach and a stem's white."""
-    return 2.5 * p.m + p.sv + max(0.75 * p.sv, p.m)
+    """From one integral to the next: its hook's reach to the outside of
+    its beak, the least white a sign keeps between two parts
+    (letterframe.least_white), and the next one's stem. Until version 2 the
+    beak's own half was left out: a hook's end stood a quarter of a stem
+    off the next integral's stem, 22 units at Regular and 50 at Black. (In
+    the monospaced cell, where the group is fitted to one cell whatever it
+    measures, half that white: more only makes the whole group smaller.)"""
+    return 2.5 * p.m + 1.5 * p.sv + (0.5 if p.mono else 1.0) * least_white(p)
 
 
 def int_span(p):
-    return -p.desc, p.asc
+    return -p.under, p.asc
 
 
 @op('integral', '∫', width=int_w())
@@ -1803,7 +1998,7 @@ def integral1(g):
 
 @op(u(0x222C), '∬', width=int_w(2))
 def integral2(g):
-    p = g.p
+    p = g.p = _ints(g.p, 2)
     x0 = 2.5 * p.m + p.sv
     for i in range(2):
         integral(g, x0 + i * int_step(p), *int_span(p))
@@ -1811,7 +2006,7 @@ def integral2(g):
 
 @op(u(0x222D), '∭', width=int_w(3))
 def integral3(g):
-    p = g.p
+    p = g.p = _ints(g.p, 3)
     x0 = 2.5 * p.m + p.sv
     for i in range(3):
         integral(g, x0 + i * int_step(p), *int_span(p))
@@ -1841,9 +2036,19 @@ def contourintegral(g):
 ROOT_K = 0.42                                  # the index's size, of the figures'
 
 
+ROOT_HEFT = 2.2                                # the heaviest the index's stem may be, in its own modules
+
+
 def _root_params(p):
-    s = 0.5 - 0.08 * heaviness(p)                            # strokes in proportion to the index's size
+    """The index's parameters: a figure ROOT_K of the figures' size, its
+    strokes in proportion, and never heavier than ROOT_HEFT of its own
+    module: a little under what a superior figure may be
+    (symkit.SMALL_HEFT, 2.6), the index being two thirds of a superior's
+    size. Unheld, its stem was 2.8 of its module at Bold and 3.3 at Black,
+    the Black's own proportion in a figure 300 units tall, and the top of
+    the fourth root's 4 stood 14 units open at Black."""
     k = ROOT_K
+    s = min(0.5 - 0.08 * heaviness(p), ROOT_HEFT * k * p.m / p.sv)
     return p.with_(m=k * p.m, cap=k * p.cap, fig_w=k * p.fig_w, fig_adv=k * p.fig_adv, leg=k * p.leg,
                    sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
 
@@ -1859,20 +2064,28 @@ def _root_layout(p):
     wi = _root_params(p).fig_w
     w = p.ss / STEEP[1]
     yb = t + 0.5 * p.sv + gap
-    dx = max(0.0, wi + gap - t - yb / 2 + w / 2)
-    bar = 1.0 * p.m if p.mono else 3.5 * p.m
+    dx = max(0.0, wi + gap - t / 2 - yb / 2)                # (the rise's left side at the index's foot)
+    bar = 1.0 * p.m if p.mono else 2.5 * p.m
     return wi, yb, dx, bar
 
 
 def _tick(p):
-    """The radical's tick: √'s two modules, or longer than its stroke is
-    wide across (the heaviest grade)."""
-    return max(2.0 * p.m, 1.3 * p.sd / SQRT2)
+    """How high a root's tick starts: as √'s (symbols.radical_tick), or as
+    high as leaves its index room over it under the sign's top."""
+    from .symbols import radical_tick
+    top = p.cap + 0.5 * p.m
+    gap = max(0.5 * p.sv, 0.75 * p.m)
+    return min(radical_tick(p), top - _root_params(p).cap - 0.5 * p.sv - gap)
+
+
+def _root_foot(p):
+    """The root's foot from where its tick starts: as √'s (symbols.radical_foot), on its own tick."""
+    return p.ss / STEEP[1] / 2 + _tick(p) / 2
 
 
 def _root_w(p):
     wi, yb, dx, bar = _root_layout(p)
-    return dx + _tick(p) + (p.cap + 0.5 * p.m) / 2 + bar
+    return dx + _root_foot(p) + (p.cap + 0.5 * p.m) / 2 + bar
 
 
 def _root(g, n):
@@ -1886,11 +2099,20 @@ def _root(g, n):
     # the body, which in Mono's cell is narrower than the radical, the bar
     # ran back into the rise and the clip cut the rise's top off
     end = _root_w(p)
-    g.stroke((dx, t), (dx + t, 0), start='v', end='h')
-    g.stroke((dx + t, 0), (dx + t + top / 2, top), start='h', end='h')
-    g.stroke((dx + t + top / 2 - p.sv / 2, top - g.sh / 2), (end, top - g.sh / 2))
+    x = dx + _root_foot(p)
+    g.stroke((x - t / 2, t), (x, 0), start='h', end='h')
+    g.stroke((x, 0), (x + top / 2, top), start='h', end='h')
+    g.stroke((x + top / 2 - p.sv / 2, top - g.sh / 2), (end, top - g.sh / 2))
     g.clip = (0, 0, end, top)
-    sub = draw(n, _root_params(p))
+    # the index is finished as the small figure it is (Glyph.outline:
+    # ``finished``). Finished again on the radical's breaks, two and a half
+    # times its own at Bold, the step in the 4's diagonal (33 units, under
+    # one of the radical's breaks) was closed as a miss: the diagonal ran
+    # straight up past the stem's top, six units off it at Bold and through
+    # it in the italic.
+    import copy
+    sub = copy.copy(draw(n, _root_params(p)))
+    sub.finished = True
     g.add_glyph(sub, 0, yb)
 
 

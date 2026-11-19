@@ -24,7 +24,8 @@ from ..draw import B, NUDGE, REGISTRY, draw, glyph, held_at, held_c, white_featu
 from ..params import SQRT2
 from .caps import big
 from .figures import STACK_MIN, beak_depth, heaviness, jog
-from .letterframe import STEEP, Frame, close_slit, growing_width, letter_width
+from .letterframe import (STEEP, Frame, close_slit, growing_width, heft, least_white, letter_width as arm_width,
+                          plain_width as letter_width)
 from .symkit import _condensed, across, set_tight, sign, tight_width
 
 
@@ -140,15 +141,29 @@ def one_bar(g) -> bool:
     return g.free('one', 0.0) >= 0.5
 
 
-def bar_out(p):
-    """How far a bar runs out past the letter it crosses: a module, or 0.9
-    of a stem toward Black, so it reads as a bar and not as a nub on the
-    letter's side. In Mono the cell is fixed and the letter can give up
-    only a module of it; the bars make up some of the rest by hanging into
-    the cell's margin (bar_hang)."""
+def bar_own(p):
+    """How far a bar of the weight's own runs out past the stem it crosses
+    (the yen's): a module, or 0.9 of a stem toward Black, so it reads as a
+    bar and not as a nub on the letter's side. In Mono the cell is fixed
+    and the letter can give up only a module of it; the bars make up some
+    of the rest by hanging into the cell's margin (bar_hang)."""
     if p.mono:
         return p.m + bar_hang(p)
     return max(p.m, 0.9 * p.ungraded().sv)                  # (grade moves strokes, not layout)
+
+
+def bar_out(p):
+    """How far a bar runs out past the side of the letter it crosses, where
+    the body makes room for it: ``bar_own`` to the Regular, the Regular's
+    past it. The bar is the Regular's from there on (draw.EXTRA_HOLD), and
+    so is its reach: at 0.9 of the weight's own stem a bar 79 units thick
+    stood 180 out at Black, and of the H's ink across the ₦ was 1.68 for
+    1.40 at Regular, the ₴ 1.59 for 1.32, the ₩ 2.06 for 1.75, the ₽ 1.30
+    for 1.16, where other families' heaviest stand at most 1.36, 1.18,
+    1.81 and 1.19 and their bars stand out less than half a stem."""
+    if p.mono:
+        return bar_own(p)
+    return bar_own(held_at(p))
 
 
 def bar_hang(p):
@@ -210,13 +225,20 @@ def _c_width(extra=0.0):
     return lambda p: letter_width(9, 2)(p) + extra * p.m
 
 
-@cur('uni20B5', '₵', growing_width(9, 2, 1.5))
+CEDI_ROOM = 0.7      # what the cedi's body gains for a unit of stem past the Regular, over the C's
+
+
+@cur('uni20B5', '₵', lambda p: REGISTRY['C'].width(p) + CEDI_ROOM * heft(p))
 def cedi(g):
-    """C with a stroke through it, right of the middle so the counter's
-    closed part stays open."""
+    """C with a stroke through the middle of its counter, the Regular's
+    stroke past it: white either side of it between the C's stem and its
+    beaks, the least a sign keeps at Black (CEDI_ROOM). (It stood right of
+    the middle in a body a stem and a half wider for every stem gained,
+    1.27 of the H's ink across at Black; in the C's own body it stands 58
+    units off the stem and the beaks there.)"""
     p = g.p
     REGISTRY['C'].fn(g)
-    x = 0.5 * g.W + 0.25 * p.sv
+    x = 0.5 * g.W
     g.lay((x, -1.5 * p.m, g.held((0.0, 1.0))), (x, p.cap + 1.5 * p.m), c=held_c(p))
     g.clip = (0, -1.5 * p.m, g.W, p.cap + 1.5 * p.m)
 
@@ -235,7 +257,7 @@ def _stub_xs(p, xc):
     return (xc - d, xc + d)
 
 
-@cur('colonmonetary', '₡', growing_width(9, 2, 1.0))
+@cur('colonmonetary', '₡', lambda p: REGISTRY['C'].width(p))
 def colon_sign(g):
     """C with two strokes standing out of its top and bottom (the colón's
     two lines, shown where they leave the letter)."""
@@ -246,7 +268,7 @@ def colon_sign(g):
     g.clip = (0, -h, g.W, p.cap + h)
 
 
-@cur('uni20BF', '₿', growing_width(9, 2, 1.0))
+@cur('uni20BF', '₿', lambda p: REGISTRY['B'].width(p))
 def bitcoin(g):
     """B with two strokes standing out of its top and bottom."""
     p = g.p
@@ -276,18 +298,70 @@ def _small_letter(p, k=0.55, stroke=0.85):
     return q.with_(xh=q.cap)
 
 
+# ₢'s r, one drawing in one place through each cut: (its height in caps, where it stands in caps, where it starts
+# in modules), the largest that keeps a white off the C at the cut's heaviest weight and grade (from 59 units in
+# Arris to 39 in its italic, whose upper beak hangs lower; in the monospaced cells it moves in as the C narrows)
+CR_PLACE = {(False, False, False): (0.31, 0.29, 4.35), (True, False, False): (0.27, 0.27, 4.35),
+            (False, True, False): (0.31, 0.29, 4.35), (True, True, False): (0.31, 0.29, 3.9),
+            (False, True, True): (0.31, 0.29, 3.9), (True, True, True): (0.27, 0.29, 3.2)}
+CR_STROKE = 0.75     # the r's strokes, of the Regular's
+
+
+def _cruzeiro_place(p):
+    return CR_PLACE[(bool(p.slant), bool(p.mono), bool(p.narrow))]
+
+
+def _cruzeiro_r(p):
+    """₢'s r: one drawing from the Regular on (the Regular's, at one size), drawn apart from the C."""
+    return _small_letter(held_at(p), _cruzeiro_place(p)[0], CR_STROKE).with_(mono=False)
+
+
 @cur('uni20A2', '₢', _c_width(1.0))
 def cruzeiro(g):
-    """C holding a small r: its stem stands on the C's bottom bar, its arm
-    reaches out through the mouth."""
+    """C holding a small r standing on its bottom bar. The r is one drawing
+    in one place at every weight, its stem run down into the bar and a white
+    all round it elsewhere: drawn at the weight's own strokes and set
+    against the C's mouth, the C's lower beak ran into it from Bold and at
+    Black the two were one shape."""
+    from shapely import affinity
+    from shapely.geometry import LineString
+
+    from ..draw import Glyph
+    from ..geom import rings_to_shapely
     p = g.p
-    wc = g.W - p.m
-    stamp(g, 'C', width=wc)
-    # the r as tall as leaves a stroke's white under the C's upper beak
-    k = min(0.62, max(0.45, (p.cap - beak_depth(p) - wmin(p)) / p.cap))
-    pr = _small_letter(p, k, 0.7).with_(mono=False)        # a letter inside a sign: the plain r, not Mono's footed one
-    wr = REGISTRY['r'].width(pr)
-    stamp(g, 'r', dx=g.W - wr - 0.25 * p.m, p=pr)
+    c = draw('C', p, width=g.W - p.m)
+    _, low, left = _cruzeiro_place(p)
+    pr = _cruzeiro_r(p)
+    r = draw('r', pr)
+    # its stem runs on down into the C's bottom bar (the owner: "the r needs its stem attached"): the r stands on
+    # the bar, and above it is the same drawing at every weight
+    y = 0.25 * pr.xh
+    rink = rings_to_shapely([[q[:2] for q in ring] for ring in r.rings()]).buffer(0)
+    cut = rink.intersection(LineString([(-1e3, y), (1e4, y)]))
+    x0, _, x1, _ = min(getattr(cut, 'geoms', [cut]), key=lambda q: q.bounds[0]).bounds
+    stem = Glyph(pr, W=r.W)
+    stem.stroke(((x0 + x1) / 2, y, x1 - x0), ((x0 + x1) / 2, c.sh / 2 - low * p.cap))
+    stand = rink.union(rings_to_shapely([[q[:2] for q in ring] for ring in stem.rings()]).buffer(0))
+    # the C, the r and its stem, each finished on its own, only joined: finished again together (the corner
+    # rule and the polish run again over the whole), the r took the C's breaks and its arm met its stem in a
+    # neck of 12 units at Bold, and in the italic it changed with the weight
+    crings, crec = c.outline()
+    whole = rings_to_shapely([[q[:2] for q in ring] for ring in crings]).buffer(0).union(
+        affinity.translate(stand, left * p.m, low * p.cap))
+    g.add_glyph(_as_drawn(p, whole, crec))     # (the italic curves the C's corners as its record names, none of the r's)
+
+
+def _as_drawn(p, shape, record):
+    """A glyph whose outline is ``shape`` as it stands, never finished again, with ``record`` its chamfers."""
+    from ..draw import Glyph
+    done = Glyph(p)
+    done.finished = True
+    out = Glyph(p)
+    out.extra = [shape]
+    out.extra_src = [(shape, done, [], (1.0, 0.0, 0.0, 1.0, 0.0, 0.0))]
+    out.extra_chamfers = list(record)
+    out.finished = True
+    return out
 
 
 def _ce_layout(p):
@@ -324,10 +398,10 @@ def _under_bar(g, name, width=None):
     strokes leave too little white between them."""
     p = g.p
     t = g.held()
-    lift = max(0.0, t + wmin(p) - p.desc)
+    lift = max(0.0, t + wmin(p) - p.under)
     sub = stamp(g, name, 0, lift, width=width)
     xs = [x for r in sub.rings() for x, _ in r]
-    y = -p.desc + t / 2
+    y = -p.under + t / 2
     g.lay((min(xs), y, t), (max(xs), y), c=held_c(p))
 
 
@@ -406,7 +480,7 @@ def austral(g):
     bar_pair(g, f.Y(4), -hang, g.W + hang)
 
 
-@cur('uni20B8', '₸', letter_width(10, 1), squint=BARS)
+@cur('uni20B8', '₸', lambda p: REGISTRY['T'].width(p), squint=BARS)
 def tenge(g):
     """T with a second bar above its own: the stem hangs from the lower."""
     p = g.p
@@ -500,7 +574,7 @@ def kip(g):
     g.lay((-hang, p.cap / 2, g.held()), (dx + p.sv + 1.5 * p.m, p.cap / 2), c=held_c(p))
 
 
-@cur('lira', '₤', letter_width(8, 1), squint=BARS)
+@cur('lira', '₤', arm_width(8, 1), squint=BARS)
 def lira(g):
     """The pound sign with two bars, centred between its base and its top,
     the white below, between and above them shared evenly where the room
@@ -543,7 +617,7 @@ def hryvnia(g):
     stroke's white from its bar rather than run into it."""
     f = Frame(g, 9)
     p, W, H = f.p, f.W, f.p.cap
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     o, hang = bar_inset(p), bar_hang(p)
     xl, xr = f.X(1) + o, f.X(8) - o                          # the body, the bars running out past it
     yt, yb = f.Y(11), f.Y(1)
@@ -586,15 +660,19 @@ def _cross_pair(p):
     strokes and not as bumps on the stem)."""
     h = held_at(p)                                          # as every added stroke, the Regular's from there on
     t = h.sd * (1 - 0.4 * heaviness(h))
-    dy = SQRT2 * (t + max(p.m, 0.5 * p.sv))
-    e = 1.4 * p.m + p.sv / 2
+    # the white between them and their reach past the stem held with them (measured on the weight's stem, the
+    # pair spread as the stem grew while its strokes kept the Regular's: ₮'s lower stroke sank through the
+    # baseline from 800 and the left of the pair was one arm)
+    dy = SQRT2 * (t + max(h.m, 0.5 * h.sv))
+    e = 1.4 * h.m + p.sv / 2
     return t, dy, e
 
 
 def _free_arm(p):
     """How far a crossing stroke's arm reaches where nothing is in its way:
     long enough past the stem to read as a stroke, not a bump on it."""
-    return 2.0 * p.m + 0.75 * p.sv
+    h = held_at(p)
+    return 2.0 * h.m + 0.25 * h.sv + p.sv / 2
 
 
 def _cross(g, xs, y_lo, y_hi, t, arms):
@@ -605,7 +683,7 @@ def _cross(g, xs, y_lo, y_hi, t, arms):
         g.lay((xs - el, y - el, across(g.p, t, (1, 1))), (xs + er, y + er), c=held_c(g.p), start='v', end='v')
 
 
-@cur('uni20BA', '\u20ba', growing_width(9, 2, 1.0))
+@cur('uni20BA', '\u20ba', letter_width(9, 2))
 def turkishlira(g):
     """A stem whose foot turns along the baseline and up the right side, two
     45-degree strokes across the stem."""
@@ -621,22 +699,35 @@ def turkishlira(g):
     _cross(g, xs, yc - dy / 2, yc + dy / 2, t, (ef, e, ef, ef))   # only the lower stroke's right arm is over the bowl
 
 
-@cur('uni20AE', '\u20ae', letter_width(10, 1))
+@cur('uni20AE', '\u20ae', lambda p: REGISTRY['T'].width(p))
 def tugrik(g):
-    """T with two 45-degree strokes across its stem. The upper stroke stays
-    a stroke's white under the bar; at heavy weights the lower one may run
-    out through the baseline, cut flat by it, rather than crowd the stem."""
+    """T with two parallel strokes across its stem, rising one for two
+    across (the slope ∤ and ∦ are struck at), each reaching past the stem
+    alike on both sides, held at the Regular as every added stroke is, the
+    pair centred between the bar and the baseline. At 45 degrees, with arms
+    toward the bar and the line kept short and the others long, there was
+    no room for them past a heavy stem: from 800 the pair stood so low that
+    the lower stroke's left arm went under the baseline and the left of the
+    pair read as one arm."""
     f = Frame(g, 10)
     p = f.p
     g.stroke(f.P(0, 11), f.P(10, 11))
     xs = f.X(5)
     g.stroke((xs, f.Y(11)), (xs, 0))
-    t, dy, e = _cross_pair(p)
-    top = f.Y(11) - g.sh / 2 - wmin(p) - 0.71 * t           # the upper stroke's highest centre point
-    y_hi = min(0.42 * p.cap + dy / 2, top - e)
-    ef = _free_arm(p)
-    _cross(g, xs, y_hi - dy, y_hi, t, (e, ef, ef, e))           # the arms toward the bar and the baseline kept short
+    h = held_at(p)
+    t = h.sd * (1 - 0.4 * heaviness(h))
+    k = 5 ** 0.5 / 2                                        # a 1:2 stroke's height over its thickness
+    dy = k * (t + max(h.m, 0.5 * h.sv))                     # one stroke over the other: their white, across
+    top = f.Y(11) - g.sh / 2 - wmin(h)                      # the bar's underside, less the (held) white under it
+    a = p.sv / 2 + 2.0 * h.m + 0.25 * h.sv                  # each arm, from the stem's middle: well past it
+    a = max(min(a, top - dy - k * t), p.sv / 2 + 0.75 * h.m)
+    mid = min(max(0.42 * p.cap, dy / 2 + a / 2 + k * t / 2), top - dy / 2 - a / 2 - k * t / 2)
     g.clip = (0, 0, f.W, p.cap)
+
+    def pair(d):
+        return [((xs - a, y - a / 2, t), (xs + a, y + a / 2), {'start': 'v', 'end': 'v'})
+                for y in (mid - dy / 2 - d, mid + dy / 2 - d)]
+    g.settle([pair(d) for d in (0.0, 1.0, 2.0, 4.0)], lay=True)
 
 
 @cur('uni20A5', '₥', letter_width(12, 3), kind='lower')
@@ -662,20 +753,21 @@ def manat(g):
     """An arch on two legs with a stem through its top up to the cap height."""
     f = Frame(g, 10)
     p, W = f.p, f.W
-    # From Bold up the arch's top chamfers meet the stem a break or so under
-    # its own top corners, and the jog between (geom.JOG) closed at one
+    # From the watch's Bold up the arch's top chamfers meet the stem a break or
+    # so under its own top corners, and the jog between (geom.JOG) closed at one
     # weight and stayed at the next: in the italic the corners curved, held
     # and curved again (800 to 850 on the heavy grade with the watch's
-    # strokes eased past Bold). The arch settles MANAT_DROP lower by
-    # ExtraBold, so the jog stays and the corners hold from where they first do.
-    from ..instances import STEMS
+    # strokes eased past Bold). The arch settles MANAT_DROP lower by the watch's
+    # ExtraBold (Arris's Black), so the jog stays and the corners hold from
+    # where they first do.
+    from ..instances import WATCH_STEMS as STEMS
     t = min(1.0, max(0.0, (p.sv - STEMS[700]) / (STEMS[800] - STEMS[700])))
     ya = f.Y(8) - MANAT_DROP * t
     g.stroke(f.P(1, 0), B(f.X(1), ya), B(f.X(9), ya), f.P(9, 0))
     g.stroke((W / 2, f.Y(3.5)), (W / 2, p.cap))
 
 
-MANAT_DROP = 12.0   # units: how much lower ₼'s arch stands at ExtraBold and heavier
+MANAT_DROP = 12.0   # units: how much lower ₼'s arch stands from a stem of 158 (the watch's ExtraBold, Arris's Black)
 
 
 @cur('uni20BE', '₾', letter_width(10, 2))
@@ -685,18 +777,38 @@ def lari(g):
     f = Frame(g, 10)
     p, W = f.p, f.W
     ya = f.Y(8)
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     g.stroke((W, f.Y(1)), B(f.X(1), f.Y(1)), B(f.X(1), ya), B(f.X(9), ya), (f.X(9), f.Y(1) + g.sh / 2 + d))
     for x in _stub_xs(p, W / 2):
         g.stroke((x, ya), (x, p.cap))
 
 
-@cur('uni20AA', '₪', lambda p: 4 * p.sv + 3 * max(1.5 * p.m, 0.75 * p.sv))
+def _sheqel(p):
+    """(parameters, white between stems) the sheqel is drawn with: four
+    stems side by side are a stack of parts, lighter toward Black
+    (arrows.stack_k), a module and a half of white between them at every
+    weight. In the weight's own strokes with three quarters of a stem
+    between them it stood 1.24 of the H's ink across at Regular, 1.71 at
+    Bold and 2.06 at Black, where seven families' heaviest stand 1.36 and
+    none over 1.55."""
+    from ..draw import _lightened
+    from .arrows import stack_k
+    k = stack_k(p)
+    q = _lightened(p, k) if k != 1.0 else p
+    return q, max(1.5 * q.m, least_white(q))
+
+
+def _sheqel_w(p):
+    q, gap = _sheqel(p)
+    return 4 * q.sv + 3 * gap
+
+
+@cur('uni20AA', '₪', _sheqel_w)
 def sheqel(g):
     """Two hooks interlocked: a stem rising and turning down on the right,
     and inside it a stem falling and turning up on the right."""
+    g.p, gap = _sheqel(g.p)
     p, H = g.p, g.p.cap
-    gap = max(1.5 * p.m, 0.75 * p.sv)
     xs = [p.sv / 2 + i * (p.sv + gap) for i in range(4)]
     yt, yb = H - g.sh / 2, g.sh / 2
     g.stroke((xs[0], 0), B(xs[0], yt), B(xs[2], yt), (xs[2], g.sh + gap))
@@ -742,9 +854,9 @@ def pfennig(g):
     back (the italic f's descender)."""
     f = Frame(g, 8, 'asc')
     p = f.p
-    g.clip = (0, -p.desc, f.W, p.asc)
+    g.clip = (0, -p.under, f.W, p.asc)
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
-    beak = max(f.Y(12) - beak_depth(p) + g.sh / 2, p.xh + max(p.m, 0.6 * p.sv))   # clear of the bowl
+    beak = max(f.Y(12) - beak_depth(p, g.sh) + g.sh / 2, p.xh + max(p.m, 0.6 * p.sv))   # clear of the bowl
     # In the italic the bowl's curved corner reaches down to a tail that
     # ends under it and shuts the slit's mouth into a pinhole at some weights
     # and not others, which the topology lock lightened the sign to open, on

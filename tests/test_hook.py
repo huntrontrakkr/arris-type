@@ -1,0 +1,136 @@
+"""The g's hook: as heavy as the letter's other horizontals, with a module
+of white (or 0.6 of a stem) between hook and bowl, on the weight's
+descender line with p q and j (params.descender_line, lower.hook_fit),
+ended in a beak, and the y's too. Until 1.016 it thinned first, and
+from Light up it was about three quarters of the bowl's strokes; and it
+went deeper alone from Bold."""
+from __future__ import annotations
+
+import pytest
+from shapely.geometry import LineString
+
+import arris.glyphs  # noqa: F401  (the registry)
+from arris.draw import draw
+from arris.geom import rings_to_shapely
+from arris.glyphs.letterframe import least_white
+from arris.glyphs.lower import BEAK_WHITE, hook_fit
+from arris.instances import params
+
+
+def _bars(name, p):
+    """The glyph's horizontals cut by a plumb line left of its middle: (bottom, thickness) from the lowest up."""
+    g = draw(name, p)
+    ink = rings_to_shapely(g.rings())
+    x0, y0, x1, y1 = ink.bounds
+    x = x0 + 0.46 * (x1 - x0)                      # (clear of the counter's cut corners, in the narrowed Black too)
+    cut = ink.intersection(LineString([(x, y0 - 10), (x, y1 + 10)]))
+    return sorted((s.bounds[1], s.length) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 500, 600, 700, 800, 900])
+def test_the_gs_hook_is_as_heavy_as_its_bowl(w):
+    p = params(w)
+    (y_hook, hook), (y_foot, foot), (_, top) = _bars('g', p)
+    assert hook == pytest.approx(foot, abs=0.5) and foot == pytest.approx(top, abs=0.5)
+    assert y_foot - (y_hook + hook) >= least_white(p) - 0.5        # the white from hook to bowl
+
+
+@pytest.mark.parametrize('w', [300, 400, 500, 600, 700, 800, 900])
+def test_the_gs_hook_ends_in_a_beak(w):
+    """The hook is cut at both ends, as the top of the 8 is: at its left a
+    cut corner and a short terminal turned up, as the c's arms end. The
+    terminal rises over the hook, and keeps three quarters of the least
+    white under the bowl."""
+    p = params(w)
+    ink = rings_to_shapely(draw('g', p).rings())
+    (y_hook, hook), *_ = _bars('g', p)
+
+    def column(x):
+        cut = ink.intersection(LineString([(x, -1000), (x, p.xh / 2)]))
+        return sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+    tip = column(p.sv / 2)[0][1]
+    # (most of an edge break, and in Arris the least every beak keeps over its bar, a fill and a half:
+    # lower.BEAK_OVER, 34 units from SemiBold, where a break of the weight's own is 50 at Black)
+    from arris.draw import fill_leg
+    from arris.glyphs.lower import BAY_WHITE, BEAK_OVER
+    assert tip >= y_hook + hook + min(0.8 * p.c, BEAK_OVER * fill_leg(p)) - 0.1, (tip, y_hook + hook)
+    for x in (p.sv / 2, p.sv - 1.0):                    # the white over it, to the bowl's cut corner
+        runs = column(x)
+        # (what every beak keeps off what it turns toward, lower.beak_in: at SemiBold, where the hook has
+        # not yet gone deeper, the beak's least rise leaves 56 units for the three quarters' 60)
+        assert runs[1][0] - runs[0][1] >= min(BEAK_WHITE, BAY_WHITE + 0.1) * least_white(p) - 1.0, (x, runs)
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_y_stands_on_the_gs_hook(w):
+    """The same hook, bar for bar (the owner: "make a g like it is
+    today")."""
+    p = params(w)
+
+    def under(name):
+        """The hook's own corners, from its right end: every point of the letter under the baseline."""
+        ring = max(draw(name, p).rings(), key=len)
+        pts = [(x, y) for x, y in ring if y < -1.0]
+        x1 = max(x for x, _ in pts)
+        return sorted((round(x1 - x, 1), round(y, 1)) for x, y in pts if x1 - x >= p.sv - 0.5)   # (left of the stem it hangs from)
+    g, y = under('g'), under('y')
+    # (to the Regular the y's body is narrower than the g's hook is long, by 19 units at Regular and 66 at
+    # Thin, and its hook ends at its body's edge, as it always has: there the two are compared short of
+    # their ends)
+    from arris.glyphs.lower import hook_span
+    whole = draw('y', p).W >= hook_span(p) + p.sv - 0.5
+    reach = float('inf') if whole else draw('y', p).W - 2 * p.c - 1.0
+    assert all(any(abs(a - c) <= 0.5 and abs(b - d) <= 0.5 for c, d in y) for a, b in g if a < reach), (g, y)
+    assert whole or w <= 400
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 500, 600, 700])
+def test_the_ys_foot_is_as_long_as_the_top_of_the_ms_arch(w):
+    """The flat between its arm and its join, along the baseline, against
+    the flat on top of the m's last arch, along the x-height (the owner:
+    "measuring the top of the m and making the flat part that long"). Past
+    the Regular, where the letters give white, the two are read in the
+    bodies the watch's own white gives them, and the y then gives the share
+    of its body the n gives (lower.y_width): narrowed with the n, not
+    measured on a narrowed m, whose top is no shorter."""
+    from arris.draw import REGISTRY
+    from arris.glyphs import lower
+    from arris.glyphs.letterframe import narrowed, own_width, zone
+    p = params(w)
+    with zone('lower'):
+        given = narrowed(p)
+    assert (given == 1.0) == (w <= 400)
+    body = REGISTRY['y'].width(p) / given
+
+    def runs(name, y, width):
+        ink = rings_to_shapely(draw(name, p, width=width).rings())
+        cut = ink.intersection(LineString([(-1e4, y), (1e4, y)]))
+        return sorted((s.bounds[0], s.bounds[2]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+    lower._measuring.append(p)                          # (as y_width reads them: bodies that have given nothing)
+    try:
+        m, foot = runs('m', p.xh - 0.5, own_width(lower.M_BODY, 3)(p))[-1], runs('y', 0.5, body)[0]
+    finally:
+        lower._measuring.pop()
+    assert foot[1] - foot[0] == pytest.approx(m[1] - m[0], abs=1.5)
+
+
+def test_the_hook_keeps_its_weight_on_the_descender_line():
+    for w in range(100, 901, 50):
+        p = params(w)
+        for sh in (p.sh, p.sh * p.low):                 # the italic's horizontals, and the upright lowercase's
+            thick, extra = hook_fit(p, sh)
+            assert extra == 0 and (thick == pytest.approx(sh) or p.desc == p.deep), w
+
+
+def _lowest(name, p):
+    return min(y for r in draw(name, p).rings() for _, y in r)
+
+
+@pytest.mark.parametrize('w', [300, 400, 600, 700, 800, 900])
+def test_every_descender_stands_on_one_line(w):
+    """g j p q y: one depth a weight, three modules to SemiBold and deeper
+    from there, never past the font's descent."""
+    p = params(w)
+    depths = {n: _lowest(n, p) for n in 'gjpqy'}
+    assert max(depths.values()) - min(depths.values()) < 0.5, depths
+    assert depths['p'] == pytest.approx(-p.desc, abs=0.5) and 180 <= p.desc <= p.deep == 250

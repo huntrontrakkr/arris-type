@@ -17,8 +17,8 @@ Specimen, and the fonts to download: **[arristype.com](https://arristype.com)**.
 
 | Family | What it is |
 |---|---|
-| **Arris** | Proportional letters, tabular figures. Measured optics. Nine weights. |
-| **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem). |
+| **Arris** | Proportional letters and figures (the watch's tabular figures with `tnum`). Measured optics. Nine weights. |
+| **Arris Watch** | The same with the watch's own stroke balance (diagonals as wide across as a stem) and its own weights: SemiBold is the watch's figures, and past Regular each weight is a little heavier than Arris's of that name. |
 | **Arris Italic**, **Arris Mono Italic** | Slanted ten degrees, every chamfer a curve, every point the upright keeps sharp kept sharp; a single-storey a and a descending f. Nine weights; Mono Italic in Mono's six. |
 | **Arris Mono Narrow** | Arris Mono with narrower letters in the same cell: about a fifth of every cell white at every weight, twice Arris Mono's white between letters, and each weight from Regular up drawn a little lighter, for code and terminals where Arris Mono reads dense. Same six weights, each with its italic, every ligature and set. |
 | **Arris Mono** | Fira Code's six weights: Light, Regular, Retina (450), Medium, SemiBold and Bold. Every glyph on one 10-module cell, the same in all six (a Bold word keeps a Regular line's grid): slabbed I, footed i l r, dotted zero, and every programming ligature Fira Code sets by default (`->` `=>` `!=` `===` `<=` `:=` `|>` `</>` `<$>` `#{` `~@` `/*` …), each one gesture in Arris's strokes, plus runs of any length (`---->` `<====>` `|---|` `####`) and Fira Code's optional sets under its tags. |
@@ -41,15 +41,16 @@ Coverage, about 2,150 code points (details in `docs/coverage/`):
 * **Terminal**: all box drawing, block elements, shades and Braille, cell
   for cell, and the Powerline glyphs.
 
-Features: `tnum` (default) `pnum` `calt` (the watch's time colon between
-figures) `zero` `ss01` `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`
+Features: `pnum` (default) `tnum` (the watch's tabular figures) `calt` (the
+time colon between figures) `zero` `ss01` `sups` `subs` `sinf` `numr` `dnom` `frac` `ordn`
 `case` `locl` `ccmp` `mark` `mkmk` `kern`; in Mono, `calt` ligatures and
 alignment (`- + *` drop beside lowercase, `:` rises beside capitals, `x` is
 `×` in `1920x1080` and `0xFF`), `ss03` (`<=` `>=` as their characters),
 Fira Code's optional sets under Fira's tags (`ss07` `=~` as ≈, `ss08`
 gapped equality, `ss09` `>>=` `|=` as arrows, `ss10` `fi` `ft`…, `cv20`
 `<=` as ⇐, `cv21` `=<` as ⩽, `cv22` `=<` as ≤, `cv25` `.-`, `cv26` `:-`, `cv27` `[]`,
-`cv28` `{.` `.}`, `cv32` `.=`; `docs/DESIGN.md`, section 8), `cv01`, `cv02`, and
+`cv28` `{.` `.}`, `cv32` `.=`; `docs/DESIGN.md`, section 8), `cv01`, `cv02`,
+`cv03` (the hooked j Arris had until 2.001), and
 in Mono Italic the italic's descending f, looped k and the y that runs on
 into its descender, drawn into the cell, and an underscore that runs into
 the f's tail (`is_fresh` as one line), all by default; `ss04`, "Plain

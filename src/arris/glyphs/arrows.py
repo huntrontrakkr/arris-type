@@ -41,7 +41,7 @@ from ..draw import B, REGISTRY, _lightened, _thickness, glyph
 from ..geom import Node, Stroke, stroke_polygon
 from ..params import SQRT2
 from .figures import heaviness
-from .letterframe import STEEP, letter_width
+from .letterframe import STEEP, plain_width as letter_width
 from .punct import axis
 
 HEAD = 0.35          # a barb's reach, of the cap height: the Mono ligatures' head, scaled to one cell as Fira Code's
@@ -322,30 +322,40 @@ def dash_measures(ctx):
     return max(2.0 * p.m, 1.6 * p.sv), max(1.0 * p.m, 0.8 * p.sv)
 
 
+def pattern_stem(p) -> float:
+    """The stem a wave's or a zigzag's measures are taken in: the weight's
+    own to the Regular, the Regular's past it. In the weight's own the
+    whites, the flats and the lead all grew with the stroke, and `⇝` ran
+    from 1.52 of the H's advance at Regular to 1.82 at Bold and 1.94 at
+    Black while the plain arrow went 1.18, 1.18, 1.40."""
+    from ..draw import _unlightened, held_at
+    return min(p.sv, held_at(_unlightened(p)).sv)
+
+
 def wave_amp(ctx):
     """Half a wave's height: crest and trough keep half a stem of white
-    between them."""
+    between them (the stem ``pattern_stem``'s, here and below)."""
     p = ctx.p
-    return max(1.0 * p.m, (ctx.ts + 0.5 * p.sv) / 2)
+    return max(1.0 * p.m, (ctx.ts + 0.5 * pattern_stem(p)) / 2)
 
 
 def zigzag_amp(ctx):
     """Half a zigzag's height: the white in each tooth (inside two 45-degree
     strokes meeting at a point) at least a third of a stem deep."""
     p = ctx.p
-    return max(1.25 * p.m, ctx.t(1, 1) / SQRT2 + 0.35 * p.sv)
+    return max(1.25 * p.m, ctx.t(1, 1) / SQRT2 + 0.35 * pattern_stem(p))
 
 
 def wave_flat(ctx):
     if ctx.p.mono:
-        return max(0.5 * ctx.p.m, 0.4 * ctx.p.sv)
-    return max(1.0 * ctx.p.m, 0.75 * ctx.p.sv)
+        return max(0.5 * ctx.p.m, 0.4 * pattern_stem(ctx.p))
+    return max(1.0 * ctx.p.m, 0.75 * pattern_stem(ctx.p))
 
 
 def wave_lead(ctx):
     """Straight shaft between a wave and the barbs' ends (longer by the
     drawing's ``lead``, when the arrow settles: LEADS)."""
-    return max(0.5 * ctx.p.sv, 0.5 * ctx.p.m) * getattr(ctx, 'lead', 1.0)
+    return max(0.5 * pattern_stem(ctx.p), 0.5 * ctx.p.m) * getattr(ctx, 'lead', 1.0)
 
 
 def pattern_min(ctx, kind):
@@ -521,6 +531,11 @@ class Spec(Drawing):
         ctx.lead = self.lead
         offs = self.offs(ctx)
         d = head(ctx, self.head, h, offs).depth
+        if self.head == 'open' and self.tail == 'head':
+            # an open head's shaft starts at the middle of its back: the run between two such heads is
+            # counted clear of their backs (counted from their middles, ⇿'s was half a stem from 550, and its
+            # joins met in a pinch); beyond one head the free run is long enough as it is
+            d += ctx.t(0, 1) / 2
         if self.tail == 'head':
             d *= 2
         elif self.tail == 'feather':
@@ -531,9 +546,8 @@ class Spec(Drawing):
         if self.marks == 'base':                            # a base under the tail's head
             d += t + bar_gap(ctx, t)
         if self.strike:                                     # room for the negation, clear of the barbs
-            p = ctx.p
-            half = max(self.offs(ctx)) + ctx.ts / 2 + max(2.0 * p.m, 1.0 * p.sv)
-            d += half + p.ss / STEEP[1] + (0.5 if p.mono else 1.5) * p.sv
+            p, q = ctx.p, strike_at(ctx.p)
+            d += strike_half(ctx, self.offs(ctx)) + q.ss / STEEP[1] + (0.5 if p.mono else 1.5) * q.sv
         return d + pattern_min(ctx, self.shaft)
 
     def free(self):
@@ -705,6 +719,23 @@ def _move(q, dx, dy):
     return (q[0] + dx, q[1] + dy) + tuple(q[2:])
 
 
+def strike_at(p):
+    """The weight a negation's measures are taken at: the stroke is held at
+    the Regular's past it (draw.EXTRA_HOLD), and so are its reach past the
+    shafts and the room the arrow makes for it. Taken at the weight's own
+    they made `↛` 2.49 of the H's advance at Black against 1.53 at Regular,
+    while the plain arrow went from 1.18 to 1.40."""
+    from ..draw import held_at
+    return held_at(p)
+
+
+def strike_half(ctx, offs):
+    """Half a negation's height: past the outer shafts by two modules or a
+    stem (the stem ``strike_at``'s)."""
+    p = ctx.p
+    return max(offs) + ctx.ts / 2 + max(2.0 * p.m, 1.0 * strike_at(p).sv)
+
+
 def strike(ctx, spec, Ls, h):
     """The negation: a 2:1 stroke, as the not-equal sign's, across the
     middle of the free shaft (clear of the barbs), reaching two modules or
@@ -715,7 +746,7 @@ def strike(ctx, spec, Ls, h):
     td = hd if spec.tail == 'head' else (h if spec.tail == 'feather' else 0.0)
     um = (-Ls + td - hd) / 2
     xm, ym = ctx.turn.vec(um, 0.0)
-    half = max(offs) + ctx.ts / 2 + max(2.0 * p.m, 1.0 * p.sv)
+    half = strike_half(ctx, offs)
     # added to the arrow: the Regular's weight at every heavier one, laid over it (draw.EXTRA_HOLD)
     from ..draw import _thickness, bar_held
     d = (1.0, 2.0)
@@ -936,7 +967,9 @@ class LArrow(Framed):
             full = p.cap if leg_vertical else min(letter_width(11, 1)(p), cell)
             V = max(full - th_shaft / 2 - (h + kb), h + kb + p.sv)
         else:
-            Ls = min(letter_width(11, 1)(p), cell) - kb - th_leg / 2
+            # (the shaft no shorter than leaves the head's barb on the leg's side WHITE of a stem from the leg:
+            # drawn to the letter's width alone, the head grew into the leg, ↵ and ⏎ shut at 850 and Black)
+            Ls = max(min(letter_width(11, 1)(p), cell) - kb - th_leg / 2, h + kb + WHITE * p.sv + th_leg / 2)
             V = h + kb + 1.5 * p.sv
         s = 1 if self.up else -1
         eps = 0.01 * ctx.ts

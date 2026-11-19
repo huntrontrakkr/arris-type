@@ -9,7 +9,7 @@ from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.pens.pointPen import SegmentToPointPen  # noqa: F401  (kept for later point pens)
 
-from .draw import REGISTRY, TAB_MATH, draw
+from .draw import PROPORTIONAL_FIGS, REGISTRY, TAB_MATH, draw, drawn_spec
 from .params import Params
 
 UPM = 1000
@@ -63,9 +63,20 @@ def glyph_contours(name: str, p: Params, tune=None):
 
 
 # Optical spacing: the H's sidebearing as a fraction of its counter, and how
-# deep into a side's white the eye counts it (fraction of the zone height).
+# deep into a side's white the eye counts it: an eighth of the x-height, in
+# the capitals' zone and the lowercase's alike. That depth is measured: the
+# area model fitted to the side bearings of ten hand-spaced sans faces (Inter
+# Light to Black, Liberation Sans, DejaVu Sans, Carlito, FreeSans; tools/
+# spacing_depth.py) explains them best at 0.07 to 0.17 of the x-height, the
+# same for both zones (median 0.12), within a tenth of a stem's bearing.
+# Until 1.017 the white counted a fifth of its zone deep (0.27 of the
+# x-height for capitals, 0.2 for lowercase), twice what those faces count,
+# so every open side (C K L T E F, c r f t k) took most of its light from
+# inside the letter and stood against its neighbour: in DOCK the C stood 79
+# units from the K and 141 from the O.
 SPACE = 0.27
-DEPTH = 0.2
+DEPTH = 0.125
+HANG = 1.5      # modules: a piece that comes into the spacing zone from outside sets the body's edge in the measure it is tall, wholly from this (spacing._edges)
 PUNCT_SIDE = 0.9   # punctuation bearings, as a share of the letters' light
 
 
@@ -188,7 +199,10 @@ def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: li
         # centred where they were; everything else keeps its body
         W = g0.W
         if W <= 2.5 * p0.sv:
-            W = REGISTRY[name].width(p)
+            # (the body of the drawing it has there: the italic's own where it has one. Read off the
+            # upright's, the cursive l, whose body gives another share from ExtraBold, stood 27 units to
+            # the right of its ungraded self at any grade at Black, in the same advance)
+            W = drawn_spec(name, p).width(p)
             dx += (g0.W - W) / 2
         g = draw(name, p, ot=t.get('ot', 0.0), ob=t.get('ob', 0.0), width=W)
         rings, rec = g.outline(record, tags=tags)
@@ -206,15 +220,16 @@ def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: li
         # (where mark positioning, ``anchors``, moves it to its base)
         adv = 0.0
         dx = -g.W / 2 - mark_over(p)
-    elif spec.kind == 'fig' or p.mono:
+    elif (spec.kind == 'fig' and name not in PROPORTIONAL_FIGS) or p.mono:
         adv = p.fig_adv
         dx = (adv - g.W) / 2
     elif isinstance(spec.kind, tuple) and spec.kind[0] == 'punct':
         xs = [x for r in rings for x, _ in r] or [0.0, g.W]
         k = spec.kind[1]
-        side = k(p) if callable(k) else PUNCT_SIDE * light(p) * k      # a glyph may set its own side
-        dx = side - min(xs)
-        adv = side + (max(xs) - min(xs)) + side
+        side = k(p) if callable(k) else PUNCT_SIDE * light(p) * k      # a glyph may set its own side,
+        left, right = side if isinstance(side, tuple) else (side, side)  # or its two sides (the comma's)
+        dx = left - min(xs)
+        adv = left + (max(xs) - min(xs)) + right
         if name in TAB_MATH and name != 'plus':                          # math on one advance, at least
             tab = _place('plus', p)[2]
             if adv < tab:
@@ -222,8 +237,8 @@ def _place_drawn(name: str, p: Params, tune=None, record: bool = False, tags: li
                 adv = tab
     else:
         zone = (0.0, p.xh) if spec.kind == 'lower' else (0.0, p.cap)
-        lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * (zone[1] - zone[0]),
-                                        floor=-0.25 * p.m)
+        lsb, rsb, xmin, xmax = bearings(rings, *zone, light(p), DEPTH * p.xh,
+                                        floor=-0.25 * p.m, hang=HANG * p.m)
         # Parts outside the zone (a j's hook, a descender's tail) may hang
         # into the neighbour's space, but by no more than half its light.
         fx0 = min(x for r in rings for x, _ in r)
@@ -488,7 +503,7 @@ def build(path, names, p: Params, family='Arris', style='SemiBold', weight=600, 
     elif kern and not p.mono:
         from .kerning import fea as kern_fea, kerns
         kinds = {n: REGISTRY[n].kind for n in names}
-        kernable = [n for n in names if kinds[n] in ('cap', 'lower') or
+        kernable = [n for n in names if kinds[n] in ('cap', 'lower') or n in PROPORTIONAL_FIGS or
                     (isinstance(kinds[n], tuple) and n in KERN_PUNCT)]
         if p.slant:
             from .italic import polylines

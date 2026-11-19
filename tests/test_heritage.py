@@ -1,4 +1,6 @@
-"""The engine at heritage parameters reproduces the watch's Chamfer figures."""
+"""The engine at heritage parameters reproduces the watch's Chamfer figures,
+but for the 1, which the owner had redrawn in every cut, the watch's with
+it (1.017, 2026-11-10: a flag, a chamfered roof and a stem, no foot)."""
 import json
 
 import numpy as np
@@ -13,7 +15,8 @@ from arris.params import HERITAGE
 NAMES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 # Every figure but the 7 is the zone master under the Chamfer rule, exactly;
 # the 7 is the watch's straightened seven (its zone master's leg wobbles).
-EXACT = set(NAMES) - {'seven'}
+REDRAWN = {'one'}
+EXACT = set(NAMES) - {'seven'} - REDRAWN
 
 
 def watch_mask(poly, k=3, ss=8):
@@ -37,6 +40,8 @@ def test_vector_trace_matches():
 def test_watch_pixels_match():
     masters = json.loads((heritage.ROOT / 'heritage' / 'chamfer-clock.json').read_text())
     for i, n in enumerate(NAMES):
+        if n in REDRAWN:
+            continue
         mask = watch_mask(rings_to_shapely(draw(n, HERITAGE).rings()))
         ref = np.array([(masters[i][j >> 3] >> (j & 7)) & 1 for j in range(27 * 36)], np.uint8).reshape(36, 27)
         assert int((mask != ref).sum()) == 0, n
@@ -52,6 +57,8 @@ def test_shipped_watch_semibold_is_the_watch():
     p = params(600, optics=HERITAGE_OPTICS)
     masters = json.loads((heritage.ROOT / 'heritage' / 'chamfer-clock.json').read_text())
     for i, n in enumerate(NAMES):
+        if n in REDRAWN:
+            continue
         ink = affinity.scale(rings_to_shapely(draw(n, p).rings()), 1 / 60, 1 / 60, origin=(0, 0))
         ref = np.array([(masters[i][j >> 3] >> (j & 7)) & 1 for j in range(27 * 36)], np.uint8).reshape(36, 27)
         assert int((watch_mask(ink) != ref).sum()) == 0, n
@@ -65,6 +72,8 @@ def test_watch_axis_at_100_is_the_watch():
     p = params(600, watch=1.0)
     masters = json.loads((heritage.ROOT / 'heritage' / 'chamfer-clock.json').read_text())
     for i, n in enumerate(NAMES):
+        if n in REDRAWN:
+            continue
         ink = affinity.scale(rings_to_shapely(draw(n, p).rings()), 1 / 60, 1 / 60, origin=(0, 0))
         ref = np.array([(masters[i][j >> 3] >> (j & 7)) & 1 for j in range(27 * 36)], np.uint8).reshape(36, 27)
         assert int((watch_mask(ink) != ref).sum()) == 0, n

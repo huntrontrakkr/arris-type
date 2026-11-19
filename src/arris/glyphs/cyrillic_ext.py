@@ -22,13 +22,13 @@ x with a descender). Accented letters are composed from their marks
 """
 from __future__ import annotations
 
-from ..draw import B, REGISTRY, Opening, draw, glyph
+from ..draw import B, REGISTRY, Opening, draw, glyph, lay_bar
 from ..params import SQRT2, outer_leg
 from .caps import big
-from .cyrillic import ALIASES as RU_ALIASES, ccap, mirror, sc, smallcap
+from .cyrillic import ALIASES as RU_ALIASES, ZE_BOWLS, ccap, mirror, sc, smallcap
 from .extra_latin import stamp
-from .figures import MOUTH_SHARE, _beak_limit, beak_depth, jog
-from .letterframe import Frame, k_arms, letter_width, white_scale
+from .figures import MOUTH_SHARE, _beak_limit, beak_depth, jog, wedge_bars
+from .letterframe import Frame, k_arms, least_white, letter_width, white_scale
 
 # Code points that are Latin or Russian letters already.
 ALIASES = {
@@ -151,12 +151,32 @@ def cross_bar(g, x0, x1, y):
 
 def beak_free(g):
     """A beak's depth, which a mouth's opening may shorten, never past its
-    outer flank (as the 3's and 5's: figures.beak_bottom)."""
+    outer flank (as the 3's and 5's: figures.beak_bottom), and never
+    lengthens: the opening's limit is the shortest beak of the weight's own
+    bars at their thinnest (figures._beak_limit), and where the letter's
+    bars are thinner than that (the italic's Ә and Ҽ at Black, their bars
+    at the height's common bar and thinned again for the bay,
+    figures.bay_stack) the limit was the longer of the two: the mouth's own
+    rule drew the beak out 24 units and left the mouth 31 for the 55 the
+    bars had given way for."""
     from ..params import outer_leg
     from .figures import _shortest
     p = g.p
+    own = beak_depth(p, g.sh)
     floor = _shortest(p, g.sh) if p.slant else outer_leg(p, sh=g.sh) + p.c
-    return max(g.free('beak', beak_depth(p, g.sh)), floor)
+    return max(min(g.free('beak', own), own), floor)
+
+
+def _mouth_frame(g, modules, rows, floor=None):
+    """The frame of a letter whose beak faces a bar (Ә, Ҽ). Upright, its
+    mouth's opening shortens the beak (MOUTH). In the italic the beak keeps
+    its flank, which its corners need to be curved (beak_free), and the
+    mouth ran out: 0.19 of a stem at Black. There the bars give instead,
+    as the S's do (figures.bay_stack)."""
+    from .figures import bay_stack
+    if g.p.slant:
+        return bay_stack(g, lambda: Frame(g, modules), [rows], floor=floor)
+    return Frame(g, modules)
 
 
 # A mouth, where a beak faces a bar (Ә Ҽ Ҩ), keeps three quarters of its
@@ -221,14 +241,14 @@ def _stem_bar(g, x, y):
 def Schwa(g):
     """Э whose lower beak runs on up into its bar: the e turned, at the
     capital height, with a beak where it opens."""
-    f = Frame(g, 9)
+    f = _mouth_frame(g, 9, (6, 11))
     p, H, d = f.p, f.p.cap, beak_free(g)
     g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 1)), B(*f.P(1, 1)), f.P(1, 6))
     g.stroke(f.P(1, 6), f.P(8, 6))
     g.defaults_used['mouth'] = (H - d) - (f.Y(6) + g.sh / 2)
 
 
-@ccap('uni0498', 'Ҙ', 9, 2)
+@ccap('uni0498', 'Ҙ', 9, 2, squint=ZE_BOWLS)                # (its small capital's bays as the з's: at Black they were slits, the italic's lower one shut)
 def Zedesc(g):
     from .cyrillic import ze_shape
     f = Frame(g, 9)
@@ -386,7 +406,10 @@ def Kastroke(g):
     weight as far as it must to keep BAR_WHITE beside it at both ends
     (draw.bar_white): from about 600, to the top of the stem at Black (the
     owner, 2026-11-06)."""
+    from shapely.geometry import LineString
+
     from ..draw import BAR_WHITE, Glyph, _thickness, bar_white
+    from ..geom import rings_to_shapely
     p = g.p
     dx = room(p)
     stamp(g, 'K', dx, width=g.W - dx)
@@ -411,8 +434,23 @@ def Kastroke(g):
     # settled a few units up where its end lands a hairline off the arm (Mono's italic at 550 on the
     # heavy grade), never down into the white it rose for
     run = (_thickness(p, g.sh)((1.0, 0.0)) - t) / 2
-    g.settle([[((-run, y_, t), (x1, y_))] for y_ in sorted({min(y + d, p.cap - t / 2) for d in (0, 2, 4, 8, 12)})],
-             lay=True)
+    letter = rings_to_shapely(g.outline(record=False)[0])
+
+    def ends(y_):
+        # Where it has risen to the top and the arm still comes in under it (Arris Mono Narrow Italic from
+        # 550, whose K stands in a narrow cell), its end stops the least white short of the arm's edge at its
+        # underside, or a module past the stem where that is less: run on, the end's corner met the arm in a
+        # pinch of a third of a unit at 600, and crossed it at 550. Where that is not clean either (the italic
+        # at Black, the arm's root at the bar), it runs on into the arm as before.
+        under = y_ - t / 2 - 0.5
+        wall = letter.intersection(LineString([(dx + p.sv + 1.0, under), (g.W + p.m, under)]))
+        xs = [q.coords[0][0] for q in getattr(wall, 'geoms', [wall]) if not q.is_empty and q.geom_type == 'LineString']
+        short = min([x1] + [x - least_white(p) for x in xs if x > dx + p.sv])
+        short = max(short, dx + p.sv + p.m)
+        return [short, x1] if short < x1 else [x1]
+
+    g.settle([[((-run, y_, t), (x, y_))]
+              for y_ in sorted({min(y + d, p.cap - t / 2) for d in (0, 2, 4, 8, 12)}) for x in ends(y_)], lay=True)
 
 
 @ccap('uni04B4', 'Ҵ', 13, 3)
@@ -431,8 +469,8 @@ def Tetse(g):
 def Dzeabkhasian(g):
     """The 3 with a flat top and a 45-degree return (ẞ's), its lower bowl
     the 3's."""
-    f = Frame(g, 9)
-    p, d = f.p, beak_depth(f.p)
+    f = wedge_bars(g, lambda: Frame(g, 9), lambda f: f.X(8) - f.X(4))
+    p, d = f.p, beak_depth(f.p, g.sh)
     x8, xm = f.X(8), f.X(4)
     ym = f.Y(11) - (x8 - xm)
     g.stroke(f.P(1, 11), (x8, f.Y(11)), (xm, ym))
@@ -514,21 +552,44 @@ def Kahook(g):
 
 @ccap('uni049C', 'Ҝ', 10, 2)
 def Kavertical(g):
-    """K with a short stem through its arm. The stem stands two modules of
-    white clear of K's stem, and stops half a stem clear of the leg."""
+    """K with a short stem through its arm: a stroke added to the letter,
+    the Regular's thickness at every heavier weight and laid over it
+    (draw.lay_bar). It crosses the arm where arm and leg have parted enough
+    for it to show KV_SHOW of its thickness below the arm (a stem at most)
+    with its foot's near corner half its thickness clear of the leg, and
+    shows as much above
+    the arm, up to the cap height; two modules of white from K's stem at
+    least. Where the arm is too thick for that (ҝ toward Black) it shows
+    less on both sides, never under KV_LEAST below the arm, and above it
+    what the x-height leaves. Two modules from the stem, at
+    the weight's own thickness, it stood where the arm meets the leg: from
+    SemiBold it was a bump on the arm with no white under it, and ҝ's
+    nothing at Black."""
     f = Frame(g, 10)
     p = g.p
     g.stroke(f.P(1, 0), f.P(1, 12))
     for pts, a, b in k_arms(g, f.X(1), f.W, p.cap):
         g.stroke(*pts, start=a, end=b)
-    x = f.X(1) + p.sv + 2 * room(p)
     k = p.sd / SQRT2
-    y_arm = x - (f.W - p.cap + p.c - k)
-    y_leg = (f.W + p.c - k) - x
-    e = max(p.sv, 1.5 * p.m)                                # it shows a stem's length past the arm
-    lo = max(y_arm - k - e, y_leg + k + 0.5 * p.sv)
-    hi = min(y_arm + k + e, f.Y(11))
-    g.stroke((x, lo), (x, hi))
+    a_arm = f.W - p.cap + p.c - k                           # the arm's centre: x - y = a_arm
+    a_leg = f.W + p.c - k                                   # the leg's: x + y = a_leg
+
+    def ends(t, own):
+        gap = t                                             # (at its centre: its near corner half of it, the leg rising to it at 45°)
+        e = max(KV_LEAST * t, min(KV_SHOW * t, p.sv, (p.cap - 4 * k - gap) / 3))
+        x_lo = (a_arm + a_leg + 2 * k + e + gap) / 2        # e below the arm, gap over the leg
+        x_hi = a_arm + p.cap - k - e                        # e above the arm, under the cap height
+        x = max(f.X(1) + p.sv + 2 * room(p), x_lo)
+        if x > x_hi:                                        # (the arm too thick: it keeps the white under it)
+            x = max(x_hi, x_lo)
+        lo = max(x - a_arm - k - e, a_leg - x + k + gap)
+        hi = min(x - a_arm + k + e, p.cap)
+        return (x, lo), (x, hi)
+    lay_bar(g, ends, direction=(0.0, 1.0))
+
+
+KV_SHOW = 1.5     # Ҝ: its short stem shows this many of its thicknesses past the arm, each side ...
+KV_LEAST = 0.5    # ... and never fewer than this
 
 
 @ccap('uni04B8', 'Ҹ', 11, 3)
@@ -551,7 +612,16 @@ def _tick(g, x_corner, y_corner, inside):
     g.stroke((a - y0, y0), (a - y1, y1), start='h', end='h')
 
 
-_TICK = Opening(lambda g: g.counter_size(), 'tick', lambda p: 0.0, max_ratio=0.85)
+def _tick_least(p):
+    """How short the tick may be drawn inside the bowl (``tick``, above the
+    corner) and still start within the bowl's ink: its start, cut level, is
+    sd·√2 wide about the stroke's centre, and on the corner it stood out of
+    the bowl's side by sd/√2 - sv/2 (16 units at Bold), a ledge over the
+    tick (ҏ at Bold and ExtraBold). A break short of that, at least."""
+    return max(0.0, p.sd / SQRT2 - p.sv / 2 + p.c)
+
+
+_TICK = Opening(lambda g: g.counter_size(), 'tick', _tick_least, max_ratio=0.85)
 
 
 @glyph('uni048E', 'Ҏ', letter_width(9, 2), kind='cap', openings=[_TICK])
@@ -568,7 +638,7 @@ def Ertick(g):
 def Koppa(g):
     """C whose lower arm turns down into the descender."""
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), f.P(7.5, 1), (f.X(7.5), -TAIL * p.desc))
     _down(g, TAIL * p.desc)
 
@@ -577,7 +647,6 @@ def Koppa(g):
 def Hastroke(g):
     """X with a bar across its crossing, the body's width less half a module
     each side, so it reaches past the diagonals at every weight."""
-    from ..draw import lay_bar
     REGISTRY['X'].fn(g)
     f = Frame(g, 10)
     lay_bar(g, lambda t, own: ((f.X(0.5) - (own - t) / 2, f.Y(6)), (f.X(9.5) + (own - t) / 2, f.Y(6))))
@@ -656,13 +725,13 @@ def _che_abkhaz(g, f, xl, xr, top, yb, ybot, beak, foot_leg=None):
 
 @glyph('uni04BC', 'Ҽ', letter_width(11, 2), kind='cap', openings=[MOUTH])
 def Cheabkhasian(g):
-    f = Frame(g, 11)
+    f = _mouth_frame(g, 11, (1, 6))
     _che_abkhaz(g, f, f.X(3.5), f.X(10), f.Y(11), f.Y(6), f.Y(1), beak=True)
 
 
 @glyph('uni04BE', 'Ҿ', letter_width(11, 2), kind='cap', openings=[MOUTH])
 def Chedescabkhasian(g):
-    f = Frame(g, 11)
+    f = _mouth_frame(g, 11, (1, 6))
     _che_abkhaz(g, f, f.X(3.5), f.X(10), f.Y(11), f.Y(6), f.Y(1), beak=True,
                 foot_leg=drop_leg(g.p, f.X(10) - f.X(3.5)))
     drop(g, (f.X(3.5) + f.X(10)) / 2)
@@ -691,7 +760,10 @@ def Haabkhasian(g):
     letter at Black and a heavy grade), or the bowl is too narrow to turn
     down (the monospaced cell), the bowl ends flat on its top bar."""
     from ..params import outer_leg
-    f = Frame(g, 11)
+    # (in the italic the beak keeps its flank and cannot shorten, _mouth_frame: the loop comes down all it may,
+    # and past that the bars give, as the Ә's and the Ҽ's. Over the loop at its lowest the mouth was 26 units
+    # at a stem of 189 and 5 at Black)
+    f = _mouth_frame(g, 11, (6.5, 11), floor=_ha_loop_limit(g.p))
     p = g.p
     xr = f.X(10)
     xm = (f.X(1) + xr) / 2                                  # the loop as wide as the bowl beside it
@@ -771,7 +843,7 @@ def Tjekomi(g):
 def Sjekomi(g):
     """G without its bar: the C whose foot turns up the right side."""
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(8), H - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 1)), B(*f.P(8, 1)), f.P(8, 6))
 
 
@@ -869,18 +941,31 @@ def koppa(g):
     _down(g, TAIL * p.desc)
 
 
+TICK_END = 2.0     # edge breaks: the least the ҏ's tick's end stands upright, cut by the body's clip (ertick)
+
+
 @glyph('uni048F', 'ҏ', letter_width(8, 2), kind='lower', openings=[_TICK])
 def ertick(g):
+    """р with the tick through its bowl's lower corner, as Ҏ's. The tick
+    leaves the bowl a short way, and its end is cut level underneath and
+    upright by the body's clip a module past it: at the Regular a face
+    1.9 breaks tall between the two. That face is held at TICK_END breaks
+    at least: as the tick grew with the weight its end came inside the
+    clip, and from Bold the corner cut took the upright face whole and the
+    end came to a point (the owner, of a pointed end: "I never want to see
+    this shape in our typefaces")."""
     f = Frame(g, 8, 'lower')
     p = g.p
     stamp(g, 'p')
-    g.clip = (-p.cap, -p.desc, g.W + p.m, p.xh)
-    _tick(g, f.X(7), f.Y(1), 1.5 * p.m)
+    inside = 1.5 * p.m
+    x_corner, y_corner = f.X(7), f.Y(1)
+    tip = x_corner + y_corner - (y_corner - inside) + p.sd / SQRT2      # the tick's end, its far corner underneath
+    g.clip = (-p.cap, -p.desc, min(g.W + p.m, tip - TICK_END * p.c), p.xh)
+    _tick(g, x_corner, y_corner, inside)
 
 
 @glyph('uni04FF', 'ӿ', letter_width(8, 2), kind='lower')
 def hastroke(g):
-    from ..draw import lay_bar
     REGISTRY['x'].fn(g)
     f = Frame(g, 8, 'lower')
     lay_bar(g, lambda t, own: ((f.X(0.5) - (own - t) / 2, f.Y(4.5)), (f.X(7.5) + (own - t) / 2, f.Y(4.5))))
@@ -902,7 +987,6 @@ def kastroke(g):
     from ..draw import _build
     p = g.p
     dx = room(p)
-    from ..draw import lay_bar
     g.add_glyph(_build(REGISTRY['k'], p, 0.0, 0.0, {}, g.W - dx), dx)
     y = (p.xh + p.asc) / 2 + p.m / 2
     lay_bar(g, lambda t, own: ((-(own - t) / 2, y), (dx + p.sv + room(p), y)))
@@ -941,12 +1025,12 @@ def pemidhook(g):
 @glyph('uni04E1', 'ӡ', letter_width(8, 2), kind='lower')
 def dzeabkhasian(g):
     """The Ӡ on the x-height, its bowl in the descender (as ʒ)."""
-    f = Frame(g, 8, 'lower')
+    f = wedge_bars(g, lambda: Frame(g, 8, 'lower'), lambda f: f.X(7) - f.X(3.5))
     p = g.p
     x7, xm = f.X(7), f.X(3.5)
     ym = f.Y(8) - (x7 - xm)
     g.stroke(f.P(1, 8), (x7, f.Y(8)), (xm, ym))
-    g.stroke((xm, ym), B(x7, ym), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    g.stroke((xm, ym), B(x7, ym), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
 
 
 def _che_small(g, desc=False):
@@ -1010,7 +1094,7 @@ def _ctick(g, f, x):
 @ital('uni048B', 8, 2)
 def shortitail_ital(g):
     """The italic й (a u), its foot running on into the cursive ц's tick."""
-    from .marks import breve, gap
+    from .marks import breve, gap, kept, mark_params
     f = Frame(g, 8, 'lower')
     _free(g)
     p = g.p
@@ -1020,7 +1104,7 @@ def shortitail_ital(g):
     g.stroke(f.P(7, 9), f.P(7, 1))
     x0, y0, x1, _ = g.clip
     g.clip = (x0, y0, x1, p.asc + p.cap)
-    breve(g, (xl + xr) / 2, p.xh + gap(p), 'lc')
+    kept(g, breve, (xl + xr) / 2, p.xh + gap(mark_params(p)), 'lc')
 
 
 @ital('uni04AD', 12, 3)
@@ -1033,7 +1117,8 @@ def tedesc_ital(g):
     entry(g, f, x1)
     arch, cut = shoulder(g, f, x1, x2, drop=BRANCH)
     g.stroke(*arch, (x2, 0), start=cut)
-    arch, cut = shoulder(g, f, x2, x3, drop=BRANCH)
+    arch, cut = shoulder(g, f, x2, x3, drop=BRANCH, joined=True)
+    g.stroke((x2, f.Y(4)), (x2, arch[0][1]))                # (the middle stem up to its own arch: italic_forms.m_ital)
     g.stroke(*arch, (x3, f.Y(1)), *_ctick(g, f, x3), start=cut)
 
 

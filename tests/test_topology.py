@@ -104,3 +104,26 @@ def test_the_build_sizes_a_fold_the_same_way():
     square = [(0, 0), (200, 0), (200, 200), (0, 200)]
     assert fold([square]) == 0.0
     assert fold([bow]) >= 90
+
+
+def test_a_closing_that_folds_does_not_stop_the_drawing():
+    """geom._fill_slits closes the ink by a share of the chamfer to find the
+    hairlines of white. Two parts standing just nearer than twice that share
+    are bridged at a point, and the closed outline crosses itself there: GEOS
+    then refuses the difference that measures the white. The italic ǎ at
+    850, grade 100, on the watch's ladder has its caron 29 units over the
+    letter with a share of 15, and drawn without the jog closing, as the
+    variable font tries every glyph it cannot interpolate, it stopped the
+    variable italic's build. The fold is taken out and the drawing goes on,
+    letter and caron apart as they are drawn."""
+    from arris import geom
+    from arris.font import _place
+    from arris.vf.space import params as at
+    p = at((850, 100, 100), True)
+    jog, geom.JOG = geom.JOG, 0.0
+    try:
+        rings, _, _ = _place('uni01CE', p, record=True, tags=[])
+    finally:
+        geom.JOG = jog
+    ink = geom.rings_to_shapely(rings)
+    assert len(getattr(ink, 'geoms', [ink])) == 2

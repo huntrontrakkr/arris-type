@@ -19,7 +19,7 @@ from pathlib import Path
 from arris.draw import REGISTRY
 from arris.font import build
 from arris.glyphs.features import fea
-from arris.instances import HERITAGE_OPTICS, MONO_NAMES, MONO_WEIGHTS, NAMES, OPTICS, STEMS, narrow_weight, params
+from arris.instances import HERITAGE_OPTICS, MONO_NAMES, MONO_WEIGHTS, NAMES, OPTICS, STEMS, mono_weight, narrow_weight, params
 from arris.italic import italic
 
 FIGS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -54,8 +54,9 @@ if mono and ital and __name__ == '__main__':
 
 
 def one(w):
-    # Mono Narrow: each weight drawn at narrow_weight (from Regular up, a little lighter than its name)
-    dw = narrow_weight(w) if narrow else w
+    # Mono: each weight drawn with Mono's own stem (mono_weight); Mono Narrow at narrow_weight (from Regular up, a
+    # little lighter than its name)
+    dw = narrow_weight(w) if narrow else mono_weight(w) if mono else w
     p = params(dw, optics=HERITAGE_OPTICS if watch else OPTICS).with_(mono=mono, narrow=narrow)
     style = (MONO_NAMES if mono else NAMES)[w]
     if ital:

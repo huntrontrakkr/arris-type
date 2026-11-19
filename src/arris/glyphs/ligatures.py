@@ -396,11 +396,13 @@ def _chevron_to(g, i, sign, upper=None, lower=None):
 def _slash_line(g, i):
     """The slash of cell i as itself; returns x(y) along its centreline."""
     from .letterframe import STEEP
+    from .punct import slash_lean
     p = g.p
     sub, x0 = _stamp(g, 'slash', i)
-    bot = -p.desc + 0.5 * p.m
+    bot = -p.under + 0.5 * p.m
     w = p.ss / STEEP[1]
-    return lambda y: x0 + w / 2 + (y - bot) / 2
+    k = slash_lean(p)
+    return lambda y: x0 + w / 2 + (y - bot) * k
 
 
 def _meet_slash(tip, a, line, sign, up):
@@ -408,9 +410,10 @@ def _meet_slash(tip, a, line, sign, up):
     going up (``up``) or down meets the slash centreline x(y)."""
     dx = 1 if sign < 0 else -1
     dy = 1 if up else -1
-    # tip + dx 2t = line(a + dy t), line(y) = c + y / 2
+    # tip + dx 2t = line(a + dy t), line(y) = c + k y (k a half; less in the italic: punct.slash_lean)
     c = line(0.0)
-    return (c + a / 2 - tip) / (2 * dx - dy / 2)
+    k = line(1.0) - c
+    return (c + a * k - tip) / (2 * dx - dy * k)
 
 
 # --- Equality and comparison ---------------------------------------------
@@ -816,24 +819,33 @@ def www(g):
     the cells."""
     from ..draw import Glyph
     from .letterframe import Frame
-    from .lower import _vee
+    from .lower import W_POST, _point, _vee
     p = g.p
     ws = _sub('w', p)
     f = Frame(Glyph(p, 'w', W=ws.W), 14, 'lower')
     xl, xm, xr = f.X(1), ws.W / 2, f.X(13)
     q1, q3 = (xl + xm) / 2, (xm + xr) / 2
-    ya = _vee(f)
-    yt = min(ya + 2 * (q1 - xl), p.xh)                      # the w's 2:1
+    if p.slant:
+        ya, cut = _vee(f)
+        yt = min(ya + 2 * (q1 - xl), p.xh)                  # the italic w's 2:1
+    else:
+        ya, cut = _point(f)
+        yt = ya + (q1 - xl)                                 # the w's 45 degrees under its walls
     step = xr - xl
     o = g.W / 2 - (xl + 1.5 * step)
     pts = [(o + xl, p.xh), (o + xl, yt)]
     for k in range(3):
         b = o + k * step
         pts += [(b + q1, ya), (b + xm, yt), (b + q3, ya), (b + xr, yt)]
-        g.stroke((b + xm, yt), (b + xm, f.Y(6)))           # the w's middle
+        if not p.slant:                                     # the w's middle, standing on its peak (lower.w)
+            g.stroke((b + xm, yt), (b + xm, f.Y(W_POST)))
+        elif yt > f.Y(6):                                   # the italic's, never over its peak
+            g.stroke((b + xm, yt), (b + xm, f.Y(6)))
     g.stroke(*pts, (o + xl + 3 * step, p.xh))
     for k in (1, 2):
         g.stroke((o + xl + k * step, yt), (o + xl + k * step, p.xh))
+    g.clip = (-g.W, cut, 2 * g.W, p.xh)                    # the points cut where the w's are (lower._vee)
+    g.butt += (('y', cut),)
 
 
 @liga('??')
@@ -842,13 +854,12 @@ def question_question(g):
     leaving from the first one's right side, as the ? of `#?` leaves the
     bar of #: one stroke from the first ? into the second."""
     from ..draw import Glyph
-    from .figures import beak_depth
     from .letterframe import Frame
     p = g.p
     (q1, x1), (q2, x2) = _run(g, ['question', 'question'], draw=False)
     g.add_glyph(q1, x1, 0.0)
     side = x1 + Frame(Glyph(p, 'question', W=q1.W), 9, 'cap').X(8)
-    g.add_glyph(_led(g, 'question', q2, [(side - x2, p.cap - beak_depth(p))]), x2, 0.0)
+    g.add_glyph(_led(g, 'question', q2, [(side - x2, None)]), x2, 0.0)       # (at its own beak: punct.question_lead)
 
 
 @liga('&&')
@@ -943,7 +954,7 @@ def _hash_join(g, bracket, after=False):
     xh = _at(g, hs, 1 if after else 0)
     dy = 0.0
     if bracket == 'braceleft':
-        top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+        top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
         dy = (top + bot) / 2 - (bars[0][0] + bars[-1][0]) / 2
     g.add_glyph(hs, xh, dy)
     tuck = 0.5 * min(p.sv, g.sh)
@@ -998,7 +1009,7 @@ def hash_underscore_paren(g):
     x0, x1 = stems[0]
     xc, w = xh + (x0 + x1) / 2, x1 - x0
     yu, t = (iu.bounds[1] + iu.bounds[3]) / 2, iu.bounds[3] - iu.bounds[1]
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m       # punct._paren
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m       # punct._paren
     xs = xp + p.sv / 2
     reach = pr.W - p.sv / 2
     xj = xs + (bot + reach - yu)                            # the paren's lower diagonal, down to the underscore's line
@@ -1172,6 +1183,13 @@ def a_cv01(g):
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
 
 
+# cv03: the hooked j (lower.j_cv03), and the accented j's on it
+HOOKED_J = ['j', 'uni0237', 'jcircumflex', 'uni01F0']
+for _n, _mark in (('jcircumflex', '\u0302'), ('uni01F0', '\u030c')):
+    from . import marks as _marks
+    _marks._register(f'{_n}.cv03', None, 'uni0237.cv03', 'j', _mark)
+
+
 @glyph('zero.cv02', None, 'fig_w', kind='fig')
 def zero_cv02(g):
     """The plain zero, without the monospaced cut's dot."""
@@ -1288,8 +1306,11 @@ def _bar_on(g, a, b, y):
     sb, xb = _stamp(g, b, 1)
     ia, ib = _ink_of(sa, xa), _ink_of(sb, xb)
     end = max(r[1] for r in _runs(ia, y=y))
-    x = end - p.c - 0.25 * p.sv                                 # the bar, clear of its end's chamfers
-    lo, hi = min(_runs(ia, x=x), key=lambda r: abs((r[0] + r[1]) / 2 - y))
+    for clear in (0.25, 0.12, 0.05, 0.0):                       # the bar, clear of its end's chamfers
+        x = end - p.c - clear * p.sv - (0.0 if clear else 1.0)
+        lo, hi = min(_runs(ia, x=x), key=lambda r: abs((r[0] + r[1]) / 2 - y))
+        if hi - lo <= 1.5 * g.sh:                               # (the bar, and not the stem behind a short one: nearer its
+            break                                               # end then. A bar as thick as its stem was tall filled the ligature)
     yc = (lo + hi) / 2
     hits = [r for r in _runs(ib, y=yc) if r[0] > end - 1]
     if hits:
@@ -1350,7 +1371,7 @@ def _brace_dot(g, right):
     p = g.p
     _stamp(g, 'braceright' if right else 'braceleft', 1 if right else 0)
     s = p.dot()
-    mid = (p.cap + 0.5 * p.m - p.desc + 0.5 * p.m) / 2      # punct._brace
+    mid = (p.cap + 0.5 * p.m - p.under + 0.5 * p.m) / 2      # punct._brace
     dot(g, cell(g, 0 if right else 1)[1], mid - s / 2)
 
 
@@ -1364,6 +1385,8 @@ def alternates_fea(mono: bool) -> str:
                 f'    }};\n    {sub}\n}} {tag};')
     out = [cv('cv01', 'Single-storey a', 'sub a by a.cv01;'),
            cv('cv02', 'Plain zero', 'sub zero by zero.cv02;')]
+    # (in Arris Mono, whose j is the hooked one, cv03 changes nothing: one setting gives the family one j)
+    out.append(cv('cv03', 'Hooked j', '\n    '.join(f'sub {n} by {n}.cv03;' for n in HOOKED_J)))
     if mono:
         subs = '\n'.join(f'    sub {n}.liga by {n}.ss03;' for n in PLAIN)
         out.append(f'feature ss03 {{\n    featureNames {{ name "Plain comparisons"; }};\n{subs}\n}} ss03;')

@@ -35,8 +35,8 @@ from ..params import SQRT2
 from . import marks
 from .cyrillic import mirror
 from .extra_latin import stamp, width_of
-from .figures import beak_depth
-from .letterframe import Frame, growing_width, letter_width, white_scale
+from .figures import beak_depth, wedge_bars
+from .letterframe import Frame, growing_width, letter_width, ungiving, white_scale
 from .marks import ABOVE, ATTACHED, BELOW, BESIDE, gap, size
 
 # --- Marks below --------------------------------------------------------------
@@ -45,7 +45,7 @@ from .marks import ABOVE, ATTACHED, BELOW, BESIDE, gap, size
 def room_below(p):
     """The depth a mark below may take: from a gap under the baseline to a
     little past the descender (as far as its chamfer), as the comma below."""
-    return 1.15 * p.desc - gap(p)
+    return 1.15 * p.under - gap(p)
 
 
 def below_dot(p):
@@ -62,7 +62,7 @@ def dotbelow(g, x, y, case):
 def dieresisbelow(g, x, y, case):
     p = g.p
     s = below_dot(p)
-    d = s + max(1.2 * p.m, 0.8 * s)
+    d = s + max(1.2 * p.m, 0.8 * min(s, marks.whites(g).dot()))
     for xd in (x - d / 2, x + d / 2):
         g.stroke((xd, -gap(p) - s, s), (xd, -gap(p)))
 
@@ -166,7 +166,7 @@ def horn_at(g, ax, ay, case, give=0.0):
     of marks does (marks._squeeze): its run and rise shorten, then it
     lightens and shrinks."""
     t, kl = marks._squeeze(give) if give > 0 else (1.0, 1.0)
-    p = marks.accent_params(g.p, kl)
+    p = marks.accent_params(g.p, kl, marks.HANG_GAIN)       # (it hangs off its letter: a little bolder than an accent)
     target = g if p is g.p else Glyph(p, W=g.W)
     k = p.sd / 2                                            # half the diagonal, across
     u = 1 / SQRT2
@@ -281,7 +281,7 @@ def Eturned(g):
     mirror(g)
 
 
-@glyph('florin', 'ƒ', letter_width(7, 1), kind='lower')
+@glyph('florin', 'ƒ', ungiving(7, 1), kind='lower')
 def florin(g):
     """The italic f's stem, upright: a hook at the top, the stem running
     on below the baseline and turning back."""
@@ -299,25 +299,25 @@ def florin(g):
 def Ezh(g):
     """The sharp s's top bar and 45-degree return without its stem: a bar,
     a diagonal back to the middle, the 3's lower bowl ending on a beak."""
-    f = Frame(g, 9)
+    f = wedge_bars(g, lambda: Frame(g, 9), lambda f: f.X(8) - f.X(4.5))
     p = f.p
     x8 = f.X(8)
     y_mid = f.Y(11) - (x8 - f.X(4.5))
     g.stroke(f.P(1, 11), (x8, f.Y(11)))
     g.stroke((x8, f.Y(11)), (f.X(4.5), y_mid))
-    g.stroke((f.X(4.5), y_mid), B(x8, y_mid), B(*f.P(8, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p)))
+    g.stroke((f.X(4.5), y_mid), B(x8, y_mid), B(*f.P(8, 1)), B(*f.P(1, 1)), (f.X(1), beak_depth(p, g.sh)))
 
 
 @glyph('uni0292', 'ʒ', letter_width(8, 2), kind='lower')
 def ezh(g):
     """The ezh on the x-height, its bowl hanging into the descender."""
-    f = Frame(g, 8, 'lower')
+    f = wedge_bars(g, lambda: Frame(g, 8, 'lower'), lambda f: f.X(7) - f.X(4))
     p = f.p
     x7 = f.X(7)
     y_mid = f.Y(8) - (x7 - f.X(4))
     g.stroke(f.P(1, 8), (x7, f.Y(8)))
     g.stroke((x7, f.Y(8)), (f.X(4), y_mid))
-    g.stroke((f.X(4), y_mid), B(x7, y_mid), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    g.stroke((f.X(4), y_mid), B(x7, y_mid), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
 
 
 @glyph('uni01E4', 'Ǥ', width_of('G', 1.5), kind='cap')
@@ -329,14 +329,19 @@ def Gstroke(g):
     g.stroke((xs - 1.5 * p.m - p.sv / 2, 0.27 * p.cap), (xs + 1.5 * p.m + p.sv / 2, 0.27 * p.cap))
 
 
+def _gstroke_white(p):
+    """The room ǥ's g keeps under its bowl: its bar, and about a third of
+    the least white on each side of it."""
+    from ..draw import bar_held
+    from .letterframe import least_white
+    return bar_held(p) + 0.72 * least_white(p)
+
+
 def _g_room(p):
-    """The room under the g's bowl, down to its hook's top edge, as
-    lower.hook draws it (the hook deepening as it must)."""
-    from ..params import inner_leg
-    from .figures import STACK_MIN
-    from .lower import HOOK_ROOM, least_white
-    tail = min(p.sh, max(STACK_MIN * p.sh, p.desc - inner_leg(p) - least_white(p)))
-    extra = min(HOOK_ROOM, max(0.0, least_white(p) - (p.desc - tail - inner_leg(p))))
+    """The room under ǥ's bowl, down to its hook's top edge, as lower.hook
+    draws it for that white (the hook deepening as it must)."""
+    from .lower import hook_fit
+    tail, extra = hook_fit(p, p.sh, _gstroke_white(p))
     return p.desc + extra - tail
 
 
@@ -351,16 +356,22 @@ def _gstroke_run(p):
 @glyph('uni01E5', 'ǥ', lambda p: REGISTRY['g'].width(p) + _gstroke_run(p), kind='lower')
 def gstroke(g):
     """g with a bar across its descender's stem, centred in the room under
-    the bowl (122 units to the hook at Regular, 146 at Black, the g's hook
-    deepening as it must: lower.hook). Like every added stroke it keeps the
+    the bowl. Its g is drawn here, not stamped: the g's own hook leaves the
+    least white under the bowl, and the bar needs its own height and white
+    beside it more (122 units at Regular, 146 at Black: _gstroke_white), so
+    this g's hook goes deeper, and thins sooner. Like every added stroke it keeps the
     Regular's thickness at the heavier weights, laid over the finished g
     (draw.lay_bar), and runs out further the thinner it is than the stem
     (_gstroke_run): nothing fills in where it crosses the stem as the g
     grows on (the owner, 2026-11-06)."""
     from ..draw import lay_bar
     p = g.p
+    from .lower import g_strokes
     run = _gstroke_run(p)
-    w = stamp(g, 'g', width=g.W - run)
+    W = g.W
+    g.W = w = W - run                    # the g in its own width, the bar running out past it
+    g_strokes(g, white=_gstroke_white(p))
+    g.W = W
     xs = w - p.sv / 2
     y = -_g_room(p) / 2
     lay_bar(g, lambda t, own: ((xs - run - p.sv / 2, y), (xs + run + p.sv / 2, y)))
@@ -370,7 +381,7 @@ def gstroke(g):
 # --- Click letters ------------------------------------------------------------
 
 def _click_span(p):
-    return -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m           # the bar's (|)
+    return -p.under + 0.5 * p.m, p.cap + 0.5 * p.m          # the bar's (|)
 
 
 @glyph('uni01C0', 'ǀ', lambda p: p.sv, kind='lower')
@@ -446,20 +457,48 @@ def _digraph(name, ch, a, b, kind):
         if p.mono:
             # two letters in one cell: both drawn small, strokes and all, at
             # the size where they fit side by side in their own widths (a Z's
-            # diagonal cannot be squeezed into half a cell)
+            # diagonal cannot be squeezed into half a cell), those widths
+            # the ones they are drawn in: the italic's l and j are its
+            # cursive ones, twice as wide as the upright's. Between them a
+            # module of white, and more where the first's ink reaches for
+            # the second's: never nearer than half a sidebearing, as the
+            # proportional digraph's (_digraph_gap), or than that module
+            # where it is the less (the cursive n's tail ran into the j's
+            # hook)
+            from shapely import affinity
+
+            from ..draw import drawn_spec
+            from ..font import light
+            from ..geom import rings_to_shapely
             p0 = p.with_(mono=False)
             gp = 1.0 * p.m
-            s = min(1.0, g.W / (REGISTRY[a].width(p0) + REGISTRY[b].width(p0) + gp))
-            q = p0.with_(m=s * p.m, cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.desc, leg=s * p.leg,
-                         sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
-            sa, sb = draw(a, q), draw(b, q)
-            x0 = (g.W - (sa.W + s * gp + sb.W)) / 2
+            s = min(1.0, g.W / (drawn_spec(a, p0).width(p0) + drawn_spec(b, p0).width(p0) + gp))
+            for _ in range(4):
+                q = p0.with_(m=s * p.m, cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.desc, under=s * p.under, deep=s * p.deep,
+                             leg=s * p.leg, sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
+                sa, sb = draw(a, q), draw(b, q)
+                ia, ib = rings_to_shapely(sa.rings()), rings_to_shapely(sb.rings())
+                need, out = min(0.5 * light(q.ungraded()), s * gp), s * gp
+                for _ in range(6):
+                    d = ia.distance(affinity.translate(ib, sa.W + out))
+                    if d >= need - 0.5:
+                        break
+                    out += need - d
+                over = (sa.W + out + sb.W) / g.W
+                if over <= 1.0 + 1e-6:
+                    break
+                s /= over
+            x0 = (g.W - (sa.W + out + sb.W)) / 2
             g.add_glyph(sa, x0)
-            g.add_glyph(sb, x0 + sa.W + s * gp)
+            g.add_glyph(sb, x0 + sa.W + out)
             return
+        # each letter at its own width, centred in its ungraded body, as a letter alone is set at a grade
+        # (font._place): drawn to the ungraded body with the grade's strokes, the l's and the j's feet came
+        # to a point at grade -100 (ǈ ǉ ǋ ǌ at every weight)
         x, wa, wb = _digraph_x(p, a, b)
-        g.add_glyph(draw(a, p, width=wa))
-        g.add_glyph(draw(b, p, width=wb), x)
+        ga, gb = draw(a, p), draw(b, p)
+        g.add_glyph(ga, (wa - ga.W) / 2)
+        g.add_glyph(gb, x + (wb - gb.W) / 2)
     glyph(name, ch, width, kind=kind)(fn)
 
 
@@ -478,13 +517,50 @@ def _digraph_x(p, a, b):
     xs = [x for r in sb.rings() for x, _ in r] or [0.0]
     x = sa.W + _digraph_gap(p.with_(slant=0.0), a, b) - min(0.0, min(xs))
     ia, ib = rings_to_shapely(sa.rings()), rings_to_shapely(sb.rings())
+    lean = None
     need = 0.5 * light(q)
+    if p.slant:
+        need += 0.5 * q.c                                   # (measured before the italic curves its corners)
+        # (measured slanted, as they stand: the slant carries a descender's hook back under the letter
+        # before it, and upright the j's hook kept its distance from the l's foot and ran into it slanted,
+        # ǉ ǌ from 850, ǈ at Bold with grade)
+        import math
+        lean = math.atan(p.slant)
+        ia, ib = (affinity.skew(i, xs=lean, use_radians=True, origin=(0, 0)) for i in (ia, ib))
     for _ in range(6):
         d = ia.distance(affinity.translate(ib, x))
         if d >= need - 0.5:
             break
         x += need - d
+    # and as far as the heaviest grade needs, each letter at its own width in its body (_digraph): grade moves
+    # nothing, and the grade's strokes grew into the white between them (the italic ǈ ǉ ǌ met at Bold and 850
+    # with grade 100)
+    heavy = _graded(q, 100.0)
+    if heavy is not None:
+        ha, hb = draw(a, heavy), draw(b, heavy)
+        ia, ib = rings_to_shapely(ha.rings()), rings_to_shapely(hb.rings())
+        if p.slant:
+            ia, ib = (affinity.skew(i, xs=lean, use_radians=True, origin=(0, 0)) for i in (ia, ib))
+        ia = affinity.translate(ia, (sa.W - ha.W) / 2)
+        for _ in range(6):
+            d = ia.distance(affinity.translate(ib, x + (sb.W - hb.W) / 2))
+            if d >= need - 0.5:
+                break
+            x += need - d
     return x, sa.W, sb.W
+
+
+def _graded(q, grad):
+    """q (ungraded) at a grade: its strokes and breaks scaled as the grade
+    scales them at its weight (instances.params: the weight the stem is
+    on its own cut's ladder, the watch's toward its drawing); None where
+    the grade leaves them as they are."""
+    from ..instances import grade_k, weight_of
+    k = grade_k(weight_of(q.sv, 1.0 - q.optical), grad)
+    if k == 1.0:
+        return None
+    return q.with_(sv=q.sv * k, sh=q.sh * k, sd=q.sd * k, ss=q.ss * k, c=q.c * k, grade_k=k, grad=grad,
+                   pregrade=(q.sv, q.sh, q.sd, q.ss, q.c))
 
 
 for _cp, _a, _b, _k in ((0x01C4, 'D', 'Zcaron', 'cap'), (0x01C5, 'D', 'zcaron', 'cap'),
@@ -533,10 +609,8 @@ def mark_width(p):
 
 def ogonek_mark(g, x):
     """The ogonek alone: from a foot at x on the baseline, turning right underneath."""
-    from .italic_forms import tail_run
-    p = g.p
-    yb = -p.desc + g.sh / 2 + 0.25 * p.m
-    g.stroke((x, g.sh / 2), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))
+    wv, wh, yb, run = marks.hook(g)
+    g.stroke((x, g.sh / 2, wv), B(x, yb, g.p.m / 2, wh), (x + run, yb))
 
 
 def horn_origin(p, case):
@@ -557,9 +631,10 @@ def _combining(name, cp, seq, where, case):
             ax, ay = horn_origin(p, case)
             horn_at(g, x + ax, ay, case)
         elif where == 'ogonek':
-            ogonek_mark(g, x)
+            marks.kept(g, ogonek_mark, x, gain=marks.HANG_GAIN)
         else:
-            BELOW[seq[0]](g, x, 0, case)
+            hangs = seq[0] == '\u0327'                       # (the cedilla: a hanging mark's breaks, one drawing at every weight)
+            marks.kept(g, BELOW[seq[0]], x, 0, case, gain=marks.HANG_GAIN if hangs else None, apart=hangs)
     glyph(name, chr(cp) if cp else None, mark_width, kind='mark')(fn)
     MARKS[name] = (where, case, seq)
 

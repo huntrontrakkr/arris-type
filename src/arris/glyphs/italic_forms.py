@@ -25,8 +25,8 @@ from __future__ import annotations
 from ..draw import AUTO_SHARE, REGISTRY, B, Opening, _counter_white, glyph
 from ..params import SQRT2, inner_leg, outer_leg
 from .figures import jog
-from .letterframe import Frame, letter_width, white_scale
-from .lower import _dot, crotch_butt, hook, shoulder
+from .letterframe import Frame, letter_width as _letter_width, own_width, ungiving, white_scale
+from .lower import _dot, crotch_butt, hook, hook_span, shoulder, shoulder_enter
 
 TAIL = 1.75      # modules of white an exit tail reaches past its stem
 FLAG = 1.5       # modules an entry flag reaches left of its stem (and down)
@@ -68,6 +68,16 @@ def _in_cell(g, fn):
     g.add_glyph(h, dx, 0.0)
     g.defaults.update(h.defaults)
     g.defaults_used.update({k: (v + dx if k == 'stem' else v) for k, v in h.defaults_used.items()})
+
+
+def letter_width(wm, stems):
+    """An italic letter's body: its master's stems and white, with no room
+    added for an arm (the cursive's one-stem letters end in tails and
+    flags). Past the Regular a one-stem letter gives the share of its body
+    the n gives, as the upright's do (letterframe.letter_width): with all
+    its white giving, the cursive r and k stood a seventh narrower at Black
+    where the n is a twelfth."""
+    return _letter_width(wm, stems, arm=0.0)
 
 
 def ital(name, wm, stems, width=None, openings=()):
@@ -354,15 +364,47 @@ def i_ital(g):
     _dot(g, f, f.X(1))
 
 
-@ital('j', 6, 1)
+def j_width(p):
+    """The cursive j's body: a one-stem letter's, giving past the Regular
+    no more than leaves lower.J_SLOT breaks of white inside its hook, or
+    what its own body has there, and that no less than J_LEAST of a break:
+    with the whole share given the hook held 4 units of white at Black for
+    37, a block under the line; and at a stem of 200 its own body is two
+    stems wide to the unit, the hook's end against the stem."""
+    from .lower import J_SLOT
+    own = max(own_width(6, 1)(p), 2 * p.sv + J_LEAST * p.c)
+    return max(letter_width(6, 1)(p), min(own, 2 * p.sv + J_SLOT * p.c))
+
+
+J_LEAST = 0.85      # edge breaks: the least white inside the cursive j's hook (its own body's, to a stem of 175)
+
+
+@ital('j', 6, 1, width=j_width)
 def j_ital(g):
     from .figures import beak_depth
     f = Frame(g, 6, 'asc', top=g.p.asc + g.p.sv)
     p = f.p
     _free(g)
-    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p)))
+    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
     entry(g, f, f.X(5))
     _dot(g, f, f.X(5))
+
+
+@ital('uni0237', 6, 1, width=j_width)
+def dotlessj_ital(g):
+    """The italic's j without its dot, for its accents (ĵ ǰ): the upright's
+    dotless j, slanted, stood in for it while the two were the same letter."""
+    from .figures import beak_depth
+    f = Frame(g, 6, 'asc', top=g.p.asc + g.p.sv)
+    p = f.p
+    _free(g)
+    g.stroke(f.P(5, 9), B(*f.P(5, -2)), B(*f.P(1, -2)), (f.X(1), -p.desc + beak_depth(p, g.sh)))
+    entry(g, f, f.X(5))
+
+
+# cv03 (the hooked j: lower.j_cv03) changes nothing in the italic, whose j is the hooked one
+for _n in ('j', 'uni0237'):
+    glyph(f'{_n}.cv03.ital', None, j_width, kind='lower')(REGISTRY[f'{_n}.ital'].fn)
 
 
 @ital('l', 6, 1)
@@ -394,7 +436,11 @@ def m_ital(g):
     entry(g, f, x1)
     arch, cut = shoulder(g, f, x1, x2, drop=BRANCH)
     g.stroke(*arch, (x2, 0), start=cut)
-    arch, cut = shoulder(g, f, x2, x3, drop=BRANCH)
+    arch, cut = shoulder(g, f, x2, x3, drop=BRANCH, joined=True)
+    # the middle stem stands up to where its own arch leaves it, as the upright m's (lower.m): the first
+    # arch's corner is cut deeper than the bar is thick, and where the second arch's branch is short it
+    # took a wedge out of the stem under it, the second counter's corner a bite the first has not
+    g.stroke((x2, f.Y(4)), (x2, arch[0][1]))
     g.stroke(*arch, *tail(g, f, x3), start=cut)
 
 
@@ -419,7 +465,7 @@ def r_ital(g):
     p = g.p
     k = p.sd / SQRT2
     y8, y5 = f.Y(8), f.Y(8 - BRANCH)
-    x0 = xs + p.sv / 2 + k - p.c
+    x0 = xs + p.sv / 2 + k - shoulder_enter(p)
     g.stroke((x0, y5), (x0 + (y8 - y5), y8), f.P(8, 8), start='h')
 
 
@@ -474,10 +520,12 @@ def p_ital(g):
     g.stroke(f.P(1, 8), B(*f.P(7, 8)), B(*f.P(7, 1)), f.P(1, 1), closed=True)
 
 
-@ital('f', 7, 1)
+@ital('f', 7, 1, width=ungiving(7, 1, arm=0.0))
 def f_ital(g):
     """The stem runs on below the baseline and turns back, the top's hook
-    turned over."""
+    turned over. Its body gives nothing past the Regular: the letter is a
+    stem and a crossbar, and what the body gave came off the bar's two
+    ends, 35 units each at Black for 72."""
     f = Frame(g, 7, 'asc')
     g.clip = (-f.W, -g.p.desc, 2 * f.W, g.p.asc)
     g.stroke(f.P(7, 12), B(*f.P(3.5, 12)), B(*f.P(3.5, -2)), f.P(0, -2))
@@ -539,12 +587,24 @@ def k_ital(g):
 
 @ital('y', 8, 2)
 def y_ital(g):
-    """A u whose right stem runs on into the descender, as the g's."""
+    """A u whose right stem runs on into the descender, as the g's, and
+    whose foot comes into that stem through the bowls' notch (lower.bowl_join;
+    the owner, 2026-11-10: "this should be on the y as well"). Until 1.017
+    the foot met the stem square."""
+    from .lower import BOWL_DROP, turned
     f = Frame(g, 8, 'lower')
     _free(g)
-    g.stroke(f.P(1, 9), B(*f.P(1, 1)), f.P(7, 1))
+    arch, cut = shoulder(g, f, f.X(1), f.X(7), drop=BOWL_DROP)
+    g.stroke(f.P(1, 9), *reversed(turned(f.W, f.p.xh, arch)), end=cut)
     entry(g, f, f.X(1))
-    hook(g, f)
+    span = hook_span(f.p)                                   # the g's own hook (lower.hook_span)
+    if f.p.mono:
+        # (in the cell the letter is drawn narrower than its body where its ink would run out, for its own
+        # tail and for a mark set beside it, _in_cell, and its hook gives with it: held at the g's span the
+        # ink did not narrow with the body, and the ỵ, drawn narrower for its dot, stood 32 units out of the
+        # cell's left side at Bold)
+        span = min(span, f.X(7) - f.X(1))
+    hook(g, f, span=span)
     g.butt += crotch_butt(g, f.Y(1))                    # the foot meets the descender square (lower.crotch_butt)
 
 
@@ -565,36 +625,129 @@ def s_ital(g):
              (xr, y_lo), B(xr, yb), (f.X(0), yb))
 
 
-@ital('e', 8, 2, openings=[Opening(_one_counter, 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
+EYE = 0.6          # the least share of their own thickness the cursive e's top and bar keep, thinned for its eye
+EXIT_OVER = 1.5    # edge breaks: the least the cursive e's exit stands over its foot
+EYE_OF_UPRIGHT = 0.55   # the least the cursive e's eye is of the upright e's, by area: its share at the Regular (_eye_of_upright)
+
+_UPRIGHT_EYE: dict = {}
+
+
+def _eye_area(g, n: int = 1) -> float:
+    """The area of a drawing's eye: of its n counters the one furthest to the
+    right (the e's one; the æ's second), and none if one of them has shut.
+    On the drawing before its curves, which moves evenly with the weight
+    where the curved outline's steps."""
+    from shapely.geometry import Polygon
+
+    from ..geom import rings_to_shapely
+    poly = rings_to_shapely(g.rings())
+    holes = [Polygon(h) for part in getattr(poly, 'geoms', [poly]) for h in part.interiors]
+    return max(holes, key=lambda h: h.centroid.x).area if len(holes) >= n else 0.0
+
+
+def _upright_eye(p) -> float:
+    """The area of the upright e's eye where the italic stands: its weight,
+    its grade, its watch, its cut."""
+    q = p.with_(slant=0.0, cursive=False)
+    if q not in _UPRIGHT_EYE:
+        from ..draw import draw
+        _UPRIGHT_EYE[q] = _eye_area(draw('e', q))
+    return _UPRIGHT_EYE[q]
+
+
+def _eye_of_upright(g, n: int = 1) -> float:
+    """The cursive e's eye (of a drawing's n counters: _eye_area) as a share
+    of the upright e's, in an opening's units (the stem its share is taken
+    of: draw._opened).
+
+    The upright e is where the family says how much eye a weight affords:
+    its bar is level, a horizontal's thickness tall, and its eye and mouth
+    share what is left. The cursive e's bar rises at 45 degrees and stands
+    1.4 of its thickness tall on the back, so its eye, the triangle over
+    the bar, had 0.56 of the upright's at the Regular, 0.39 at Bold and
+    0.24 at Black: 73 units a side between a stem of 200 and a bar 182
+    tall (the owner: "There's gotta be a way to make the italic e black
+    have a bigger hole"). It keeps the Regular's share, EYE_OF_UPRIGHT, by
+    reaching (_e_strokes)."""
+    from ..params import WHITE_HELD
+    p = g.p
+    stem = p.sv - max(0.0, p.sv - WHITE_HELD * p.grade_k) * p.optical
+    up = _upright_eye(p)
+    return stem * _eye_area(g, n) / up if up > 0 else stem
+
+
+def _e_strokes(g, f, xl, xr, x_exit):
+    """The cursive e on a back at xl: the eye's top and bar, the foot and
+    the exit.
+
+    Only what closes the eye gives way to keep it open: the top and the
+    bar, together and by one share (``eye``, down to EYE of their own
+    thickness), as far as the eye's own share of the stem needs (the
+    opening, draw._opened) and no further. The back and the foot are the
+    alphabet's strokes at every weight, and the exit stands over the foot
+    by EXIT_OVER breaks at least.
+
+    Past that the eye keeps its share of the upright e's (_eye_of_upright)
+    by the head's ``reach``: the top and the bar's upper end stand that far
+    further right, in units, and the bar leaves the back as much lower.
+
+    Until 1.017 the eye was kept by thinning all the letter's horizontals,
+    the foot with the top, and then the bar: from SemiBold the foot was 0.70
+    of every other letter's (104 units beside the a's and the o's 149 at
+    Black), the top fell from 98 units at 550 to 73 at 600, the bar from 121
+    at Bold to 88 at Black, and the exit, a reach that shrinks with the
+    white, stood 28 units over the foot at Black for 59 at Regular: all but
+    gone. (The owner, 2026-11-10: "there's definitely something weird going
+    on with the thicknesses towards the black ... the little bit at the
+    bottom ... isn't nearly as thick"; and of the fix, "it's also important
+    that we remain uniform in thickness".)"""
+    p = g.p
+    full = max(g.sh0 * g.sh_k, p.floor)                     # the alphabet's horizontal here
+    k = g.free('eye', 1.0)
+    reach = g.free('reach', 0.0)
+    # (the top gives with the bar once the bar has come down to it: on the height's bar, which the italic's
+    # lowercase stands on past the Regular, draw._start, it is the thinner of the two to begin with, and
+    # thinned by the bar's share it stood at 101 units at Black under a bar of 144)
+    top, bar = min(full, max(p.sh * g.sh_k, p.floor) * k), p.sd * k
+    yt, yf = p.xh - top / 2, full / 2
+    if reach > 0:
+        # The head reaches to the right, and the bar, which runs into its corner, leaves the back as much
+        # lower: the eye's two legs each grow by the reach and no stroke is thinner for it (the owner, of
+        # the thinning: "it's also important that we remain uniform in thickness"). What the eye gains the
+        # mouth gives, the channel between the bar's underside and the exit: the reach stops where the
+        # eye's inscribed circle is as wide as the channel, so neither white is the letter's pinch.
+        leg = (xr - xl) - p.sv / 2 - top / 2 - bar / SQRT2      # the eye's legs, drawn
+        gap = (x_exit - xr) + (yt - yf) - (bar + p.sd) / SQRT2  # the bar's underside over the exit's top, upright
+        even = (gap / SQRT2 - (2 - SQRT2) * leg) / ((2 - SQRT2) + 1 / SQRT2)
+        xr += max(0.0, min(reach, even))
+    g.stroke((xl, yt - (xr - xl), bar), (xr, yt))
+    L = max(_reach(p, FLAG), full / 2 + EXIT_OVER * p.c)
+    g.stroke((xr, yt, top), B(xl, yt), B(xl, yf, None, full), (x_exit, yf), (x_exit + L, yf + L), end='h')
+
+
+@ital('e', 8, 2, openings=[Opening(_one_counter, 'eye', lambda p: EYE, max_ratio=AUTO_SHARE, hold=True, across=True),
+                           Opening(_eye_of_upright, 'reach', lambda p: p.xh, max_ratio=EYE_OF_UPRIGHT)])
 def e_ital(g):
     """The cursive e: its bar a 45-degree stroke rising from the left side
     into the top right corner, the eye the triangle above it; the lower arm
-    leaves on a 45-degree upstroke, a hand's exit. At heavy weights the bar
-    thins so the eye stays open."""
+    leaves on a 45-degree upstroke, a hand's exit. At heavy weights the top
+    and the bar thin so the eye stays open, and the head reaches to the
+    right so it stays the upright e's eye in little (_e_strokes)."""
     f = Frame(g, 8, 'lower')
     _free(g)
-    p = g.p
-    xl, xr = f.X(1), f.X(7)
-    yt = f.Y(8)
-    g.stroke((xl, yt - (xr - xl), p.sd * g.free('bar', 1.0)), (xr, yt))
-    L = _reach(p, FLAG)
-    g.stroke((xr, yt), B(xl, yt), B(xl, f.Y(1)), (f.X(6), f.Y(1)), (f.X(6) + L, f.Y(1) + L), end='h')
+    _e_strokes(g, f, f.X(1), f.X(7), f.X(6))
 
 
 @ital('ae', 14, 3, width=lambda p: REGISTRY['a.ital'].width(p) + REGISTRY['e.ital'].width(p) - p.sv,
-      openings=[Opening(lambda g: _counter_white(g, 2), 'bar', lambda p: 0.6, max_ratio=AUTO_SHARE)])
+      openings=[Opening(lambda g: _counter_white(g, 2), 'eye', lambda p: EYE, max_ratio=AUTO_SHARE, hold=True, across=True),
+                Opening(lambda g: _eye_of_upright(g, 2), 'reach', lambda p: p.xh, max_ratio=EYE_OF_UPRIGHT)])
 def ae_ital(g):
     """The single-storey a and the cursive e on one stem: the a's bowl on
     its left, the e's eye and exit on its right."""
     f = Frame(g, 14, 'lower')
     _free(g)
-    p = g.p
-    xl, xm, xr = f.X(1), f.X(7), f.X(13)
-    yt = f.Y(8)
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    g.stroke((xm, yt - (xr - xm), p.sd * g.free('bar', 1.0)), (xr, yt))
-    L = _reach(p, FLAG)
-    g.stroke((xr, yt), B(xm, yt), B(xm, f.Y(1)), (f.X(12), f.Y(1)), (f.X(12) + L, f.Y(1) + L), end='h')
+    _e_strokes(g, f, f.X(7), f.X(13), f.X(12))
 
 
 # --- Cyrillic italic ---------------------------------------------------------

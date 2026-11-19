@@ -18,10 +18,10 @@ from __future__ import annotations
 
 from shapely.geometry import Polygon
 
-from ..draw import B, REGISTRY, draw, glyph
+from ..draw import B, REGISTRY, draw, glyph, lay_bar
 from ..params import SQRT2
-from .letterframe import STEEP, Frame, growing_width, letter_width
-from .punct import _bracket, axis, dot, dot_w, punct, stem_w
+from .letterframe import STEEP, Frame, growing_width, kept_width, plain_width as letter_width
+from .punct import LOW_LINE, _bracket, axis, dash, dot, dot_gap, dot_w, punct, question_return, stem_w
 from .symkit import MIRROR, sign, stamp_t
 
 ALIASES = {0x2015: 'emdash', 0x2024: 'period', 0x2027: 'periodcentered',
@@ -63,27 +63,27 @@ def _double_gap(p):
 def dblverticalbar(g):
     """Two bars, never closer than three quarters of a stem."""
     p = g.p
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     for x in (p.sv / 2, g.W - p.sv / 2):
         g.stroke((x, bot), (x, top))
     g.clip = (0, bot, g.W, top)
 
 
-@sign('underscoredbl', '‗', letter_width(9, 0))
+@sign('underscoredbl', '‗', dash(LOW_LINE, 9))
 def underscoredbl(g):
     """Two low lines: the lower where the underscore is, the upper a stroke
     above it; at heavy weights they thin (to 0.7) before they rise far."""
     p = g.p
-    g.stack(2, p.desc + 0.5 * p.m, ratio=0.9)
+    g.stack(2, p.under + 0.5 * p.m, ratio=0.9)
     g.sh_k = max(g.sh_k, 0.7)
     sh = g.sh
-    y1 = -p.desc + sh / 2
+    y1 = -p.under + sh / 2
     y2 = y1 + sh + max(0.9 * sh, 0.5 * p.m)
     for y in (y1, y2):
         g.stroke((0, y), (g.W, y))
 
 
-@sign('uni203E', '‾', letter_width(9, 0))
+@sign('uni203E', '‾', dash(LOW_LINE, 9))
 def overline(g):
     p = g.p
     y = p.asc - g.sh / 2
@@ -220,16 +220,25 @@ def fourdotmark(g):
 
 def column_dot(p, n):
     """Dots in a column of n over the cap height: a period's, or smaller
-    where heavy dots would leave less than 0.55 of a stem between them."""
-    return min(p.dot(), (p.cap - (n - 1) * max(0.5 * p.m, 0.55 * p.sv)) / n)
+    where heavy dots would leave less than 0.55 of a stem between them
+    (the Regular's stem past it, draw.held_at: of the weight's own, four
+    dots were 119 units at Bold and 98 at Black, smaller the heavier the
+    font)."""
+    from ..draw import held_at
+    return min(p.dot(), (p.cap - (n - 1) * max(0.5 * p.m, 0.55 * held_at(p).sv)) / n)
 
 
 def _column(g, n):
+    """(A dot smaller than the period's is broken in proportion, laid: at
+    the weight's own break four dots at Black were diamonds.)"""
     p = g.p
     s = column_dot(p, n)
     for i in range(n):
         y = i * (p.cap - s) / (n - 1)
-        g.stroke((g.W / 2, y, s), (g.W / 2, y + s))
+        if s < p.dot():
+            g.lay((g.W / 2, y, s), (g.W / 2, y + s), c=p.c * s / p.dot())
+        else:
+            g.stroke((g.W / 2, y, s), (g.W / 2, y + s))
 
 
 @sign('uni205D', '\u205d', lambda p: column_dot(p, 3))
@@ -458,11 +467,25 @@ for _nm, _ch, _a, _b in (('exclamdbl', '‼', 'exclam', 'exclam'), ('uni2047', '
 @sign('uni203D', '‽', growing_width(9, 2, 0.6))
 def interrobang(g):
     """The question mark with the exclamation's stroke down its middle: the
-    stem runs on up to the top bar."""
+    stem runs on up to the top bar. The stroke is added to the mark, so
+    past the Regular it holds the Regular's weight, laid over
+    (draw.lay_bar): at the weight's own it filled the bowl's left half by
+    Bold, the beak stood against it, and the mark read as a P."""
     REGISTRY['question'].fn(g)
     f = Frame(g, 9, 'cap')
-    xs = f.X(4)
-    g.stroke((xs, g.p.cap), (xs, f.Y(6)))
+    p, xs = g.p, f.X(4)
+    yr = question_return(g, f)
+    stub = max(0.0, yr - (p.dot() + dot_gap(p)))            # the question mark's own stem under its bowl
+
+    def ends(t, own):
+        # toward Black that stem shortens to nothing and the bowl's return ends at its centre line: the
+        # stroke, thinner than it, moves over to stand on the return's end and not past it
+        x = xs + (t / 2) * (1.0 - min(1.0, stub / (own / 2))) if t < own else xs
+        # it runs on down into that stem, half its length: ended on the return's centre line, its end's
+        # break met the break of the corner the return turns into the stem on, and at the Regular and
+        # lighter, where the two are one width, the italic's curve there left an edge half a unit long
+        return (x, p.cap), (x, yr - stub / 2)
+    lay_bar(g, ends, direction=(0.0, 1.0))
 
 
 # --- Carets -------------------------------------------------------------------
@@ -480,7 +503,7 @@ def caret(g):
     """The caret: a gable hanging below the baseline, its point just above."""
     p = g.p
     k = p.sd / SQRT2
-    foot = -0.5 * p.desc
+    foot = -0.5 * p.under
     h = _caret(g, g.W, foot)
     g.clip = (0, foot - p.sv, g.W, foot + h + k)
 
@@ -490,7 +513,7 @@ def caretinsertion(g):
     """A long 45-degree stroke rising to the right, a short one leaving its
     middle down to the baseline: the caret with one arm drawn on."""
     p, W = g.p, g.W
-    bot = -0.5 * p.desc
+    bot = -0.5 * p.under
     g.stroke((0, bot), (W, bot + W), start='h', end='h')
     g.stroke((W / 2, bot + W / 2), (W, bot), start='flat', end='h')
     g.clip = (0, bot, W, bot + W)
@@ -501,7 +524,7 @@ def caretinsertion(g):
 def _quill(g, mirror):
     p, W = g.p, g.W
     _bracket(g, mirror)
-    mid = (p.cap + 0.5 * p.m + (-p.desc + 0.5 * p.m)) / 2
+    mid = (p.cap + 0.5 * p.m + (-p.under + 0.5 * p.m)) / 2
     x0, x1 = p.sv / 2, 0.65 * W
     if mirror:
         x0, x1 = W - x0, W - x1
@@ -534,7 +557,7 @@ def _tray(g, y_bar, up, x0=None, x1=None):
 @sign('uni203F', '‿', letter_width(10, 2))
 def undertie(g):
     p = g.p
-    _tray(g, -p.desc + g.sh / 2, True)
+    _tray(g, -p.under + g.sh / 2, True)
 
 
 @sign('uni2040', '⁀', letter_width(10, 2))
@@ -546,7 +569,7 @@ def chartie(g):
 @sign('uni2054', '⁔', letter_width(10, 2))
 def invertedundertie(g):
     p = g.p
-    _tray(g, -p.desc + 1.5 * p.m + g.sh / 2, False)
+    _tray(g, -p.under + 1.5 * p.m + g.sh / 2, False)
 
 
 @sign('uni2050', '⁐', letter_width(8, 2))
@@ -571,16 +594,17 @@ def swungdash(g):
     g.stroke((0, lo), (r, hi), (r + f, hi), (2 * r + f, lo), (2 * r + 2 * f, lo), (W, hi), start='v', end='v')
 
 
-@glyph('uni204A', '⁊', growing_width(7, 1, 2.0), kind='lower')
+@glyph('uni204A', '⁊', growing_width(7, 1, 1.0), kind='lower')
 def tironianet(g):
-    """A bar on the x-height and a stem down from near its right end (the
-    seven drawn upright); the bar runs on past the stem by more than half a
-    stem, so it never reads as a turned L."""
+    """A bar on the x-height turning down at its right end into a stem that
+    runs under the line to the descender (the seven drawn upright), as the
+    sign stands in other families (Inter, DejaVu, Noto). Until version 2 the
+    bar ran on past the stem by a stem and more and the stem stopped on the
+    line: a T, and at Black nothing else."""
     f = Frame(g, 7, 'lower')
     p = g.p
-    g.stroke(f.P(0, 8), f.P(7, 8))
-    xs = min(f.X(5), g.W - max(1.5 * p.m, p.sv) - p.sv / 2)
-    g.stroke((xs, f.Y(8)), (xs, 0))
+    xs = g.W - p.sv / 2
+    g.stroke((0, f.Y(8)), (xs, f.Y(8)), (xs, -p.under))
 
 
 # --- Per ten thousand -----------------------------------------------------------
@@ -590,22 +614,18 @@ def _ring_gap(p):
 
 
 def _ring_w(p):
-    return 4.5 * p.m + p.sv
+    from .punct import pct
+    return pct(p)[3]
 
 
 @sign('uni2031', '‱', lambda p: REGISTRY['percent'].width(p) + 2 * (_ring_w(p) + _ring_gap(p)),
        kind=('punct', 1.0))
 def pertenthousand(g):
     """The per mille sign with one more ring."""
-    from .punct import _ring
-    p = g.p
-    sub = draw('percent', p)
-    w = sub.W
+    from .punct import pct_rings_after, percent_part
+    sub = percent_part(g)
     g.add_glyph(sub)
-    s, rw, rh = p.sv, _ring_w(p), 5.0 * p.m + p.sv
-    for i in range(2):
-        x0 = w + _ring_gap(p) + i * (rw + _ring_gap(p))
-        _ring(g, x0 + s / 2, g.sh / 2, x0 + rw - s / 2, rh - g.sh / 2)
+    pct_rings_after(g, sub, 2, _ring_gap(sub.p))
 
 
 # --- Spaces -------------------------------------------------------------------------
@@ -646,7 +666,7 @@ def _case(name, how):
 
     def fn(g):
         p = g.p
-        dy = p.desc / 2 - 0.25 * p.m if how == 'bracket' else (p.cap - p.xh) / 2
+        dy = p.under / 2 - 0.25 * p.m if how == 'bracket' else (p.cap - p.xh) / 2
         g.add_glyph(draw(name, p), 0, dy)
     glyph(f'{name}.case', None, spec.width, kind=spec.kind, solid=spec.solid)(fn)
 

@@ -18,8 +18,8 @@ from ..params import SQRT2
 from . import marks
 from .symkit import sign
 from .cyrillic import sc
-from .letterframe import STEEP, Frame, growing_width, least_white, letter_width
-from .punct import _ring, axis, dot, punct
+from .letterframe import STEEP, Frame, growing_width, least_white, letter_width as arm_width, plain_width as letter_width
+from .punct import _ring, axis, dot, pct, pct_rings_after, percent_part, punct
 
 ALIASES = {0x2206: 'uni0394', 0x2126: 'uni03A9', 0x00B5: 'uni03BC', 0x2010: 'hyphen', 0x2011: 'hyphen'}
 # (no soft hyphen, U+00AD: where a word may break is the shaper's business, and it is never drawn)
@@ -96,9 +96,13 @@ def cent(g):
     g.clip = None
 
 
-@glyph('sterling', '£', letter_width(8, 1), kind='cap')
+@glyph('sterling', '£', arm_width(8, 1), kind='cap')
 def sterling(g):
-    """A stem rising into a hooked top, a bar across, a base."""
+    """A stem rising into a hooked top, a bar across, a base. Its body is
+    the E's and the L's (letterframe.letter_width: a letter with one stem
+    makes room for its arms as they thicken). On the stem's growth alone it
+    stood 0.95 of the H's ink across at Regular and 0.74 at Black, where
+    twenty-one families' heaviest stand 0.90 and none under 0.74."""
     f = Frame(g, 8)
     p = f.p
     g.stroke(f.P(8, 11), B(*f.P(2.5, 11)), f.P(2.5, 1))
@@ -114,7 +118,7 @@ def yen(g):
     the stem's sides, and over the baseline; they run out past the stem by
     a bar's own reach."""
     from shapely.geometry import LineString
-    from .currency import bar_out, bar_pair, pair, wmin
+    from .currency import bar_own as bar_out, bar_pair, pair, wmin
     p = g.p
     stamp(g, 'Y', width=g.W)
     xc = g.W / 2
@@ -128,7 +132,7 @@ def yen(g):
     bar_pair(g, yc, xc - p.sv / 2 - bar_out(p), xc + p.sv / 2 + bar_out(p))
 
 
-@glyph('currency', '¤', lambda p: max(letter_width(8, 2)(p), 2.4 * p.m + 2 * p.sv + least_white(p)),
+@glyph('currency', '¤', lambda p: max(letter_width(10, 2)(p), 2.4 * p.m + 2 * p.sv + least_white(p)),
        kind=('punct', 1.0))
 def currency(g):
     """A ring on the axis, its counter never under least_white (the sign
@@ -150,7 +154,7 @@ def currency(g):
 @glyph('brokenbar', '¦', lambda p: p.sv, kind=('punct', 1.0))
 def brokenbar(g):
     p = g.p
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     mid = (top + bot) / 2
     gap = max(p.m, 0.6 * p.sv) / 2
     g.stroke((p.sv / 2, bot), (p.sv / 2, mid - gap))
@@ -265,28 +269,33 @@ def trademark(g):
     stamp(g, 'M', ps, dx=wt + 0.6 * p.m, dy=p.cap - ps.cap)
 
 
-@glyph('perthousand', '‰', lambda p: REGISTRY['percent'].width(p) + 5.5 * p.m, kind=('punct', 1.0))
+def _mille_width(p):
+    if p.mono:
+        return REGISTRY['percent'].width(p) + 5.5 * p.m
+    _, _, _, rw, _, white = pct(p)
+    return REGISTRY['percent'].width(p) + white + rw
+
+
+@glyph('perthousand', '‰', _mille_width, kind=('punct', 1.0))
 def perthousand(g):
-    p = g.p
-    w = stamp(g, 'percent')
-    s = p.sv
-    rw, rh = 4.5 * p.m + s, 5.0 * p.m + s
-    x0 = w + 1.0 * p.m
-    _ring(g, x0 + s / 2, g.sh / 2, x0 + rw - s / 2, rh - g.sh / 2)
+    """The percent sign and one more of its rings, the least white on."""
+    sub = percent_part(g)
+    g.add_glyph(sub)
+    pct_rings_after(g, sub, 1, pct(sub.p)[5])
 
 
-@glyph('daggerdbl', '‡', growing_width(6, 1, 2.0), kind=('punct', 1.0))
+@glyph('daggerdbl', '‡', lambda p: __import__('arris.glyphs.punct', fromlist=['x']).dagger_width(p), kind=('punct', 1.0))
 def daggerdbl(g):
-    """The dagger with a second bar; the stem's ends beyond the bars stay
-    longer than a stem is thick."""
+    """The dagger with a second bar, as far from the foot as the first is
+    from the top."""
     from .punct import dagger_bar
     p, W = g.p, g.W
-    g.stroke((W / 2, -p.desc + p.m), (W / 2, p.cap))
+    g.stroke((W / 2, -p.under + p.m), (W / 2, p.cap))
     yt = dagger_bar(p)
-    yb = -p.desc + p.m + (p.cap - yt)
+    yb = -p.under + p.m + (p.cap - yt)
     g.stroke((0, yt), (W, yt))
     g.stroke((0, yb), (W, yb))
-    g.clip = (0, -p.desc, W, p.cap)
+    g.clip = (0, -p.under, W, p.cap)
 
 
 @sign('numero', '№', lambda p: REGISTRY['N'].width(p) + 5 * p.m, kind='cap')
@@ -314,16 +323,35 @@ def infinity(g):
     _ring(g, W / 2, a - h, W - s / 2, a + h, leg=1.2 * p.m)
 
 
-@glyph('radical', '\u221a', lambda p: 2.0 * p.m + (p.cap + 0.5 * p.m) / 2 + 3.5 * p.m, kind=('punct', 0.6))
+RADICAL_TICK = 0.45     # of the radical's height: where its tick starts
+
+
+def radical_tick(p):
+    """How high the radical's tick starts. In 368 fonts the tick's end
+    stands at half the sign's height (the middle half of them 0.46 to
+    0.57). Two modules long at 45 degrees it stood at a fifth, and from
+    Bold its stroke was wider than it was long: a slash under a bar."""
+    return RADICAL_TICK * (p.cap + 0.5 * p.m)
+
+
+def radical_foot(p):
+    """Where the radical's foot stands from its left side: half its tick's
+    height on (the steep 2:1) and half the stroke's width across, so the
+    tick's level end starts at the body's side."""
+    from .letterframe import STEEP
+    return p.ss / STEEP[1] / 2 + radical_tick(p) / 2
+
+
+@glyph('radical', '\u221a', lambda p: radical_foot(p) + (p.cap + 0.5 * p.m) / 2 + 2.5 * p.m, kind=('punct', 0.6))
 def radical(g):
-    """A short 45-degree tick down to the baseline, a long 2:1 rise, a bar
-    along the top."""
+    """A tick down to the baseline and a long rise, both at the steep 2:1,
+    and a bar along the top."""
     p, W = g.p, g.W
     top = p.cap + 0.5 * p.m
-    t = 2.0 * p.m
-    g.stroke((0, t), (t, 0), start='v', end='h')
-    g.stroke((t, 0), (t + top / 2, top), start='h', end='h')
-    g.stroke((t + top / 2 - p.sv / 2, top - g.sh / 2), (W, top - g.sh / 2))
+    t, x = radical_tick(p), radical_foot(p)
+    g.stroke((x - t / 2, t), (x, 0), start='h', end='h')
+    g.stroke((x, 0), (x + top / 2, top), start='h', end='h')
+    g.stroke((x + top / 2 - p.sv / 2, top - g.sh / 2), (W, top - g.sh / 2))
     g.clip = (0, 0, W, top)
 
 
@@ -409,25 +437,39 @@ SPACING = {'circumflex': ('ˆ', '̂'), 'caron': ('ˇ', '̌'), 'breve': ('˘', '�
 
 
 def _spacing_width(p):
+    """An accent's body alone: the Regular's past it, as the accent is (marks.mark_params)."""
+    p = marks.mark_params(p)
     return 2 * marks.size(p, 'lc') + 1.5 * p.sv
+
+
+def _hook_width(p):
+    return 3 * p.m + marks.mark_params(p, marks.HANG_GAIN).sv
 
 
 for nm, (ch, comb) in SPACING.items():
     def fn(g, comb=comb):
+        from ..draw import Glyph
         p = g.p
-        marks.ABOVE[comb](g, g.W / 2, p.xh + marks.gap(p), 'lc')
+        q = marks.mark_params(p)                            # (the accent alone is the accent on a letter)
+        target = g if q is p else Glyph(q, W=g.W)
+        if target is not g:
+            target.finished = True
+            target.reg = marks.mark_params(p, 0.0)
+        marks.ABOVE[comb](target, g.W / 2, p.xh + marks.gap(q), 'lc')
+        if target is not g:
+            g.add_glyph(target)
     glyph(nm, ch, _spacing_width, kind=('punct', 0.6))(fn)
 
 
 @glyph('cedilla', '¸', lambda p: 3 * p.m + p.sv, kind=('punct', 0.6))
 def cedilla(g):
-    marks.cedilla(g, g.W - g.p.sv / 2 - 0.5 * g.p.m, 0, 'lc')
+    marks.kept(g, marks.cedilla, g.W / 2, 0, 'lc', gain=marks.HANG_GAIN, apart=True)
 
 
-@glyph('ogonek', '˛', lambda p: 3 * p.m + p.sv, kind=('punct', 0.6))
+@glyph('ogonek', '˛', _hook_width, kind=('punct', 0.6))
 def ogonek(g):
-    from .italic_forms import tail_run
-    p = g.p
-    yb = -p.desc + g.sh / 2 + 0.25 * p.m
-    x = p.sv / 2
-    g.stroke((x, g.sh), B(x, yb, p.m / 2), (x + tail_run(p, 1.5 * p.m + p.sv / 2, p.m / 2), yb))
+    def hook(g):
+        wv, wh, yb, run = marks.hook(g)
+        x = wv / 2
+        g.stroke((x, g.sh, wv), B(x, yb, g.p.m / 2, wh), (x + run, yb))
+    marks.kept(g, hook, gain=marks.HANG_GAIN)

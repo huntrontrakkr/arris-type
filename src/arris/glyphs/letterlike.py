@@ -19,11 +19,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from ..draw import B, REGISTRY, draw, glyph
+from ..draw import B, REGISTRY, Opening, draw, drawn_spec, glyph
 from ..params import SQRT2, outer_leg
+from .caps import Q_BOWL, Q_OPEN, _q_open, q_drawing
 from .figures import beak_depth, jog
 from .letterframe import STEEP, Frame, close_slit, heft, least_white, letter_width
-from .lower import HOOK_ROOM
+from .lower import hook_room
 from .symkit import MIRROR, TURN, across, fit_inner, set_tight, sign, small_all, stamp_t, tight
 
 ALIASES = {0x212A: 'K', 0x212B: 'Aring'}
@@ -97,7 +98,55 @@ def _double(name, ch, base, y_range, side=1, wider=True, kind='cap', dot=False):
 _double('uni2102', 'ℂ', 'C', lambda p, sh: (sh / 2, p.cap - sh / 2))
 _double('uni2119', 'ℙ', 'P', lambda p, sh: (0.0, p.cap - sh / 2))
 _double('uni211D', 'ℝ', 'R', lambda p, sh: (0.0, p.cap - sh / 2))
-_double('uni211A', 'ℚ', 'Q', lambda p, sh: (sh / 2, p.cap - sh / 2))
+
+
+def _dsq_parts(g):
+    """ℚ's inner stroke and the slit beside it. Where ℚ is drawn no wider
+    than the Q (Arris Mono's cell) the two stand in the Q's own counter,
+    and give way before the tail does: the stroke to the floor, then the
+    slit to the least white, so the counter beside them keeps what the Q's
+    rule needs to leave its tail whole (Q_OPEN stems each side, over
+    Q_BOWL), or the Q's own counter where that is less. (With the slit
+    held, the tail was a stub from Arris Mono Medium and in Mono Narrow.)"""
+    from .letterframe import least_white
+    p = g.p
+    t, s = ds_t(p), ds_s(p)
+    q = min(g.W, REGISTRY['Q'].width(p)) - 2 * p.sv          # the Q's own counter at this width
+    room = g.W - 2 * p.sv - min(q, 2 * Q_OPEN * p.sv / Q_BOWL)   # for the stroke and its slit
+    t = max(p.floor, min(t, room - s))
+    s = max(least_white(p), min(s, room - t))
+    return t, s
+
+
+def _dsq_open(g):
+    return _q_open(g, sum(_dsq_parts(g)))
+
+
+# (Drawn here and not stamped: the Q's tail is cut back from the counter's left wall by a break, and stamped at
+# the wider body its counter ran on under the inner stroke, so from 850 the tail's end met that stroke and shut
+# a pinhole under it in the italic. Here the tail is the Q's own, measured on the counter the inner stroke leaves.)
+@sign('uni211A', 'ℚ', _ds_width('Q'), kind='cap',
+      openings=[Opening(_dsq_open, 'tail', lambda p: p.cap * 3.5 / 12, max_ratio=Q_OPEN, own=True)])
+def dsQ(g):
+    p = g.p
+    if p.mono:
+        # In Mono's cell the Q's left side is split in two lines, a slit between them, in the room the stem
+        # takes (more only where two lines and a slit need it): the counter and the tail are the Q's own. An
+        # inner stroke standing in the counter beside the stem, as in Arris, left the tail a stub from Arris
+        # Mono Medium and none in Mono Narrow at Bold.
+        from .letterframe import least_white
+        s = max(least_white(p), 0.3 * p.sv)
+        t = max(p.floor, (p.sv - s) / 2)
+        total = 2 * t + s
+        q_drawing(g, total - p.sv, left=t)
+        x0 = Frame(g, 10).X(1) - p.sv / 2                      # the side's outer edge
+        g.stroke((x0 + t + s + t / 2, g.sh / 2, t), (x0 + t + s + t / 2, p.cap - g.sh / 2))
+        return
+    t, s = _dsq_parts(g)
+    q_drawing(g, t + s)
+    g.stroke((p.sv + s + t / 2, g.sh / 2, t), (p.sv + s + t / 2, p.cap - g.sh / 2))
+
+
 _double('uni2145', 'ⅅ', 'D', lambda p, sh: (sh / 2, p.cap - sh / 2))
 _double('uni2146', 'ⅆ', 'd', lambda p, sh: (sh / 2, p.asc), side=-1, kind='lower')
 
@@ -117,6 +166,12 @@ def dse(g):
     _inner(g, ds_x(p, f.X(1)), f.Y(1), f.Y(8))
 
 
+def _hooked_j(p):
+    """The body ⅉ's hook is drawn in: the hooked j's (lower.j_width), which Arris's own j no longer has."""
+    from .lower import j_width
+    return j_width(p)
+
+
 @sign('uni2148', 'ⅈ', lambda p: p.sv + ds_extra(p), kind='lower')
 def dsi(g):
     """The i's stem and an inner stroke beside it, the dot over both."""
@@ -131,7 +186,7 @@ def dsi(g):
     g.clip = None
 
 
-@sign('uni2149', '\u2149', lambda p: REGISTRY['uni0237'].width(p) + ds_extra(p), kind='lower')
+@sign('uni2149', '\u2149', lambda p: _hooked_j(p) + ds_extra(p), kind='lower')
 def dsj(g):
     """The j doubled: its stem, and a lighter stroke on its right that turns
     into the j's hook under both; the dot over the two."""
@@ -144,7 +199,7 @@ def dsj(g):
     xi = ds_x(p, xs)
     yb = fj.Y(-2)
     x1 = fj.X(1)
-    g.stroke((xi, p.xh, ds_t(p)), B(xi, yb), B(x1, yb), (x1, -p.desc + beak_depth(p)))
+    g.stroke((xi, p.xh, ds_t(p)), B(xi, yb), B(x1, yb), (x1, -p.desc + beak_depth(p, g.sh)))
     g.stroke((xs, p.xh), (xs, yb))
     _dot(g, f, (xs + xi) / 2)
     g.clip = None
@@ -318,7 +373,7 @@ def scriptg(g):
     f = Frame(g, 8, 'lower')
     p = f.p
     g.stroke(f.P(7, 8), B(*f.P(1, 8)), B(*f.P(1, 1)), f.P(7, 1), closed=True)
-    top = min(-p.desc + beak_depth(p), -max(p.m, 0.6 * p.sv))     # white under the bowl
+    top = min(-p.desc + beak_depth(p, g.sh), -max(p.m, 0.6 * p.sv))     # white under the bowl
     g.stroke(f.P(7, 9), B(*f.P(7, -2)), B(*f.P(1, -2)), (f.X(1), max(top, f.Y(-2) + 0.01)))
     close_slit(g, f.X(1) + p.sv / 2, f.X(7), f.Y(-2) + g.sh / 2, f.Y(1) - g.sh / 2)
 
@@ -382,10 +437,10 @@ def weierstrass(g):
     # into one line; from 550 the step hovered about a break (closed at
     # some weights, kept at others: a flicker). The hook deepens into the
     # font's descent by what keeps the step a break and a half
-    drop = min(HOOK_ROOM, max(0.0, 2.5 * p.c - (p.desc - outer_leg(p))))
+    drop = min(hook_room(p), max(0.0, 2.5 * p.c - (p.desc - outer_leg(p))))
     yh = f.Y(-2) - drop
     g.clip = (-g.W, -p.desc - drop, 2 * g.W, p.xh)
-    g.stroke((xs, p.xh), B(xs, yh), B(p.sv / 2, yh), (p.sv / 2, f.Y(-2) + g.sh / 2 + beak_depth(p)))
+    g.stroke((xs, p.xh), B(xs, yh), B(p.sv / 2, yh), (p.sv / 2, f.Y(-2) + g.sh / 2 + beak_depth(p, g.sh)))
     g.stroke((xs, f.Y(8)), B(xb, f.Y(8)), B(xb, f.Y(1)), (xs, f.Y(1)), closed=True)
     _entry(g, xs, p.xh)
 
@@ -393,11 +448,15 @@ def weierstrass(g):
 # --- Turned and reversed ------------------------------------------------------------
 
 def _turned(name, ch, base, M=TURN, zone='cap', kind=None, solid=False):
+    """``base`` turned, in the body of the drawing it turns: in the italic
+    the cursive f's for ⅎ, not the upright f's, which from 650 is no wider
+    than at Regular (lower.stub): drawn in it the cursive's two hooks had
+    no arm left past their turn and ended in spurs."""
     def fn(g):
         p = g.p
         about = p.cap / 2 if zone == 'cap' else p.xh / 2
         stamp_t(g, base, M, width=g.W, about=about)
-    sign(name, ch, lambda p: REGISTRY[base].width(p), kind=kind or REGISTRY[base].kind, solid=solid)(fn)
+    sign(name, ch, lambda p: drawn_spec(base, p).width(p), kind=kind or REGISTRY[base].kind, solid=solid)(fn)
 
 
 _turned('uni2141', '⅁', 'G')
@@ -432,27 +491,40 @@ def _rx(p):
     wr = REGISTRY['R'].width(p)
     k = p.sd / SQRT2
     a = wr + p.c - k                                        # the R's leg: x + y = a (caps.R)
-    yc = -p.desc / 3
+    yc = -p.under / 3
     e = 1.5 * p.m + p.sv / 2
     return wr, a, yc, e
 
 
 def _rx_width(p):
     wr, a, yc, e = _rx(p)
-    return max(a + 0.9 * p.desc, a - yc + e) + p.sd
+    return max(a + 0.9 * p.under, a - yc + e) + p.sd
+
+
+RX_CLIMB = 1.2   # ℞: how far the crossing climbs the leg, per unit the leg's thickness has grown past the Regular's
 
 
 @sign('prescription', '\u211e', _rx_width, kind='cap')
 def prescription(g):
     """R whose leg runs on below the baseline, crossed there by a short
-    stroke square to it."""
+    stroke square to it. The R keeps its leg at the weight's own thickness;
+    the cross is a stroke added to it, the Regular's thickness at every
+    heavier weight and laid over the leg (Glyph.held, Glyph.lay), and the
+    crossing climbs the leg as the leg grows (RX_CLIMB), toward the
+    baseline, so the x keeps its four arms to Black. Crossed at the
+    Regular's place with a cross as heavy as the leg, the x filled in from
+    SemiBold and was a boot under the R from ExtraBold (the owner: "not
+    legible at deep black"; "the cross to make the X, that part should be
+    thinned out ... move the cross up on the stem as it gets bolder")."""
+    from ..draw import held_at, held_c
     p = g.p
     wr, a, yc, e = _rx(p)
     stamp(g, 'R', width=wr)
-    bot = -0.9 * p.desc
+    bot = -0.9 * p.under
     g.stroke((a - p.sv / 2, p.sv / 2), (a - bot, bot), start='flat', end='h')   # (overlapping the leg)
+    yc += RX_CLIMB * max(0.0, p.sd - held_at(p).sd)
     xc = a - yc
-    g.stroke((xc - e, yc - e), (xc + e, yc + e), start='v', end='v')
+    g.lay((xc - e, yc - e, g.held((1, 1))), (xc + e, yc + e), c=held_c(p), start='v', end='v')
     # cut on its own frame: clipped at its body, which in Mono's cell is
     # narrower, the crossing stroke was cut short, and in the italic, as
     # narrow as a letter goes, cut away with the leg's foot
@@ -476,7 +548,7 @@ def frakturZ(g):
     yb = -p.desc + g.sh / 2
     g.stroke((0, yt), (W, yt))
     g.stroke((yt + a, yt), (xm, ym), start='h', end='flat')
-    beak = min(yb + g.sh / 2 + beak_depth(p), ym - g.sh / 2 - max(p.m, 0.6 * p.sv))
+    beak = min(yb + g.sh / 2 + beak_depth(p, g.sh), ym - g.sh / 2 - max(p.m, 0.6 * p.sv))
     g.stroke((xm - p.sv / 4, ym), B(xr, ym), B(xr, yb), B(xl, yb), (xl, max(beak, yb + 0.01)))
 
 

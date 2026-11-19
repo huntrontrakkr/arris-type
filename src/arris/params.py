@@ -34,15 +34,24 @@ class Params:
     cap: float = 720.0         # cap and figure height (12 modules)
     xh: float = 540.0          # x-height (9 modules)
     asc: float = 780.0         # ascender of b d h k l (13 modules, a module above the caps)
-    desc: float = 180.0        # descender depth of g j p q y (3 modules)
+    desc: float = 180.0        # descender depth of g j p q y: 3 modules, deeper from Bold (descender_line)
+    deep: float = 250.0        # the font's descent (font.Metrics.desc): the deepest a letter draws
+    under: float = 180.0       # three modules under the baseline: where brackets, signs and marks reach (the letters' line is desc)
     sv: float = 120.0          # vertical stem
     sh: float = 120.0          # horizontal stroke
+    low: float = 1.0           # the lowercase's horizontals, as a share of sh (instances.low_share)
     sd: float = 120.0 / SQRT2  # 45-degree stroke, measured perpendicular
     ss: float = 120.0 * 2 / math.sqrt(5)  # 2:1 stroke, measured perpendicular
     leg: float = 90.0          # bowl corner: centreline chamfer leg
     c: float = 30.0            # edge break on every right-angled corner
     fig_w: float = 540.0       # tabular figure body (9 modules)
     fig_adv: float = 600.0     # tabular figure advance (10 modules)
+    fig_own: float = 0.0       # the figure body at the watch's own rate (instances.FIG_GROWTH; 0: fig_w): Arris Mono's
+    white_low: float = 1.0     # what is left of a lowercase letter's white past the Regular (instances.white_given)
+    white_cap: float = 1.0     # of a capital's, a figure's, a sign's
+    past: float = 0.0          # units the font's stem stands past its Regular's: 0 to the Regular, in the watch's own
+                               # drawing and in Arris Mono (what a rule that turns on the weight past the Regular reads:
+                               # a set drawn smaller inside a glyph carries its font's, whatever its own modules)
     mono: bool = False         # monospaced: every glyph on one cell (MONO_CELL), whatever the weight
     narrow: bool = False       # Arris Mono Narrow: the Mono's cell, its letters in MONO_NARROW modules
     wide: float = 1.0          # Mono Narrow: Arris Mono's body at this weight over the narrow one, a wide letter's (draw.body_width)
@@ -75,7 +84,10 @@ class Params:
         p = replace(self, **kw, raw=None)
         if kw.get('mono') and not self.mono:                # turning monospaced: Mono's one cell (MONO_CELL)
             lo, hi = MONO_BODY
-            p = replace(p, fig_adv=MONO_CELL * p.m, fig_w=min(max(p.fig_w, lo * p.m), hi * p.m))
+            # (Mono's letters fill one cell at every weight: their white is the cell's, and nothing of the
+            # proportional cut's narrowing past the Regular reaches them: white_low, white_cap, fig_own)
+            p = replace(p, fig_adv=MONO_CELL * p.m, fig_w=min(max(p.fig_own or p.fig_w, lo * p.m), hi * p.m),
+                        white_low=1.0, white_cap=1.0, past=0.0)
         if p.mono and p.narrow and not (self.mono and self.narrow):   # turning narrow: the narrow body,
             p = replace(p, wide=p.fig_w / (MONO_NARROW * p.m), fig_w=MONO_NARROW * p.m)   # the Mono's for the wide letters
         if p.floor and min(before.values()) < p.floor:
@@ -118,7 +130,7 @@ class Params:
         return s
 
     def scaled(self, k: float) -> 'Params':
-        keep = ('mono', 'narrow', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw', 'light', 'unlit', 'pregrade')
+        keep = ('mono', 'narrow', 'cursive', 'plain', 'grade_k', 'grad', 'slant', 'raw', 'light', 'unlit', 'pregrade', 'low')
         out = Params(**{f: (getattr(self, f) * k if f not in keep else getattr(self, f)) for f in self.__dataclass_fields__})
         return replace(out, raw=tuple(v * k for v in self.raw) if self.raw else None,
                        pregrade=tuple(v * k for v in self.pregrade) if self.pregrade else None)
@@ -141,6 +153,42 @@ class Params:
         return self.with_(sv=sv / k, sh=sh / k, sd=sd / k, ss=ss / k, c=self.c / k, grade_k=1.0, grad=0.0)
 
 
+def white_own(r: float) -> float:
+    """A letter's white against its master's modules at a stem of r watch
+    stems, by the watch's own rule: a little wider toward Thin, a quarter
+    of a module narrower for each watch stem past the watch's weight
+    (letterframe.white_scale)."""
+    return 1 - 0.25 * (r - 1) if r >= 1 else 1 + 0.4 * (1 - r)
+
+
+# The least white grows with the stem to a stem of 158, Arris's Black until its weights took other families'
+# colour, and in Arris stays what it is there, 95 units, to the Black of 200: under half a stem. Sixty families'
+# Blacks keep 0.41 of a stem in the e's eye, 0.30 between the s's bars and 0.37 over the a's bowl (their middle
+# ones, 2026-11-11): the white a reader needs does not grow with the stem, and at 0.6 of it, 120 units at Black,
+# the g's hook and the white over it no longer stood on the descender line. The watch's own drawing keeps 0.6 of
+# its stem to its Black.
+WHITE_HELD = 158.0
+
+
+def white_floor(m: float, sv: float, optical: float = 1.0) -> float:
+    """The least white between two parts of a letter: a module, or 0.6 of
+    a stem toward Black, and in Arris (``optical``: its share, 0 in the
+    watch's own drawing) no more than at a stem of WHITE_HELD
+    (letterframe.least_white)."""
+    own = 0.6 * sv
+    return max(m, own - (own - 0.6 * min(sv, WHITE_HELD)) * optical)
+
+
+def descender_line(base: Params, sv: float, sh: float) -> float:
+    """How deep a weight's descenders go, all of them: three modules, or
+    what the g's hook needs under its bowl, a horizontal and the least
+    white over it, down to the font's descent. One line a weight: the g
+    and y had gone deeper alone from Bold (their hooks making room, 205
+    units at Bold and 250 at Black) and left p q j at 180, so a line of
+    text stood on two descender lines."""
+    return min(base.deep, max(base.desc, sh + white_floor(base.m, sv, 0.0)))        # (the hook's white: lower.hook_white)
+
+
 def outer_leg(p: Params, sv: float | None = None, sh: float | None = None) -> float:
     """Outer chamfer leg of a bowl corner between a vertical and a horizontal."""
     sv = p.sv if sv is None else sv
@@ -156,6 +204,6 @@ def inner_leg(p: Params, sh: float | None = None) -> float:
 # The watch figures, in modules: two-module strokes; every diagonal as wide
 # across as a stem (so 45-degree strokes are only 1/sqrt2 of it), 1.5-module
 # bowl legs, half-module edge breaks.
-HERITAGE = Params(m=1, cap=12, xh=9, asc=13, desc=3, sv=2, sh=2, sd=SQRT2,
+HERITAGE = Params(m=1, cap=12, xh=9, asc=13, desc=3, deep=250 / 60, under=3, sv=2, sh=2, sd=SQRT2,
                   ss=4 / math.sqrt(5), leg=1.5, c=0.5, fig_w=9, fig_adv=10, optical=0.0)
 HERITAGE_UNITS = HERITAGE.scaled(60)

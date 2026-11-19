@@ -142,7 +142,7 @@ def _layout(names, p, zone):
     """[(name, params, x offset)], total width: letters side by side, tight."""
     from ..font import light
     from ..spacing import bearings
-    from ..font import DEPTH
+    DEPTH = 0.2          # of the zone: letters packed inside a sign count their white deeper than text does (font.DEPTH)
     y0, y1 = zone
     lt = TIGHT * light(p)
     out, x, prev = [], 0.0, None
@@ -219,7 +219,7 @@ def tight_width(names, zone=None, case='cap'):
 def small_all(p):
     """Small figures' parameters with every vertical metric scaled."""
     from .features import SMALL, small
-    return small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.desc)
+    return small(p).with_(xh=SMALL * p.xh, asc=SMALL * p.asc, desc=SMALL * p.under, under=SMALL * p.under, deep=SMALL * p.deep)
 
 
 SMALL_HEFT = 2.6    # the heaviest a small letter's stem may be, in its own modules
@@ -231,7 +231,7 @@ def small_letter(p, k, stroke=0.8):
     its own (smaller) module: a stem 2.9 modules wide is the Black's, and a
     small S or E drawn heavier than that closes its mouths and counters."""
     s = min(stroke, SMALL_HEFT * k * p.m / p.sv)
-    return p.with_(cap=k * p.cap, xh=k * p.xh, asc=k * p.asc, desc=k * p.desc, m=k * p.m, leg=k * p.leg,
+    return p.with_(cap=k * p.cap, xh=k * p.xh, asc=k * p.asc, desc=k * p.under, under=k * p.under, deep=k * p.deep, m=k * p.m, leg=k * p.leg,
                    sv=s * p.sv, sh=s * p.sh, sd=s * p.sd, ss=s * p.ss, c=s * p.c)
 
 
@@ -248,7 +248,7 @@ K_MIN = 0.7         # the most a sign is condensed before it is drawn smaller in
 
 def _scaled(p, s):
     """Every dimension of the drawing (heights too) times s: a smaller sign."""
-    return _condensed(p, s).with_(cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.desc)
+    return _condensed(p, s).with_(cap=s * p.cap, xh=s * p.xh, asc=s * p.asc, desc=s * p.under, under=s * p.under, deep=s * p.deep)
 
 
 def _body(width, p, kind):
@@ -256,8 +256,20 @@ def _body(width, p, kind):
     a letter fills the cell; other signs keep their width, at most a cell."""
     from ..draw import LETTER_KINDS
     if p.mono:
-        return p.fig_w if kind in LETTER_KINDS else min(width(p), p.fig_w)
+        return p.fig_w if kind in LETTER_KINDS else min(width(p), sign_room(p))
     return width(p)
+
+
+def sign_room(p):
+    """The widest a sign that is not a letter stands in the monospaced
+    cell: the figures' body, and in Arris Mono Narrow Arris Mono's (what a
+    wide letter keeps there: Params.wide), not the narrow letters'. A sign
+    stands in Mono Narrow as it does in Mono until it has to be fitted
+    (its ink out of the cell: in the italic, leaned); fitted, it was drawn
+    down to the narrow letters' body, 468 units for 540: the ≤ of Arris
+    Mono Narrow Italic 0.78 as tall as the upright's with 0.6 of its ink,
+    the × 0.82 and 0.68, the # two thirds of its ink, 143 glyphs in all."""
+    return p.wide * p.fig_w
 
 
 PLAIN = (0.0, 0.0, ())      # a sign's look as drawn on its own (_look)
@@ -368,10 +380,10 @@ def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
                 # it stands in the cell's body, narrowed no further
                 a, b = _ink_x(fn, q, cell, look=look, at=p)
             return b - a <= p.fig_adv - 2 * CELL_GAP * p.m + tol
-        if width(q) > p.fig_w + tol:
+        if width(q) > sign_room(p) + tol:
             return False
         a, b = _ink_x(fn, q, _drawn_body(width, q, cell, kind), look=look, at=p)
-        return b - a <= p.fig_w + tol
+        return b - a <= sign_room(p) + tol
 
     k, s = 1.0, 1.0
     if look != PLAIN:
@@ -404,6 +416,8 @@ def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
     q = _condensed(p, k) if k < 1 else p
     q = _scaled(q, s) if s < 1 else q
     dx, dy = 0.0, (1 - s) * p.cap / 2
+    if s < 1 and _on_the_line(fn, p, cell, look):
+        dy = 0.0                                            # (drawn smaller toward the line it stands on)
     body = _drawn_body(width, q, cell, kind) if (k < 1 or s < 1) else cell
     if k < 1 or s < 1:
         from ..draw import _ink_x as carried
@@ -414,6 +428,21 @@ def _mono_fit(key, fn, width, p, kind=None, look=PLAIN):
         dx = (cell - (a + b)) / 2
     _FIT[(key, p, look)] = (k, s, dx, dy, body)
     return _FIT[(key, p, look)]
+
+
+ON_LINE = 0.5    # modules: a sign whose ink comes down to within this of the baseline (above or below) stands on it
+
+
+def _on_the_line(fn, p, cell, look):
+    """Whether a sign stands on the baseline as it is drawn (its ink comes
+    down to it, ON_LINE): drawn smaller to fit its cell, it is drawn
+    smaller toward the line, not about the axis (_mono_fit). About the
+    axis, the punctuation drawn on the line stood off it: ⁈ ⁉ 8 units in
+    Arris Mono at SemiBold and 22 in Mono Narrow, ⅀ as far."""
+    g = _glyph(p, cell, look)
+    fn(g)
+    ys = [q[1] for r in g.rings() for q in r]
+    return bool(ys) and abs(min(ys)) <= ON_LINE * p.m
 
 
 def _drawn_body(width, q, cell, kind):
@@ -451,11 +480,22 @@ def mono_fitted(name, fn, width, kind):
     """(drawing, body) for a symbol in the monospaced cut: as drawn, unless
     its ink would run out of the cell (mono_overflows); then fitted as a
     sign is (_mono_fit: condensed, or drawn smaller, and centred)."""
+    def held(p):
+        # (a picture, technical.pictured: held at its Regular before it is fitted)
+        if p.mono and getattr(fn, 'picture', False):
+            from ..draw import held_at
+            return held_at(p)
+        return p
+
     def body(p):
         n = width(p)
-        return min(n, p.fig_w) if p.mono and mono_overflows(name, fn, width, p) else n
+        return min(n, sign_room(p)) if p.mono and mono_overflows(name, fn, width, held(p)) else n
 
     def wrapped(g):
+        q = held(g.p)
+        if q is not g.p:
+            g.p = q
+            g.pictured = True                               # (technical.picture's mark: the white rule reads its own strokes)
         p = g.p
         if not p.mono or not mono_overflows(name, fn, width, p, _look(g)):    # (as its glyph draws it)
             return fn(g)

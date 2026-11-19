@@ -152,14 +152,14 @@ def be_srb_ital(g):
 def _macron_over(name, latin):
     """The italic of ``name``: a Latin letter with a macron (ī ū m̄)."""
     def fn(g, latin=latin):
-        from .marks import gap, macron
+        from .marks import gap, kept, macron, mark_params
         p = g.p
         sub = stamp(g, latin, width=g.W)
         rings = g.extra[-1]
         top = rings.bounds[3]
         x0, x1 = rings.bounds[0], rings.bounds[2]
         # over the letter's x-height part (an entry flag leans left of it)
-        macron(g, (max(x0, 0) + min(x1, g.W)) / 2, top + gap(p), 'lc')
+        kept(g, macron, (max(x0, 0) + min(x1, g.W)) / 2, top + gap(mark_params(p)), 'lc')
         return sub
     ital(name, 8, 2, width=lambda p, n=latin: REGISTRY[n].width(p))(fn)
 

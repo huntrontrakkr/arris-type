@@ -2,22 +2,58 @@
 
 Spacing (``arris.spacing``) gives every side of every glyph the same light,
 which suits pairs whose profiles face each other. Some pairs interlock: a T's
-bar reaches over an o, an A's open side meets a V's, a period tucks under a
-P's bowl. For those the white the eye sees between the two shapes is far
+bar reaches over an o, an L's foot runs under a Y's arm, a period tucks under
+a P's bowl. For those the white the eye sees between the two shapes is far
 wider than their closest approach suggests the designer meant.
 
 For each pair, on rows where both glyphs have ink, the gap between the left
-glyph's right profile and the right glyph's left profile is measured. If
-its narrowest point is much wider than two sidebearings, the pair closes
-toward that; if it is narrower than a collision floor (an accent on a
-capital against a T's bar), it opens. Everything else is left to spacing.
-A closing kern never brings the two inks closer than half a standard gap
-in any direction (CLEAR): rows a little apart count at their diagonal
-distance. A mark floating high kerns as if its sides ran down to half
-the x-height (``_shadow``), so it never slides over a lowercase body.
-No pair is kerned across scripts (a Latin letter and a Cyrillic or Greek
-one): shapers break text into runs of one script before kerning, so such
-a pair is never applied (it was 39% of the variable fonts' pairs).
+glyph's right profile and the right glyph's left profile is measured, in
+standard gaps (two sidebearings: the white between two H's).
+
+* Two letters whose narrowest gap is wider than a standard gap close to
+  one, and never nearer than three quarters of one in any direction (rows
+  a little apart count at their diagonal distance). That is where hand
+  kerning leaves them: in seven kerned faces of this kind (Chakra Petch,
+  Oxanium, Exo 2, Tomorrow, Regular and heavy) the L's foot stands 1.06
+  standard gaps from the Y's stem, 0.96 from the T's, the T's bar 1.02
+  from the A, the T 1.03 from the J; where the approach is on a slant the
+  inks come to 0.86 (LV), 0.74 (LW), 0.87 (To), 0.78 (Ta), 0.75 (Tr).
+  Until 1.017 a pair closed only past a gap and a quarter, and by four
+  fifths of the excess: LY was left 1.36 to 1.47 gaps apart, LT 1.30 to
+  1.39, TA 1.33 to 1.39, and the capitals read as loose wherever an L, a T
+  or a Y stood (the owner: "L next to Y, super off").
+* A pair with a mark of punctuation in it keeps more air, as it does in
+  those faces (a period stands 1.2 to 1.5 gaps from what it follows): it
+  closes past a gap and a quarter by four fifths of the excess, and a mark
+  that lies low (a period, a comma: all its ink under half the x-height)
+  comes no nearer than a gap and a fifth to any ink over it and is pulled
+  in by no more than 0.45 of a gap, which is what those faces pull a period
+  in by after any letter that overhangs it (P. 0.47, F. 0.42, T. 0.46,
+  Y. 0.47, V. 0.37, r. 0.38, f. 0.33). Until 1.017 a period went under a
+  P's bowl by 1.4 gaps at Regular and 2.2 at Black, 255 and 280 units.
+* No two inks come nearer than a collision floor, whichever way they
+  approach: an accent on a capital against a T's bar on its own row, a
+  j's hook under an l's foot on none (until 1.017 only gaps on a shared
+  row counted: L and j, l and j, t and j stood 0.18 to 0.20 of a gap
+  apart at Regular, where those faces keep 0.43 to 0.97).
+* Two capitals side to side, one of them a letter whose arms stand
+  upright for half its height (A V W Y), keep six tenths of a gap where
+  they come nearest. Spacing gives such a letter the bearing its open
+  half earns, and beside a bowl or another arm that left two upright
+  edges nearly touching at the heavy weights (R and Y 0.38 of a gap at
+  Black, P and A 0.47, two Ys 0.23: those faces 0.63 to 0.74 and 0.62 to
+  0.85). A side is told from a bar's end by how tall it is where the two
+  come nearest (``_tall``): bars' ends still close to the floor, as they
+  do in those faces (T and T 0.18 to 0.38). Everything else is left to
+  spacing. (Two rules tried first, a floor on the white averaged over a
+  run and the side rule for every letter, each opened hundreds of
+  ordinary pairs at Black, bar ends and lowercase diagonals with them.)
+
+A mark floating high kerns as if its sides ran down to half the x-height
+(``_shadow``), so it never slides over a lowercase body. No pair is kerned
+across scripts (a Latin letter and a Cyrillic or Greek one): shapers break
+text into runs of one script before kerning, so such a pair is never
+applied (it was 39% of the variable fonts' pairs).
 """
 from __future__ import annotations
 
@@ -27,11 +63,20 @@ from shapely.geometry import LineString
 from .geom import rings_to_shapely
 
 ROWS = 160
-INTERLOCK = 1.25    # a pair closes when its narrowest gap passes this many standard gaps ...
-CLOSE = 0.8         # ... by this share of the excess
-FLOOR = 0.35        # and opens when its narrowest gap is under this share of a standard gap
+INTERLOCK = 1.0     # two letters close when their narrowest gap passes this many standard gaps ...
+CLOSE = 1.0         # ... by this share of the excess (to a standard gap)
+CLEAR = 0.75        # and their inks stay this share of a standard gap apart, in any direction
+MARK_INTERLOCK = 1.25   # a pair with a mark of punctuation in it: when its gap passes this many ...
+MARK_CLOSE = 0.8        # ... by this share of the excess
+MARK_CLEAR = 0.5        # its inks this far apart in any direction
+LOW_CLEAR = 1.2         # and a mark lying low (a period, a comma) this far from any ink,
+LOW_PULL = 0.45         # pulled in by no more than this share of a standard gap
+FLOOR = 0.35        # a pair opens when its inks come nearer than this share of a standard gap, in any direction
+ARMS = 'AVWY'       # capitals whose arms stand upright for half their height: beside another capital, where the
+SIDE = 1.2          # two come nearest, each a part this many stems tall or more (a side, not a bar's end:
+SIDE_DEPTH = 0.5    # as tall as it stays within this share of a stem of its nearest row),
+FACE = 0.6          # they keep this share of a standard gap between them
 MIN_KERN = 10
-CLEAR = 0.5         # a closing kern keeps the inks this share of a standard gap apart, in any direction
 
 
 def profiles(rings, ys):
@@ -100,35 +145,113 @@ def scripts(name: str) -> frozenset:
 def kerns(placed: dict, p, light: float, left_names=None, right_names=None):
     """placed: name -> (rings, advance). Returns {(left, right): kern}."""
     ys = np.linspace(-p.desc, p.asc + 0.3 * p.cap, ROWS)
-    prof = {n: _shadow(profiles(r, ys), ys, p.xh) for n, (r, _) in placed.items()}
+    raw = {n: profiles(r, ys) for n, (r, _) in placed.items()}
+    prof = {n: _shadow(raw[n], ys, p.xh) for n in placed}
     std = 2 * light
     out = {}
     lnames = left_names or list(placed)
     rnames = right_names or list(placed)
     rscript = [scripts(n) for n in rnames]
+    mark = {n: _mark(n) for n in placed}
+    low = {n: mark[n] and _lies_low(raw[n], ys, p.xh) for n in placed}
+    rmark, rlow = np.array([mark[n] for n in rnames]), np.array([low[n] for n in rnames])
+    cap = {n: _capital(n) for n in placed}
+    arm = {n: cap[n] and _arm(n) for n in placed}
+    rcap, rarm = np.array([cap[n] for n in rnames]), np.array([arm[n] for n in rnames])
+    depth = SIDE_DEPTH * p.sv
+    tall_r = {n: _tall(placed[n][1] - prof[n][1], ys, depth) for n in lnames}
+    tall_l = np.array([_tall(prof[n][0], ys, depth) for n in rnames])
     R = np.array([placed[n][1] - prof[n][1] for n in lnames])      # white to the right of each left glyph
     L = np.array([prof[n][0] for n in rnames])                      # white to the left of each right glyph
     for i, a in enumerate(lnames):
-        gap = R[i][None, :] + L                                     # rows x right glyphs
+        gap = R[i][None, :] + L                                     # right glyphs x rows
         both = ~np.isnan(gap)
         has = both.any(axis=1)
         g = np.where(both, gap, np.inf).min(axis=1)
+        marked = rmark | mark[a]
+        inter = np.where(marked, MARK_INTERLOCK, INTERLOCK) * std
+        share = np.where(marked, MARK_CLOSE, CLOSE)
+        clear = np.where(rlow | low[a], LOW_CLEAR, np.where(marked, MARK_CLEAR, CLEAR)) * std
         ks = np.zeros(len(rnames))
         for j in np.nonzero(has)[0]:
             m = g[j]
-            if m > INTERLOCK * std:
-                ks[j] = -CLOSE * (m - INTERLOCK * std)
+            if m > inter[j]:
+                ks[j] = -share[j] * (m - inter[j])
             elif m < FLOOR * std:
                 ks[j] = FLOOR * std - m
         closing = np.nonzero(ks < 0)[0]
-        if len(closing):
-            ks[closing] = np.maximum(ks[closing], np.minimum(0.0, _clearance(R[i], L[closing], ys, CLEAR * std)))
+        for d in np.unique(clear[closing]):
+            idx = closing[clear[closing] == d]
+            ks[idx] = np.maximum(ks[idx], np.minimum(0.0, _clearance(R[i], L[idx], ys, d)))
+        lows = closing[(rlow | low[a])[closing]]
+        ks[lows] = np.maximum(ks[lows], -LOW_PULL * std)
+        # no two inks nearer than the floor, whichever way they approach (a
+        # j's hook under an l's foot shares no row with it)
+        ks = np.where(has, np.maximum(ks, _clearance(R[i], L, ys, FLOOR * std)), ks)
+        # two capitals side to side, one of them an arm's (a bowl against an
+        # arm, R and Y; two arms, V and Y): where they come nearest, each is a
+        # side if it stays near that row over more than a bar's end does
+        if cap[a]:
+            at = np.where(both, gap, np.inf).argmin(axis=1)
+            tall = np.minimum(tall_r[a][at], tall_l[np.arange(len(rnames)), at])
+            facing = has & rcap & (rarm | arm[a]) & (tall >= SIDE * p.sv)
+            ks = np.where(facing, np.maximum(ks, FACE * std - g), ks)
         sa = scripts(a)
         for j in np.nonzero(has)[0]:
             k = 5 * round(ks[j] / 5)
             if abs(k) >= MIN_KERN and (not sa or not rscript[j] or sa & rscript[j]):
                 out[(a, rnames[j])] = int(k)
     return out
+
+
+def _tall(white, ys, depth):
+    """Per row, how tall the part of a side is that stands there: the run
+    of rows about it whose white is within ``depth`` of that row's (0 where
+    the row has no ink). A bar's end is as tall as the bar is thick; a
+    bowl, an arm or a stem is taller (in stems, at half a stem's depth: T E
+    F L r f t 0.73 to 0.88, the C's beak 1.05; the Y's arm 1.37 at Black
+    and 2.2 at Regular, R and P 1.7 and 2.7, O 3.4 and 6.4)."""
+    v = np.where(np.isnan(white), np.inf, white)
+    dy = ys[1] - ys[0]
+    out = np.zeros(len(v))
+    for i in np.nonzero(np.isfinite(v))[0]:
+        near = v <= v[i] + depth
+        lo = hi = i
+        while lo > 0 and near[lo - 1]:
+            lo -= 1
+        while hi < len(v) - 1 and near[hi + 1]:
+            hi += 1
+        out[i] = (hi - lo + 1) * dy
+    return out
+
+
+def _capital(name: str) -> bool:
+    from .draw import REGISTRY
+    spec = REGISTRY.get(name)
+    return spec is not None and spec.kind == 'cap'
+
+
+def _arm(name: str) -> bool:
+    """Whether a capital is one of those with upright arms (ARMS), by the
+    letter it is made from (Ý is a Y)."""
+    from .draw import REGISTRY, _root
+    spec = REGISTRY.get(name)
+    return spec is not None and _root(spec) in ARMS
+
+
+def _mark(name: str) -> bool:
+    """Whether a glyph is a mark of punctuation (not a letter): by its
+    kind, a letter if it is not a glyph of the library's (a test shape)."""
+    from .draw import REGISTRY
+    spec = REGISTRY.get(name)
+    return spec is not None and isinstance(spec.kind, tuple) and spec.kind[0] == 'punct'
+
+
+def _lies_low(prof, ys, xh) -> bool:
+    """Whether all a glyph's ink is under half the x-height (a period, a
+    comma, an ellipsis, the low quotes)."""
+    ink = ~np.isnan(prof[0])
+    return bool(ink.any()) and ys[ink].max() < xh / 2
 
 
 def _clearance(r, Ls, ys, d):

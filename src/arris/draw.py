@@ -6,9 +6,10 @@ spacing is added when the font is assembled.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Callable
 
 from . import cache
@@ -50,6 +51,10 @@ class Opening:
     limit: Callable[[Params], float]
     max_ratio: float | None = None   # cap on the watch's share, if it is generous
     hold: bool = False               # past the weight where it first acts, the counter it had there, shrinking (_engaged)
+    own: bool = False                # the glyph thins the strokes round this counter itself, by ``free``: the thinning
+                                     # of all its horizontals for its closed counters (draw) is off where it draws with it
+    across: bool = False             # the gap is as wide as the letter's counter: held to as much less of its share as
+                                     # the counter has given across past the Regular (given_across)
 
 
 @dataclass(frozen=True)
@@ -86,6 +91,7 @@ class Spec:
     cell: bool = False                 # a terminal cell's drawing: stays upright in the italic (font.place)
     squint: tuple = ()                 # Squint rules
     base: str | None = None            # the letter it is made from (ñ's n, the Bulgarian п's n): its body in Mono Narrow
+    white: str = 'cap'                 # whose white its body and drawing measure (letterframe.zone, white_of)
 
 
 def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=False, cell=False, squint=(),
@@ -97,10 +103,56 @@ def glyph(name: str, char: str | None, width, kind='fig', openings=(), solid=Fal
             # a symbol keeps to its cell in the monospaced cut (symkit.mono_fitted)
             from .glyphs.symkit import mono_fitted
             f, w = mono_fitted(name, fn, w, kind)
-        REGISTRY[name] = Spec(name, ord(char) if char else None, f, w, kind, tuple(openings), solid, cell,
-                              tuple(squint), base)
+        white = white_of(fn, kind)
+        REGISTRY[name] = Spec(name, ord(char) if char else None, f, _zoned(w, white), kind, tuple(openings), solid, cell,
+                              tuple(squint), base, white)
         return fn
     return deco
+
+
+def given_across(spec, p) -> float:
+    """What is left of the white across a glyph's counters past the
+    Regular, as a share of what the watch's own rule gives its weight
+    (letterframe.white_scale): the measure an opening that is as wide as
+    its letter's counter is held to (Opening.across). Until 1.017's
+    narrowing the cursive e's eye was held to half a stem whatever its
+    counter: in a counter a quarter narrower at Black the rule took hold a
+    weight earlier and thinned the top and the bar to 0.70 of their own for
+    it, where they had given 0.92."""
+    from .glyphs.letterframe import white_scale, zone
+    from .params import white_own
+    with zone(spec.white):
+        return white_scale(p) / white_own(p.sv / (2 * p.m))
+
+
+OWN_WHITE = ('operators', 'arrows', 'technical')    # glyph modules whose signs keep the watch's own white (white_of)
+
+
+def white_of(fn, kind) -> str:
+    """Whose white a glyph's body and drawing measure (letterframe.zone):
+    a lowercase letter's ('lower'), which gives way to the stems fastest
+    past the Regular; a capital's, a figure's or a sign's ('cap'); or the
+    watch's own ('own'), for the mathematical operators, the arrows and
+    the technical signs: figures of fixed geometry, bars a set white apart
+    and strokes at 45 degrees, that have no counter to give. Narrowed with
+    the letters, ⊦ lost its stem to a wedge at Black, ⊫ its two stems to a
+    slab, and the feet of ≎ ran out past its bars in points."""
+    if kind == 'lower':
+        return 'lower'
+    if (getattr(fn, '__module__', '') or '').rsplit('.', 1)[-1] in OWN_WHITE:
+        return 'own'
+    return 'cap'
+
+
+def _zoned(width, white):
+    """A glyph's body width, measured in its own white: a lowercase
+    letter's gives way to its stems faster than a capital's
+    (letterframe.white_scale, zone; white_of)."""
+    def measured(p):
+        from .glyphs.letterframe import zone
+        with zone(white):
+            return width(p)
+    return measured
 
 
 def B(x, y, leg=None, w=None):
@@ -128,6 +180,42 @@ def hold_weight(p) -> float:
     return EXTRA_HOLD
 
 
+def crotch_fill(p) -> float:
+    """How far along the stem the corner rule fills the crotch a diagonal
+    makes with it, in breaks (geom._ring_rule): one in Arris, the leg every
+    other corner has on its horizontal or vertical edge; two in the watch's
+    own drawing (the pixel rule the figures came with, WTCH 100). The
+    italic's were two as well until 1.017, twice the upright's ink where a
+    diagonal already lies on a stem: 88 units along each side of the
+    cursive e's eye at Black."""
+    return 2.0 - p.optical
+
+
+def fill_leg(p) -> float:
+    """The leg of the chord that fills a concave corner (geom._ring_rule):
+    the weight's own break up to its cut's Regular, and the Regular's from
+    there to Black (held_at), so the insides of the letters stop filling
+    as the stems grow. The watch's own drawing (WTCH 100) keeps the pixel
+    rule, one leg for every corner.
+
+    The owner, 2026-11-10: "the interior ... is getting really fat because
+    we chamfer the bits at a certain level and it just doesn't look
+    right"; shown the fills held at the Regular's, the italic's crotches
+    filled one break and both, he chose both ("you can try three")."""
+    return p.c - (p.c - held_c(p)) * p.optical
+
+
+def facet_close(p) -> float | None:
+    """How short a wall of white between two cuts closes to a point, in
+    breaks (geom.FACET, geom._polish): half a break in Arris; in the
+    watch's own drawing and the italic, only the slivers every outline
+    loses."""
+    from .geom import FACET, POLISH
+    if p.slant:
+        return None
+    return POLISH + (FACET - POLISH) * p.optical
+
+
 @dataclass
 class Glyph:
     p: Params
@@ -139,8 +227,10 @@ class Glyph:
     W: float = 0.0    # body width
     sh_k: float = 1.0  # horizontal thickness factor (tight stacks of bars)
     sh_auto: float = 1.0  # further thinning that keeps closed counters open (see draw)
+    zone_k: float = 1.0   # the zone's share of the weight's horizontals: the lowercase's are thinner toward Black (Params.low)
     clip: tuple[float, float, float, float] | None = None   # keep ink inside (x0, y0, x1, y1)
     butt: tuple = ()   # lines ('x' or 'y', value) the ink meets flush: no edge breaks there (geom.ink)
+    end_cut: float | None = None   # the share of a stroke's flat end either of its cuts may take, where not a third (geom._share): a half, and the two meet in a point (the l's foot)
     overrides: dict = field(default_factory=dict)
     defaults: dict = field(default_factory=dict)
     parts: dict = field(default_factory=dict)        # name -> stroke indices
@@ -346,12 +436,22 @@ class Glyph:
         # glyphs stamped as drawn at this one's parameters, only moved (an
         # accented letter's base): finished. One drawn at other parameters
         # (a small figure in a fraction) or scaled is finished again here.
+        # Not a mark drawn with its own (marks.kept: ``finished``): it is the
+        # mark it is under a lighter letter. Finished again on a heavier
+        # letter's breaks, a corner cut where a steep edge meets a level one
+        # (the cedilla's tab) was cut a second time, half as deep again.
         finished = [e for e in self.extra if any(src[0] is e and tuple(src[3][:4]) == (1.0, 0.0, 0.0, 1.0)
-                                                 and src[1].p == p for src in self.extra_src)]
+                                                 and (src[1].p == p or getattr(src[1], 'finished', False))
+                                                 for src in self.extra_src)]
         rings = ink(self.strokes, _thickness(p, self.sh), p.c, self.extra, box, rec, self.butt,
                     tags=tags, extra_edges=self._extra_edges() if tags is not None else (), finished=finished,
-                    overlay=self.overlay)
+                    overlay=self.overlay, crotch=crotch_fill(p), facet=facet_close(p), fill=fill_leg(p),
+                    end_cut=getattr(self, 'end_cut', None))
         rec = (rec or []) + self.extra_chamfers if record else []
+        if getattr(self, 'diagram', False):
+            # a diagram, the same outline in every font (⌬, technical.benzene): the italic curves none of it,
+            # as it slants none of it (a cell)
+            rec = []
         if record and getattr(self, 'square', False):
             # italic.SQUARE: the italic k's edge breaks; 'bowl', a bowl's chamfers too (₴)
             rec = rec + [('square',) if self.square is True else ('square', self.square)]
@@ -415,14 +515,19 @@ class Glyph:
         return out
 
     @property
+    def sh0(self) -> float:
+        """The horizontals of the glyph's zone, before the glyph thins its own."""
+        return self.p.sh * self.zone_k
+
+    @property
     def sh(self) -> float:
-        return max(self.p.sh * self.sh_k * self.sh_auto, self.p.floor)
+        return max(self.sh0 * self.sh_k * self.sh_auto, self.p.floor)
 
     def stack(self, n: int, height: float, ratio: float = 0.9):
         """Thin the horizontals where n bars share ``height`` so that each
         counter between them stays at least ``ratio`` times a bar."""
         fit = height / (n + (n - 1) * ratio)
-        self.sh_k = min(1.0, fit / self.p.sh)
+        self.sh_k = min(1.0, fit / self.sh0)
         return self.sh
 
 
@@ -465,6 +570,8 @@ LETTER_KINDS = ('cap', 'lower')
 
 _WIDE: dict = {}
 WIDE_MODULES = 11.0   # Mono Narrow: a letter this many modules wide or more at the Regular is wide by nature
+WIDE_ROOTS = ('M',)   # and what is made from these: the M is two stems and a V between them at any width (10.7 modules
+                      # since 1.017, among Ђ Ъ Ѣ, which are one stem and a bowl)
 # Mono Narrow's arch letters, a little wider than its body: in 7.8 modules the
 # shoulder's 45-degree diagonal and the arch's corner left the n, h and r
 # almost no flat top, and at Bold the diagonal ran out of room and its notch
@@ -486,14 +593,14 @@ def _root(spec):
 
 def _wide(spec) -> bool:
     """Whether a letter is wide by nature: its own width at the Regular
-    (proportional, ungraded) is WIDE_MODULES or more (m 11.1, M 11.8, W and w
-    13.3; T at 10.3 and the rest are not). Decided once, at the Regular, so
-    a letter is wide at every weight or at none."""
+    (proportional, ungraded) is WIDE_MODULES or more (m and W 12.2, w 11.8;
+    the rest are not), or it is made from the M (WIDE_ROOTS). Decided once,
+    at the Regular, so a letter is wide at every weight or at none."""
     if spec.name not in _WIDE:
         from .instances import params as _params
         ref = _params(400)
         try:
-            _WIDE[spec.name] = spec.width(ref) >= WIDE_MODULES * ref.m
+            _WIDE[spec.name] = spec.width(ref) >= WIDE_MODULES * ref.m or _root(spec) in WIDE_ROOTS
         except Exception:
             _WIDE[spec.name] = False
     return _WIDE[spec.name]
@@ -521,6 +628,26 @@ def body_width(spec, p, width=None):
 _DEPTH = [0]   # how deep in other glyphs' drawings a drawing is made (a stamped or inset letter is 1 or more)
 
 
+@contextlib.contextmanager
+def _as_own():
+    """While a reference is drawn that others are measured by and that is
+    kept (a height's overshoot from its o, its bar from the 5, the hooks'
+    lines from the e, a glyph's Regular, the weight its counters shut at):
+    drawn as a glyph of its own, not as a part of whichever glyph asks for
+    it first. In Arris Mono a glyph of its own is fitted to its cell and a
+    part of another is not (_start), so the reference was one drawing if a
+    letter asked first and another if an accented letter's base did, and
+    kept either way: after a plain e, s or o the x-height's overshoot in
+    Mono Bold Italic was 1.50 units, before one 1.09, and the same font
+    came out two ways as its glyphs were shared out among the build's
+    workers (about a hundred accented letters and tabular figures)."""
+    depth, _DEPTH[0] = _DEPTH[0], 0
+    try:
+        yield
+    finally:
+        _DEPTH[0] = depth
+
+
 def _cell_kind(spec) -> bool:
     """Whether a glyph keeps to Mono's cell: not marks, spaces, ligatures."""
     return spec is not None and spec.kind not in ('mark', 'space') and \
@@ -540,6 +667,36 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
     g.width_arg = width                     # (a body the caller set: a composite's base is drawn in it)
     g.sh_auto = overrides.get('sh_auto', 1.0)
     g.defaults['sh_auto'] = 1.0
+    if spec.kind == 'lower' and not p.slant:
+        g.zone_k = p.low
+        if p.optical and spec.name not in ZONE_SETTERS and not _OWN_BAR[0]:
+            # The zone's bar is the one the a's and the e's hooks hang from (lower.hook_ref): where those
+            # thin it with their closed end's bar, from ExtraBold, every bar of the lowercase thins with
+            # them, and the counters of o, c, b, n and the rest stand on the lines the a's and the e's do
+            # (the owner, 2026-11-12, of the c brought onto their lines and the o left on its own, 23 units
+            # thicker at Black: "o needs to open up a little bit more. Let's make sure that we're extremely
+            # consistent like this across everything").
+            from .glyphs.lower import hook_ref
+            ref = hook_ref(p)
+            if ref is not None:
+                g.zone_k = ref[0] / p.sh
+    elif spec.kind == 'lower' and p.optical and not _OWN_BAR[0]:
+        # The italic's lowercase stands on the upright's bar. It kept the weight's own (it is not thinned
+        # for the x-height as the upright is), and from SemiBold a line of it was the darker of the two: by
+        # 2.6% at Black, on bars of 170 units beside the upright's 118, with every counter of the cursive the
+        # tighter for it.
+        from .glyphs.lower import hook_ref
+        ref = hook_ref(p.with_(slant=0.0))
+        if ref is not None:
+            g.zone_k = min(1.0, ref[0] / p.sh)
+    elif spec.kind in ('cap', 'fig') and p.optical and spec.name not in CAP_SETTERS and not _OWN_BAR[0]:
+        # The capitals and the figures the same: one bar on the cap height, the one the 5, the 6 and the 9
+        # keep where their mouths hold them (from ExtraBold: 147 units to Black). Each letter thinned for
+        # itself, and at Black the O and the E stood on bars of 170 units, the S on 154, the 5, 6 and 9 on
+        # 147 and the Q on 119.
+        bar = _cap_bar(p)
+        if bar is not None:
+            g.zone_k = min(1.0, bar / p.sh)
     if cell and p.mono and _DEPTH[0] == 0 and _cell_kind(spec):
         # Mono: no ink past the cell (the body sits centred in it). A letter
         # is fitted into it (_cell_fit); anything else that would run on is
@@ -553,9 +710,11 @@ def _start(spec, p, ot, ob, overrides, width, cell=True):
 
 
 def _drawn(spec, g):
+    from .glyphs.letterframe import zone
     _DEPTH[0] += 1
     try:
-        spec.fn(g)
+        with zone(spec.white):                              # (what the drawing measures in white is its own kind's)
+            spec.fn(g)
     finally:
         _DEPTH[0] -= 1
     return g
@@ -743,13 +902,31 @@ def _build(spec, p, ot, ob, overrides, width=None):
 # Params.optical (0 in the watch's own drawing, WTCH 100). Drawn on the base
 # letters and figures; composites inherit them. None turns them off.
 _FIGS = ('zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine')
+# The figures and their alternates that stand in text as letters do, spaced by
+# their own white (font._place_drawn) and kerned; each has a tabular twin on
+# the figures' cell (name.tnum: glyphs.features). In Arris Mono all share
+# the cell.
+PROPORTIONAL_FIGS = _FIGS + ('zero.zero', 'zero.dot', 'five.ss02')
 OPTICAL = {
-    'names': set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') | set(_FIGS),
+    # (j.cv03: the hooked j was the j until 1.017, and is Arris Mono's still)
+    'names': set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') | set(_FIGS) | {'j.cv03'},
     # optical centre: the middle rises until the top counter of a three-bar
-    # letter (B E 8) is this share of the bottom one; calibrated so that at
-    # Regular the middle rises 2.5% of the cap height. As the bars thicken the
-    # counters shrink and the rise with them, so heavy top bowls never pinch.
-    'counters': 0.8615,
+    # letter (B E 8) is this share of the bottom one. 1.0: no rise, the middle
+    # bar of every letter and figure on the centre of its height. One rule for
+    # all of them, and one number: until 1.017 it was 0.8615 (the middle 2.5%
+    # of the height over the centre at Regular), and the a and the e alone
+    # let it go toward Black. Measured on 37 families the middle bar of H E B
+    # S 8 3 e a s stands 1.3% over the centre at Regular and 1.0% at Bold
+    # (0.928 here), from none to 5%, and the ink's centre of mass on the
+    # centre, for their lower halves are the wider; Arris's halves are one
+    # width, and with the bars centred its centre of mass is on the centre
+    # too, where 0.8615 held it half a percent over. Centred, the a is the e
+    # turned half round, the s and the 8 their own half turn and the c's two
+    # hooks one length at every weight (the owner, 2026-11-12: "it doesn't
+    # have to be symmetric across the horizontal. It just has to follow the
+    # same rules", and of centred against half the rise: "I trust your
+    # feeling about this").
+    'counters': 1.0,
     # overshoot: each glyph's own, measured (vision.overshoot_need: its hull
     # under a blur calibrated on a circle to a 1.5% overshoot), at most this
     # share of the zone height
@@ -779,15 +956,106 @@ def _bowl_side(rings, y_line, inward, p):
     return flats > 0
 
 
+CAP_SETTERS = {'five', 'six', 'nine'}       # the figures the cap height's bar is taken from (_cap_bar)
+_CAP_BAR: dict = {}
+
+
+def _cap_bar(p):
+    """The bar of the cap height at ``p``: the 5's, as its mouth leaves it."""
+    if p not in _CAP_BAR:
+        if len(_CAP_BAR) > 512:
+            _CAP_BAR.clear()
+        _CAP_BAR[p] = None                                  # (while the 5 is drawn: what it stamps keeps the weight's own)
+        with _as_own():
+            _CAP_BAR[p] = draw('five', p).sh
+    return _CAP_BAR[p]
+
+
+ZONE_SETTERS = {'a', 'e', 's'}  # the letters the lowercase's bar is taken from, and the s, which shares its own out (_start)
+_ZONE_OVER: dict = {}
+_OWN_BAR = [0]              # while set, a letter is begun on the weight's own bar (_start, _zone_over)
+
+
+def _zone_over(p, lower: bool) -> float:
+    """What a round letter reaches past its line at ``p``: the o's need
+    on the x-height, the O's on the cap height (vision.overshoot_need)."""
+    key = (p, lower)
+    if key not in _ZONE_OVER:
+        from .vision import overshoot_need
+        if len(_ZONE_OVER) > 1024:
+            _ZONE_OVER.clear()
+        _ZONE_OVER[key] = 0.0               # (while the o is drawn: fitted into Mono's cell it asks for its own)
+        _OWN_BAR[0] += 1                    # (its outside is all that is measured: on the weight's own bar, so the
+        try:                                # letters the height's bar is taken from can ask while they are drawn)
+            with _as_own():
+                g = _build(drawn_spec('o' if lower else 'O', p), p, 0.0, 0.0, {})
+        finally:
+            _OWN_BAR[0] -= 1
+        _ZONE_OVER[key] = overshoot_need(g.rings(), p.xh if lower else p.cap)[0]
+    return _ZONE_OVER[key]
+
+
+HOOKS_WITH = {'c', 's'}     # letters whose hooks are the a's and the e's (lower.hook_ref): they move with theirs (_optical)
+_HOOK_WARPS: dict = {}
+
+
+def _hook_warps(p):
+    """(the a's warp, the e's): what the optical corrections do to the two
+    letters the hooks of the x-height are taken from."""
+    if p not in _HOOK_WARPS:
+        if len(_HOOK_WARPS) > 512:
+            _HOOK_WARPS.clear()
+        with _as_own():
+            _HOOK_WARPS[p] = tuple(getattr(draw(n, p), 'warp', None) for n in 'ae')
+    return _HOOK_WARPS[p]
+
+
+class Joined:
+    """Two warps, one under ``m`` and one from it up (either may be None:
+    nothing moves there)."""
+
+    def __init__(self, low, high, m):
+        self.low, self.high, self.m = low, high, m
+
+    def __call__(self, y):
+        f = self.low if y < self.m else self.high
+        return y if f is None else f(y)
+
+
 def _optical(g, spec, p):
     from .geom import Node, Stroke
     from .vision import overshoot_need
     H = p.xh if spec.kind == 'lower' else p.cap
+    if spec.name in HOOKS_WITH and not p.slant:
+        # The c and the s hang the a's hook over the middle and the e's under it (lower.hook_ref), and are
+        # moved as those two are, the upper half as the a and the lower as the e: with a rise of their own
+        # (an overshoot was each letter's own) the c's hooks
+        # ended 2.5 units off theirs at Black, both of them higher.
+        high, low = _hook_warps(p)
+        g.warp = Joined(low, high, H / 2) if (low is not None or high is not None) else None
+        return
     r = OPTICAL['counters']
-    A = max(H / 2 - 1.5 * g.sh, 0.0)                         # a counter's height with the middle centred
+    # (the bars on its lines, where the letter draws them thicker than its own: the arm the a's and the e's
+    # hooks hang from, the 3's top and foot. They move as one piece too; measured on the letter's own bar they
+    # stood half in the white that stretches, and the rise took 3 units off the Black 3's top and gave them to
+    # its foot)
+    outer = max(g.sh, getattr(g, 'arm', 0.0))
+    A = max(H / 2 - outer - g.sh / 2, 0.0)                   # a counter's height with the middle centred
     dc = A * (1 - r) / (1 + r) * p.optical
+    if dc:
+        # (a rise, where OPTICAL sets one, is every letter's alike, and gone at Black, where there is no room
+        # for it: from Bold it fades out. The e's closed counter is over its bar and the a's under it, so a
+        # rise makes the e's eye the smaller of the two, at Black 93 units by 107, side by side in a word)
+        from .instances import STEMS
+        dc *= 1.0 - min(1.0, max(0.0, (p.sv / p.grade_k - STEMS[700]) / (STEMS[900] - STEMS[700])))
     rings0 = g.rings()
     top, bot = overshoot_need(rings0, H)
+    if p.optical:
+        # One overshoot for a height: the o's on the x-height, the O's on the cap height (the capitals and the
+        # figures), whatever the letter. Each had what its own outline asked, and at Regular the C stood 3.3
+        # units over the line by the O's 1.3, the figures 3.0, the J's foot 10.8: the bars they carry there
+        # stood that far off one another's (the owner, 2026-11-12: "put the overshoot on one value").
+        top = bot = _zone_over(p, spec.kind == 'lower')
     cap_ = OPTICAL['over_max'] * H
     # a side the drawing already carries past its line (v's point) keeps the
     # overshoot it was drawn with
@@ -836,12 +1104,12 @@ def _optical(g, spec, p):
     # floor forced it, the whole rise arrived between 100 and 110, and the
     # font, drawing a line from Thin to ExtraLight, had a tenth of it at 110.
     if p.floor:
-        zone = H - t - (m + t / 2)
+        zone = H - outer - (m + t / 2)
         k = min(1.0, p.floor / max(min(t, p.sh), 1e-6))
         ramp = min(1.0, max(0.0, (min(t, p.sh) - p.floor) / p.floor))
         dc = max(0.0, min(dc * ramp, zone * (1 - k) + ot))
-    knots = [(t, t - ob), (m - t / 2, m - t / 2 + dc), (m + t / 2, m + t / 2 + dc), (H - t, H - t + ot)]
-    if not (dc or ot or ob) or not (t < m - t / 2 and m + t / 2 < H - t):
+    knots = [(outer, outer - ob), (m - t / 2, m - t / 2 + dc), (m + t / 2, m + t / 2 + dc), (H - outer, H - outer + ot)]
+    if not (dc or ot or ob) or not (outer < m - t / 2 and m + t / 2 < H - outer):
         return
 
     g.warp = Warp(tuple(knots), ot, ob)
@@ -929,6 +1197,11 @@ def _heaviest_stroke(g, p) -> float:
     (its reach is drawn from its strokes) between one master and the next."""
     if g is None or not getattr(g, 'strokes', None):
         return max(p.sv, p.sh, p.sd, p.ss)
+    if getattr(g, 'pictured', False):
+        # a picture is the Regular's drawing at every heavier weight (technical.picture): its whites are
+        # read by the strokes it is drawn in. Read by the weight's, the stopwatch lost a white it had
+        # at Regular, was lightened as far as the rule goes and drawn smaller than its Regular.
+        p = g.p
     th = _thickness(p, g.sh)
     best = 0.0
     for st in g.strokes:
@@ -954,6 +1227,18 @@ def white_features(rings, p, g=None) -> int:
         return 0
     ink = rings_to_shapely(rings)
     hull = MultiPoint([q[:2] for r in rings for q in r]).convex_hull
+    if g is not None and g.overlay and (g.strokes or g.extra):
+        # A stroke laid over a sign (the slash of ≠, of a negation) runs out past it, and between its ends
+        # and the sign's own outline stand wedges of white that are nobody's: they close as the sign's
+        # strokes grow, whatever is done. Counted, the ≠ had six whites at the Regular for the two a reader
+        # sees, lost four from Medium, and was lightened as far as the rule goes from SemiBold without
+        # getting one back: its bars 0.8 of the equals' beside it. A sign's whites are the ones inside the
+        # outline of what it is laid over.
+        import shapely
+        from .geom import stroke_polygon
+        th = _thickness(g.p, g.sh)
+        own = shapely.union_all([stroke_polygon(st, th, g.p.c) for st in g.strokes] + list(g.extra)).convex_hull
+        hull = hull.intersection(own)
     r = WHITE_OPEN * _heaviest_stroke(g, p)
     centres = hull.difference(ink).buffer(-r, join_style='mitre')
     return sum(1 for q in getattr(centres, 'geoms', [centres])
@@ -971,7 +1256,8 @@ def _white_reference(spec, p):
     if key not in _WHITE:
         from .instances import params
         ref = params(400).with_(mono=p.mono)
-        g = _build(spec, ref, 0.0, 0.0, {})
+        with _as_own():
+            g = _build(spec, ref, 0.0, 0.0, {})
         _WHITE[key] = white_features(g.rings(), ref, g)
     return _WHITE[key]
 
@@ -1023,9 +1309,10 @@ def _topology_reference(spec, p) -> tuple:
         if p.slant:
             from .italic import italic
             ref = italic(ref)
-        g = _build(spec, ref, 0.0, 0.0, {})
-        if OPTICAL is not None and ref.optical and spec.name.removesuffix('.ital') in OPTICAL['names']:
-            _optical(g, spec, ref)
+        with _as_own():
+            g = _build(spec, ref, 0.0, 0.0, {})
+            if OPTICAL is not None and ref.optical and spec.name.removesuffix('.ital') in OPTICAL['names']:
+                _optical(g, spec, ref)
         _TOPO[key] = _topology(g)
     return _TOPO[key]
 
@@ -1080,23 +1367,24 @@ def _cut_form(spec, sq, p):
     default form does not read there (vision.READS) and the other reads
     better, every weight of the cut takes the other. A sign keeps one form
     through its family."""
-    from .instances import params
+    from .instances import drawn
     from .vision import READS
     key = (spec.name, sq.free, p.mono)
     if key not in _FORMS:
-        heavy = params(900).with_(mono=p.mono)
-        g0 = _build(spec, heavy, 0.0, 0.0, {})
-        d0 = g0.defaults.get(sq.free)
-        b = sq.limit(heavy)
-        choice = d0
-        if d0 is not None and b != d0:
-            kinds = ('hole', 'slot')
-            n0 = _squint_regular(spec, heavy, kinds, {sq.free: d0})[1]
-            n1 = _squint_regular(spec, heavy, kinds, {sq.free: b})[1]
-            s0 = _squint(g0, count=n0)
-            s1 = _squint(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), count=n1)
-            if s0 < READS - SQUINT_SLACK and s1 > s0:
-                choice = b
+        with _as_own():
+            heavy = drawn(900).with_(mono=p.mono)                   # (the watch's Black: the heaviest any cut draws)
+            g0 = _build(spec, heavy, 0.0, 0.0, {})
+            d0 = g0.defaults.get(sq.free)
+            b = sq.limit(heavy)
+            choice = d0
+            if d0 is not None and b != d0:
+                kinds = ('hole', 'slot')
+                n0 = _squint_regular(spec, heavy, kinds, {sq.free: d0})[1]
+                n1 = _squint_regular(spec, heavy, kinds, {sq.free: b})[1]
+                s0 = _squint(g0, count=n0)
+                s1 = _squint(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), count=n1)
+                if s0 < READS - SQUINT_SLACK and s1 > s0:
+                    choice = b
         _FORMS[key] = choice
     return _FORMS[key]
 
@@ -1113,18 +1401,19 @@ def _thinning_reads(spec, sq, p) -> bool:
     glyph is left be at every weight. Decided once for the cut, so the
     weights and grades agree (and the variable font's masters with them):
     decided weight by weight, ¥'s bars went thin, thick, thin, thick."""
-    from .instances import params
+    from .instances import drawn
     key = (spec.name, sq.free, p.mono)
     if key not in _THINS:
-        heavy = params(900).with_(mono=p.mono)
-        kinds = ('hole', 'slot')
-        g0 = _build(spec, heavy, 0.0, 0.0, {})
-        b = sq.limit(heavy)
-        _, n0, w0 = _squint_regular(spec, heavy, kinds, {sq.free: g0.defaults.get(sq.free)})
-        _, n1, w1 = _squint_regular(spec, heavy, kinds, {sq.free: b})
-        s0 = _read(g0, n0, w0 if sq.whites else 0)
-        s1 = _read(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), n1, w1 if sq.whites else 0)
-        _THINS[key] = s1 >= s0 - SQUINT_SLACK
+        with _as_own():
+            heavy = drawn(900).with_(mono=p.mono)
+            kinds = ('hole', 'slot')
+            g0 = _build(spec, heavy, 0.0, 0.0, {})
+            b = sq.limit(heavy)
+            _, n0, w0 = _squint_regular(spec, heavy, kinds, {sq.free: g0.defaults.get(sq.free)})
+            _, n1, w1 = _squint_regular(spec, heavy, kinds, {sq.free: b})
+            s0 = _read(g0, n0, w0 if sq.whites else 0)
+            s1 = _read(_build(spec, heavy, 0.0, 0.0, {sq.free: b}), n1, w1 if sq.whites else 0)
+            _THINS[key] = s1 >= s0 - SQUINT_SLACK
     return _THINS[key]
 
 
@@ -1175,23 +1464,25 @@ def _cut(p):
     instances.params, Mono, Mono Narrow or neither, italic or not); else
     None (a set derived from one: small capitals, small figures). Mono
     Narrow's weight is the one it is drawn at (instances.narrow_weight).
+    The weights are the watch's (instances.WATCH_STEMS, drawn): the one
+    whose stem p has, whatever p's font calls it, so a rule that names a
+    weight (the Regular's, every hundred to p's own, the watch's Black)
+    reads the same stems in Arris, whose weights past the Regular are
+    lighter than their names on the watch's ladder, as in Arris Watch.
     Until 1.014 Narrow was not found here, so no rule that reads the cut
     held for it: its ligatures spaced at Bold as at their own Regular and
     spread a cell a character, its added strokes never stopped gaining."""
     if p not in _CANON:
-        from .instances import params, stem
+        from .instances import drawn, watch_weight
         out = None
         grad = p.grad
-        base_sv = p.sv / p.grade_k
-        lo, hi = 1.0, 1000.0
-        for _ in range(40):                                 # the weight whose stem p has
-            mid = (lo + hi) / 2
-            lo, hi = (mid, hi) if stem(mid) < base_sv else (lo, mid)
-        w = round((lo + hi) / 2, 3)
+        w = watch_weight(p.sv / p.grade_k)                  # the watch's weight whose stem p has
+        if abs(w - round(w, 3)) < 1e-9:
+            w = round(w, 3)
 
         def make(watch):
             def at(w_):
-                q = params(w_, grad, watch=watch).with_(mono=p.mono, narrow=p.narrow)
+                q = drawn(w_, grad, watch=watch).with_(mono=p.mono, narrow=p.narrow)
                 if p.cursive:
                     q = q.with_(cursive=True)
                 if p.slant:
@@ -1214,12 +1505,14 @@ def _cut(p):
 
 def _at_watch(p, watch):
     """p's weight and grade in its own cut at another watch balance, if p is
-    a font's own (_cut); else None."""
+    a font's own (_cut); else None. The font's weight (instances.weight_of),
+    as the variable font carries the watch axis: at one weight, from Arris's
+    stem to the watch's."""
     cut = _cut(p)
     if cut is None:
         return None
-    from .instances import params
-    q = params(cut[0], p.grad, watch=watch).with_(mono=p.mono)
+    from .instances import params, weight_of
+    q = params(weight_of(p.sv / p.grade_k, 1.0 - p.optical), p.grad, watch=watch).with_(mono=p.mono)
     if p.cursive:
         q = q.with_(cursive=True)
     if p.slant:
@@ -1384,13 +1677,15 @@ def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
         return None
     w, at = cut
     op = spec.openings[k]
+    across = (lambda q: given_across(spec, q)) if op.across else (lambda q: 1.0)
     key = (spec.name, k, ratio, at(400), tuple(sorted(overrides.items())))
     if key not in _ENGAGED:
         # read on the cut's own drawings, each in its own width (a graded weight is drawn in its
         # ungraded body: the reference is the cut's, whatever body p is drawn in)
         def short(w_):
             q = at(w_)
-            return op.measure(_build(spec, q, ot, ob, overrides, None)) < ratio * q.sv - 1e-6
+            with _as_own():
+                return op.measure(_build(spec, q, ot, ob, overrides, None)) < ratio * q.sv * across(q) - 1e-6
         if short(400.0):
             we = 400.0
         elif not short(900.0):
@@ -1405,11 +1700,13 @@ def _engaged(spec, k, ratio, p, ot, ob, overrides, width) -> float | None:
             _ENGAGED[key] = None
         else:
             q = at(we)
-            _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, None)), q.sv)
+            with _as_own():
+                _ENGAGED[key] = (we, _counter_area(_build(spec, q, ot, ob, overrides, None)), q.sv, across(q))
     found = _ENGAGED[key]
     if found is None or w < found[0]:
         return None
-    return found[1] * (found[2] / p.sv) ** HOLD_DECAY
+    # (a counter that gives across is as much smaller both ways: the eye over a 45-degree bar)
+    return found[1] * (found[2] / p.sv) ** HOLD_DECAY * (across(p) / found[3]) ** 2
 
 
 def _squint_monotone(spec, sq, p, ot, ob, overrides, width):
@@ -1423,24 +1720,25 @@ def _squint_monotone(spec, sq, p, ot, ob, overrides, width):
     weight now thins at least as much as a lighter one."""
     key = (spec.name, sq.free, p, ot, ob, tuple(sorted(overrides.items())), width)
     if key not in _MONO:
-        reg = _regular_sv(p)
-        g0 = _build(spec, p, ot, ob, overrides, width)
-        a0 = overrides.get(sq.free, g0.defaults.get(sq.free))
-        lim = sq.limit(p)
-        best = None
-        lighter = _lighter(p)
-        if lighter is None:
-            anchors = [_restroked(p, reg + (p.sv - reg) * j / SQUINT_ANCHORS) for j in range(1, SQUINT_ANCHORS)]
-        else:
-            anchors = [q for q in lighter if q.sv >= reg]
-        for q in anchors + [p]:
-            v = _squint_value(spec, sq, q, ot, ob, overrides, width)
-            if v is None:
-                continue
-            if best is None or abs(v - a0) > abs(best - a0):
-                best = v
-        if best is not None and (lim - a0) * (best - a0) < 0:   # (only ever toward the limit)
+        with _as_own():
+            reg = _regular_sv(p)
+            g0 = _build(spec, p, ot, ob, overrides, width)
+            a0 = overrides.get(sq.free, g0.defaults.get(sq.free))
+            lim = sq.limit(p)
             best = None
+            lighter = _lighter(p)
+            if lighter is None:
+                anchors = [_restroked(p, reg + (p.sv - reg) * j / SQUINT_ANCHORS) for j in range(1, SQUINT_ANCHORS)]
+            else:
+                anchors = [q for q in lighter if q.sv >= reg]
+            for q in anchors + [p]:
+                v = _squint_value(spec, sq, q, ot, ob, overrides, width)
+                if v is None:
+                    continue
+                if best is None or abs(v - a0) > abs(best - a0):
+                    best = v
+            if best is not None and (lim - a0) * (best - a0) < 0:   # (only ever toward the limit)
+                best = None
         _MONO[key] = best
     return _MONO[key]
 
@@ -1448,6 +1746,14 @@ def _squint_monotone(spec, sq, p, ot, ob, overrides, width):
 _SQUINT: dict = {}
 SQUINT_SLACK = 0.02   # what the Regular reference allows for the raster
 _REG_SV: dict = {}
+
+
+def _lighter_than_regular(p) -> bool:
+    """Whether p is a weight of a font's own cut lighter than that cut's
+    Regular (hold_weight: Arris Mono Narrow's is narrow_weight(400)). A set
+    derived from one (small capitals, a sign fitted to Mono's cell) is not."""
+    cut = _cut(p)
+    return cut is not None and cut[0] < hold_weight(p) - 1e-6
 
 
 def _regular_sv(p) -> float:
@@ -1481,7 +1787,8 @@ def _squint_regular(spec, p, kinds, over=None):
     key = (spec.name, p.mono, kinds, tuple(sorted(over.items())))
     if key not in _SQUINT:
         ref = params(400).with_(mono=p.mono)
-        reg = _build(spec, ref, 0.0, 0.0, dict(over))
+        with _as_own():
+            reg = _build(spec, ref, 0.0, 0.0, dict(over))
         d = _squint_pieces(reg, kinds)
         _SQUINT[key] = (min(READS, min(d, default=1.0)) - SQUINT_SLACK, len(d), white_features(reg.rings(), ref, reg))
     return _SQUINT[key]
@@ -1513,14 +1820,23 @@ def _opened(spec, p, ot, ob, width, nest=True):
         ratio = _heritage_ratio(spec, k)
         if op.max_ratio is not None:
             ratio = min(ratio, op.max_ratio)
-        target = ratio * p.sv
+        # (a share of the stem, and in Arris of no more stem than the least white grows with, 158 units:
+        # params.white_floor. At a stem of 200 the 3's mouth was held to 150 units, the letters' bays to 57)
+        from .params import WHITE_HELD
+        target = ratio * (p.sv - max(0.0, p.sv - WHITE_HELD * p.grade_k) * p.optical) * (given_across(spec, p) if op.across else 1.0)
         if op.free not in g.defaults:                       # this drawing does not use it (a cell's upright form)
             continue
         measure = op.measure
         if op.hold:
             held = _engaged(spec, k, ratio, p, ot, ob, overrides, width)
             if held is not None:
-                measure, target = _counter_area, held
+                # (the held counter's area, and none where the opening's own measure finds its counter shut:
+                # the smallest counter left is then another one. The cursive æ's eye shut at Black, its a's
+                # bowl was the smallest counter there was, far over the held area, and the rule stood by:
+                # the eye came back at 1,650 square units, half the e's, by the topology lock lightening the
+                # whole letter)
+                own = op.measure
+                measure, target = (lambda h, own=own: _counter_area(h) if own(h) > 0 else 0.0), held
         if measure(g) >= target - 1e-6:
             continue
         a0 = a = g.defaults[op.free]
@@ -1686,18 +2002,19 @@ def _mono_held(name, p, ot, ob, width):
     key = (name, at(MONO_HOLD), ot, ob, width)
     if key not in _MONO_HELD:
         _MONO_HELD[key] = None                              # while it is found, a drawing that asks again (a rule's
-        ref = _counters(_draw(name, at(MONO_HOLD), ot, ob, width))   # reference at Black) is drawn as it is
+        with _as_own():                                     # reference at Black) is drawn as it is
+            ref = _counters(_draw(name, at(MONO_HOLD), ot, ob, width))
 
-        def shut(w_):
-            q = at(w_)
-            return _shuts(_counters(_draw(name, q, ot, ob, width)), ref, q.sv)
-        held = None
-        if shut(900.0):
-            lo, hi = MONO_HOLD, 900.0
-            for _ in range(7):                              # to under 2 of weight
-                mid = (lo + hi) / 2
-                lo, hi = (lo, mid) if shut(mid) else (mid, hi)
-            held = lo
+            def shut(w_):
+                q = at(w_)
+                return _shuts(_counters(_draw(name, q, ot, ob, width)), ref, q.sv)
+            held = None
+            if shut(900.0):
+                lo, hi = MONO_HOLD, 900.0
+                for _ in range(7):                          # to under 2 of weight
+                    mid = (lo + hi) / 2
+                    lo, hi = (lo, mid) if shut(mid) else (mid, hi)
+                held = lo
         _MONO_HELD[key] = held
     held = _MONO_HELD[key]
     return p if held is None or w <= held else at(held)
@@ -1712,15 +2029,70 @@ def draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | 
     return _draw(name, _mono_held(name, p, ot, ob, width), ot, ob, width)
 
 
+def drawn_spec(name: str, p: Params) -> Spec:
+    """The drawing ``name`` gets at ``p``: where the font slants and has an
+    italic drawing of it (n.ital), that one replaces the upright one. A
+    second form (second_form) is its glyph's drawing, pinned."""
+    if p.slant and not p.plain and f'{name}.ital' in REGISTRY:
+        return REGISTRY[f'{name}.ital']
+    if name not in REGISTRY:
+        base, _, free = name.rpartition('.')
+        if base in REGISTRY:
+            spec = drawn_spec(base, p)
+            for sq in spec.squint:
+                if sq.form and sq.free == free:
+                    return _second_spec(spec, sq, p)
+    return REGISTRY[name]
+
+
+def pinned(fn: Callable, free: str, v: float) -> Callable:
+    """The drawing with its free variable held at v."""
+    def f(g):
+        g.overrides[free] = v
+        return fn(g)
+    f.__module__, f.__name__ = fn.__module__, getattr(fn, '__name__', f.__name__)
+    return f
+
+
+def second_form(name: str, free: str) -> str:
+    """The name of a glyph's second form (Squint.form) as a glyph of its
+    own: dollar.stem, and dollar.stem.ital for an italic drawing."""
+    root = name.removesuffix('.ital')
+    return f'{root}.{free}' + name[len(root):]
+
+
+_SECOND: dict = {}
+
+
+def _second_spec(spec: Spec, sq: Squint, p: Params) -> Spec:
+    """A glyph's second form as a glyph of its own: its drawing pinned to
+    that form, the rule that chose it gone. A form is measured against its
+    own Regular: the closed counters its horizontals thin for, the white a
+    symbol keeps, the topology the lock holds, the lightening a heavier
+    weight keeps from a lighter. The variable font carries the two forms
+    as two glyphs (arris.vf.forms) and always drew them so; the static
+    fonts measured the second against the first's Regular, and the dollar,
+    which with stubs for a stem is the S and has the S's counters, not the
+    four its stem cuts, was lightened as far as the rules go for whites it
+    no longer had: bars of 96 units at Black on an S of 160, a fifth
+    lighter at 690 than at 680."""
+    key = (spec.name, sq.free)
+    if key not in _SECOND:
+        _SECOND[key] = replace(spec, name=second_form(spec.name, sq.free), unicode=None,
+                               fn=pinned(spec.fn, sq.free, sq.limit(p)),
+                               squint=tuple(q for q in spec.squint if q is not sq))
+    return _SECOND[key]
+
+
 def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float | None = None) -> Glyph:
-    spec = REGISTRY[name]
-    if p.slant and not p.plain and f'{name}.ital' in REGISTRY:   # an italic drawing replaces the upright one
-        spec = REGISTRY[f'{name}.ital']
+    spec = drawn_spec(name, p)
     g, overrides = _opened(spec, p, ot, ob, width)
     nesting = _Nesting.at(name, g, p, ot, ob, width)
     auto = _auto_counters(spec)
     if any(op.hold for op in spec.openings):
         auto = None             # an opening that holds is the counter's rule (thinning on its own share grew it again)
+    if any(op.own and op.free in g.defaults for op in spec.openings):
+        auto = None             # the drawing thins what bounds its counter, and only that (the cursive e's top and bar)
     if auto is not None:
         n, ratio = auto
         share = min(ratio, AUTO_SHARE)
@@ -1808,11 +2180,20 @@ def _draw(name: str, p: Params, ot: float = 0.0, ob: float = 0.0, width: float |
                 prev = _anchor(name, lighter[-1], ot, ob, width)[1].get(sq.free)
                 if prev is not None and (v is None or abs(prev - a0) > abs(v - a0)):
                     v = prev
+            a0, lim = g.defaults[sq.free], sq.limit(p)
+            if v is not None and (v - (a0 + lim) / 2) * (lim - a0) > 0:
+                # the second form is a drawing of its own, held to its own
+                # Regular by every rule (_second_spec), as the variable font
+                # carries it
+                return _draw(second_form(name, sq.free), p, ot, ob, width)
         if v is not None:
             overrides[sq.free] = v
             g = _build(spec, p, ot, ob, overrides, width)
     # (the heritage drawing is never lightened; composites rely on their parts' own rules)
-    if _is_symbol(spec) and p.floor and g.strokes and not g.extra:
+    # (past the Regular only: a lighter weight's strokes close no white, and where its count fell short of the
+    # Regular's, as a white the Regular holds came apart into two or ran to a pinch, it was lightened as far as
+    # the rule goes, and let go at once at the next weight: ↯ at 0.8 to 362 and whole from 364, ⌦ to 372)
+    if _is_symbol(spec) and p.floor and g.strokes and not g.extra and not _lighter_than_regular(p):
         want = _white_reference(spec, p)
         if want and white_features(g.rings(), p, g) < want:
             a, b = 1.0, LIGHTEN_MIN
@@ -1968,7 +2349,7 @@ def _anchor(name, p, ot, ob, width) -> tuple:
         if row is not None and cache.valid(row[0]):
             light, ov = json.loads(row[1])
         else:
-            with cache.using() as mods:
+            with cache.using() as mods, _as_own():          # (the lighter weight as a glyph of its own, whoever asks)
                 g = draw(name, p, ot, ob, width)
             light, ov = getattr(g, 'lightened', 1.0), dict(getattr(g, 'overrides', {}))
             if con is not None:

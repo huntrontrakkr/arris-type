@@ -21,7 +21,7 @@ from .cyrillic_ext import room
 from .cyrillic_locl import tall_ve
 from .figures import beak_depth
 from .greek import _tonos_width
-from .letterframe import Frame, close_slit, letter_width
+from .letterframe import Frame, close_slit, letter_width, ungiving
 
 ALIASES = {
     0x03D5: 'uni0444',      # phi symbol: the stroked phi
@@ -71,7 +71,7 @@ def Upsilonhook(g):
     f = Frame(g, 10)
     p, W, H = f.p, f.W, f.p.cap
     xl, xr = f.X(1), f.X(9)
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     yt = f.Y(11)
     xa = xl + 1.25 * p.leg + 0.5 * p.sv                     # where the arm meets the top line
     yj = yt - 2 * (W / 2 - xa)                              # at the 7's 2:1 slope, as the v's arms
@@ -84,16 +84,17 @@ def Upsilonhook(g):
 @glyph('uni03D3', 'ϓ', lambda p: REGISTRY['uni03D2'].width(p) + _tonos_width(p), kind='cap')
 def Upsilonacutehook(g):
     from .extra_latin import stamp
-    from .marks import acute, size
+    from .marks import acute, kept, mark_params, size
     p = g.p
-    a = size(p, 'uc')
+    q = mark_params(p)
+    a = size(q, 'uc')
     if p.mono:
         stamp(g, 'uni03D2', width=g.W)
-        acute(g, a / 2 + p.sv / 2, p.cap + 0.6 * p.m, 'uc')
+        kept(g, acute, a / 2 + q.sv / 2, p.cap + 0.6 * p.m, 'uc')
         return
     t = _tonos_width(p)
     stamp(g, 'uni03D2', t)
-    acute(g, t / 2 - 0.1 * p.m, p.cap - a, 'uc')
+    kept(g, acute, t / 2 - 0.1 * p.m, p.cap - a, 'uc')
 
 
 @glow('uni03D6', 'ϖ', 13, 3)
@@ -123,7 +124,7 @@ def _draws(g, pts):
     return ok
 
 
-@glow('uni03F0', 'ϰ', 10, 2)
+@glow('uni03F0', 'ϰ', 10, 2, width=ungiving(10, 2))
 def kappa_symbol(g):
     """An x whose falling stroke curls at both ends: it leaves a beak at
     the top left along a flat, and lands on a flat that turns up into a
@@ -134,13 +135,23 @@ def kappa_symbol(g):
     yt, yb = f.Y(8), f.Y(1)
     run = (yt - yb) / 2
     xa = (W - run) / 2
-    d = beak_depth(p) - g.sh / 2                            # the beak's stub, below the flat's centre
+    d = beak_depth(p, g.sh) - g.sh / 2                            # the beak's stub, below the flat's centre
     x0, x1 = p.sv / 2, W - p.sv / 2
     curl = [(x0, yt - d), B(x0, yt), (xa, yt), (xa + run, yb), B(x1, yb), (x1, yb + d)]
     if _draws(g, curl):
         g.stroke(*curl)
-    else:                                                   # flats too short to curl (a crowded cell)
-        g.stroke((x0, yt), (xa, yt), (xa + run, yb), (x1, yb))
+    else:
+        # the same path in three strokes, each curl to the diagonal's end, the diagonal cut level at both:
+        # in one, its outline crossed itself at the diagonal's foot from 840, and the letter fell back to
+        # flats without their curls (701 units wide at 830, 517 at 840)
+        hooks = [[(x0, yt - d), B(x0, yt), (xa, yt)], [(xa + run, yb), B(x1, yb), (x1, yb + d)]]
+        if all(_draws(g, h) for h in hooks):
+            for h in hooks:
+                g.stroke(*h)
+            e = g.sh / 2                                    # (cut level with the flats' outer edges, on its own 2:1 line)
+            g.stroke((xa - e / 2, yt + e), (xa + run + e / 2, yb - e), start='h', end='h')
+        else:                                               # flats too short to curl (a crowded cell)
+            g.stroke((x0, yt), (xa, yt), (xa + run, yb), (x1, yb))
     x0 = W / 2 - p.xh / 4
     g.stroke((x0, 0), (x0 + p.xh / 2, p.xh), start='h', end='h')
 
@@ -165,10 +176,14 @@ def _lunate(name, ch, base, kind, rev, dot):
             mirror(g)
         if dot:
             # in the middle of the bowl, half a stem clear of its sides and
-            # beaks (a speck where a heavy grade leaves no room)
+            # beaks, or a quarter of the counter where that is less: held
+            # to half a stem in the counters the letters have past the
+            # Regular it was a speck from ExtraBold (a speck still where a
+            # heavy grade leaves no room)
             p = g.p
             top = p.cap if kind == 'cap' else p.xh
-            s_ = min(p.dot(), max(g.W - 3 * p.sv, p.floor))
+            counter = g.W - 2 * p.sv
+            s_ = min(p.dot(), max(counter - 2 * min(p.sv / 2, counter / 4), p.floor))
             g.stroke((g.W / 2, top / 2 - s_ / 2, s_), (g.W / 2, top / 2 + s_ / 2))
     glyph(name, ch, lambda p, b=base: REGISTRY[b].width(p), kind=kind)(fn)
 
@@ -204,7 +219,7 @@ def koppaarchaic(g):
 def Stigma(g):
     """The final sigma at capital height."""
     f = Frame(g, 9)
-    p, d = f.p, beak_depth(f.p)
+    p, d = f.p, beak_depth(f.p, g.sh)
     g.clip = (0, -p.desc, f.W, p.cap)
     from .italic_forms import tail_run
     g.stroke((f.X(8), p.cap - d), B(*f.P(8, 11)), B(*f.P(1, 11)), B(*f.P(1, 4)), B(*f.P(8, 4)),
@@ -265,7 +280,7 @@ def _sampi(g, f, xl, xr, top, foot):
     arch and apart. Where the x-height has no room for them (the small
     sampi at heavy weights) the lower one runs into the descender."""
     p = g.p
-    d = beak_depth(p)
+    d = beak_depth(p, g.sh)
     g.stroke((xl, top + g.sh / 2 - d), B(xl, top), B(xr, top), (xr, foot))
     t = p.sh + (p.sd - p.sh) * 26.565 / 45                   # thickness at the shallow slope (geom.Thickness)
     v = t * 5 ** 0.5 / 2                                    # ... measured upright
@@ -296,22 +311,22 @@ def sampi(g):
 
 @glyph('tonos', '΄', lambda p: 0.4 * p.cap / 2, kind=('punct', 0.4))
 def tonos(g):
-    from .marks import acute, size
+    from .marks import acute, kept, size
     p = g.p
-    acute(g, size(p, 'uc') / 2, p.cap - size(p, 'uc'), 'uc')
+    kept(g, acute, size(p, 'uc') / 2, p.cap - size(p, 'uc'), 'uc')
 
 
 @glyph('uni0374', 'ʹ', lambda p: 0.4 * p.cap / 2, kind=('punct', 0.4))
 def numeralsign(g):
     """The keraia: an acute standing at the cap height."""
-    from .marks import acute, size
+    from .marks import acute, kept, size
     p = g.p
-    acute(g, size(p, 'uc') / 2, p.cap - size(p, 'uc'), 'uc')
+    kept(g, acute, size(p, 'uc') / 2, p.cap - size(p, 'uc'), 'uc')
 
 
 @glyph('uni0375', '͵', lambda p: 0.4 * p.cap / 2, kind=('punct', 0.4))
 def lowernumeralsign(g):
     """The lower keraia: the same stroke, hung below the baseline."""
-    from .marks import acute, size
+    from .marks import acute, kept, size
     p = g.p
-    acute(g, size(p, 'uc') / 2, -0.8 * p.desc, 'uc')
+    kept(g, acute, size(p, 'uc') / 2, -0.8 * p.desc, 'uc')

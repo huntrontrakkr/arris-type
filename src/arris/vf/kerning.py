@@ -7,7 +7,7 @@ import logging
 from collections.abc import Mapping, Sequence
 
 from arris import italic as ital
-from arris.draw import REGISTRY
+from arris.draw import PROPORTIONAL_FIGS, REGISTRY
 from arris.font import KERN_PUNCT, light, place
 from arris.kerning import kerns
 from arris.params import Params
@@ -47,7 +47,7 @@ def kern(names: Sequence[str], upright: Upright, ps: Mapping[Place, Params],
     """(each master's pairs, every pair kerned in any master): the letters
     and the punctuation that kerns, each ungraded master's kerning made in
     a process of its own, the graded masters taking the ungraded's."""
-    kernable = [n for n in names if REGISTRY[n].kind in ('cap', 'lower') or n in KERN_PUNCT]
+    kernable = [n for n in names if REGISTRY[n].kind in ('cap', 'lower') or n in PROPORTIONAL_FIGS or n in KERN_PUNCT]
     plain = [w for w in MASTERS if w[1] == 0]
     with settings.pool(len(plain), _use, (kernable, upright, ps, settings.italic)) as pool:
         pairs_by = dict(pool.imap_unordered(_master, plain))

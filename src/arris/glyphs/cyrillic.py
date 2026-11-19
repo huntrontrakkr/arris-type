@@ -17,7 +17,7 @@ from shapely import affinity
 from ..draw import AUTO_MIN, NUDGE, Opening, Squint, B, REGISTRY, draw, glyph
 from ..geom import rings_to_shapely
 from .caps import big
-from .figures import beak_depth, jog
+from .figures import beak_depth, jog, off_the_beak
 from .letterframe import Frame, k_arms, letter_width
 
 ALIASES = {
@@ -75,7 +75,18 @@ def _bent_leg(f, g, x_top, y_top, x_foot):
     return [(x_top, y_top), (x_top, y_bend), (x_foot, yb)]
 
 
-@ccap('uni041B', '\u041b', 9, 2)
+# Widths by the share of the Н's that eighteen families give each letter (Exo 2, Fira Sans, IBM Plex Sans,
+# Inter, Manrope, Montserrat, Noto Sans, Onest, Roboto, Rubik, Source Sans 3, Tektur and six more, at
+# Regular and Bold: the advance of each letter over the Н's, and the н's for the small ones). Arris's stood
+# inside their range for 48 of the 66 letters at Regular; these did not. The Л was 0.91 of the Н for their
+# 0.99 (0.92 to 1.11), the Д 0.93 for 1.03, the Ж 1.16 for 1.30 (1.18 to 1.50), the Ф 1.02 for 1.13 (1.04 to
+# 1.36), the Ш 1.23 for 1.35 (1.29 to 1.50) and the Щ 1.25 for 1.38: the three-stem letters had the m's
+# fault before it was widened (lower.M_BODY), counters three modules wide beside the Н's five. Each keeps
+# its drawing in a wider body, as the m does.
+EL_BODY, DE_BODY, ZHE_BODY, EF_BODY, SHA_BODY, SHCHA_BODY = 10, 11, 14.5, 12, 13.5, 14.5
+
+
+@ccap('uni041B', '\u041b', 9, 2, width=letter_width(EL_BODY, 2))
 def El(g):
     f = Frame(g, 9)
     g.stroke(f.P(8, 0), f.P(8, 11), f.P(2.5, 11))
@@ -89,7 +100,7 @@ def _el_leg(g, f):
     g.stroke((x0, f.Y(11)), (x0, y_bend), (x1, 0), end='h')
 
 
-@ccap('uni0414', 'Д', 10, 2)
+@ccap('uni0414', 'Д', 10, 2, width=letter_width(DE_BODY, 2))
 def De(g):
     f = Frame(g, 10)
     p, W = f.p, f.W
@@ -101,7 +112,7 @@ def De(g):
         g.stroke((x, f.Y(1)), (x, -0.8 * p.desc))
 
 
-@ccap('uni0416', '\u0416', 13, 3)
+@ccap('uni0416', '\u0416', 13, 3, width=letter_width(ZHE_BODY, 3))
 def Zhe(g):
     """K's arm and leg, back to back on one stem."""
     f = Frame(g, 13)
@@ -115,7 +126,7 @@ def Zhe(g):
             g.stroke(*[(xm + sign * (x + ox - xm), y) for x, y in pts], start=a, end=b)
 
 
-# З's, Э's and Є's bowls are open: the counter rule (closed counters) never
+# Э's and Є's bowls are open (the З's too, which keeps its bars: below): the counter rule (closed counters) never
 # lightens them, and at Black their small capitals з э є kept only slits
 # between the beaks and the middle arm (solid at the heaviest grade). Their
 # horizontals thin under the squint instead, as far as the counter rule's,
@@ -123,7 +134,19 @@ def Zhe(g):
 OPEN_BOWLS = (Squint('sh_auto', lambda p: AUTO_MIN, whites=True),)
 
 
-@ccap('uni0417', 'З', 9, 2, squint=OPEN_BOWLS)
+# The Ze stands on the height's bar at every weight, as the Э, the Є and its own descender form (Ҙ) do. It was
+# thinned under the squint, and that rule gives all or nothing: from Bold its three bars stood at seven
+# tenths of the others' (93 units at Bold beside 133, less than its own 115 at SemiBold; 103 at Black beside
+# 147), and its waist, the two breaks of its end using its whole height from a stem of 189, came to a point
+# (the owner, 2026-11-12, of the italic's at 850: "The middle thing just looks so crappy here. It's super
+# thin. It doesn't make sense"). What the squint was put there for at this height, the slits between the beaks
+# and the waist at Black, the beak's white now keeps (figures.off_the_beak: the waist's end steps back for it).
+# Its small capital (з) keeps the squint: three of the italic's bars, which are the weight's own in the
+# x-height, leave its bays 15 units each at Black, and without it the lower one closed from a stem of 189.
+ZE_BOWLS = (Squint('sh_auto', lambda p: AUTO_MIN if p.cap <= p.xh + 1e-6 else 1.0, whites=True),)
+
+
+@ccap('uni0417', 'З', 9, 2, squint=ZE_BOWLS)
 def Ze(g):
     """The 3 with the 2's beak on top."""
     ze_shape(g)
@@ -132,10 +155,22 @@ def Ze(g):
 def ze_shape(g, foot_leg=None):
     """З. ``foot_leg``: the leg of the lower bowl's foot corners (the default:
     the parameter leg); Ҙ's drop hangs between them (cyrillic_ext.drop_leg)."""
+    from ..draw import _thickness, fill_leg
+    from ..geom import JOG, JOG_FILLS
+    from ..params import SQRT2
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
-    g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6), big(p)), f.P(3, 6))
-    g.stroke(f.P(3, 6), B(*f.P(8, 6)), B(*f.P(8, 1), foot_leg), B(*f.P(1, 1), foot_leg), (f.X(1), d))
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
+    w = (off_the_beak(g, f, f.X(1), f.X(3), 6, 11, 1), f.Y(6))          # the waist's end, a beak's white off the beaks
+    # The upper bowl's rounder corner gives where the waist is short. Its diagonal's inner edge comes down on
+    # the waist's top, and between it and the break of the waist's end the top keeps a flat the outline
+    # holds (over geom.JOG, which closes a shorter step between two 45-degree edges: the italic's at Black,
+    # its end stepped back from the beaks, had 31 units there for 34, the top was taken for a miss, and the
+    # waist ended in a wedge, the diagonal's edge run straight through to the end's lower break).
+    edge = _thickness(p, g.sh)((SQRT2 / 2, SQRT2 / 2)) / SQRT2 - g.sh / 2    # the inner edge's foot on the waist's top, left of the corner's cut
+    flat = 1.1 * JOG * min(p.c, JOG_FILLS * fill_leg(p))
+    corner = min(big(p), max(p.leg, f.X(8) - edge - w[0] - p.c - flat))
+    g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 6), corner), w)
+    g.stroke(w, B(*f.P(8, 6)), B(*f.P(8, 1), foot_leg), B(*f.P(1, 1), foot_leg), (f.X(1), d))
 
 
 @ccap('uni0418', 'И', 10, 2, width=lambda p: REGISTRY['N'].width(p))
@@ -160,7 +195,7 @@ def U_(g):
     g.stroke(f.P(8, 12), B(*f.P(8, 1)), f.P(2, 1))
 
 
-@ccap('uni0424', 'Ф', 11, 3)
+@ccap('uni0424', 'Ф', 11, 3, width=letter_width(EF_BODY, 3))
 def Ef(g):
     f = Frame(g, 11)
     g.stroke(B(*f.P(1, 3)), B(*f.P(10, 3)), B(*f.P(10, 9)), B(*f.P(1, 9)), closed=True)
@@ -196,14 +231,14 @@ def Che(g):
     g.stroke(f.P(8, 0), f.P(8, 12))
 
 
-@ccap('uni0428', 'Ш', 12, 3)
+@ccap('uni0428', 'Ш', 12, 3, width=letter_width(SHA_BODY, 3))
 def Sha(g):
     f = Frame(g, 12)
     g.stroke(f.P(1, 12), f.P(1, 1), f.P(11, 1), f.P(11, 12))
     g.stroke((f.W / 2, f.Y(1)), (f.W / 2, f.p.cap))
 
 
-@ccap('uni0429', 'Щ', 13, 3)
+@ccap('uni0429', 'Щ', 13, 3, width=letter_width(SHCHA_BODY, 3))
 def Shcha(g):
     f = Frame(g, 13)
     p, W = f.p, f.W
@@ -289,16 +324,16 @@ def Yusbig(g):
 @ccap('uni042D', 'Э', 9, 2, squint=OPEN_BOWLS)
 def Ereversed(g):
     f = Frame(g, 9)
-    p, H, d = f.p, f.p.cap, beak_depth(f.p)
+    p, H, d = f.p, f.p.cap, beak_depth(f.p, g.sh)
     g.stroke((f.X(1), H - d), B(*f.P(1, 11)), B(*f.P(8, 11)), B(*f.P(8, 1)), B(*f.P(1, 1)), (f.X(1), d))
-    g.stroke(f.P(3, 6), f.P(8, 6))
+    g.stroke((off_the_beak(g, f, f.X(1), f.X(3), 6, 11, 1), f.Y(6)), f.P(8, 6))
 
 
 @ccap('uni0404', 'Є', 9, 2, squint=OPEN_BOWLS)
 def Eukr(g):
     REGISTRY['C'].fn(g)
     f = Frame(g, 9)
-    g.stroke(f.P(1, 6), f.P(6, 6))
+    g.stroke(f.P(1, 6), (off_the_beak(g, f, f.X(8), f.X(6), 6, 11, 1), f.Y(6)))
 
 
 def _yu_gap(g):

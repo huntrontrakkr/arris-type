@@ -15,7 +15,7 @@ from ..draw import B, REGISTRY, Opening, glyph
 from ..params import SQRT2
 from .caps import big
 from .cyrillic import mirror, sc
-from .figures import beak_depth, jog
+from .figures import beak_depth, jog, off_the_beak
 from .letterframe import STEEP, Frame, k_arms, letter_width
 
 ALIASES = {
@@ -68,8 +68,12 @@ def Theta(g):
     g.stroke(f.P(3.5, 6), f.P(6.5, 6))
 
 
-@gcap('uni039E', 'Ξ', 9, 0)
+@gcap('uni039E', 'Ξ', 9, 1)
 def Xi(g):
+    """Three bars, in the Σ's body: a letter with no stem has no white to
+    give its stems, and in a body of nine modules of white it stood 1.05 of
+    the H's advance at Light and 0.55 at Black, three stubs (other families'
+    Ξ: 0.85 of their H at Regular and at Bold, a little over their Σ)."""
     f = Frame(g, 9)
     g.stroke((0, f.Y(11)), (f.W, f.Y(11)))
     g.stroke(f.P(1.5, 6), f.P(7.5, 6))
@@ -158,7 +162,11 @@ def delta(g):
     g.stroke(B(*f.P(1, 1)), B(*f.P(7, 1)), B(*f.P(7, 8)), B(*f.P(1, 8)), closed=True)
     xl, yt, yb = f.X(1), f.Y(12), f.Y(8)
     s = g.free('neck', 1.0)
-    g.stroke((xl + s * (yt - yb), yb), B(xl, yt), f.P(6, 12), start='h')
+    # (settled, in the italic, a little more upright where the round of the bowl's top right corner would take
+    # the flat between it and the neck's foot: at Thin on the heavy grade it took the flat and the neck's edge
+    # with it, and the outline cut across the counter)
+    steps = (0.0, 0.03, 0.06, 0.1) if p.slant else (0.0,)
+    g.settle([[((xl + (s - d) * (yt - yb), yb), B(xl, yt), f.P(6, 12), {'start': 'h'})] for d in steps])
     g.defaults_used['hook'] = f.X(6) - (xl + s * (yt - yb) / 2 + p.sd * (1 + s * s) ** 0.5 / 2)
 
 
@@ -166,9 +174,10 @@ def delta(g):
 def epsilon(g):
     """A small Ze, mirrored: beaks at the right, the waist's point at the left."""
     f = Frame(g, 8, 'lower')
-    p, d = f.p, beak_depth(f.p)
-    g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 4.5), big(p)), f.P(5, 4.5))
-    g.stroke(f.P(5, 4.5), B(*f.P(1, 4.5)), B(*f.P(1, 1)), B(*f.P(7, 1)), (f.X(7), d))
+    p, d = f.p, beak_depth(f.p, g.sh, low=True)
+    w = (off_the_beak(g, f, f.X(7), f.X(5), 4.5, 8, 1, d), f.Y(4.5))   # the waist's end, a beak's white off the beaks
+    g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 4.5), big(p)), w)
+    g.stroke(w, B(*f.P(1, 4.5)), B(*f.P(1, 1)), B(*f.P(7, 1)), (f.X(7), d))
 
 
 @glow('uni03B6', 'ζ', 8, 1)
@@ -238,12 +247,17 @@ def xi(g):
     g.stroke(f.P(6, 7), B(*f.P(1, 7)), B(*f.P(1, 1)), B(*f.P(7, 1)), f.P(7, -2.5))
 
 
-@glow('uni03C0', 'π', 9, 2)
+@glow('uni03C0', 'π', 10, 2)
 def pi(g):
-    f = Frame(g, 9, 'lower')
+    """Two legs under a bar that passes them by two modules each side, the
+    legs as far apart as the n's stems. In nine modules they stood a module
+    nearer, and the letter was the narrowest of twenty-one families' π:
+    0.98 of its n's advance, their least 1.01 and their middle one 1.08
+    (tools/script_shares.py)."""
+    f = Frame(g, 10, 'lower')
     g.stroke((0, f.Y(8)), (f.W, f.Y(8)))
     g.stroke(f.P(2, 8), f.P(2, 0))
-    g.stroke(f.P(7, 8), B(*f.P(7, 1)), f.P(9, 1))
+    g.stroke(f.P(8, 8), B(*f.P(8, 1)), f.P(10, 1))
 
 
 @glow('uni03C1', 'ρ', 8, 2)
@@ -267,7 +281,7 @@ def sigma(g):
 @glow('uni03C2', 'ς', 8, 2)
 def finalsigma(g):
     f = Frame(g, 8, 'lower')
-    p, d = f.p, beak_depth(f.p)
+    p, d = f.p, beak_depth(f.p, g.sh)
     g.clip = (0, -p.desc, f.W, p.xh)
     from .italic_forms import tail_run
     g.stroke((f.X(7), p.xh - d), B(*f.P(7, 8)), B(*f.P(1, 8)), B(*f.P(1, 2.5)), B(*f.P(7, 2.5)),
@@ -322,21 +336,35 @@ TONOS = {0x0386: 'A', 0x0388: 'E', 0x0389: 'H', 0x038A: 'I', 0x038C: 'O', 0x038E
 
 
 def _tonos_width(p):
-    from .marks import size
-    return size(p, 'uc') + 0.6 * p.sv + 0.5 * p.m
+    """The room a capital's tonos takes beside it: the accent's own (the
+    Regular's past it: marks.mark_params), and in the italic half a break
+    more (_italic_room)."""
+    from .marks import mark_params, size
+    room = _italic_room(p)
+    p = mark_params(p)
+    return size(p, 'uc') + 0.6 * p.sv + 0.5 * p.m + room
+
+
+def _italic_room(p):
+    """The italic rounds the capital's top left corner, out toward the
+    tonos beside it, the more the heavier: Έ Ή Ί Ύ kept 9 units of white
+    at the Regular and met their tonos from SemiBold. Half a break more
+    between them keeps 20 at every weight (the upright's 13 to 19)."""
+    return 0.5 * p.c if p.slant else 0.0
 
 
 for cp, base in TONOS.items():
     def fn(g, base=base):
         from .extra_latin import stamp
-        from .marks import acute, size
+        from .marks import acute, kept, mark_params, size
         p = g.p
-        a = size(p, 'uc')
+        q = mark_params(p)
+        a = size(q, 'uc')
         if p.mono:                                          # no room beside it: above, to the left
             stamp(g, base, width=g.W)
-            acute(g, a / 2 + p.sv / 2, p.cap + 0.6 * p.m, 'uc')
+            kept(g, acute, a / 2 + q.sv / 2, p.cap + 0.6 * p.m, 'uc')
             return
         t = _tonos_width(p)
         stamp(g, base, t)
-        acute(g, t / 2 - 0.1 * p.m, p.cap - a, 'uc')
+        kept(g, acute, (t - _italic_room(p)) / 2 - 0.1 * p.m, p.cap - a, 'uc')
     glyph(f'uni{cp:04X}', chr(cp), lambda p, b=base: REGISTRY[b].width(p) + _tonos_width(p), kind='cap')(fn)

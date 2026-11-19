@@ -7,10 +7,9 @@ band of grade and watch (the choice is monotone in the weight: draw)."""
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Callable
 from typing import NamedTuple
 
-from arris.draw import REGISTRY, Glyph, draw
+from arris.draw import REGISTRY, draw, pinned, second_form
 
 from .space import DEFAULT, Place, params
 
@@ -36,15 +35,6 @@ def _second(n: str, free: str, d: float, lim: float, loc: Place, italic: bool) -
     g = draw(n, params(loc, italic))
     v = g.overrides.get(free, d)
     return (v - (d + lim) / 2) * (lim - d) > 0
-
-
-def _pinned(fn: Callable[[Glyph], object], free: str, v: float) -> Callable[[Glyph], object]:
-    """The drawing with its free variable held at v."""
-    def f(g: Glyph) -> object:
-        g.overrides[free] = v
-        return fn(g)
-    f.__module__, f.__name__ = fn.__module__, getattr(fn, '__name__', f.__name__)
-    return f
 
 
 def install(names: list[str], italic: bool = False) -> tuple[list[str], dict[str, Form]]:
@@ -75,14 +65,14 @@ def install(names: list[str], italic: bool = False) -> tuple[list[str], dict[str
                             lo, hi = (lo, mid) if _second(n, sq.free, d, lim, (mid, gs, ts), italic) else (mid, hi)
                         lo = hi
                     regions.append(Region(round(lo, 1), glo, ghi, tlo, thi))
-            alt = f'{n}.{sq.free}'
+            alt = second_form(n, sq.free)
             keep = tuple(q for q in spec.squint if q is not sq)
             for base in (n, f'{n}.ital'):
                 if base in REGISTRY:
                     b = REGISTRY[base]
-                    REGISTRY[base] = dataclasses.replace(b, fn=_pinned(b.fn, sq.free, d), squint=keep)
-                    REGISTRY[base.replace(n, alt, 1)] = dataclasses.replace(
-                        b, name=base.replace(n, alt, 1), unicode=None, fn=_pinned(b.fn, sq.free, lim), squint=keep)
+                    REGISTRY[base] = dataclasses.replace(b, fn=pinned(b.fn, sq.free, d), squint=keep)
+                    REGISTRY[second_form(base, sq.free)] = dataclasses.replace(
+                        b, name=second_form(base, sq.free), unicode=None, fn=pinned(b.fn, sq.free, lim), squint=keep)
             names.append(alt)
             forms[n] = Form(alt, regions)
     return names, forms

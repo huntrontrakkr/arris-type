@@ -26,15 +26,17 @@ media controls and the watch's own pictographs.
 """
 from __future__ import annotations
 
-from shapely.geometry import Polygon
+import math
 
-from ..draw import B, REGISTRY, _lightened, glyph
+from shapely.geometry import LineString, Polygon
+
+from ..draw import B, REGISTRY, _lightened, _thickness, glyph
 from ..params import SQRT2
 from .arrows import chev, kb_of, reach, stack_k, Ctx, Turn
 from .figures import beak_depth
-from .letterframe import STEEP, growing_width, heft, letter_width
+from .letterframe import STEEP, growing_width, heft, plain_width as letter_width
 from .extra_latin import _split_counters
-from .operators import OPW, cdot, eq_gap, int_span, integral, kd, u
+from .operators import INNER_ARM, OPW, cdot, eq_gap, int_span, integral, kd, u
 from .punct import _ring, axis
 
 
@@ -78,6 +80,37 @@ def lighten(g):
     k = stack_k(g.p)
     if k != 1.0:
         g.p = _lightened(g.p, k)
+
+
+def _pict(p):
+    """The parameters a picture is drawn with (the watch, the keyboard, the
+    clocks, the erase keys): the weight's own to the Regular, the Regular's
+    past it (draw.held_at). Its whites are already the least a drawing may
+    have at the Regular (a module between a hand and its ring, between two
+    keys), so every unit a stroke gained past it was added to the picture's
+    size: at Black the watch stood from 0.34 of the cap height under the
+    line to 1.34 above it (1.25 tall at Regular), the keyboard 1.48 tall
+    for 0.90 and 2.36 of the H's advance for 1.62, the alarm clock 1.52 for
+    0.95. Other families draw one picture for every weight."""
+    from ..draw import held_at
+    return held_at(p)
+
+
+def picture(g):
+    q = _pict(g.p)
+    if q is not g.p:
+        g.p = q
+        g.pictured = True
+
+
+def pictured(fn):
+    """Mark a glyph drawn as a picture (picture): in the monospaced cell
+    it is held at the Regular before it is fitted there (symkit.mono_fitted),
+    not after. Fitted from the weight's own parameters, condensed, a picture
+    no longer knew its Regular and was drawn at the weight: ⎋ in Arris Mono
+    Italic Bold a blot, the erase keys' x a lozenge."""
+    fn.picture = True
+    return fn
 
 
 def line_top(p):
@@ -178,7 +211,7 @@ def wavyline(g):
     """A wave stood on end, the brackets' height: two periods of the tilde's
     step."""
     p = g.p
-    bot, top = -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    bot, top = -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
     n = 2
     # the wave's step: the body's, unless two periods of it and their
     # verticals (half a stem at least) would run past the brackets' height;
@@ -210,7 +243,7 @@ def _ceil_floor(g, top, mirror):
     from .punct import _bracket
     p = g.p
     W = g.W
-    bot_, top_ = -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    bot_, top_ = -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
     y = top_ - g.sh / 2 if top else bot_ + g.sh / 2
     yo = bot_ if top else top_
     pts = [(W, y), (p.sv / 2, y), (p.sv / 2, yo)]
@@ -329,11 +362,23 @@ def _erase(g, right):
     # the x: in the square part, clear of the walls by half a stem
     gap = max(0.5 * p.sv, 0.75 * p.m)
     e = p.sd / (2 * SQRT2)                                   # a diagonal's flat end reaches this far past it
-    t = min(h - g.sh / 2 - gap - e, (x_back - x0) / 2 - p.sv / 2 - gap - e)
     cx = (x0 + x_back) / 2
+    t = min(h - g.sh / 2 - gap - e, (x_back - x0) / 2 - p.sv / 2 - gap - e)
+    # In a narrow cell (Arris Mono) the square part is short, and the x moves toward the point, into the
+    # white the point holds: the arm that runs into it ends square to its wall, and keeps the gap from it.
+    # Kept in the square part, the x in the monospaced cuts was a unit across, a blot of its own weight.
+    left = x0 + p.sv / 2 + gap + e                           # the x's centre is its reach and more past this
+    toward = SQRT2 * (p.sd / 2 + gap)                        # the arm's end from the point's wall, along the arm
+    room = (x_tip - left - toward) / 3                       # the reach at which the two meet
+    if room > t:
+        t = min(h - g.sh / 2 - gap - e, room)
+        cx = min(max(cx, left + t), x_tip - toward - 2 * t)
     if not right:
         cx = W - cx
     xw = max(0.8 * p.sd, 1.12 * p.floor)                     # the x a little lighter, a mark inside the key
+    # (and no heavier than leaves its arms INNER_ARM of their thickness from the centre, operators._inner_equals:
+    # in Arris Mono Italic Bold, the key drawn smaller to fit its cell, the x was a lozenge)
+    xw = max(min(xw, SQRT2 * t / INNER_ARM), 1.12 * p.floor)
     g.stroke((cx - t, a - t, xw), (cx + t, a + t), start='flat', end='flat')
     g.stroke((cx - t, a + t, xw), (cx + t, a - t), start='flat', end='flat')
 
@@ -345,19 +390,21 @@ def _erase_h(p):
 
 
 def _erase_w(p):
-    q = _light(p)
+    q = _pict(p)
     return 3.2 * _erase_h(q) + q.sv
 
 
 @tech(u(0x2326), '⌦', _erase_w)
+@pictured
 def eraseright(g):
-    lighten(g)
+    picture(g)
     _erase(g, True)
 
 
 @tech(u(0x232B), '⌫', _erase_w)
+@pictured
 def eraseleft(g):
-    lighten(g)
+    picture(g)
     _erase(g, False)
 
 
@@ -381,16 +428,17 @@ KEYS = 5
 
 def _kbd_w(p):
     """⌨'s body: five keys, half a stem or more of white between them."""
-    q = _light(p)
+    q = _pict(p)
     s = max(q.dot() * 0.8, q.sv)
     gap = max(0.6 * s, 0.75 * q.m)
-    return max(letter_width(14, 2)(p), KEYS * s + (KEYS + 1) * gap + 2 * q.sv)
+    return max(letter_width(14, 2)(q), KEYS * s + (KEYS + 1) * gap + 2 * q.sv)
 
 
 @tech(u(0x2328), '⌨', _kbd_w)
+@pictured
 def keyboard(g):
     """A frame with two rows of keys and a space bar."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p)
     W = g.W
@@ -404,6 +452,11 @@ def keyboard(g):
     x0, x1 = p.sv / 2, W - p.sv / 2
     y0, y1 = a - H / 2, a + H / 2
     leg = min(p.leg, 0.25 * H)
+    if k < 1:
+        # (the keys made smaller, the frame's corners no longer than leave the corner keys their gap: the
+        # frame's inside chamfer, its stroke's half past the bevel, and a key's corner cut; at the full leg
+        # the corner key in Arris Mono Italic ran into it, and in Arris Mono kept 11 units of white for 25)
+        leg = min(leg, (p.sv + g.sh) / 2 + 2 * gap + min(p.c, s / 3) - p.sd / SQRT2 - SQRT2 * gap)
     g.stroke(B(x0, y0, leg), B(x1, y0, leg), B(x1, y1, leg), B(x0, y1, leg), closed=True)
     inner0, inner1 = x0 + p.sv / 2 + gap, x1 - p.sv / 2 - gap
     n = KEYS                                                # the same at every weight
@@ -417,40 +470,71 @@ def keyboard(g):
     g.stroke((inner0 + step, yb, s), (inner1 - step, yb))
 
 
+BENZENE_R = 280     # ⌬: the hexagon's radius to the middle of its stroke, in units, in every font
+BENZENE_T = 64      # ... its strokes' thickness, the ring's and the bonds'
+BENZENE_GAP = 44    # ... the white between a bond and the side it doubles, and at the bond's ends
+BENZENE_AXIS = 360  # ... its centre's height: the math axis (half the cap height in every cut)
+
+
 def _benzene_w(p):
-    """⌬'s body: three quarters of the cap height, or room for its ring
-    (its counter nine tenths of a stem) with half a stem of white about it."""
-    q = _light(p)
-    return max(0.75 * q.cap, 2 * 2.6 * q.sv) + q.sv
+    """⌬'s body: the hexagon's width across its upright sides."""
+    return 2 * (BENZENE_R * math.cos(math.pi / 6) + BENZENE_T / 2)
 
 
-@tech(u(0x232C), '⌬', _benzene_w)
+@glyph(u(0x232C), '⌬', _benzene_w, kind=('punct', 1.0), cell=True)
 def benzene(g):
-    """A hexagon whose slopes run at 2:1, a ring inside it."""
-    lighten(g)
-    p = g.p
-    a = axis(p)
-    W = g.W
-    w = (W - p.sv) / 2                                      # half width, centreline
-    c = W / 2
-    hh = w                                                  # a 2:1 slope from the point to the top's end
-    g.stroke((c - w, a), (c - w / 2, a + hh), (c + w / 2, a + hh), (c + w, a), (c + w / 2, a - hh),
-             (c - w / 2, a - hh), closed=True)
-    # the ring: clear of the hexagon's top and of its 2:1 sides (where its
-    # upright side ends) by half a stem and more, which the italic's curves need
-    gap = max(0.5 * p.sv, 0.75 * p.m) + 0.25 * p.sv
-    wss = p.ss / STEEP[1]
-    t = max(0.75 * p.sv, 1.12 * p.floor)                    # a lighter ring, as a small one is
-    r = min(max(0.45 * w, 0.9 * p.sv), w - g.sh / 2 - gap - t / 2,
-            (w - wss / 2 - t / 2 - gap) / 1.207)
-    _ring(g, c - r, a - r, c + r, a + r, w=t, leg=0.586 * r)
+    """The benzene ring as a chemistry textbook draws it (Kekulé's): a
+    regular hexagon standing on a point, a bond inside along every other
+    side, as Unicode draws BENZENE RING and every family that has it does
+    (Noto Sans Math and Symbols, FreeMono). It is a diagram, not a letter:
+    the same outline in every font, at every weight, grade and watch,
+    upright in the italics (a cell, as the terminal and bracket pieces
+    are) and small enough for Mono's cell, so nothing in it moves. (The
+    hexagon with a ring inside is ⏣, which Arris does not have; drawn so
+    here, with the weight's strokes and 2:1 slopes, the ring shut in Arris
+    Mono Narrow Italic at 450 and the hexagon leaned with the italic.)"""
+    from shapely import affinity
+    from shapely.geometry import box
+    from ..instances import params
+    q = params(400)                                         # its corners broken as the Regular's, in every font
+    g.p = g.p.with_(c=q.c, leg=q.leg, floor=q.floor, sv=q.sv, sh=q.sh, sd=q.sd, ss=q.ss)
+    g.diagram = True
+    c, a = g.W / 2, BENZENE_AXIS
+    r, t, gap = BENZENE_R, BENZENE_T, BENZENE_GAP
+    inr = r * math.cos(math.pi / 6)                         # the radius to a side's middle
+    corner = [(c + r * math.cos(math.radians(90 + 60 * i)), a + r * math.sin(math.radians(90 + 60 * i)))
+              for i in range(6)]
+
+    def scaled(k):
+        return Polygon([(c + k * (x - c), a + k * (y - a)) for x, y in corner])
+    hole = scaled((inr - t / 2) / inr)
+    g.extra.append(scaled((inr + t / 2) / inr).difference(hole))
+    room = hole.buffer(-gap + 0.5, join_style='mitre')       # (a hair inside: the bond's edge is laid on its line)
+    d = (inr - t - gap) / inr                               # a bond's middle, as a share of a side's
+    for i in (1, 3, 5):                                     # every other side: the upper left, lower left and right
+        (x0, y0), (x1, y1) = corner[i], corner[(i + 1) % 6]
+        ang = math.degrees(math.atan2(y1 - y0, x1 - x0))
+        mx, my = c + ((x0 + x1) / 2 - c) * d, a + ((y0 + y1) / 2 - a) * d
+
+        def bond(half):
+            return affinity.translate(affinity.rotate(box(-half, -t / 2, half, t / 2), ang, origin=(0, 0)), mx, my)
+        lo, hi = 0.0, r / 2                                 # the longest that keeps the white off the ring at its ends
+        for _ in range(40):
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if room.contains(bond(mid)) else (lo, mid)
+        g.extra.append(bond(lo))
 
 
-@tech(u(0x238B), '⎋', lambda p: 0.85 * p.cap + p.sv)
+@tech(u(0x238B), '⎋', lambda p: 0.85 * _pict(p).cap + _pict(p).sv)
+@pictured
 def escape(g):
     """The escape key: an octagon broken at its upper left, an arrow running
-    out of the break from its centre."""
-    lighten(g)
+    out of the break from its centre. A picture, the Regular's from there
+    to Black (_pict): drawn at the weight, its arrow's barbs grew faster
+    than the ring (200 units at Regular on a ring of 306, 322 on 331 at
+    Black), the ring opened round them to keep its white, and from Bold
+    it was a J beside an arrow, its ends on its own corners' cuts."""
+    picture(g)
     p = g.p
     a = axis(p)
     W = g.W
@@ -484,7 +568,7 @@ def _int_piece(g, top_hook):
         yt = top - g.sh / 2
         g.stroke((x + reach_, top - d), B(x + reach_, yt), B(x, yt), (x, desc))
     else:
-        bot = -p.desc
+        bot = -p.under
         yb = bot + g.sh / 2
         g.stroke((x, asc), B(x, yb), B(x - reach_, yb), (x - reach_, bot + d))
 
@@ -516,7 +600,7 @@ def _paren_piece(g, part, mirror):
     asc, desc = line_top(p)
     xs = p.sv / 2
     reach_ = W - xs
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
     if part == 'upper':
         g.stroke(T(xs + reach_, top), T(xs, top - reach_), T(xs, desc), start='h', end='h')
@@ -530,7 +614,7 @@ def _bracket_piece(g, part, mirror):
     p = g.p
     W = g.W
     asc, desc = line_top(p)
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     T = (lambda x, y: (W - x, y)) if mirror else (lambda x, y: (x, y))
     yt, yb = top - g.sh / 2, bot + g.sh / 2
     if part == 'upper':
@@ -547,7 +631,7 @@ def _brace_piece(g, part, mirror):
     p = g.p
     W = g.W
     asc, desc = line_top(p)
-    top, bot = p.cap + 0.5 * p.m, -p.desc + 0.5 * p.m
+    top, bot = p.cap + 0.5 * p.m, -p.under + 0.5 * p.m
     xs = W / 2                                              # the brace's spine
     reach_ = max(xs - p.sv / 2, p.sd + 0.5 * p.sv)          # never too short for its stroke
     xp = xs - reach_
@@ -733,7 +817,7 @@ for _cp, _k in ((0x23BA, 1), (0x23BB, 3), (0x23BC, 7), (0x23BD, 9)):
 # the italic as the brackets are.
 
 def _hb_width(p):
-    return p.cap + p.desc                                   # the upright brackets' height (cap + half a module to the foot)
+    return p.cap + p.under                                   # the upright brackets' height (cap + half a module to the foot)
 
 
 def _hb_fit(g):
@@ -1047,7 +1131,7 @@ def hands(g, c, a, r, minute=(0, 1), hour=(1, 0), long_=0.8, short=0.55):
 
 
 def clock_w(share=0.38, extra=0.0):
-    return lambda p: 2 * face_r(_light(p), share) + _light(p).sv + extra * p.m
+    return lambda p: 2 * face_r(_pict(p), share) + _pict(p).sv + extra * p.m
 
 
 def _light(p):
@@ -1060,11 +1144,12 @@ def _crown(p):
     return 0.5 * p.sv + 0.75 * p.m
 
 
-@tech(u(0x231A), '⌚', lambda p: 2 * face_r(_light(p), 0.3) + _light(p).sv + _crown(_light(p)), solid=True)
+@tech(u(0x231A), '⌚', lambda p: 2 * face_r(_pict(p), 0.3) + _pict(p).sv + _crown(_pict(p)), solid=True)
+@pictured
 def watch(g):
     """The watch: a chamfered case, a little taller than wide, on its
     straps, a crown at the right, hands at twelve and three."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p)
     rx = (g.W - p.sv - _crown(p)) / 2
@@ -1075,7 +1160,7 @@ def watch(g):
              closed=True)
     # straps: solid, narrower than the case, out to the brackets' height
     sw = 1.1 * rx
-    bot, top = -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    bot, top = -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
     top, bot = max(top, a + ry + p.sv), min(bot, a - ry - p.sv)
     g.stroke((c, a + ry, sw), (c, top))
     g.stroke((c, bot, sw), (c, a - ry))
@@ -1094,11 +1179,12 @@ def _alarm_r(p, W):
     return min(face_r(p, 0.33), (W / 2 - _alarm_reach(p)) / 0.97)
 
 
-@tech(u(0x23F0), '⏰', lambda p: 2 * (0.97 * face_r(_light(p), 0.33) + _alarm_reach(_light(p))))
+@tech(u(0x23F0), '⏰', lambda p: 2 * (0.97 * face_r(_pict(p), 0.33) + _alarm_reach(_pict(p))))
+@pictured
 def alarmclock(g):
     """An octagon's face with two bells above its upper chamfers and two
     feet below its lower ones."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p) - 0.04 * p.cap
     gap = max(0.75 * p.sv, 1.0 * p.m)
@@ -1123,10 +1209,11 @@ def alarmclock(g):
 
 
 @tech(u(0x23F1), '⏱', clock_w(0.33))
+@pictured
 def stopwatch(g):
     """An octagon's face, a crown on top (a stem and a cap) and a button at
     its upper right, one hand at twelve."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p) - 0.06 * p.cap
     r = (g.W - p.sv) / 2
@@ -1146,10 +1233,11 @@ def stopwatch(g):
 
 
 @tech(u(0x23F2), '⏲', clock_w(0.36), solid=True)
+@pictured
 def timerclock(g):
     """An octagon's face with a mark above it and a hand turned back to
     half past ten."""
-    lighten(g)
+    picture(g)
     p = g.p
     a = axis(p) - 0.05 * p.cap
     r = (g.W - p.sv) / 2
@@ -1166,7 +1254,7 @@ def timerclock(g):
 def _hg(p):
     """An hourglass's measures: (top, bottom, glass half width at the bars,
     the slope's height, the neck's half white, a 2:1 stroke's width)."""
-    bot, top = -p.desc + 0.5 * p.m, p.cap + 0.5 * p.m
+    bot, top = -p.under + 0.5 * p.m, p.cap + 0.5 * p.m
     sh = p.sh
     hgt = (top - bot) - sh
     w = p.ss / STEEP[1]
@@ -1183,17 +1271,40 @@ def _hg_w(p):
     return 2 * (_hg(pk)[2] + pk.m) + pk.sv * 0
 
 
+HG_STEEPEST = 4.0   # an hourglass's sides in a narrow cell rise at most this much for each unit across
+HG_NECK = 0.5       # ... where that does not fit, its neck's white narrows to this share
+HG_LIGHTEST = 0.75  # ... and then its strokes lighten together to this share
+
+
 def _hourglass(g, sand):
     """An hourglass: two bars, and glass whose sides run at 2:1 into an
     upright neck; with sand, a heap on the lower bar and a band left at the
-    foot of the upper bulb, each following the glass a half stem inside it."""
+    foot of the upper bulb, each following the glass a half stem inside it.
+
+    In a cell narrower than the glass (Arris Mono and Mono Narrow) its sides
+    run steeper, to 4:1, its neck kept as short; where even that does not
+    fit, the neck's white narrows (to half), then its strokes lighten
+    together (to 0.75), and only past that do the sides shorten. Kept at 2:1 and shortened, the
+    sides were a third of the glass's height in Arris Mono Narrow at Bold,
+    the neck an upright channel between them, and the hourglass read as an
+    I between two bars (⏳'s heap went with it)."""
     lighten(g)
     p = g.p
     W = g.W
     top, bot, half_w, dy, neck, w = _hg(p)
-    if half_w > W / 2 - p.m:                                 # a narrow cell: a steeper, shorter glass
-        half_w = W / 2 - p.m
-        dy = min(dy, 2 * (half_w - neck - w / 2))
+    room = W / 2 - p.m
+    if half_w > room:
+        need = dy / HG_STEEPEST                             # the least run across for the glass's sides
+        fn = min(1.0, max(HG_NECK, (room - need - w / 2) / neck))
+        k = min(1.0, (room - need) / (fn * neck + w / 2))
+        if k < 1.0:
+            g.p = p = _lightened(p, max(k, HG_LIGHTEST))
+            top, bot, _, dy, neck, w = _hg(p)
+        neck *= fn
+        half_w = room
+        dy = min(dy, HG_STEEPEST * (half_w - neck - w / 2))
+    run = (half_w - neck - w / 2) / dy                      # across, for each unit up the glass's sides
+    wr = p.ss * (1 + run * run) ** 0.5                      # a side's stroke, measured across
     yt, yb = top - g.sh / 2, bot + g.sh / 2
     g.stroke((0, yt), (W, yt))
     g.stroke((0, yb), (W, yb))
@@ -1204,15 +1315,15 @@ def _hourglass(g, sand):
     if not sand:
         return
     gap = max(0.5 * p.sv, 0.75 * p.m)
-    gh = gap / STEEP[1]                                      # that white, measured across a 2:1 wall
+    gh = gap * (1 + run * run) ** 0.5                        # that white, measured across a side
     yn = yt - dy                                             # the upper bulb's foot
-    lower = lambda y: W / 2 - half_w + (y - yb) / 2 + w / 2 + gh
-    upper = lambda y: W / 2 - (neck + w / 2) - (y - yn) / 2 + w / 2 + gh
+    lower = lambda y: W / 2 - half_w + (y - yb) * run + wr / 2 + gh
+    upper = lambda y: W / 2 - (neck + w / 2) - (y - yn) * run + wr / 2 + gh
     base = yb + g.sh / 2
-    hh = min(0.4 * dy, (W / 2 - lower(base)) * 2 - p.sv)
+    hh = min(0.4 * dy, (W / 2 - lower(base)) / run - p.sv)
     solid(g, [(lower(base), base), (W - lower(base), base), (W - lower(base + hh), base + hh),
               (lower(base + hh), base + hh)])
-    y1 = yn + 2 * (gh - neck + p.sv / 4)
+    y1 = yn + (gh + wr / 2 - (neck + w / 2) + p.sv / 4) / run
     y2 = max(min(y1 + 0.35 * dy, yt - g.sh / 2 - gap), y1 + 0.4 * p.sv)
     solid(g, [(upper(y1), y1), (W - upper(y1), y1), (W - upper(y2), y2), (upper(y2), y2)])
 

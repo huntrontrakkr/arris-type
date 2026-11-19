@@ -12,9 +12,9 @@ from ..draw import AUTO_SHARE, B, NUDGE, REGISTRY, Opening, _counter_white, draw
 from ..geom import rings_to_shapely
 from ..params import SQRT2
 from .caps import big
-from .figures import STACK_MIN, beak_depth
-from .lower import shoulder
-from .letterframe import Frame, k_arms, letter_width
+from .figures import BAY_WHITE, STACK_MIN, beak_depth
+from .lower import NARROW, narrow_frame, narrow_width, shoulder
+from .letterframe import Frame, k_arms, least_white, letter_width
 
 
 def stamp(g, name, dx=0.0, dy=0.0, width=None, clear=False):
@@ -111,10 +111,22 @@ def oslash(g):
 
 @glyph('Dcroat', 'Đ', width_of('D', 1.5), kind='cap')
 def Dcroat(g):
+    """D with a bar through its stem, two modules and a half into the
+    counter, and never nearer the bowl's inside than the least white
+    (letterframe.least_white): in Arris Mono Narrow at Bold, the D drawn
+    narrow for its cell, the bar ran on to the bowl and cut the counter in
+    two."""
+    from shapely.geometry import LineString
     p = g.p
     dx = 1.5 * p.m
     stamp(g, 'D', dx, width=g.W - dx)
-    _bar(g, 0, dx + p.sv + 2.5 * p.m, p.cap / 2)
+    x1 = dx + p.sv + 2.5 * p.m
+    y = p.cap / 2
+    cut = g.extra[-1].intersection(LineString([(dx + p.sv + 1.0, y), (g.W + p.m, y)]))
+    walls = [q.bounds[0] for q in getattr(cut, 'geoms', [cut]) if not q.is_empty]
+    if walls:
+        x1 = min(x1, min(walls) - least_white(p))
+    _bar(g, 0, x1, y)
 
 
 @glyph('Eth', 'Ð', width_of('D', 1.5), kind='cap')
@@ -158,10 +170,10 @@ def _slot(g, w, x1):
     the right edge of the t's ink, the t's rings and the first cut's x."""
     from shapely.geometry import LineString
     p = g.p
-    rings, _ = draw('t', p).outline(record=False)
+    sub = draw('t', p)
+    rings, _ = sub.outline(record=False)
     ink = rings_to_shapely([[tuple(q[:2]) for q in r] for r in rings])
-    col, wm = (3, 9) if p.mono else (2, 7)                     # the t's stem column in its frame (lower.t)
-    xs = p.sv / 2 + (w - p.sv) * (col - 1) / (wm - 2) + p.sv / 2 + p.c
+    xs = sub.defaults_used['stem'] + p.sv / 2 + p.c            # a break right of the t's stem (lower.t)
     top, foot = p.xh, 0.0
     for k in range(6):
         xc = xs + (x1 - p.c - xs) * k / 5
@@ -321,10 +333,10 @@ def kgreenlandic(g):
         g.stroke(*pts, start=a, end=b)
 
 
-@glyph('longs', 'ſ', letter_width(7, 1), kind='lower')
+@glyph('longs', 'ſ', narrow_width, kind='lower')
 def longs(g):
-    f = Frame(g, 7, 'asc')
-    g.stroke(f.P(2, 0), B(*f.P(2, 12)), f.P(7, 12))
+    f = narrow_frame(g)                                     # the f without its bar (lower.f_)
+    g.stroke(f.P(2, 0), B(*f.P(2, 12)), f.P(NARROW, 12))
 
 
 @glyph('eng', 'ŋ', letter_width(8, 2), kind='lower')
@@ -412,7 +424,10 @@ def Germandbls(g):
     y_mid = f.Y(11) - (x8 - f.X(4.5))
     g.stroke(f.P(1, 0), B(*f.P(1, 11)), (x8, f.Y(11)))
     g.stroke((x8, f.Y(11)), (f.X(4.5), y_mid))
-    g.stroke((f.X(4.5), y_mid), B(x8, y_mid), B(*f.P(8, 1)), f.P(3, 1))
+    # the foot's end keeps a beak's white off the stem (figures.BAY_WHITE): on the third module it
+    # stood 39 units from it at Black, a quarter of a stem, a slit the height of the foot
+    xe = max(f.X(3), f.X(1) + p.sv / 2 + BAY_WHITE * least_white(p))
+    g.stroke((f.X(4.5), y_mid), B(x8, y_mid), B(*f.P(8, 1)), (xe, f.Y(1)))
 
 
 @glyph('AE', 'Æ', letter_width(13, 2), kind='cap')

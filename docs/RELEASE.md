@@ -49,6 +49,1521 @@ Reserved Font Name. Every font carries the copyright
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 2.001
+
+Version 2: how the letters stand together. A true Bold and a true Black,
+one bar for a height, every corner broken by one rule, five letters
+redrawn and the rest checked glyph by glyph along every cut's ladder and
+grade, in Arris, its italic, Arris Watch, Arris Mono and Mono Narrow.
+
+- A true Bold and a true Black. Past the Regular each weight has the stem
+  that gives a line of its lowercase the colour other families' weight of
+  that name has (`instances.STEMS`: Medium 110, SemiBold 133, Bold 155,
+  ExtraBold 178, Black 200), read on sixty families at every weight they
+  have. On the ladder of the next entry (130 at Bold, 158 at Black)
+  Arris's Bold had their SemiBold's colour and its Black their Bold's (the
+  owner: "a true bold at the same color as other sets and a true black").
+  Past the Regular a bowl's outside cut holds the Regular's size and its
+  inside goes square, which is what the counters lacked at 175. Arris Mono
+  keeps the next entry's stems, Arris Watch the watch's.
+- One bar for a height. Every letter of the lowercase stands on the bar
+  the a's and the e's hooks hang from (`lower.hook_ref`), every capital
+  and figure on the 5's (`draw._cap_bar`), upright and italic. Each had
+  thinned for itself: at Black the O and the E stood on 170 units, the S
+  on 154, the 5 on 147, the 3 and the Q on 119 (the owner: "Let's make
+  sure that we're extremely consistent like this across everything").
+- The hooks of c, a, e and s hang from that bar and end on one line, at
+  every weight, in Arris and Arris Mono; the a and the e are as they were
+  and the c and the s moved ("a and e are perfect. C needs to change").
+  The a's and the e's outer bars are one thickness, the s is drawn on
+  their three bars, and at Black the a is the e turned half round, all
+  but its notch (`lower.a_like_e`, from Bold).
+- One overshoot for a height: the o's on the x-height, the O's on the cap
+  height, for every letter and figure that stands over its line
+  (`draw._zone_over`). Each had taken what its own outline asked, the C
+  3.3 units at Regular by the O's 1.3.
+- Every middle bar stands on the centre of its height (H E B S 8 3 e a
+  s). It stood 2.5% over it at Regular, about twice what 37 families
+  measured do, and the a and the e alone let it go toward Black; the
+  owner, shown the options: "I trust your feeling about this". A rise, if
+  one is set again, is every letter's alike and fades out from Bold
+  (`draw.OPTICAL['counters']`).
+- A beak hangs from the bar its letter draws. C, G, Э, Є, the euro and
+  thirty more measured it from the weight's own bar, 170 units at Black
+  where the capitals stand on 147, and the C's beak ended 23 units under
+  the S's and the 2's.
+- The Q's square corner is cut as the O's are from Bold, and at Black the
+  Q is the O with its tail. The 3's top and foot are the height's bar and
+  its waist alone thins, to a notch (the owner, shown it on full bars:
+  "Don't fix the italic 3 or the old three. I like the way that it
+  notches"). The j stands on the l's foot, turned left, and the hooked j
+  is `cv03`; the l and the j end in one cut at every weight; the g's and
+  the y's hooks are one hook; an arm's end keeps a small beak at every
+  weight.
+- The italic at the new weights. Its capitals and figures stand on the
+  height's bar too, and an italic capital's bars give a little past the
+  stack's least for its bays (the S's, 20 units wide at Black, are 54).
+  The cursive q, g and y keep the bowls' notch to Black
+  (`lower.BOWL_NOTCH_ITAL`: it was gone from ExtraBold), and their join
+  no longer cuts the bar it joins (the q's foot was 137 units for its
+  top's 168 at Black). A mouth's own rule never draws its beak out (the
+  italic Ә and Ҽ stood 31 units open at Black for 55; the Ҩ, 5). The
+  cursive j's body keeps 0.85 of a break inside its hook.
+- The italic's lowercase stands on the upright's bar. It kept the weight's
+  own horizontal, and from SemiBold a line of it was the darker of the
+  two: by 2.6% at Black, on bars of 170 units beside the upright's 118,
+  every counter of the cursive the tighter for it. The cursive e's top is
+  that bar and its diagonal alone gives for its eye.
+- Cyrillic widths, read on eighteen families that have it
+  (`tools/script_shares.py`: each letter's advance as a share of the
+  Н's). Arris stood inside their range for 48 of the 66 basic letters at
+  Regular; Л Д Ж Ф Ш Щ and their small letters stood under it (the Ш 1.23
+  of the Н for their 1.29 to 1.50: the three-stem letters had the m's
+  fault before it was widened) and keep their drawings in wider bodies
+  (`cyrillic.EL_BODY` and the rest). 57 of 66 now. Left: и й И Й, which
+  are the N's width, 18% over the Н's at Bold and 25% at Black where no
+  family goes past 5% (the Latin N the same against the H: its diagonal
+  holds one slope and the letter widens for it), and у У, the Latin y's
+  drawing, heavier than any family's.
+- The letters built on the 3. The Ze stands on the height's bar, as the Э,
+  the Є and the Ҙ: thinned under the squint, which gives all or nothing,
+  its three bars stood at seven tenths of the others' from Bold and its
+  waist came to a point (the owner, of the italic's at 850: "The middle
+  thing just looks so crappy here. It's super thin"). Its small capital
+  and the small Ҙ keep the squint, their bays having no room without it.
+  The ezh and the Abkhasian dze thin their bars for the wedge under their
+  diagonal (`figures.wedge_bars`): in the italic the small ezh's two bars
+  met at Black and the diagonal's end stood out of the join in teeth.
+- Outlines. A stroke's outline that runs out and straight back loses the
+  spike (`geom._despike`: a notch in the Black a's counter); rings and
+  their points come out in one order whatever the float noise (the Mono
+  Bold ø was drawn two ways).
+
+The six causes:
+
+- (Arris Mono's ladder now; Arris's is the one above.) Black draws a stem
+  of 158 units, where it drew 175, and every weight
+  past the Regular is rescaled to it: each adds to the Regular's stem four
+  fifths of what it added (`instances.STEMS`: Medium 102, SemiBold 114,
+  Bold 130, ExtraBold 144, Black 158, for 105, 120, 140, 158 and 175). At
+  175, in the widths the letters now have past the Regular (next), the
+  n's counter was narrower than its stems, 164 units, and this round's
+  repairs gathered there: the j's hook shut, the k's loop all but, the
+  f's and the t's crossing a knot, a dot a speck. At 158 the counter is
+  184 units, and at every weight of Arris it is wider than the stems
+  beside it (the owner, 2026-11-11, to dropping that Black and making the
+  ExtraBold the heaviest: "we should do that but we need to rescale
+  everything after regular").
+
+  Nothing is drawn that was not. Black is the ExtraBold of before, Bold
+  the 650 the f's and the t's crossing was chosen at, and so each weight:
+  every glyph of each was compared with the drawing the old ladder has at
+  its stem, upright, italic and Mono. A rule of the engine that names a
+  weight (the measured optics' ends, the weight a cut's forms are chosen
+  at, the weights a heavier one is held against) still names the old
+  ones, whose stems the new have (`instances.drawn`, `WATCH_STEMS`). In
+  the notes below, written before this one, Black and the weights given
+  by number are those: Arris's Black is their 800, its Bold their 650.
+  Stem to cap height is now 0.18 at Bold and 0.22 at Black (measured
+  neutral faces' Bold 0.23, chamfered ones' 0.20:
+  `docs/research/reference-fonts.md`): a Bold lighter than most.
+
+  Arris Mono takes the same weights (its Bold 130 units). Arris Watch
+  and the watch's end of the variable font keep the watch's own (the
+  owner: "Watch cut keeps its weights"): its SemiBold is the watch's
+  figures pixel for pixel, as before, and at one name it is heavier than
+  Arris, 5% at SemiBold and 11% at Black; along the watch axis the
+  variable font goes from one stem to the other. A positive grade fades
+  out to a cut's own Black.
+
+  Between the two ladders the watch axis is a slope, not a step. Along it
+  the stem goes straight from Arris's to the watch's, and everything a
+  rule reads off the stem goes one way with it: what of the stem is past
+  the Regular, the white the letters give, their bodies, the r's share of
+  the H (the owner: "we treat that as a gradient that you can go across").
+  The f's and the t's rule has a threshold, and read on Arris's share of
+  the stem it came on somewhere along the axis, later the heavier the
+  weight: at Black the stub was Arris's half way to the watch's drawing
+  and the watch's two thirds of the way, and shrank three units before it
+  grew. Between Arris and the watch's drawing it is now as far from the
+  one as from the other (`lower.between`), as the variable font carries
+  it; at either end it is what it was.
+
+  The grade is held to the same (the owner: "we have looked at the watch
+  axis but what about the other one?"). Along it, from -100 to 100 at
+  each weight from Light to Black, at Arris's end, at the watch's and
+  half way between, the stem never thins for a heavier grade, what a rule
+  reads as the weight is the ungraded weight's, the f's stub by its stem
+  and the r's share run one way, and no advance moves
+  (`tests/test_grade_advance.py`); scanned in twenty steps on 78 letters,
+  figures and signs, upright, italic and in the watch's drawing, no
+  advance moves and none fails to draw. The scan found two faults, both
+  mended. A narrow letter thickens outward from its middle in the body
+  its drawing has at the grade, and that body was read off the upright's
+  drawing: the cursive l, whose body gives another share from ExtraBold,
+  stood 27 units to the right of its ungraded self at any grade at Black,
+  in the same advance (`font._place_drawn` reads the drawing it has). And
+  the a at Black broke its bowl's left corners 55 units for 131 at grade
+  80 and 100 and not at 85 or 90: its foot is cut along its bar's own
+  edge, the cut's end and the corner before it are one point to the last
+  bit, and which side of the other each fell on decided whether the
+  stroke's outline crossed itself; when it did, the stroke was taken for
+  one whose bowls do not fit and they were shrunk to whatever size
+  passed. Two points of a stroke's side that are one are one edge the
+  less (`geom.SAME`). The jumps that remain along the grade are the at
+  sign's and the dollar's, as before the rescale.
+
+  With it the engine knows a font's own parameters at any weight
+  (`draw._cut`); until now only at one round to a thousandth, and a rule
+  that searches along the weights (an opening held from where it first
+  falls short) read the drawings between as a derived set's, small
+  capitals', which are filled otherwise. It moves the cursive e's eye,
+  and with it the thirty letters built on that e, by a tenth of a unit of
+  advance at the heaviest weights, and nothing else.
+
+- Under each arch of the cursive m the counter has one top, the same in
+  both, at every weight (the owner, 2026-11-11: "some funky stuff going on
+  under the loops ... This was a problem before ... if we have some
+  consistency there that'd be really good"). An arch leaves its stem by a
+  branch, three modules under the arch in the italic, and in the m's
+  narrow counters the branch has little room: 0.8 of an edge break showed
+  under the arch at SemiBold, under a tenth at Bold, and from ExtraBold it
+  lay inside the arch, the white beside it running up into the arch in a
+  pocket. And the first arch's corner, cut deeper than the bar is thick,
+  took a wedge out of the middle stem under the second arch, so the
+  pocket there was another shape. The upright has had the rule since
+  2.001's first round: nothing of a shoulder is drawn smaller than an
+  edge break. The italic has it now (`lower.shoulder`): a branch that
+  would show under a break below its arch is cut along the arch's
+  underside, the counter's top the arch's alone; and the cursive m's
+  middle stem stands up to its own arch, as the upright m's does. The
+  Cyrillic т, the same letter, with it. The n and the h, with more room,
+  keep their branch to Bold (1.7 breaks under the arch there) and take
+  the rule from ExtraBold, where the upright n loses its step too.
+  In Arris Mono's cell the m's arches run out of room to rise: from
+  SemiBold upright, from Medium in the italic, which draws the upright's
+  m in a narrower body so that its slanted ink fits the cell. With no
+  room the second arch began square on the stem's centre, and the notch
+  the arches meet in was what the corner rule made of that: it shrank
+  with the weight to 36 units at Medium and stood at 48 again from
+  SemiBold (Mono Narrow: 27 at SemiBold, 48 at Bold), with an upright
+  step in one side where the italic first ran out of room. The italic
+  also had the pocket under its second arch at Regular and Retina, and at
+  Bold its middle stem stopped 0.9 of a unit under its arch (the italic's
+  horizontals are cos(slant) thinner than their name) and the second
+  counter bit into it. An arch that joins another keeps its cut at every
+  weight, set where the notch it leaves is an edge break deep
+  (`lower.notch_meet`: nothing of a shoulder is drawn smaller than a
+  break), and the stem stands to the underside as it is drawn
+  (`lower.bar_half`). In all four Mono cuts the m is joined one way from
+  Light to Bold: two counters of one shape, and one V over the middle
+  stem that shrinks with the weight to a break and stays there (Mono: 81,
+  54, 45, 36, 28, 32 units from Light to Bold).
+- The beak of the a, the e and the s keeps its bay open (the owner,
+  2026-11-11: "a weird optical effect ... with the hooks ... the a's upper
+  storey, the way it meets it ... at the bolder weights. If I were to
+  zoom out ... where it meets the bottom storey or where it does not
+  meet"). Each ended in the c's beak at every weight, and the white
+  between the beak's end and the bar it turns toward ran out as the bars
+  grew: on the a 90 units at Regular, 57 at Bold, 46 at ExtraBold, 37 at
+  Black, 0.23 of a stem, a slit as long as the beak is wide. Measured the
+  same way on 339 fonts of 60 families from Regular up (the least width
+  of the passage into each bay, by the n's stem), the families of
+  Arris's boldness keep 0.41 of a stem at its ExtraBold and 0.36 at its
+  Black, and none under 0.24; Arris stood below every one of them at
+  Black. A beak that turns into a bay now keeps 0.6 of the least white
+  off the next bar, 0.36 of a stem from Bold (`lower.beak_in`), its
+  corner cut that much shorter: the gap is 57 units at Bold, 52 at
+  ExtraBold, 57 at Black. Bold and lighter are as they were; æ, œ, ә and
+  the accented letters take the rule with their letters. The c, with its
+  whole mouth for room, keeps its beak.
+- The italic's hooks keep their white too, by another way. A capital's
+  beak keeps a flank a break and a quarter longer in the italic than
+  upright, which its corners need to be curved, and at the heavy weights
+  it closed on what it turns toward: the S's stood 29 units off its spine
+  at Black, 0.18 of a stem, for the upright's 78; the beaks of З, Э and Є
+  came down beside their bar's end, 37 units off it; ε, a letter of the
+  x-height with a capital's beaks, held 12 units between its two; Ә and Ҽ
+  0.19 of a stem. Shortened as the a's is, to what the white wanted, the
+  beaks lost their curves at ExtraBold and Black and kept them below. So
+  the beak stays and what it turns toward gives. The S's bars thin, as
+  the 3's and the 5's do, no further than leaves the beak's white
+  (`figures.bay_stack`: by 2% at ExtraBold and a fifth at Black, in the
+  italic; upright Arris not at all), and Ә's and Ҽ's with it. A bar's end
+  steps back from a beak that passes it (`figures.off_the_beak`: З, Э, Є
+  and their small capitals, in the italic; upright their corners are
+  broken and stand clear). The question mark's bars thin as the S's do. ε takes the small capital's beak in the
+  italic, the lowercase c's, as the italic з it mirrors has. The curved
+  corners of all of them are the ones they had, at every weight. The
+  capital ẞ's foot, which ended on the third module 39 units from its
+  stem at Black, keeps a beak's white off it.
+- The at sign's whites give way a gap at a time. Four uprights cross it
+  and four bars stack up it, and where one white ran short the whole row
+  went even at once: at Medium the inner a stood 75 units higher in its
+  ring than at Regular or SemiBold, and along the grade the sign changed
+  by a hundred squares of an edge break in one step of a twentieth
+  (found going along the grade axis). A gap that is short now takes what
+  it lacks from the others, by their shares of what they have over
+  (`punct.spread`), and the row stands evenly only where there is no more
+  room than that. The dollar's changes along the grade are its form's,
+  the stem through the S or in stubs, which the variable font switches
+  as a glyph; they are left.
+- A sign that could not be drawn at one width while its Mono body was
+  being found stopped the build (℃ in Arris Mono Narrow SemiBold: its C,
+  tried 59 units wide with a stem of 108, folded on itself and the union
+  of its strokes raised). `geom.ink` mends such an outline before the
+  union, and the fit goes on to a body it can be drawn in.
+- The variable italic's build stopped on the ǎ. To find hairlines of
+  white the ink is closed by a share of the chamfer (`geom._fill_slits`);
+  two parts standing just nearer than twice that share are bridged at a
+  point, and the closed outline crosses itself there. The italic ǎ at
+  850, grade 100, on the watch's ladder has its caron 29 units over the
+  letter with a share of 15, and drawn without the jog closing, as the
+  variable font tries a glyph it cannot interpolate well, the measure of
+  its white raised. The fold is taken out and the white measured as any
+  other. No drawing the fonts carry changes: only one that could not be
+  made.
+- Two letters in one cell (ǆ ǉ ǌ ǳ and their capitals, in Arris Mono)
+  are drawn small, at the size where their bodies fit side by side. The
+  size was taken from the upright's bodies, and the italic draws its
+  cursive l and j, twice as wide as the upright's since those were
+  narrowed: in Arris Mono Italic the ǉ ran out of its cell on both sides
+  (30 and 38 units at Light, 3 at Regular). And nothing kept the first
+  letter's tail off the second: the ǌ's n ran into its j's hook, the ǆ's
+  and ǳ's d into their z. The size is now the bodies' as drawn, and the
+  two inks stand half a sidebearing apart, as the proportional digraph's
+  do (`latin_plus._digraph`). The upright Mono digraphs are unchanged to
+  the unit.
+- A sign of bars keeps its share of the line. The dashes, the underscore,
+  the plus, the minus and the equals were measured as the letters are, in
+  stems and modules of white: the white widened toward Thin, and past the
+  Regular gave way to stems they have not got, so as the letters grew the
+  signs shrank. Against the H's advance the hyphen stood 1.24 of its
+  Regular's share at Thin and 0.60 of it at Black, a square of ink
+  between its letters; the en and the em dash the same; the plus and the
+  equals 1.12 and 0.81, the plus at Black four stubs. In sixty other
+  families each keeps its share from Thin to Black (1.00 or 1.01 of the
+  Regular's at the median at every weight; none over 1.17 at Thin or
+  under 0.83 at Bold). Their modules are the length of their bars: at
+  every weight the body keeps the share of the H's body it has at the
+  Regular (`letterframe.kept_width`), in the watch's own drawing too.
+  Every operator stands in the plus's body again: the ones that kept the
+  watch's own white were a body of their own past the Regular (52 units
+  wider than the equals at Black), and a sign drawn with lighter strokes
+  to keep its whites took its body from those strokes (the plus and the <
+  54 units narrower than the equals). In Arris Mono, whose signs are
+  drawn to their cell, nothing moves.
+- The dashes are as long as other families'. At six, nine and sixteen
+  modules the hyphen stood 0.81 of the H's advance, the en dash 1.10 and
+  the em dash 1.77, and the underscore, nine modules too, 1.10: of sixty
+  families the en dash, the em dash and the underscore were longer than
+  all but two or three, the hyphen than all but three (their middle ones
+  0.60, 0.79, 1.23 and 0.75). They are four, six, ten and a half and five
+  and a half modules (`punct.HYPHEN` and the names beside it): 0.62, 0.81,
+  1.24 and 0.76 at the Regular, and within 0.07 of the families' at every
+  weight. The double low line and the overline are the underscore's
+  length. Arris Mono's are its cell's, as they were.
+- The ≤ and the ≥ stand between the baseline and the cap height at every
+  weight. The <'s own chevron over a bar, the equals' white between: at
+  the Regular the pair fills the cap height to 38 units, and bolder every
+  part of it grew, 805 units tall at SemiBold and 997 at Black, 150 under
+  the baseline and 127 over the capitals. The white gives first, to the
+  least white a counter keeps, and then the chevron is drawn as large as
+  the height leaves, its bar as wide. The ≠'s slash passes its bars by a
+  module: four modules each way from the axis took it 98 units past the
+  Regular's bars and left it 66 inside Black's, two bars and a tick.
+- The Greek Ξ stands in the Σ's body. Three bars and no stem, it was nine
+  modules of white: 1.05 of the H's advance at Light, 0.97 at Regular and
+  0.55 at Black, where it was three stubs. Other families' Ξ is 0.85 of
+  their H at Regular and at Bold, a little over their Σ; Arris's is 0.90
+  at every weight. The rest of the Greek was read against twenty-one
+  families the way the Cyrillic was against eighteen
+  (`tools/script_shares.py`, which reads either now): forty-five of
+  forty-nine letters stood in their range at Regular and forty-three at
+  Bold. The π was the narrowest of them all, 0.98 of its n's advance for
+  their least 1.01 and their middle one 1.08: its legs stand a module
+  further apart, as far as the n's stems, in ten modules for nine (1.08).
+  With it, the Ξ and the N's width (the next note) forty-six stand in
+  range at both weights; what stands outside is the Latin letter it
+  shares (Α Κ Μ, the ν's walls) or a bowl's ink measured against the n
+  (φ).
+- The N keeps its share of the H. Its diagonal runs at 2:1 between its
+  stems, and with its joins held a stroke from the cap and the baseline
+  the stems and the diagonal each added their whole growth to the width:
+  against the H's advance the N stood 1.06 at Regular, 1.18 at Bold and
+  1.25 at Black, and the small и the same against its н (1.06, 1.16,
+  1.23). Sixty-eight families' N stands 1.01 to 1.02 of their H at every
+  weight (the widest 1.17), eighteen families' и 1.00 to 1.01 of their н
+  (the widest 1.05). Past the Regular the body keeps the share of the H's
+  it has there (`caps.n_width`: 1.07 of the advance from Medium to Black)
+  and the joins deepen instead, as a heavy N's do in every face: the
+  diagonal and the stem are one block to a third of the height at Black.
+  No counter is under the least white where it opens: at Black the N's
+  open 305 units across and the small и's 227. With it go И Й и й, the
+  Greek Ν, the
+  accented N's, № ₦ Ɲ. The Regular and the lighter weights are as they
+  were; the watch's own drawing keeps its master's N (ten modules to the
+  H's nine) and Arris Mono its cell's.
+- One font from one source. A reference that others are measured by is
+  drawn once and kept: a height's overshoot from its o, its bar from the
+  5, the hooks' lines from the e, a glyph's Regular, the weight a Mono
+  letter's counters shut at. It was drawn as a part of whichever glyph
+  asked for it first, and in Arris Mono a part of another glyph is not
+  fitted to the cell while a glyph of its own is: in Mono Italic the
+  x-height's overshoot was 1.50 units at Bold where a plain letter had
+  been drawn first and 1.09 where an accented letter's base had. The
+  build shares its glyphs out among workers, so the same source gave two
+  fonts: about a hundred accented letters and the tabular figures of
+  Mono Bold Italic differed from one run to the next, by under half a
+  unit. A reference is now drawn as a glyph of its own, whoever asks
+  (`draw._as_own`), and a check draws in several orders, each in a
+  process of its own.
+- An accent takes half of what its letter gains. Accents were drawn with
+  their letter's own strokes at a size that grew with them: at Black an
+  acute carried 1.48 times the ink other families give it for its letter
+  and stood 1.35 times as tall, a circumflex 1.88, a caron 1.99, a tilde
+  1.63, and a dieresis's dots stood 160 units apart for the Regular's 72
+  (the owner: "all bloated and ugly at black"; of a first trial, "They
+  are still too far apart"). Held at the Regular's weight outright they
+  were hairlines on a Black letter, four tenths of its stem ("It looks
+  wrong. Can we look at what other heavy or black weights look like on
+  other languages and try to figure out what we can do better?"). Read
+  off fifty-nine families at Regular and at their heaviest weight, each
+  mark's thickest stroke over its letter's stem: an accent's is 0.76 to
+  0.86 of the stem at Regular and 0.62 to 0.71 at the heaviest, half of
+  what the stem gains between the two (0.49 to 0.63 at the median, accent
+  by accent); the white between it and its letter closes a little, and a
+  dieresis's dots thicken without drifting apart. Past its cut's Regular
+  a mark's strokes take half of the letter's gain (`marks.MARK_GAIN`,
+  `marks.mark_params`), and its corner breaks, its size and its whites
+  stay the Regular's: 0.62 to 0.66 of the stem at Black, the dots of ë as
+  far apart as at Regular. Every accent over a letter and under one, the
+  apostrophe of ď ľ ť, the Greek tonos and its capitals' room for it, the
+  accents alone (´ ` ˆ ¨ ˜ ˇ) and the combining marks. To the Regular
+  nothing moves. A letter's own dot (i, j) is its letter's. In Arris Mono
+  the apostrophe of ď ľ ť is its letter's too: the cell has no room for
+  white between them, and the two are drawn as one.
+- The cedilla is a flat tab. It was a hook, a neck down and a foot
+  turning left, and at Black it stood 0.92 of the stem thick and 0.62 of
+  its letter wide where those families have 0.68 and 0.48: a second foot
+  under the letter. After Tomorrow's (the owner: "the cedilla under the
+  c ... just turns into a little flat tab"; of the tab at a third, two
+  thirds and the whole of the letter's weight, "F. Definitely"): a short
+  stroke leaning two down for one across, its top in the letter, cut
+  level underneath, two modules deep and as wide as the letter's stem at
+  every weight (`marks.cedilla`); 0.46 of the c's width at Black. Ç ç Ş ş
+  and their kin, the ¸ alone and the combining cedilla, one drawing from
+  Thin to Black.
+- The ogonek is a small hook on a third of its letter's gain
+  (`marks.HANG_GAIN`; the horn the same): 0.67 of the stem and 0.46 of
+  its letter's width at Black, for the families' 0.71 and 0.45. Its foot
+  is 15 units longer at the Regular and hangs lower as its notch would
+  close, as the cedilla's did. In the italic it stays six tenths of a
+  stem, the most it can be before it changes the letter it hangs from (at
+  seven tenths the Į's stem was drawn another way at the Regular); the ˛
+  alone was a whole stem there and matches now. Its join is finished with
+  its letter's ink under it, so nothing steps where it stops being the
+  letter's own stroke. (Finished with the letter stamped in a second time
+  under it, the italic ą lost the curve of its bowl's upper left corner
+  at Bold and ExtraBold; only the mark and the fills of its join are
+  stamped in, and a check holds the ą to the a above the baseline.)
+- The ring is an octagon, after Tomorrow's ("Do Tomorrow because it's
+  better"). It was a square on four bowl corners, whose diagonals are as
+  thick as the alphabet's and thicker than the ring's sides: the counter
+  came out a diamond and the outside all but square, a block with a
+  pinhole at Black. Eight sides of one thickness, a regular octagon
+  inside and out (`marks.ring`), at every weight; its size as before.
+- A mark stamped into a heavier letter keeps the corners it was finished
+  with (`Glyph.outline`, `finished`). A part drawn at other parameters
+  than its host's was finished a second time on the host's breaks, which
+  a level or 45-degree stroke passes unchanged; a corner cut where a
+  steep edge meets a level one (the tab's) was cut again, half as deep
+  again, and the ¸ changed by 1,700 square units between weights 400 and
+  401.
+- The dollar with stubs for a stem is drawn in its weight's strokes.
+  Found reading every symbol at four weights against other families
+  (thirty at their heaviest: the dollar's thickest stroke 0.86 to 1.45 of
+  the H's stem, Arris 0.80). From 690 the stem stops running through the
+  S, and the S that is left has two bays, not the four counters the stem
+  cut; the rules that keep a symbol's white went on measuring it against
+  the Regular's four, could not find them, and lightened it as far as
+  they go: bars of 106 units at Bold on an S of 133, 96 at Black on 160,
+  28% of its ink gone between 680 and 690. The variable font, which
+  carries the two forms as two glyphs, never did this, so the static
+  fonts and the variable font disagreed. A second form is now a glyph of
+  its own in the engine too (`draw._second_spec`), measured against its
+  own Regular by every rule: bars of 133 at Bold and 170 at Black, and
+  its body grows with the S's again (an advance of 713 units at Black
+  for 654). The ¢ with stubs gains a twentieth of its ink at Bold and
+  Black the same way. Arris Watch's and Arris Mono's are unchanged (Mono
+  keeps the stem through at every weight).
+- Signs that outgrew the capitals, from the same reading (the owner: "I
+  agree with it"):
+  - The equals and every sign stacked from bars. The white between the
+    bars was 1.6 bars at every weight, 272 units at Black: the = stood
+    from 0.07 to 0.93 of the cap height there (thirty families' heaviest
+    0.11 to 0.81 at the outside), the ≡ and the ≈ past the capitals both
+    ways. In 397 fonts read by their boldness the white stands 1.72 bars
+    at Arris Regular's, 0.86 at its Bold's, 0.62 at its Black's: past
+    the Regular it gives a third of what the stem gains
+    (`punct.eq_white`). The = stands 0.20 to 0.80 at Black.
+  - The tilde signs. Two of the ~ itself with the whole white between
+    their boxes stood 0.74 of the cap height tall at Regular and 1.15 at
+    Black. A stacked tilde rises six tenths of its stroke, two of them
+    stand as two bars do, a tilde over bars stays in the capitals, and
+    all stand in the operators' body (`operators.stack`): the ≈ 0.46 of
+    the cap height tall at Regular, 0.74 at Black.
+  - The signs of dots. ÷ ∶ ∷ ∴ ∵ were set by the ellipsis's step and grew
+    with their dots, from under the baseline to over the capitals at
+    Black; each is as tall as the plus (`operators.dot_reach`), the
+    division sign's dots smaller where the weight's would leave no white
+    beside the bar.
+  - The daggers. The bar went down the stem as the weight rose, to keep
+    two stems of stem over it, and crossed at 0.39 of the cap height at
+    Black: a plus, and the double dagger's bars one blob. It crosses at
+    0.71 to the Bold and 0.66 at Black (`punct.dagger_bar`), the body
+    0.69 to 0.82 of the H's (0.96 at Black).
+  - The radical. Its tick was two modules long and gone into its own
+    stroke from Bold: a slash under a bar. It starts at 0.45 of the
+    sign's height, at the steep 2:1 (368 fonts: 0.50); ∛ ∜ with it, their
+    tick as high as leaves the index room.
+- Small signs that grew with the stem, from the same reading. Of the
+  H's ink across, at Black, against twenty-one families' heaviest: the
+  “ 1.16 (theirs 0.77, 0.91 at the outside), the bullet 0.79 (0.51,
+  0.77), the brace 1.04 (0.56, 0.71), the bracket 0.66 (0.45, 0.54), the
+  multiplication sign 0.95 (0.78, 0.93). Past the Regular a quotation
+  mark's dot and the bullet take half of what the weight's would gain,
+  as an accent does (`punct.quote_dot`, `bullet_width`): “ ” „ ‘ ’ ‚ 0.84
+  and 0.36 at Black, the bullet 0.57. A bracket's arm stands out a
+  little over half a stem past its spine at least (it was a whole one):
+  0.51. The brace's arm stands out as the bracket's, its point is as
+  deep as the Regular's and half the stem's gain, and what of the point
+  would stand out further than the Regular's is cut off flat
+  (`punct._brace_cut`): 0.62, and the engine draws it a fifth lighter
+  at Black to keep its bays, as it does the parenthesis. The
+  multiplication sign's arms ran corner to corner of the plus's square,
+  root two as long as the plus's: 0.85 of the square across at every
+  weight (0.81 of the H). The comma and the semicolon are as they were.
+- Signs that outgrew their line or lost their form toward Black, from
+  the same reading:
+  - Struck arrows. A negation is held at the Regular's weight past it;
+    its reach past the shafts and the room the arrow makes for it are
+    now the Regular's too (`arrows.strike_at`). Of the H's advance at
+    Regular, Bold and Black: ↛ 1.53, 1.77, 1.98 (was 1.53, 2.05, 2.49),
+    ↮ 1.71, 2.00, 2.32 (2.27, 2.80), ⇏ 1.63, 1.71, 1.70 (1.89, 1.96);
+    the plain arrow goes 1.18, 1.18, 1.40.
+  - Wavy and zigzag arrows. The whites in a wave or a tooth, the wave's
+    flats and the lead to the head are measured in the Regular's stem
+    past it (`arrows.pattern_stem`): ↝ 1.30, 1.37, 1.39 (was 1.54,
+    1.64), ⇝ 1.52, 1.67, 1.73 (1.82, 1.94), ↭ 1.57, 1.63, 1.73 (1.80,
+    1.98).
+  - The interrobang's exclamation stroke is added to the question mark:
+    past the Regular it holds the Regular's weight, laid over
+    (`draw.lay_bar`), running on down into the question mark's own stem
+    and, where that stem has gone, standing on the end of the bowl's
+    return. At the weight's own it filled the
+    bowl's left half by Bold, the whole mark was lightened to 0.8 to
+    keep the counter that was left, and it read as a P.
+  - ⁝ ⁞ keep 0.55 of the Regular's stem between their dots past it, and
+    a dot smaller than the period's is broken in proportion
+    (`genpunct.column_dot`): four dots are 143 units at Bold and at
+    Black, where they were 119 and 98, and diamonds at Black.
+  - The Tironian et is a bar on the x-height turning down at its right
+    end into a stem to the descender, as in Inter, DejaVu and Noto. It
+    was a T: its bar ran on past the stem and the stem stopped on the
+    line.
+  - The watch, the keyboard, the alarm clock, the stopwatch, the timer
+    and the two erase keys are the Regular's drawing at every heavier
+    weight (`technical.picture`), as other families draw one picture for
+    every weight. Their whites are the least a drawing may have at the
+    Regular, so every unit a stroke gained past it went to the picture's
+    size: at Black the watch stood 1.68 of the cap height tall for 1.25,
+    the keyboard 1.48 for 0.90 and 2.36 of the H's advance for 1.62, the
+    alarm clock 1.52 for 0.95. The white rule reads a picture by the
+    strokes it is drawn in (`draw._heaviest_stroke`).
+  - ∬ ∭: a hook's end keeps the least white off the next integral's
+    stem (`operators.int_step`; the step left the beak's own half out:
+    22 units at Regular, 50 at Black), and the group is drawn as a stack
+    of parts, lighter toward Black. ∬ 1.43, 1.58, 1.63 of the H's
+    advance (was 1.38, 1.64, 1.82), ∭ 1.94, 2.18, 2.28 (1.83, 2.24,
+    2.52). In the monospaced cell they are as they were.
+- Currency signs and the ellipsis, from the same reading (of the H's
+  ink across, Regular to Black):
+  - The pound and the lira stand in the E's body
+    (`letterframe.letter_width`: a letter with one stem makes room for
+    its arms as they thicken). On the stem's growth alone they went 0.95
+    to 0.74, the narrowest of twenty-one families at Black. The tenge
+    and the tugrik stand in the T's (they went 1.21 to 0.87, wider than
+    any family at Regular and narrower than all but one at Black).
+  - A bar's reach past the letter it crosses is the Regular's past it
+    (`currency.bar_out`), as the bar itself is: at 0.9 of the weight's
+    own stem a bar 79 units thick stood 180 out at Black. ₦ 1.40 to 1.35
+    (was 1.68), ₴ 1.32 to 1.27 (1.59), ₩ 1.75 to 1.73 (2.06), ₽ 1.16 to
+    1.14 (1.30), ₣ 1.11 to 1.07 (1.24), € 1.17 to 1.10 (1.27), and ₱ ₭ ₳
+    with them. The yen's bars, which cross a stem with room either side,
+    keep the weight's own reach (`currency.bar_own`).
+  - The sheqel's four stems are a stack of parts, lighter toward Black,
+    a module and a half of white between them at every weight: 1.24,
+    1.40 at Bold, 1.44 at Black (was 1.71, 2.06; seven families'
+    heaviest 1.36, none over 1.55).
+  - The bitcoin and the colón stand in their letters' bodies and the
+    Turkish lira in a two-stem letter's (they widened with the stem for
+    strokes that are now the Regular's: 1.00 to 1.18). The cedi's stroke
+    runs through the middle of its counter, in the C's body and 0.7 of a
+    unit more for every unit of stem past the Regular, so it keeps the
+    least white off the C's stem and beaks at Black: 1.00 to 1.13 (was
+    1.27). The currency sign is larger: 0.96 to 0.88 (0.70 at Regular,
+    under all of nineteen families).
+  - The ellipsis's dots stand the Regular's white apart past it
+    (`punct.dot_step`): 0.95, 1.20 at Bold, 1.35 at Black (was 1.48,
+    1.78; twenty-one families' heaviest 1.29, none over 1.62), and ⋮ ⋯ ⋰
+    ⋱ with it (⋮ stood from a quarter of the cap height under the line
+    to a quarter over the capitals at Black).
+  - Arris Mono's ellipsis is drawn for its cell (`punct.ellipsis_dot`)
+    and stands on the baseline at every weight. Drawn with the period's
+    dots and fitted to the cell, it was drawn smaller about the math
+    axis from Medium up and left the line: 24 units over it at Medium,
+    59 at SemiBold, 89 at Bold (since 1.015).
+- The at sign is one line round an a, after Tektur's (the owner: "our at
+  symbol and the ligatures involved with that symbol should look a little
+  bit more like [Tektur's] at symbol"): from its foot, open at the right,
+  along the bottom, up the left side, over the top and down the right
+  side, which is the a's stem, the a's bowl hanging on it (`punct.at`).
+  Three uprights cross it where four did, in a body a module narrower,
+  and its foot stands a fifth of the cap height under the baseline, as
+  most families' does. It was an a in a ring open at its foot, on the
+  baseline. One drawing for every cut: Arris and its italic, Arris Mono
+  and Mono Narrow and their italics, and the `~@` ligature, whose tilde
+  runs over the sign's top and down into the a.
+- The index of ∛ and ∜ is drawn as the small figure it is and left as
+  drawn (`operators._root`), its stem at most 2.2 of its own module
+  (`ROOT_HEFT`). It was finished a second time on the radical's breaks,
+  which closed the step in the 4's diagonal: from Bold the diagonal ran
+  up past the stem's top a few units off it, and in the italic at Bold
+  and ExtraBold the outline crossed itself; and at Black its stem was 3.3
+  of its module, a smudge. Found by scanning every sign changed in this
+  round in all seven cuts (3,939 drawings; nothing else faulted).
+- Arris Mono Narrow, read through after these changes (the owner:
+  "sometimes it will break"). Its six fonts built and checked whole:
+  - Bold Italic's ą and Ą carried a scrap of the ogonek's join, three
+    units by four, as a contour of its own across their outline (new
+    with the ogonek's join: `marks.JOIN_FILL`).
+  - The forward slash of Arris Mono Italic and Mono Narrow Italic was
+    drawn 0.8 and 0.7 of its height with half and a third of its ink,
+    and the // /* */ of a comment with it (since 1.015): leaned again
+    by the slant it did not fit its cell and was drawn smaller until it
+    did. It leans as the upright's does (`punct.slash_lean`).
+  - A sign fitted into the cell was fitted to the narrow letters' body,
+    468 units, where Arris Mono fits it to 540: 143 glyphs of Mono
+    Narrow Italic stood smaller than their uprights (the ≤ 0.78 as tall
+    with 0.6 of its ink, the × 0.82 and 0.68). They are fitted to Arris
+    Mono's body (`symkit.sign_room`) and stand as they do in Arris Mono
+    Italic.
+- The cursive e's eye is the upright e's in little (the owner: "There's
+  gotta be a way to make the italic e black have a bigger hole"). Its bar
+  rises at 45 degrees and stands 1.4 of its own thickness tall on the
+  back, 182 units at Black where the upright's level bar is 104, and the
+  eye, the triangle over it, had 0.56 of the upright e's area at the
+  Regular, 0.39 at Bold and 0.24 at Black: 3,000 square units, 73 a side,
+  beside a stem of 200. It now keeps 0.55 of the upright's from the
+  Regular to Black (`italic_forms.EYE_OF_UPRIGHT`): 6,800 square units at
+  Black, 2.3 times what it was, and 8,800 at Bold for 6,200.
+  - The head reaches to the right, by 7 units at Medium, 21 at Bold and
+    37 at Black, and the bar, which runs into its corner, leaves the back
+    as much lower (`_e_strokes`, ``reach``). Both legs of the eye grow by
+    the reach; the top, the bar, the back and the foot are as thick as
+    they were, and the advance is what it was. The mouth gives what the
+    eye gains (the channel under the bar, 110 units across at Black, is
+    84), and the reach stops where the eye's inscribed circle would be as
+    wide as the channel.
+  - Nothing moves at the Regular or lighter, nor in Arris Mono Italic and
+    Mono Narrow Italic, whose e, in its cell, has an eye the upright's
+    size.
+  - The æ's eye is the e's at every weight. At Black it had shut, the
+    rule that keeps it read the smallest counter left, the a's bowl, and
+    stood by, and the eye came back at 1,650 square units by the topology
+    lock lightening the whole letter. An opening that holds a counter's
+    area now reads none where its own measure finds the counter shut
+    (`draw._opened`).
+  - Read every ten units of weight from 400 to 900, at the corners of
+    grade and watch, and in ℯ: a clean outline everywhere. Only Arris
+    Italic from Medium up moves, and in it only e, æ, ℯ, œ and what is
+    stamped from them (é ę ё …).
+  - A trial variable italic of e, æ and ℯ: the small faults of the
+    outline across the design space fall (2,888 places to 435 on the e,
+    3,936 to 1,526 on the æ) and the mean difference from the drawings
+    is what it was (worst 6.9 units for 7.3), but 19 places stand over 3
+    units where 4 did, and the æ has one point 68 units off its drawing
+    at ExtraBold, halfway along the watch axis: new, and not yet looked
+    into.
+- Every glyph along every cut, character by character (the owner: "go
+  through character by character and try different weights and different
+  combinations and try to fix them"). Each glyph drawn every 50 units of
+  weight from 100 to 900 upright and italic, at grade ±100 at Thin,
+  Regular, Bold and Black, and at the six weights of the four monospaced
+  cuts (175,000 drawings), and read for faults, pointed ends, pieces and
+  counters that come and go between neighbouring weights, outlines and
+  advances that jump from one weight to the next, and counters closing.
+  Fixed so far:
+  - The ogonek (ą ę į ų ǫ ǭ Ą Ę Į Ų Ǫ Ǭ): its joined fills, cut a hair
+    clear of the letter and the hook, lay beside them and met them at a
+    point, a ring of their own, at every weight in ę ǫ Ę Ų and from Medium
+    in į ą ų Ą Į; at 450 one was a diamond off the stem's side. They are
+    grown back over the hair, and only a fill at the join is kept (above
+    it was the letter finished again, a sliver up the Į's whole stem at
+    600, a wedge that leaned the Ą's right leg at Bold).
+  - The brace's point is cut, just past the Regular, from where the
+    Regular's stands, its tip cut back by its break, an allowance that
+    fades out over half a stem's gain (`punct._brace_cut`): read from the
+    point's full reach at once, the cut began a unit past the Regular at
+    nothing, the tip stood 20 units further out and near sharp, and the
+    brace was a fifth of a stem wider at 401 than at 400. At Black it is
+    as wide as it was.
+  - The Q's tail keeps half a break of white from the counter's left wall:
+    from 850 it ran on to the wall and shut off a pinhole under it.
+  - ↵ and ⏎ keep their shaft long enough for the head's barb to stand
+    half a stem from the leg (`arrows.LArrow`): drawn to the letter's
+    width alone, the head grew into the leg at 850 and Black.
+  - ϰ keeps its curls at every weight: drawn in one stroke its outline
+    crossed itself at the diagonal's foot from 840, and the letter fell
+    back to flats without them, 701 units wide at 830 and 517 at 840. Where
+    the one stroke fails it is drawn in three, the same path.
+  - ť's apostrophe reads the t's stem from its crossbar's top: from a bar's
+    thickness over it, the stem stood under the line from 850 and was read
+    as none, then at 890 as a sliver of its top, and the apostrophe jumped
+    49 units right.
+  - The digraphs (Ǆ ǅ ǆ Ǉ ǈ ǉ Ǌ ǋ ǌ Ǳ ǲ ǳ) set each letter at its own
+    width, centred in its ungraded body, as a letter alone is set at a
+    grade: drawn to the ungraded body with the grade's strokes, the l's and
+    the j's feet came to a point at grade -100, at every weight. Their
+    second letter's place is measured slanted in the italic (the slant
+    carries the j's hook back under the l's foot: ǉ ǌ met from 850, with
+    half a break more for the corners the italic curves) and against the
+    heaviest grade's strokes as well as the ungraded ones, so grade still
+    moves nothing and the white holds at grade 100.
+  - ↈ and ↂ in the monospaced cuts: their stems and whites want more
+    than the cell (ↈ's seven stems and six whites 1176 units at the
+    Regular, the cell 540), and at the weight's own stems the whites came
+    to nothing: ↈ was a block from Arris Mono Regular, ↂ from SemiBold. In
+    a body that narrow stems, whites, bars and the corners' legs are drawn
+    lighter together, in proportion (`numberforms._rings`); Arris and Arris
+    Italic, where the body is as wide as they take, draw them as they were.
+  - Ҝ ҝ: the short stem through the arm is a stroke added to the K, held
+    at the Regular and laid over it as every added stroke is
+    (`draw.lay_bar`), and crosses the arm where arm and leg have parted
+    enough for it to show a stem and a half of itself under the arm, its
+    foot's near corner half its thickness clear of the leg, as much above,
+    up to the cap
+    height (`cyrillic_ext.Kavertical`). Two modules from K's stem at the
+    weight's own thickness, it stood where arm and leg meet: from SemiBold
+    a bump on the arm with no white under it, the Ҝ a block at Black and
+    the ҝ's stem gone; in Arris Mono a stub on the ҝ's arm at Light and
+    Regular. The ҝ from Bold has too little x-height for its arm and a stem
+    across it: the stem keeps the white under it and shows above the arm
+    only what the x-height leaves.
+  - A point where the outline runs back on itself goes with the collinear
+    ones before the corners are broken (`geom._ring_rule`): where two edges
+    fell exactly on one line the union left a spike of no width along it,
+    at one weight and not a tenth either side. The italic ρ ϱ ₯ had one at
+    Medium (500), k ķ ǩ at Bold with grade -100, ӌ at 850, its advance 8
+    units short for it.
+  - The jog closer, moving an edge onto its neighbour's line, could leave a
+    wall under a unit between two cuts; the polish now closes those as it
+    closes any micro-flat (`geom._unjogged`): the italic Ң Ҷ Ԥ Ҭ Ӌ where the
+    descender turns into its tick at Black, ε and έ at 850, the small italic
+    3 of ¾ ⅓ ⅔ and the superiors at SemiBold, ↈ ₢ ⎶ in Arris Mono Italic.
+  - Έ Ή Ί Ύ in the italic: the italic rounds the capital's top left corner
+    out toward its tonos, the more the heavier; they kept 9 units of white
+    at the Regular and met from SemiBold. Half a break more between them
+    keeps 20 at every weight, the upright's 13 to 19 (`greek._italic_room`).
+  - Đ Ð: the bar stops the least white short of the bowl's inside
+    (`extra_latin.Dcroat`): in Arris Mono Narrow at Bold, the D drawn
+    narrow for its cell, it ran on to the bowl and cut the counter in two;
+    at Black in Arris it came 39 units nearer the bowl than that.
+  - ℞ (the owner: "the way that it crosses the bottom is not legible at
+    deep black"; "the R will retain its stem, while the cross to make the
+    X, that part should be thinned out ... move the cross up on the stem
+    as it gets bolder"): the R keeps its leg at the weight's own thickness;
+    the stroke across it is held at the Regular and laid over it, as every
+    stroke added to a letter is, and the crossing climbs the leg as the leg
+    grows past the Regular's (`letterlike.RX_CLIMB`), toward the baseline.
+    Crossed at the Regular's place by a stroke as heavy as the leg, the x
+    filled in from SemiBold and was a boot under the R from ExtraBold.
+    Light and Regular are as they were.
+  - The question mark kept 0.8 of the weight's stem of white over its dot
+    at every weight, 160 units at Black (`punct.dot_gap`), where faces of
+    this kind keep a third of a stem (Tomorrow, Barlow, Kanit, Exo 2,
+    Oxanium, Inter): the dot came up into the bowl, its stem was gone from
+    750, the stroke turned down into its own end as a tail to the right,
+    and at Black it was another drawing again (❔ ❓ ‽ ¿ ⁇ ⁈ ⁉ with it).
+    The white over a dot is now the Regular's past the Regular, never under
+    0.55 of a stem (`punct.DOT_WHITE`: a tenth over the half stroke the
+    white rule reads as white, under which the exclamation mark had none
+    and was lightened); and the bowl's return rises where the dot comes up
+    under it, so a quarter of a stem of the stem shows below it
+    (`punct.question_return`), its bars giving way above as the S's do for
+    its bays (`figures.bay_stack`, which now reads where a rule of the
+    letter's own sets the lower bar). The italic, whose beak hangs two fifths
+    deeper, keeps its stem to ExtraBold and at Black ends the stroke flush
+    with the return. ! and ¡ keep a tighter gap from Bold (110 units at
+    Black for 160). Where a bar leads into the ? in place of its beak (the
+    `#?` and `??` ligatures, `punct.question_lead`), the bowl keeps the
+    beak's white under the bar's underside, the return coming down for it
+    toward the dot; the `??`'s bar comes in where the second ?'s own beak
+    ends (it came in 30 to 86 units lower, measured on bars the ? had
+    thinned). The programming ligatures are Arris Mono's alone, which goes
+    to Bold, and there both keep their bowls open; drawn in Arris's ladder
+    for the audit they shut in a pinch in the italic from Bold, and at
+    ExtraBold and Black `#?` has no room under the # bar for the bowl's
+    white at all.
+  - ℚ is the Q drawn with its inner stroke (`letterlike.dsQ`), not the Q
+    stamped wider: there its counter ran on under the inner stroke, the
+    tail was measured on that and cut back from the wrong wall, and from
+    850 its end met the inner stroke and shut a pinhole in the italic; in
+    Arris Mono from Bold the two crossed. The tail is now the Q's own,
+    measured on the counter the inner stroke leaves, the same as the Q's
+    in Arris. In the monospaced cell, where ℚ is no wider than the Q, the
+    inner stroke thins toward the floor before the tail gives way (the
+    tail is a stub at Mono Bold, as the Q's own is at Black).
+  - Ҟ in Arris Mono Narrow Italic: the bar through the stem rises to the
+    stem's top and the arm, in the narrow cell, still comes in under it.
+    Its end met the arm in a pinch from 500 and crossed it at 550; it now
+    stops the least white short of the arm (a module past the stem at the
+    least), and where that is not clean either (the italic at Black, the
+    arm's root at the bar) runs on into the arm as it did.
+  - ⋰ ⋱ in a cell narrower than the step across (Arris Mono and Mono
+    Narrow) step across as the cell leaves and up by the dots' own step
+    (`operators._diagonal_dots`): stepped up as little as across, their
+    dots ran into one in Arris Mono Narrow Italic from 650 (143 units each
+    way for dots 182 across).
+  - δ in the italic: the italic rounds the bowl's top right corner from
+    where its chamfer leaves the top, and at Thin on the heavy grade (85
+    to 120) the round took the short flat beside the neck's foot and the
+    neck's edge with it, and the outline cut across the counter. The neck
+    is settled a few hundredths more upright where that happens
+    (`Glyph.settle` on the italic outline); everywhere else it is as it was.
+  - ₮'s pair of strokes is settled a unit or two down where the lower
+    one's underside, cut flat by the baseline, left an edge of half a unit
+    beside the stem's foot in the italic (Black on the heavy grade).
+  - ∤ and ∦ are struck by the not-equal sign's stroke turned a quarter,
+    rising one for two across (`operators.negate_across`): it meets the
+    bars at the angle the not-equal sign's meets its own, and reaches past
+    the outer bars as far as an arrow's negation reaches past its shafts.
+    Struck at 2:1 as the not-equal sign is, ∦'s stroke ended inside both
+    bars at every weight and the sign read as a Cyrillic И; every family
+    that has them (Noto Sans Math, DejaVu Sans, FreeSans) crosses both bars
+    at a lower angle. In a cell narrower than the sign the stroke's reach
+    gives way before the white between the bars does; Arris Mono Italic
+    draws ∦ a tenth smaller to keep it in its cell, as it does any sign
+    whose ink would lean out. ∦ grows to give the stroke its room (731
+    units of advance for 653 at Medium, 872 for 681 at 850); ∤ keeps its
+    advance.
+  - ⇿'s run between its two open heads is counted clear of the heads'
+    backs (`arrows.Spec.depth`): counted from the middle of each back, the
+    white between the backs was half a stem from 550 (65 units at Black
+    for a stem of 200, 35 in Arris Mono Narrow) and the shaft's two joins
+    met in a pinch. It is 1.2 to 1.5 stems now in every cut, and the
+    advance grows with it, smoothly, to 1,327 units at Black for 1,038.
+    ⇽ ⇾ are as they were.
+  - ⌬ is the benzene ring as a chemistry textbook draws it, Kekulé's
+    (`technical.benzene`): a regular hexagon standing on a point with a
+    bond inside along every other side, as Unicode draws BENZENE RING and
+    Noto Sans Math and Symbols and FreeMono do. It is a diagram, not a
+    letter: one outline in every font, at every weight, grade and watch,
+    upright in the italics and small enough for Mono's cell, so nothing in
+    it moves (a test holds every cut to the Regular's to under a unit).
+    Drawn before with a ring inside (that is ⏣, which Arris does not have),
+    at each weight's strokes and 2:1 slopes, it leaned with the italic and
+    its ring was squeezed in the monospaced cells to under its own stroke:
+    in Arris Mono Narrow Italic the counter shut at 450 and was a dot at
+    500.
+  - ⌛ ⏳ in a cell narrower than the glass (Arris Mono and Mono Narrow)
+    keep its height and run their sides steeper, to 4:1
+    (`technical._hourglass`); where even that does not fit, the neck's
+    white narrows (to half), then the strokes lighten together (to 0.75),
+    and only past that do the sides shorten. Kept at 2:1 and shortened,
+    the sides were a third of the glass's height in Arris Mono Narrow at
+    Bold, the white a third of the way up as narrow as at the waist, and
+    the hourglass read as an I between two bars; ⏳'s sand was gone there
+    from 600 and in both italic cells from Bold. Arris is as it was.
+  - ‰ ‱: the rings after the % are drawn at the measures the % was
+    drawn with (`punct.pct_rings_after`). In the monospaced cell the % is
+    fitted to its own cell, its rings drawn smaller, and the rings beside
+    it, drawn at the sign's own measures, stood a third larger than the
+    %'s (Arris Mono Italic at every weight, Mono Narrow from 500).
+  - ₢ is a C with a small r standing on its bottom bar
+    (`currency.cruzeiro`). The r is one drawing in one place in each cut
+    from the Regular to Black, at the Regular's strokes, its stem run down
+    into the bar and a white all round it elsewhere: placed for the cut's
+    heaviest weight and grade, it keeps 59 units off the C at Black in
+    Arris and 36 in its italic, whose upper beak hangs lower. Drawn before
+    at each weight's strokes against the C's mouth, the C's lower beak ran
+    into the r's stem from Bold and at Black the two were one shape; in the
+    italic the r took the beak's place. The C, the r and its stem are each
+    finished on their own and only joined: finished again together, the r
+    took the C's breaks, its arm met its stem in a neck of 12 units, and
+    in the italic it changed with the weight.
+  - ≰ ≱ are struck at 3:1 (`operators._le_strike`, as DejaVu strikes
+    them): at the not-equal sign's 2:1 through a sign twice as tall as it
+    is wide the stroke ran corner to corner, and its top end met the end
+    of ≰'s upper arm, which stood out past it in a notch.
+  - ď ľ ť Ľ: the apostrophe is placed by its ink and keeps the least
+    white off its letter (its tail reaches past the measure that placed
+    it); in Arris Mono it ran into the stem from Regular on. Where the cell
+    has no room for that (ď at Mono Bold Italic) the white closes up with
+    the rest of the squeeze (`marks._squeeze`) as a stack of marks does,
+    and the ink stays in the cell.
+  - ₮'s two strokes cross the stem rising one for two (the slope ∤ ∦ are
+    struck at), each reaching past it alike on both sides and centred
+    between the bar and the baseline, held at the Regular. At 45 degrees,
+    from 800 the pair stood so low that the lower stroke's left arm went
+    under the baseline and the left of the pair read as one arm.
+    ₺, drawn with the same pair of strokes, reaches past its stem alike at
+    Bold and Black too, where its left arms had gone to stubs.
+  - ℚ in Arris Mono: the Q's left side is split in two lines with a slit
+    between them, in the room the stem takes (`letterlike.dsQ`). The inner
+    stroke standing in the counter, as in Arris, left the tail a stub from
+    Arris Mono Medium and none in Mono Narrow at Bold.
+  - ‰ ‱ in Arris Mono: the % inside them is drawn at their own measures
+    and never fitted to a cell of its own (`punct.percent_part`). They are
+    fitted to the cell as a whole; drawn as a glyph, the % inside was
+    fitted again, at some of the measures the fit tried and not at others,
+    and Arris Mono Narrow's ‰ stood a ninth taller at 500 than at 490 (‱ a
+    fifth wider). Their % is now the Mono %, its rings running into the
+    slash, as the % beside them.
+  - The rule that lightens a sign to keep its whites (`draw.white_features`)
+    acts from the cut's Regular on, as it says (Arris Mono Narrow's is its
+    own, `draw._lighter_than_regular`): at the lighter weights, where no
+    white closes, a count that fell short (a white that came apart, a
+    pinch) lightened the sign as far as the rule goes and let go at the next
+    weight: ↯ at 0.8 to 362 and whole from 364, ⌦ ⌫ to 372, ⇜ ⇝ to 176.
+  - Spacing: a piece of ink that comes into the spacing zone from
+    outside (a tail's tip over the baseline, one stroke with a larger
+    piece there; or a piece of its own that only dips into the zone, the
+    ŉ's apostrophe under the x-height) sets the body's edge in the measure
+    it is tall, wholly from a module and a half (`spacing._edges`,
+    `font.HANG`). Counted whole at a unit's height, it moved the edge onto
+    itself at the weight where it first came into the zone: the italic
+    ȷ's advance jumped 51 units between 350 and 360, the ℘'s 44 between
+    230 and 240, the ŉ's 60 between 360 and 370. An arm that reaches into
+    the zone (the ℞'s cross, a module and a half and more) sets it as it
+    did. The italic j's tail hangs under the letter before it at the
+    Regular as it did at the light weights (56 units tighter at 400).
+- The outline faults the end scan named, and their kin (the owner:
+  "Start fixing").
+  - The ҏ's tick (and Ҏ's) ended in a point at Bold and ExtraBold: a
+    diagonal's end cut between two level edges, 12 units of face at Bold.
+    The tick now stops two breaks short of where its diagonal meets the
+    level (`cyrillic_ext.TICK_END`) and keeps the least length that is
+    still a tick (`_tick_least`), so its end is flat and fully cut. The
+    counters are what they were.
+  - A sign inside another keeps its own shape (`operators.INNER_ARM`):
+    an arm reaches at least 1.5 of its thickness past the centre, and the
+    inner sign is drawn lighter, to 0.6 of the stem, before it gives that
+    up. ⊜'s bars were dots, 86 units long for 81 thick at the Regular,
+    and in the monospaced cuts from SemiBold a sliver (4 units in Arris
+    Mono Italic): now 187 for 62 at the Regular and 143 to 194 in the
+    monospaced cuts. ⊛'s star filled 0.73 of its box, a blot: now 0.55,
+    white between its spokes at every weight. ⊎'s plus was a square or a
+    lozenge from Bold and in Mono at every weight: it has its four inside
+    corners (in the monospaced cuts the plus sign itself, drawn small,
+    `_small_plus_in_cup`).
+  - The erase keys' x (⌦ ⌫) in the monospaced cuts was a unit across at
+    every weight: the key, drawn to the cell's width, kept its point, and
+    the x was kept to the square part left over, 0.9 units of reach for
+    125 in Arris. Drawn at its weight it was a blot (a lozenge from
+    SemiBold in Arris Mono Italic), at the Regular a hairline cross. Where
+    the square part is short the x now moves toward the point, into the
+    white the point holds (the arm that runs into it ends square to its
+    wall and keeps the gap from it): a reach of 66 in Arris Mono, 52 in
+    Mono Narrow, and its stroke no heavier than leaves each arm 1.5 of
+    its thickness. Arris and Arris Italic draw the keys as they were.
+  - ⎋ is a picture (`technical.picture`), the Regular's drawing at every
+    heavier weight as the clocks and keys are. Drawn at the weight, its
+    arrowhead outgrew the ring (barbs of 200 on a ring of 306 at the
+    Regular, 322 on 331 at Black), the ring opened round it, and from Bold
+    it was a J beside an arrow.
+  - In the monospaced cuts a picture is held at the Regular before it is
+    fitted to the cell, not after (`technical.pictured`,
+    `symkit.mono_fitted`): fitted from the weight's condensed parameters
+    it no longer knew its Regular, and ⎋ was drawn at a stem of 114 in
+    Arris Mono SemiBold for 90, 124 at Bold; the watch 126 for 86 in
+    Mono Italic Bold. Now each stands at its Regular's stem in proportion
+    to the cell's module (⏱ in Arris Mono Italic from SemiBold a little
+    lighter still, where the topology lock keeps its whites).
+  - The keyboard (⌨) in a narrow cell draws its keys smaller, and its
+    frame's corners kept their full leg: the corner key ran into the
+    frame's inside chamfer in Arris Mono Italic and Mono Narrow Italic at
+    every weight, and both top corner keys in Arris Mono and Mono Narrow
+    at Light (11 units of white in Arris Mono where the keys keep 25
+    between them). Where the keys are made smaller the corners now leave
+    the corner keys their gap; Arris draws it as it did.
+  - A sign drawn smaller to fit its cell is drawn smaller toward the
+    baseline when it stands on it (`symkit._on_the_line`), not about the
+    axis: ⁈ and ⁉ stood 8 to 51 units off the line in the monospaced cuts
+    from SemiBold, ⅀ 74 in Arris Mono Italic Bold. They stand on it, and
+    so do the others drawn smaller there: the fractions (½ ¾ ⅛ … ↉), ‰ ‱
+    № ℀ ℁ ℅ ℆ ⅍ √ ∛ ∜ ⁇ ⁒ ⁙ ⁛ ↯ ₠ ₪.
+  - The polish that closes slivers left by unions and clips closed the
+    face of a stroke's flat end too, where the end was thinner than the
+    break it was cut with: the corner rule left cut, face, cut, a third
+    each, and the face, under a quarter of the break, went, two cuts and
+    a point. It leaves a flat end's face (`geom._end_face`): the spokes
+    of the star in ⊛ in Arris Mono Narrow Italic Bold.
+  - `tools/end_scan.py` names nothing apart now (`KNOWN` is empty).
+- No bar ends in an arrowhead (the owner, of the 3's top bar in Arris
+  Italic Black: "Sharp pointy 3 top? I never want to see this shape in
+  our typefaces"). The corner rule cut both corners of a stroke's flat
+  end by the weight's full break, each taking up to half of the end: an
+  end thinner than two breaks came to a point, and one a little thicker
+  kept a face of a few units between two full cuts, which reads the
+  same. The italic thins the 3's bars to 104 units at Black, on a break
+  of 50. Now the two cuts of a flat end take a third of it each at most
+  (`geom._share`, `END_CUT`), and an end with no room for two breaks and
+  a face is an even three: cut, face, cut.
+  - With the 3 went the same point on the number sign's eight ends (from
+    Bold), the question mark's hook (ExtraBold), the brace's nib, the
+    Cyrillic з's middle arm and ʒ's, Æ's middle bar at Black, the
+    double-struck ℕ ℙ ℝ ⅆ ⅈ ⅉ at every weight, and the ogonek's tab in
+    the italic: of 2,432 glyphs, 6 of the upright and 20 of the italic at
+    Regular, 20 and 20 at Bold, 56 and 86 at Black. And the short face (under half its cuts'
+    leg) on the asterisk's arms and on the lowercase bars at Black, the
+    z's, the t's and the f's, 18 units between two cuts of 50: now 39,
+    39 and 39: 4 glyphs and 6 at Regular, 13 and 24 at Bold, 138 and 308
+    at Black.
+  - Nothing else moves in the letters and figures below ExtraBold. From
+    there a flat end of the capitals' and figures' bars loses a unit of
+    its cuts (50, 47, 50 on the E's arm: now 49 each).
+  - Three ends keep what their owner gave them and ask for it
+    (`lower.POINTED`, `Glyph.end_cut`): the l's foot and the j's, two
+    cuts and the point between them, the k's leg's landing ("The L
+    should follow the form that K sets"), and the r's arm ("don't fix
+    the R"). A hook's beak (a c e s g) is not an end of this kind: a bowl
+    corner's chamfer and one cut, the hook's own shape. Nor are the
+    italic's entry strokes.
+  - `topology.stroke_ends` reads a drawing for the shape and
+    `tools/end_scan.py` reads every glyph of every cut at its ladder of
+    weights: 2,432 glyphs at 47 places, 114,304 drawings, and no flat end
+    comes to a point or keeps a face under half its cuts. Six signs it
+    named apart were older faults of another kind, redrawn in the next
+    entry: the ҏ's tick at Bold and ExtraBold, and ⊜ ⊎ ⎋ ⌦ ⌫ in the
+    monospaced cuts.
+  - A trial variable font of the changed glyphs (3 z # ? * { з), upright
+    and italic: nothing folds that did not; the italic brace stands up
+    to 7 units off its drawing at Black with grade (the question mark's
+    fold of 8 there has gone; the italic z's spike at 875 with grade and
+    watch at 90 is older and stands).
+  - The figures' nearest approach may be half a unit under 0.3 of a
+    standard gap: the 2 by the 7 at Black is 0.2997 (0.304), their bars'
+    ends a little fuller.
+- The ≠ stands on the equals' bars. The rule that lightens a sign to
+  keep its whites counted the wedges between the ≠'s slash and its bars,
+  outside the bars: six whites at the Regular for the two a reader sees.
+  Four went from Medium, and from SemiBold the whole sign was drawn 0.8
+  of its weight without getting one back, its bars thinner than the
+  equals' beside it (the owner, of Bold: it "looks like crap"). A sign's
+  whites are the ones inside the outline of what its slash is laid over
+  (`draw.white_features`): the ≠ keeps its two to Black on the equals'
+  own bars, its slash the Regular's weight as every laid stroke is.
+- Past the Regular the letters give white to their stems, as the letters
+  of other families do. Arris got bolder outward: almost every unit a stem
+  gained went onto the letter's width. Read at one boldness and one
+  x-height against 60 grotesque, geometric and squared families
+  (`tools/width_survey.py`), its n's counter was 20% narrower at Black
+  than at Regular where theirs is 38%, and a line of lowercase 6% longer
+  at Bold and 11% at Black for their 2.4% and 3.9% (the owner: "this gets
+  far too bold widthwise"). At Regular it sets as they do (a letter of a
+  line 0.92 of the x-height, their median 0.92), so nothing changes there
+  or below. Past it a lowercase letter's white now gives 0.59 of a module
+  for each watch stem its stem gains, a capital's, a figure's and a
+  sign's 0.45 (`instances.white_given`, `letterframe.white_scale`): at
+  Black the n's counter is 38% narrower and the H's 29%, a line of
+  lowercase 4.5% longer and at Bold 2.5%, a line of capitals 3.7% and
+  2.2% (theirs 4.4% and 2.5%). Tabular figures widen three
+  quarters of a unit for each unit of stem (a unit and a half before:
+  `instances.FIG_GIVEN`; the zero's counter 31% narrower at Black for
+  19%). The italic gives as the upright does. The watch's own drawing
+  (WTCH 100) keeps its modules and Arris Mono its cell: neither changes.
+  The mathematical operators, the arrows and the technical signs keep
+  their widths (`draw.white_of`): bars a set white apart and strokes at
+  45 degrees have no counter to give, and narrowed with the letters ⊦ lost
+  its stem to a wedge at Black, ⊫ its two stems to a slab, and the feet of
+  ≎ ran out past its bars. Punctuation and currency give as the capitals
+  do, but for the signs that are bars alone (the note on them, below).
+
+  What a narrower body could not hold as it was is kept by rule. A
+  one-stem letter (E F K L T Z, k z) gives the share of its body the H or
+  the n gives of its own, not the white of its modules
+  (`letterframe.narrowed`): its open side holds an arm or a diagonal, and
+  with all of it giving the k and the z stood at 0.90 of their share at
+  Black. The y, whose foot is measured on the m's arch, is measured in the
+  bodies before they gave and gives as the n does. The f and the t give
+  on the arm's side only, and no more than leaves the arm 1.1 stems past
+  the stem (`lower.narrow_frame`, `lower.narrow_width`; their crossing is
+  the next point). The j keeps a break of white in its hook. The kink where an arch or a bowl leaves its
+  stem is what it was, to ExtraBold (the owner: "preserving the kink ...
+  at later weights to a small degree so that it matches what we had"):
+  where no step is drawn under a shoulder its diagonal lies inside the
+  arch and needs none of the counter's room (`lower.shoulder`), and
+  without that the n was square from 725. The Q's tail is held to the
+  bowl's own width where that is less than its share of the stem, and the
+  cursive e's eye to as much less as its counter has given
+  (`Opening.across`): held to whites the narrower letters cannot have,
+  the Q's bars thinned to 0.7 of the O's at Black and the e's top and bar
+  to 0.70 (now none, and 0.82; the e's were 0.92). The florin and the ϰ
+  keep their bodies (`letterframe.ungiving`): the florin's crossbar and
+  hook ran into a wedge at Black as the f's did, and the ϰ lost its curls.
+  The cursive's one-stem letters (j l r k) give the n's share as the
+  upright's do, with no arm's room added (`italic_forms.letter_width`):
+  with all their white giving they stood a seventh narrower at Black,
+  where the n is a twelfth. The cursive j gives no more than leaves a
+  break of white inside its hook, or what its own body has there
+  (`italic_forms.j_width`): with the whole share given the hook held 4
+  units of white at Black for 37, a block under the line. The cursive f,
+  a stem and a crossbar, keeps
+  its body: what it gave came off the bar's two ends, 35 units each at
+  Black for 72, and the `ss10` ligatures fi and fj, which run that bar on
+  into the next letter, took the stem behind so short a bar for the bar
+  itself and came out one black block at ExtraBold and Black
+  (`ligatures._bar_on` now finds the bar however short its end is). The
+  turned f (ⅎ) takes the body of the f it turns (`letterlike._turned`,
+  `draw.drawn_spec`): in the italic it turned the cursive f in the
+  upright f's body, which from 650 is no wider than at Regular, and the
+  cursive's two hooks ended in spurs.
+  Every glyph was compared with its drawing before the narrowing, at
+  eighteen places of the family (the Regular and lighter, Arris Mono and
+  the watch's own drawing unchanged, to the last point, but for the dot
+  below and the italic's turned f).
+- The dot in a lunate sigma (ͼ ͽ Ͼ Ͽ) is no speck. It stood half a stem
+  clear of the bowl's sides, which the counter of a heavy c has not got:
+  37 units at Black for a stem of 175, and in the counters the letters
+  have now a speck on the stroke's floor from ExtraBold. It keeps half a
+  stem clear, or a quarter of the counter where that is less
+  (`greek_ext._lunate`): 82 units at Black, and from SemiBold up in every
+  cut where half a stem did not fit (Mono Italic and Mono Narrow at Bold,
+  the watch's own drawing at Black).
+- The f and the t keep the crossing they have at 650, to Black. The
+  crossbar's stub left of the stem is a quarter of the letter's white,
+  about 70 units at every weight, while the cuts on it double from Regular
+  to Black: at SemiBold its end still has a face between its two cuts, at
+  Bold they met in a point, and from ExtraBold the stub was one plane with
+  the cut of the t's top and the f's hook, a wedge on the stem's side (the
+  owner: "it just turns into this gnarled, ugly thing when it comes to the
+  way that everything joins ... especially for smaller ones, it just looks
+  like a big old knot"). And the crossbar ended half a stem short of the
+  arm, 45 units at Regular and 88 at Black ("they don't keep track of the
+  same length"). Shown the stub going into the stem between SemiBold and
+  Bold with the crossbar coming out to the arm's end as it went, the owner
+  chose the letter half way: "Look at how it is currently at weight 650
+  and make it the exact same shape throughout all the way to 900. It needs
+  to not move one bit. It needs to be exactly the same for both the
+  stems." To SemiBold the two letters are as they were. From 650 the stub
+  is a break and a seventeenth deep (two legs of its crotch's fill, at
+  Black), a face between two cuts that take its whole depth, the same
+  points on the f and on the t, at every weight (`lower.stub`,
+  `lower.narrow_stub`). The crossbar ends level with the arm and the foot
+  from 650 (`lower.bar_short`): at 650 it stood an edge break short of
+  them, and held so to Black it read as short ("they don't seem to be
+  sticking out in level with either the foot or the ascender,
+  respectively, with the cross"). The stem stands that much nearer the body's left
+  edge and the body is as much narrower: 356 units at 650 for 381 at
+  SemiBold, 413 at Black. The rule reads the font's weight past its
+  Regular (`Params.past`), so the watch's own drawing keeps its f and t.
+- The l lands as the k's leg does. Its cut ended upright, an edge break
+  of face over its own break; the k's leg, at the same angle and the same
+  thickness, ends in a flat on the baseline and one break up to a point
+  (the owner: "the L kind of descends and it lands ... the K has descender
+  at the same angle, but the way that it hits it is kind of different, the
+  way that the chamfering looks. The L should follow the form that K
+  sets"). The l's end is now the leg's at every weight, Thin to Black: the
+  same flat on the line, to a tenth of a unit, and the same point. Its
+  body is what it was; the cut stands a break lower on the stem.
+- The r grows against the n as it gets bolder. At six ninths of the H's
+  width for every weight (below) its arm shrank as the stem grew, and
+  from Bold nothing of it was left but the end of the shoulder's diagonal
+  on the stem's corner (the owner: "a little tiny clown nose"). Other
+  families' r gains on their n with weight: its advance 0.65 of the n's
+  at Regular and 0.69 at Black across the 60. Shown the r at eight
+  ninths, seven, six growing to eight, six growing to seven and six, the
+  owner chose six to the Regular growing to seven at Black
+  (`lower.r_width`): its advance 0.75 of the n's at Regular, 0.78 at Bold
+  and 0.80 at Black. It grows by the font's weight past its Regular
+  (`Params.past`): the watch's own drawing keeps six ninths.
+- Inside corners stop growing at the Regular. One chord cut every corner
+  that sticks out and filled every corner that points in, a quarter of
+  the stem long. A cut takes ink off the outside of a letter; a fill puts
+  it into a counter or a join, and on one leg the fills grew as fast as
+  the stems while the whites they stand in shrank: from Bold the insides
+  of the letters clogged (the owner: "the interior ... is getting really
+  fat because we chamfer the bits at a certain level and it just doesn't
+  look right"). Other families tighten their joins as they get bolder:
+  across 37 measured, the widest spot at a join is 1.18 stems at Regular
+  and 1.10 at Black, where Arris stood at 1.38 at every weight. A fill
+  now has the weight's own leg up to the Regular and the Regular's from
+  there to Black (`draw.fill_leg`, 22.5 units where Black's cut is 44);
+  the cuts grow as they did. A bowl's inside chamfer is what its strokes
+  leave of it, down to the same leg: from ExtraBold it was held at an edge
+  break (the O's 44 units for 32 at Black), the stroke thicker round the
+  corner than along its sides. Nothing changes at Regular or lighter in
+  the upright. At Black the widest spot in the upright's b d g p q y goes
+  from 1.32 stems to 1.23, the a's and the e's from 1.28 to 1.18. The
+  watch's own drawing (WTCH 100) keeps one leg for every corner.
+- The italic fills a crotch one leg, as the upright does. Where a
+  diagonal meets a stem the italic kept the pixel rule's fill, two legs
+  along the stem: twice the upright's ink where a diagonal already lies
+  on a stem, 88 units up each side of the cursive e's eye at Black, whose
+  sides are 178. This one changes the italic at every weight, a little:
+  the notches over its branches (n h m r), its k, v, w, y and z and the
+  e's eye end in a smaller cut.
+- A shoulder keeps its neck. An arch's or an arm's diagonal started an
+  edge break into its stem, and the fill in the crotch over it was the
+  rest of the join: with a smaller fill the neck, where the stroke is
+  thinnest, would have lost that ink (the cursive r's arm at Black, 0.54
+  of a stem across where it leaves the stem, went to 0.37 in the making).
+  The diagonal starts deeper by what the fill is short
+  (`lower.shoulder_enter`): the notch stands on the stem where it always
+  did, and ends in the small cut. The cursive r's neck is 0.71 of a stem
+  at Regular (0.60) and 0.73 at Black (0.54); where a shoulder goes
+  square, and at which weight, is as it was, and the step under an arch
+  keeps a flat the outline holds (`lower.STEP_KEPT`: the cursive m's
+  arches, which rise half as far as the n's, would have lost theirs).
+- The cursive e gives only its top and its bar for its eye. Its eye was
+  kept open by thinning every horizontal of the letter, the foot with the
+  top, and then the bar: from SemiBold the foot was 0.70 of every other
+  letter's (104 units beside the a's and the o's 149 at Black), the top
+  fell from 98 units at 550 to 73 at 600 and the bar from 121 at Bold to
+  88 at Black, and the exit, a reach that shrinks with the white, stood
+  28 units over the foot at Black for 59 at Regular (the owner: "there's
+  definitely something weird going on with the thicknesses towards the
+  black ... the little bit at the bottom ... isn't nearly as thick").
+  The back and the foot are now the alphabet's strokes at every weight,
+  the exit stands a break and a half over the foot at least, and the top
+  and the bar give way together, for the eye alone: full to Bold, 0.97 of
+  their own at ExtraBold and 0.92 at Black (137 and 135 units beside the
+  foot's 149), never thinner than at the weight before
+  (`italic_forms._e_strokes`; the æ's e alike). The eye is held from
+  where it first falls short of half a stem, shrinking as the stem grows.
+- A step never closes past the end of the edge it slides along
+  (`geom._close_jogs`): under the ç at Black, where the c's corner, a
+  flat of 33 units and the fill into the cedilla's stem stand over a
+  stem side of 25, the fill slid 33 down it and the outline crossed
+  itself by four units.
+- Every descender stands on one line. The g's and the y's hooks went
+  deeper than the p, q and j from Bold (to make room under the bowl: 34
+  units at Bold, 70 at Black), so a line of text stood on two descender
+  lines. A weight now has one: three modules to SemiBold, then what the
+  g's hook needs under its bowl (a horizontal and the least white over
+  it), 205 units at Bold, 230 at ExtraBold, 250 at Black, the font's
+  descent (`params.descender_line`). Brackets, signs and marks keep their
+  own depth (`Params.under`).
+- The hooks of g and y are as heavy as the letters' other strokes. They
+  were thinner from Light up (57 units to the bowl's 79 at Regular, about
+  three quarters), and it read as a mistake: a reader on r/typography
+  circled it. The hook measured its white past the inner leg of its own
+  corner, not from bar to bar, and thinned before it made room. On the
+  weight's descender line it keeps its weight at every weight.
+- The hooks of g and y end in a beak. They ran left and stopped flat. A
+  hook now turns up at its end through a cut corner into a short
+  terminal, as the c's arms end, so the swoop is cut at both ends as the
+  top of the 8 is (the owner: "a nice kind of bracketed curve to it").
+  The terminal's tip, a short end and not a bar, keeps three quarters of
+  the least white under what stands over it (`lower.BEAK_WHITE`). The
+  italic's hooks are as they were.
+- A letter with one stem keeps its share of the line. Stems alone added
+  width, so from Regular to Black the H grew a fifth and the E, K, L, T,
+  Z, f, k, t and z not at all: each lost a fifth of its share (0.80 to
+  0.84 of what it had; in hand-drawn faces 0.93 to 1.08,
+  `tools/letter_shares.py`). Their arms, thicker in a body no wider, were
+  stubs, and the K's and k's diagonals rooted in one block along the stem.
+  Past Regular such a letter now widens by what its stem has grown
+  (`letterframe.letter_width`); Regular and lighter are as they were. The
+  r takes a share of the H's width instead: it had been a third wider
+  than the n at Thin and a tenth at Regular, its arm long for the letter
+  (six ninths to the Regular, below, growing to seven at Black, above).
+- Open sides are spaced as hand-spaced faces space them. The spacing
+  counts the white beside a letter to a depth, and counted it a fifth of
+  the zone deep: twice what ten hand-spaced sans faces count (fitted to
+  their side bearings, `tools/spacing_depth.py`: 0.07 to 0.17 of the
+  x-height, the same for capitals and lowercase). Every open side (C K L
+  T E F, c r f t k) took most of its light from inside the letter and
+  stood against its neighbour: in DOCK the C stood 79 units from the K and
+  141 from the O, and the word read DO CK. The depth is now an eighth of
+  the x-height; those gaps are 125 and 148, and the D, with the O's
+  corners, stands 147 from the O.
+- The lowercase's horizontals thin a little more than the capitals'
+  toward Black (0.92 of them at Bold, 0.87 at Black; upright only), and
+  where three bars stack in the x-height (a e s) the inner one gives first
+  and the bar at the open end keeps its weight, as in hand-drawn faces
+  (`tools/stroke_roles.py`). Until now all three thinned alike.
+- Every corner takes one break's leg on its horizontal or vertical edge.
+  The corner rule broke a right angle by a chord with a leg on each side,
+  outside (cut) and inside (filled), and it filled the crotch a diagonal
+  makes with a stem by a chord as long: two legs along the stem, twice the
+  ink of any other corner, added where two strokes already overlap. The
+  joins of K, k, M, R, Q and the 1 were the thickest in the alphabet for
+  it (the largest disk that fits them 1.5 to 1.6 strokes across; a T is
+  1.45: `tools/stroke_audit.py`). A crotch is now filled one leg along the
+  stem; right angles are broken as before, and nothing is left sharp.
+  Those joins measure 1.41 to 1.5 at every weight and grade. The watch's
+  own drawing and the italic keep the pixel rule's chord.
+- The K is the k's drawing at every weight: the arm into the stem, the leg
+  off the arm, the crotch a point. From Bold, and in Arris Mono, it had
+  changed to the pixel master's form, arm and leg meeting in a block
+  beside the stem.
+- Every bowl meets its stem through a notch. Each was a closed octagon
+  laid square against its stem. A bowl now joins as the n's arch leaves
+  its own, at 45 degrees with a notch, at one of its two joins: under
+  the ascender on b and d, where the h has its own; over the descender
+  on p, q and g; at the foot on a, u and y (`lower.bowl_join`). The other
+  join stays square, and as in the n the notch closes by Black. It is a
+  rule of its own, half as deep as the arches': a module under the line
+  for their two (`lower.BOWL_DROP`). The n, h, m and r are as they were.
+  (The owner: "add a little notch into both the u and the lower part of
+  the a, like if you took the letter n and flipped it upside down", then
+  "if we're going to do it on the a and the u, then we need to do it on
+  all the bowls". At the arches' depth, at the light weights, a bowl
+  stood a long way off its stem and the line was noisy; shown it at two
+  modules, one and 0.6 he chose one, and of the arches: "those remain
+  the same. It's just a different rule set.") In the italic the q, the
+  g and the y take the notch too, at the foot ("a little teeny weeny
+  notch"); its own a, b, d, p and u branch as they always have, and its
+  hooks end flat as they always have ("the descender should remain
+  flat"). Letters that draw a bowl of their own (þ, the Cyrillic and
+  Greek ones) still close square.
+- Redrawn, after the chamfered faces (Chakra Petch first), with Arris's
+  corners:
+  - a: an arch over a bowl. The arm starts in the c's beak and comes into
+    the stem through a bowl's corner; the open storey is seven eighths of
+    the bowl (it was two thirds, under a bare bar).
+  - e and s: their open ends turn through a cut corner into the same
+    beak, so a, c, e and s end alike; the e's bar stands above the middle.
+  - v: high walls over a 45-degree point, the capital's drawing in the
+    x-height (the owner: "it needs to have the 45 degrees with the high
+    walls"), and as wide as its two arms: nine tenths of the n. Its arms
+    were at 2:1, the 7's slope, in eight modules; the italic's still are.
+  - w: the capital's build in the x-height too, high walls, 45-degree
+    valleys and its middle stroke a stem standing on the peak ("if we're
+    going to modify the v and the y then we should definitely do the w").
+    Its arms were at 2:1, and the italic's still are; the `www` ligature
+    follows.
+  - v, w and y bend at one height: their walls turn into their arms as
+    far above the point as the w's valleys are deep ("where the crook
+    occurs needs to be consistent"). That is what narrows the v; of the
+    ways to it he was shown (a flat foot on the v, longer arms on the w,
+    two heights) this is the one that keeps the v pointed, and it reads
+    further from the u than the eight-module v did: v/u 0.46 at Regular
+    by `tools/letter_confusion.py` at 11 arcminutes (0.77 with the 2:1
+    arms, 0.38 with 45-degree arms in eight modules; other families 0.58
+    to 0.88).
+  - y: the v's left arm, a wall and 45 degrees, come into a stem as a
+    bowl comes into its own, with the bowls' notch at its foot, and the
+    stem run on down into the g's hook ("make a g like it is today and
+    ... take a v and then join it such that it has a little bit of a
+    notch to it like the bowls"). Its foot, the flat between arm and
+    join, is as long as the flat on top of the m's arch ("measuring the
+    top of the m and making the flat part that long"), which sets its
+    width: 0.87 of the n's advance at Thin, 0.96 at Regular, 1.05 at
+    Bold. It had been a bowl open at the top, its left corner cut all
+    the way across to a flat a module short of the stem. The italic
+    keeps its own.
+  - x: the X's drawing in the x-height. Both step at the crossing at the
+    light weights and lose the step as they grow; the x had crossed plain.
+  - 1: a stem whose top left corner is cut and run out into a flag that
+    ends plumb, no foot (Arris Mono keeps the foot its cell needs). It
+    was the watch's 1 on a foot six modules wide; the watch's cut takes
+    the new figure too.
+  - D: the O's corners. They were a module larger.
+  - J: one stroke, an arm along the cap height that turns down into the
+    stem and the stem into the U's hook. It wore the 1's foot on top, a
+    bar three modules either side of the stem: two short ends, each
+    broken at both corners and filled into the stem, at Black a six-sided
+    lump. The arm stands to one side and is never shorter than a stem
+    past the stem; the hook's white is seven tenths of the U's at every
+    weight (0.57 at Black before).
+- An arch's shoulder (n h m) is never drawn smaller than an edge break.
+  Its room was measured to the outside of the arch's far corner, so from
+  Medium the shoulder's edge ran into that corner's cut and the counter
+  came to a point under the arch: at Black a spike 39 units tall beside a
+  flat of 106, with the arch a third thicker over the flat than its bar.
+  The room is now the arch's own underside, which keeps a flat past the
+  shoulder; a step under the shoulder shorter than a break is not drawn
+  (the counter's top is then the arch's alone), nor a notch over it
+  shallower than a break. So the shoulder goes as the X's step does: the
+  n keeps both to Bold, the notch alone at ExtraBold, and is square at
+  Black, as the m is from SemiBold. The m's middle stem stands up to its
+  second arch (the first arch's corner had bitten a wedge out of it at
+  the heavy weights, and that counter's corner was all but sharp).
+- Six letters stand where faces of this kind put them. Measured on six
+  (Chakra Petch, Oxanium, Rajdhani, Exo 2, Tomorrow, Share Tech: each
+  letter's ink and advance against the n's or the H's), the masters'
+  module widths left the m cramped and five letters in too much white.
+  The m's counters are seven eighths of the n's (three quarters before:
+  its advance 1.36 of the n's, now 1.47; those faces 1.44 to 1.59). The w
+  is a tenth narrower (1.46 of the n to 1.33; 1.24 to 1.42), the M eleven
+  modules for twelve (1.29 of the H to 1.19; 1.15 to 1.31), the W thirteen
+  for fourteen (1.37 to 1.28), the T the E's eight for ten (0.98 to 0.79;
+  0.79 to 0.84), and the r two thirds of the H for eight ninths, to the
+  Regular (its advance was 0.94 of the n's, where every one of those
+  faces has it under 0.72; it keeps its notch and its arm). In Arris Mono every letter fills
+  the cell as before.
+- The j is narrower. Against the n it stood wider than any of those six
+  faces sets it, its advance 0.65 of the n's (theirs 0.41 to 0.49): its
+  hook is three modules of white across for four, the room its two
+  corners need (0.54). Arris Mono's and the italic's are as they were.
+- The l ends in one cut. Its foot was a corner and three modules of
+  tail. The tail is now nothing: the stem turns through the corner's one
+  cut and runs on to the baseline (the owner: "only one single notch", no
+  flat foot; it ended upright there, two edge breaks tall, until it took
+  the k's leg's end, above). It is its stem and
+  its cut at every weight (0.46 to 0.49 of the n's advance; it was 0.65,
+  in those faces 0.40 to 0.51).
+- The f and the t are a module narrower, six for their masters' seven:
+  hook, foot and crossbar each a module shorter (0.61 and 0.69 of the n's
+  advance at Regular; they were 0.72 and 0.79, in those faces 0.48 to
+  0.69), and a line with several of them (little, filter) keeps the
+  rhythm its stems set. They keep their hooks: the l's cut was tried on
+  the f's top and the t's foot, and the owner kept it for the l alone
+  ("keep the hooks for the f and the t, and the l stays without a
+  hook"). The ſ follows the f. Arris Mono's and the italic's own f and l
+  are as they were.
+- The l has no flag. It carried the 1's at the top, a module to the left
+  of the stem. Over the x-height spacing lets a part hang into its
+  neighbour's room (it is meant for a j's hook under the line): the
+  flag's tip stood 12 units from the body's edge at Regular, where a stem
+  stands 88, and 21 outside it at Black, and whatever stood before an l
+  with ink that high was crowded: F E T K and the l 0.3 of the white
+  between two stems (0.55 to 0.85 in those faces), i d H and the l a
+  third at Black (0.84 to 1.0), "illicit" a comb. No longer than it was
+  thick, it read as a bump on the stem.
+- The percent sign is three pieces. Its rings were four and a half
+  modules of counter in the full stem, in a body their two widths did not
+  fit: each ran into the slash at every weight (50% read as 5096), and at
+  Black the sign was one mass, its counters two thirds of a stem. Drawn in
+  the small figures' strokes (0.8 of the weight's, 0.68 at Black), its
+  rings half the cap height and five modules across, each stands the
+  least white clear of the slash (`punct.pct`), as those faces draw it
+  (0.2 to 0.8 of a stem between ring and slash). ‰ and ‱ carry the same
+  rings. In Arris Mono's cell the sign is as it was.
+- The number sign's ends are longer than its strokes. Only the square
+  between its bars was kept, at the full strokes: at Black the ends stood
+  two thirds of a stroke past the bars, a cross with a hole in it. Its
+  ends are a stroke and a half at least, and where its height does not
+  hold that its strokes thin together (0.91 of the weight's at Bold, 0.72
+  at Black; those faces 0.8 to 0.9 at Bold).
+- The straight quotes are a third of the cap height (two dots from Bold,
+  where that is more): they were two dots at every weight, a quarter of
+  it at Regular (0.31 to 0.36 in those faces). The double quote's ticks
+  stand a module and a half of white apart for two, so the pair no longer
+  reads as two apostrophes.
+- Figures are proportional by default. The default was the watch's
+  tabular set, every figure centred on a ten-module cell: the figures
+  stood a third of the white between two stems apart (0.34; 0.63 to 0.88
+  in those faces), the 1 two whole ones from its neighbours (1.8 to 2.4;
+  0.6 to 0.9), and nothing was kerned against them: 1,110 and 7/11 fell
+  apart in a line of text. The same drawings are now spaced as the
+  letters are, each by its own white (the 0 against the 0 0.84, the 1
+  against the 1 0.68), and kerned with the letters and the marks (a
+  period after a 7 1.6 for 2.0). `tnum` gives the tabular set, unkerned,
+  on its cell (`pnum` undoes it), and every feature that takes a figure
+  takes either: `zero` `ss01` `ss02` `sups` `subs` `numr` `dnom` `frac`
+  `ordn` `ss20`. Between proportional figures the time colon keeps a
+  colon's sides; between tabular ones it is the watch's. Arris Mono is
+  unchanged: every figure on the cell. **Anyone who set a clock, a table
+  or a counter in Arris and relied on the default now needs
+  `font-variant-numeric: tabular-nums` (`tnum`).**
+- The ring is three tenths of the cap height. It was drawn in the full
+  stem up to two modules, round a counter of two: 0.38 of the cap height
+  at Regular and half of it from Bold, twice any other accent, and Å
+  stood 1.47 to 1.60 cap heights tall (1.34 to 1.40 in those faces), into
+  the descenders of the line above. Its stroke is 0.7 of the stem up to a
+  module and a quarter, its counter a module and a half (0.30 of the cap
+  height, 0.33 from Bold; theirs 0.26 to 0.36).
+- A comma stands where a period does. Its side was measured from the tip
+  of its tail, so after any letter its head stood half a dot further off
+  than a period's dot: a quarter of the white between two stems at
+  Regular, 0.7 of it at Black (T and a comma 2.3 gaps apart for a
+  period's 1.7). Its head now stands on the period's dot and its tail
+  hangs into the white before it; the semicolon and the low quotes with
+  it.
+- No two inks nearer than the collision floor, in any direction. Only
+  gaps on a shared row were counted, and a j's hook under an l's, a t's
+  or an L's foot shares none: 0.18 to 0.20 of a gap at Regular (0.43 to
+  0.97 in those faces), now 0.35.
+- The w's middle peak is a peak at every weight. Its middle stroke ran
+  from the peak to the sixth module, and where the peak is lower than
+  that it stood over it: a post 65 units tall at Thin, a stub at Light,
+  and at Regular a spearhead with a barb of 11 units each side. The
+  stroke now stands in the peak, never over it.
+- Arris Mono's r ends its arm on a whole face at Bold. In the cell the
+  arm is short, and the shoulder's diagonal ran into its end, leaving it
+  a face of 7 units; the shoulder now rises no further than leaves the
+  arm's underside an edge break of flat.
+- An arm keeps six tenths of a gap from a side. The capitals whose arms
+  stand upright for half their height (A V W Y) take the bearing their
+  open half earns, and beside a bowl or another arm that left two upright
+  edges all but touching at the heavy weights: R and Y 0.38 of a gap at
+  Black, P and A 0.47, two Ys 0.23 (0.63 to 0.74 and 0.62 to 0.85 in
+  those faces). They open to 0.6: 7 pairs at Regular, 33 at Black. Bars'
+  ends still close to the floor.
+- A crotch with a step in it is broken as any crotch. Where a diagonal
+  lands on a short edge square to the bar it runs into (the Z's foot),
+  the corner was filled as a right angle, no further than that short
+  edge: 35 units at Bold, 9 at Black. The chord now keeps its leg on the
+  bar and runs square to the diagonal until it meets it
+  (`geom._stepped_crotches`): 23 glyphs move at Regular, 147 at Black, by a
+  few units each, none in the italic.
+- Letters that interlock are kerned as hand kerning leaves them. A pair
+  closed only when its narrowest gap passed a standard gap (the white
+  between two H's) and a quarter, and then by four fifths of the excess,
+  so every such pair was left 1.3 to 1.45 gaps apart: L and Y 240 units
+  for the H's 177, L and T 230, T and A 239, and the capitals read loose
+  wherever an L, a T or a Y stood. Measured in seven kerned faces of this
+  kind (Chakra Petch, Oxanium, Exo 2, Tomorrow; Regular and heavy), the
+  facing ends of such pairs stand one standard gap apart (LY 1.06, LT
+  0.96, TA 1.02, TJ 1.03), and where the approach is on a slant the inks
+  come to three quarters of one or a little more (LV 0.86, LW 0.74, To
+  0.87, Ta 0.78, Tr 0.75). Two letters now close to a standard gap and
+  never nearer than three quarters of one in any direction: at Regular LY
+  -130 (it was -70), LT -75 (-25), LV -120 (-65), LW -45 (0), TA -105
+  (-55), To -115 (-60). A pair with a mark of punctuation in it keeps the
+  air it had, and a period or a comma is pulled in by no more than 0.45
+  of a gap, which is what those faces do after any letter that overhangs
+  it (P. 0.47, T. 0.46, Y. 0.47, r. 0.38): it had gone under the P's bowl
+  by 255 units at Regular and 280 at Black. Still open: at the heavy
+  weights a bowl stands nearer an arm than in those faces (R and Y, P and
+  A, V and a); `kerning.py` has the measurements.
+- No letter keeps a crumb. Scanned at fifteen weights from Thin to Black
+  for edges shorter than half an edge break, twenty-two of the sixty-two
+  letters and figures had one somewhere, of three kinds. A counter a
+  little taller than its two corners' cuts kept a wall of a few units
+  between them as it closed with the weight (a e s B G 3 5 6 8 9: the
+  a's bowl 13 units at SemiBold, the G's pocket 20 at Black): such a wall
+  under half a break now closes, the cuts running on to meet in a point
+  (`geom._polish`, `FACET`). Under the stub of a bar across a stem (f t l,
+  the 4) the end's break and the fill into the stem are two chords of one
+  length with a flat between, 10 units at Medium and none at Bold: a flat
+  under half a break closes, and the two are one plane
+  (`geom._close_jogs`). And the X's step left a flat of 6 units in its
+  crotches at Regular, which goes with the first. The italic and the
+  watch's drawing are finished as they were. At the named weights no edge
+  of a letter is now under 0.45 of a break (the v's flank at Black, 0.48).
+- The points of v and w hang an edge break under the baseline and are
+  cut flat there, a break and a half wide (22 units down at Regular, 44
+  at Black). They had run 38 and 73 units under the line to a flat under
+  a break wide, the sharpest end in the alphabet; the drop is theirs and
+  stays, the needle goes. The w's middle peak ends as the corner rule
+  ends any point (cut at the x-height first, it kept two crumbs at
+  ExtraBold).
+- Ends at Black. The f's top corner is cut down to the t's, so bar and
+  corner make one plane; the Q's tail gives as the bowl grows; the 4 keeps
+  a module of white beside its stem and the G's bar a least white over
+  its foot; the beaks
+  of c and j are measured by the lowercase's own bar (they had kept the
+  capitals', and the j's beak a 19-unit step).
+- The italic keeps its own letters: its a, e, f, k, r, s, t, y and z are
+  drawn as they were (the r is the same outline at every weight); it takes
+  the descender line, the capitals' widths, the K, the D, the x and the 1.
+
 ## 1.016
 
 - Grade changes no width, in every glyph. The grade axis thickens or thins

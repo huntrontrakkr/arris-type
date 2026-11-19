@@ -13,14 +13,15 @@ Diagonals cannot be mapped point by point (their slope must stay 45 degrees
 or 2:1), so constructions place them by an anchored edge instead.
 
 Widths: a letter is its stems plus its white. Stems take the weight's stem;
-white widens a little at light weights and narrows a little at heavy ones,
-so counters change far less than strokes.
+white widens a little at light weights, and past the Regular it gives way
+to the stems as the white of other families' letters does (white_scale).
 """
 from __future__ import annotations
 
+import contextlib
 import math
 
-from ..params import SQRT2
+from ..params import SQRT2, white_floor, white_own
 
 STEEP = (1 / math.sqrt(5), 2 / math.sqrt(5))
 
@@ -38,24 +39,157 @@ def _interp(anchors, t):
     return fa + (fb - fa) * (t - a) / (b - a) if b != a else fa
 
 
-def white_scale(p) -> float:
-    """How much a letter's white widens (light) or narrows (heavy)."""
-    r = p.sv / (2 * p.m)          # stem relative to the watch's two-module stem
-    if r >= 1:
-        return 1 - 0.25 * (r - 1)
-    return 1 + 0.4 * (1 - r)
+def share_width(wm: float):
+    """A body that keeps its master's share of the H's width at every
+    weight: ``wm`` ninths of it (the H is nine modules)."""
+    return lambda p: wm / 9 * (2 * p.sv + 5 * p.m * white_scale(p))
 
 
-def letter_width(wm: float, stems: float):
-    """Body width for a master ``wm`` modules wide with ``stems`` stems across."""
+_ZONE = ['cap']     # whose white is being asked for (zone)
+
+
+@contextlib.contextmanager
+def zone(kind):
+    """While a glyph's body is measured or drawn: whether its white is a
+    lowercase letter's ('lower'), the watch's own, which gives nothing
+    ('own': draw.white_of), or a capital's, a figure's, a sign's (anything
+    else) (white_scale)."""
+    _ZONE.append(kind if kind in ('lower', 'own') else 'cap')
+    try:
+        yield
+    finally:
+        _ZONE.pop()
+
+
+def white_scale(p, lower: bool | None = None) -> float:
+    """How much a letter's white widens (light) or narrows (heavy), against
+    its master's modules.
+
+    To the Regular the white widens a little as the stems thin, by the
+    watch's own rule (params.white_own). Past it the white gives way to the
+    stems as the white of other families' letters does, a lowercase
+    letter's faster than a capital's, a figure's or a sign's
+    (instances.white_given: what is left of it, carried in the parameters,
+    so a set drawn smaller inside a glyph gives as its font does).
+    ``lower``: whose white; by default the glyph's being measured or drawn
+    (zone)."""
+    if lower is None and _ZONE[-1] == 'own':
+        return white_own(p.sv / (2 * p.m))
+    low = _ZONE[-1] == 'lower' if lower is None else lower
+    return white_own(p.sv / (2 * p.m)) * (p.white_low if low else p.white_cap)
+
+
+def plain_width(wm: float, stems: float):
+    """Body width for a master ``wm`` modules wide with ``stems`` stems
+    across: its stems and its white."""
     return lambda p: stems * p.sv + (wm - 2 * stems) * p.m * white_scale(p)
+
+
+def own_width(wm: float, stems: float):
+    """The body plain_width gives where no white has given way: by the
+    watch's own rule at every weight (params.white_own). What a letter
+    that narrows by a share of its body is measured in (letter_width,
+    lower.y_width)."""
+    return lambda p: stems * p.sv + (wm - 2 * stems) * p.m * white_own(p.sv / (2 * p.m))
+
+
+REGULAR_R = 0.75    # the Regular's stem, in watch stems: a module and a half (instances.REGULAR_R, heft)
+
+
+def kept_width(wm: float, stems: float):
+    """The body of a sign of bars: a dash, the underscore, the plus, the
+    equals and the operators drawn in the plus's body. At every weight it
+    keeps the share of the H's body it has at the Regular.
+
+    Its modules are not white between stems: they are the length of its
+    bars. Read as white (plain_width) they widened toward Thin and past the
+    Regular gave way to stems the sign has not got: as the letters grew the
+    signs shrank. Against the H's advance the hyphen stood 1.24 of its
+    Regular's share at Thin and 0.60 of it at Black, a square of ink
+    between its letters; the en and the em dash the same; the plus and the
+    equals 1.12 and 0.81, the plus at Black four stubs. In sixty other
+    families each keeps its share from Thin to Black: 1.00 or 1.01 of the
+    Regular's at the median at every weight, none over 1.17 at Thin or
+    under 0.83 at Bold.
+
+    The watch's own drawing keeps the same share of its own H (its Black's
+    hyphen was the same square). In Arris Mono, whose signs are drawn to
+    their cell, the body is its modules, as it was.
+
+    The operators that keep the watch's own white (draw.white_of) stand in
+    the plus's body with the plus: they were a body of their own past the
+    Regular, 52 units wider than the equals at Black."""
+    own = own_width(wm, stems)
+    k0 = white_own(REGULAR_R)
+    share = (2 * REGULAR_R * stems + (wm - 2 * stems) * k0) / (4 * REGULAR_R + 5 * k0)
+
+    def width(p):
+        p = p.ungraded()
+        if p.mono:
+            return own(p)
+        # (a sign drawn with lighter strokes to keep its whites, draw._lightened, stands in the body its
+        # weight gives the others: at Black the plus and the < stood 54 units narrower than the equals)
+        q = p.with_(sv=p.sv / p.light) if p.light != 1.0 else p
+        return share * (2 * q.sv + 5 * q.m * white_scale(q, lower=False))
+    return width
+
+
+ARM = 1.0     # what a one-stem letter's open side widens by, for each unit its stem grows past Regular
+
+
+def ungiving(wm: float, stems: float, arm: float = ARM):
+    """A letter's body that gives no white past the Regular: letter_width
+    as it was before the letters gave. For a letter whose drawing has no
+    counter to take it from: the florin's crossbar and hook (a wedge at
+    Black in the narrower body, as the f's were), the ϰ's two curls."""
+    own = own_width(wm, stems)
+    if stems != 1 or not arm:
+        return own
+    return lambda p: own(p) + arm * heft(p)
+
+
+def narrowed(p) -> float:
+    """What is left, past the Regular, of the body of the letter the others
+    stand beside: the n's among lowercase letters (eight modules, two
+    stems), the H's among the rest (nine). 1 to the Regular, in Arris Mono
+    and in the watch's own drawing (white_scale)."""
+    white = (4 if _ZONE[-1] == 'lower' else 5) * p.m
+    return (2 * p.sv + white * white_scale(p)) / (2 * p.sv + white * white_own(p.sv / (2 * p.m)))
+
+
+def letter_width(wm: float, stems: float, arm: float = ARM):
+    """A letter's body. A letter with one stem (E F K L T Z, f k r t z)
+    makes room on its open side as its arms and diagonals thicken: past
+    Regular it widens by ``arm`` times what the stem has grown, as a letter
+    with two stems widens by its second.
+
+    Until 1.017 it did not: stems alone added width, so from Regular to
+    Black the H grew a fifth and the E, the K and the r not at all, and
+    each lost a fifth of its share of the line (K 0.82, T 0.80, r 0.80, z
+    0.80 of what it had at Regular; in hand-drawn faces every letter keeps
+    its share, 0.93 to 1.08: tools/letter_shares.py). Their arms, thicker
+    in a body no wider, were stubs (f t r), and the K's and k's diagonals
+    rooted in one block along the stem.
+
+    Where the white gives way past the Regular (white_scale) a one-stem
+    letter gives the share of its body the n (the H) gives of its own
+    (narrowed), not the white of its modules: its open side, six modules of
+    the k's eight where the n has four between its stems, holds an arm or a
+    diagonal as thick as a stem, and with all six giving the k, the z, the K
+    and the Z lost a tenth of their share again (0.90 and 0.93)."""
+    if stems != 1:
+        return plain_width(wm, stems)
+    own = own_width(wm, stems)
+    # (with no arm's room, the cursive's one-stem letters: the share all the same)
+    return lambda p: (own(p) + arm * heft(p)) * narrowed(p)
 
 
 def least_white(p) -> float:
     """The least white across a closed counter or between two parts of a
     sign: a module, or 0.6 of a stem toward Black (white narrower than half
-    a stroke is no white at all: draw.white_features)."""
-    return max(p.m, 0.6 * p.sv)
+    a stroke is no white at all: draw.white_features), in Arris no more
+    than at a stem of 158 (params.white_floor)."""
+    return white_floor(p.m, p.sv, p.optical)
 
 
 def heft(p) -> float:
@@ -68,7 +202,7 @@ def growing_width(wm: float, stems: float, k: float):
     """A symbol's body: a letter's, plus k units for every unit its stem has
     grown past Regular, so the white between its parts grows with its
     strokes instead of being eaten by them."""
-    base = letter_width(wm, stems)
+    base = plain_width(wm, stems)
     return lambda p: base(p) + k * heft(p)
 
 
@@ -102,24 +236,24 @@ class Frame:
         return (self.X(x), self.Y(y))
 
 
-def k_arms(g, x_stem: float, W: float, top: float, branch: bool = False):
+def k_arms(g, x_stem: float, W: float, top: float, branch: bool = True):
     """K's arm and leg for a stem at x_stem in a body W wide and ``top`` tall.
 
-    Both leave the body's right corners an edge break in. At light weights
-    they meet in a short vertical beside the stem, as the K master draws it;
-    when heavier strokes would make that junction a lump (their outer edges
-    no longer reach the vertical), the arm runs on into the stem and the leg
-    branches from the arm, so the crotch between them stays open.
-    Returns strokes as (points, start cap, end cap)."""
+    Both leave the body's right corners an edge break in. The arm runs on
+    into the stem and the leg branches from the arm where they cross (from
+    the stem, if they cross inside it), so the crotch between them is a
+    point at every weight and the two read as two strokes.
+
+    Until 1.017 the capital changed its drawing along the weight: where the
+    body was narrow for its strokes (from Bold, and in Arris Mono) arm and
+    leg met in a short vertical beside the stem, as the K's pixel master
+    draws it, a block a stem wide with a flat-bottomed crotch, while the k,
+    drawn in the x-height, never did. (``branch`` is kept for callers that
+    named it.) Returns strokes as (points, start cap, end cap)."""
     p = g.p
     k = p.sd / SQRT2
     a_arm = W - top + p.c - k                               # arm: x - y = a_arm
     a_leg = W + p.c - k                                     # leg: x + y = a_leg
-    xj = x_stem + p.sv * 0.999                             # (overlapping the stem by a hair)
-    if not branch and 2 * xj + p.sv > a_arm + a_leg + 2 * k + 1e-6:
-        y_hi, y_lo = xj - a_arm, a_leg - xj
-        mid = [(xj, y_hi), (xj, y_lo)] if y_hi > y_lo + 1e-9 else [(xj, y_hi)]
-        return [([(top + a_arm, top), *mid, (a_leg, 0)], 'h', 'h')]
     # the leg leaves the arm where they cross, or the stem if they cross inside it
     xm = max((a_arm + a_leg) / 2, x_stem)
     return [([(top + a_arm, top), (x_stem, x_stem - a_arm)], 'h', 'flat'),

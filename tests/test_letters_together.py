@@ -1,0 +1,1352 @@
+"""How the letters stand together (1.017): every letter keeps its share of
+the line as weight is added, open sides are spaced as hand-spaced faces
+space them, the open letters share one terminal and one balance of
+storeys, and the corners of the D are the O's."""
+from __future__ import annotations
+
+from itertools import pairwise
+
+import pytest
+from shapely.geometry import LineString, Point, box
+
+import arris.glyphs  # noqa: F401  (the registry)
+from arris.draw import OPTICAL, REGISTRY, draw
+from arris.font import place
+from arris.geom import rings_to_shapely
+from arris.instances import params
+
+CMAP = {chr(s.unicode): n for n, s in REGISTRY.items() if s.unicode}
+
+
+def _ink(ch, p):
+    return rings_to_shapely(draw(CMAP[ch], p).rings())
+
+
+def _ink_of(name, p):
+    """A glyph's ink as it stands in the font, by its name (what is built on another letter too)."""
+    rings, _ = place(name, p)
+    return rings_to_shapely([[(q[0], q[1]) for q in r] for r in rings])
+
+
+def _width(ch, p):
+    x0, _, x1, _ = _ink(ch, p).bounds
+    return x1 - x0
+
+
+@pytest.mark.parametrize('ch', list('EFKLTZ'))
+def test_a_one_stem_capital_keeps_its_share_of_the_line(ch):
+    """Regular to Black the H grows a fifth; a letter with one stem grows
+    with it (hand-drawn faces: 0.93 to 1.08 of its share; until 1.017 0.80
+    to 0.84)."""
+    share = lambda w: _width(ch, params(w)) / _width('H', params(w))
+    assert share(900) / share(400) >= 0.9, ch
+
+
+@pytest.mark.parametrize('ch', list('fktz'))
+def test_a_one_stem_lowercase_letter_keeps_its_share(ch):
+    """(The f and the t from their stem's left side: half of the crossbar's
+    stub beyond it goes into the stem by 650, lower.stub.)"""
+    from arris.glyphs.lower import stub as stub_
+    stub = lambda p: stub_(p) if ch in 'ft' else 0.0
+    share = lambda w: (_width(ch, params(w)) - stub(params(w))) / _width('n', params(w))
+    assert share(900) / share(400) >= 0.9, ch
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_the_r_is_two_thirds_of_the_h_and_grows_to_seven_ninths(w):
+    """Six ninths of the H's width to the Regular: at Thin it was a third
+    wider than the n, and at eight ninths still the lightest letter of the
+    alphabet, its advance 0.94 of the n's where faces of this kind give
+    the r 0.62 to 0.72 (the owner, twice: a module off the arm). Past the
+    Regular it grows with its stem, to seven ninths at the watch's Black,
+    a stem of 175, which Arris passes at its ExtraBold (instances.STEMS),
+    as other families' r grows against their n: at six its arm was a stub on the stem's corner (the owner: "a
+    little tiny clown nose"; of five widths shown he chose this one, and
+    of the r so drawn: "It looks great")."""
+    from arris.glyphs.letterframe import heft, share_width, zone
+    from arris.glyphs.lower import R_BLACK, R_SHARE
+    from arris.instances import drawn
+    p = params(w)
+    share = R_SHARE[0] + (R_SHARE[1] - R_SHARE[0]) * min(1.0, heft(p) / R_BLACK)
+    assert (share, R_SHARE) == ((6.0 if w <= 400 else 7.0 if w == 900 else share), (6.0, 7.0))
+    assert heft(drawn(900)) == R_BLACK
+    with zone('lower'):
+        assert REGISTRY['r'].width(p) == pytest.approx(share_width(share)(p))
+    if w <= 400:
+        assert REGISTRY['r'].width(p) == pytest.approx(6 / 9 * REGISTRY['H'].width(p))
+    assert _width('r', p) <= 0.9 * _width('n', p)
+    of_n = lambda q: REGISTRY['r'].width(q) / REGISTRY['n'].width(q)
+    assert of_n(params(900)) > of_n(params(700)) > of_n(params(400))
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 700, 900])
+def test_the_narrow_letters_are_narrow(w):
+    """Advances against the n's, inside what chamfered and squared faces
+    give a letter with one stem and an arm (Chakra Petch, Oxanium,
+    Rajdhani, Exo 2, Tomorrow, Share Tech, Regular and their heaviest): the
+    l 0.40 to 0.56, the t 0.53 to 0.74, the f 0.48 to 0.72. On their
+    masters' module widths the l stood at 0.65 at Regular, the t at 0.79
+    and the f at 0.72, and a line with several of them lost its rhythm.
+    The j stands on the l's foot and is as wide as it. At Black, where
+    the n has narrowed and the f and the t hold the Bold's shape, the t is
+    0.78 of the n and the f 0.77: twenty-nine families' Blacks give the t
+    0.61 to 0.79 and the f 0.55 to 0.79 (the l 0.43 to 0.59, the j 0.34
+    to 0.61)."""
+    p = params(w)
+    adv = lambda ch: place(CMAP[ch], p)[1]
+    assert 0.40 <= adv('l') / adv('n') <= (0.56 if w < 800 else 0.59)
+    assert 0.53 <= adv('t') / adv('n') <= (0.76 if w < 800 else 0.80)
+    assert 0.48 <= adv('f') / adv('n') <= (0.73 if w < 800 else 0.79)
+    assert 0.40 <= adv('j') / adv('n') <= 0.56
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_l_is_a_stem_and_a_tail(w):
+    """Over the x-height the l is its stem and nothing else, and its stem
+    stands where an i's does: the flag it carried there (the 1's) hung
+    into the room of whatever stood before it, 12 units from the body's
+    edge at Regular for a stem's 88, and outside it at Black."""
+    p = params(w)
+    rings, _ = place('l', p)
+    ink = rings_to_shapely(rings)
+    x0, _, x1, _ = ink.intersection(LineString([(-1e4, p.xh + p.m), (1e4, p.xh + p.m)])).bounds
+    top = ink.intersection(LineString([(-1e4, p.asc - p.c - 1), (1e4, p.asc - p.c - 1)])).bounds
+    assert x1 - x0 == pytest.approx(p.sv, abs=1.0)
+    assert top[0] == pytest.approx(x0, abs=1.0) and top[2] == pytest.approx(x1, abs=1.0)
+    i_left = min(x for r in place('i', p)[0] for x, _ in r)
+    assert 0.8 * i_left <= x0 <= i_left + 1.0               # (a little nearer: its foot's corner lets light in below)
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_v_and_w_hang_a_break_under_the_line(w):
+    """Their points hang one edge break under the baseline and end blunt,
+    more than a break wide (until 1.017: 1.7 breaks down to a flat of
+    0.9; then, for a while, cut on the line)."""
+    p = params(w)
+    for ch in 'vw':
+        ink = _ink(ch, p)
+        assert ink.bounds[1] == pytest.approx(-p.c, abs=1), ch
+        foot = ink.intersection(LineString([(-50, -p.c + 0.5), (2000, -p.c + 0.5)]))
+        flats = [s.length for s in getattr(foot, 'geoms', [foot])]
+        assert len(flats) == (1 if ch == 'v' else 2) and min(flats) >= 1.2 * p.c, (ch, flats)
+
+
+def _whites(ch, p, at=0.5):
+    """The whites a plumb line through the letter crosses, from the bottom up."""
+    ink = _ink(ch, p)
+    x0, y0, x1, y1 = ink.bounds
+    x = x0 + at * (x1 - x0)
+    cut = ink.intersection(LineString([(x, y0 - 10), (x, y1 + 10)]))
+    runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+    return [b[0] - a[1] for a, b in pairwise(runs)]
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_open_storey_of_a_and_e(w):
+    """The a, e and s stack their three bars with one white, and their
+    middle bar stands where the optical centre puts every letter's
+    (draw.OPTICAL): on the centre of the height, so the open storey and the
+    closed one are one size (until 1.017 the middle stood over the centre,
+    the a's open storey seven eighths of its bowl and the e's a seventh
+    more than its bowl; the owner, 2026-11-12: "at black the e. And the a
+    in the middle needs to be about the same size too. Or exactly the
+    same", the e's eye 93 units tall by the a's 107; and of the rule: "it
+    just has to follow the same rules")."""
+    from arris.instances import STEMS
+    p = params(w)
+    r = OPTICAL['counters']
+    even = min(1.0, max(0.0, (p.sv - STEMS[700]) / (STEMS[900] - STEMS[700])))
+    ae = r + (1.0 - r) * even
+    bowl, upper = _whites('a', p, at=0.42)                  # left of where its bowl rises into the stem, right of its beak
+    assert upper / bowl == pytest.approx(ae, abs=0.08)
+    lower, bowl = _whites('e', p)
+    assert bowl / lower == pytest.approx(ae, abs=0.08)
+    lower, upper = _whites('s', p)
+    assert upper / lower == pytest.approx(ae, abs=0.08)                 # (the s moves as the a and the e do: its hooks are theirs)
+    if w == 900:
+        def counter(name):
+            hole = min(draw(name, p).rings(), key=len)
+            return (max(x for x, _ in hole) - min(x for x, _ in hole), max(y for _, y in hole) - min(y for _, y in hole))
+        assert counter('e') == pytest.approx(counter('a'), abs=1.0)
+
+
+@pytest.mark.parametrize('w', [300, 400, 700])
+def test_a_c_e_s_end_in_one_terminal(w):
+    """Each open end turns through a cut corner into the c's beak: the a's
+    arm, the e's arm and both ends of the s reach as far from their lines
+    as the c's do."""
+    p = params(w)
+
+    def reach(ch, top, right):
+        ink = _ink(ch, p)
+        x0, y0, x1, y1 = ink.bounds
+        x = x1 - 1 if right else x0 + 1
+        cut = ink.intersection(LineString([(x, y0 - 10), (x, y1 + 10)]))
+        runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+        lo, hi = runs[-1] if top else runs[0]
+        return hi - lo
+
+    c = reach('c', True, True)
+    for ch, top, right in (('a', True, False), ('e', False, True), ('s', True, True), ('s', False, False)):
+        assert reach(ch, top, right) == pytest.approx(c, abs=0.12 * c), (ch, top)
+
+
+def _throat(ink, sv):
+    """The least width of the passage into a letter's bay: a white open to
+    the outside through a way narrower than itself (the a's upper storey,
+    the s's two, the e's mouth). None: no bay, or none narrower at its
+    mouth than a third of a stem and a half."""
+    from shapely.geometry import Polygon
+    parts = list(getattr(ink, 'geoms', [ink]))
+    counters = [Polygon(h) for part in parts for h in part.interiors]
+    r = 1.0
+    while r <= 0.25 * sv:
+        grown = ink.buffer(r, 8)
+        for part in getattr(grown, 'geoms', [grown]):
+            for h in part.interiors:
+                hole = Polygon(h)
+                if hole.area > (0.15 * sv) ** 2 and not any(k.contains(hole.representative_point()) for k in counters):
+                    return 2 * r
+        r += 1.0
+    return None
+
+
+@pytest.mark.parametrize('w', list(range(100, 901, 50)))
+@pytest.mark.parametrize('mono', [False, True])
+def test_the_hooks_of_c_a_e_and_s_stand_on_one_line(w, mono):
+    """The four hang their hooks from one bar and end them on one line,
+    over the middle and under it (the owner, 2026-11-12, of c a e s side by
+    side at ExtraBold and Black: "all these letters have hooks and none of
+    them are completely aligned. Like some of them are a couple points off
+    from each other"; and of which was to move: "a and e are perfect. C
+    needs to change"). The hook is the a's and the e's (lower.hook_ref):
+    from ExtraBold those thin the bar it hangs from with their closed end's,
+    the c and the s kept the zone's own, and the c's stood 2 units off
+    theirs at ExtraBold and 23 at Black, the s's lower arm 12 and 26."""
+    p = params(w).with_(mono=mono)
+    seen = {'top bar': {}, 'top end': {}, 'bottom bar': {}, 'bottom end': {}}
+    for ch, top, bottom in (('c', 'R', 'R'), ('a', 'L', None), ('e', None, 'R'), ('s', 'R', 'L')):
+        ink = _ink(ch, p)
+        x0, y0, x1, y1 = ink.bounds
+        for side, which in ((top, 'top'), (bottom, 'bottom')):
+            if side is None:
+                continue
+            through_hook = x1 - p.c - 10 if side == 'R' else x0 + p.c + 10
+            clear = p.sv + max(p.c, p.leg) + 20                                         # past the wall and its corner's inside cut
+            past_it = x0 + clear if side == 'R' else x1 - clear                         # the bar alone, over the counter
+            for part, x in (('end', through_hook), ('bar', past_it)):
+                cut = ink.intersection(LineString([(x, y0 - 5), (x, y1 + 5)]))
+                runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 0.5)
+                seen[f'{which} {part}'][ch] = runs[-1][0] if which == 'top' else runs[0][1]
+    for part, ys in seen.items():
+        assert max(ys.values()) - min(ys.values()) < 0.01, (part, ys)
+    # and the hook is a hook: its end stands off its bar, toward the middle
+    assert seen['top end']['c'] < seen['top bar']['c'] - 0.5 * p.c and seen['bottom end']['c'] > seen['bottom bar']['c'] + 0.5 * p.c
+
+
+@pytest.mark.parametrize('w', [400, 700, 800, 850, 900])
+def test_one_bar_and_one_overshoot_on_each_height(w):
+    """Every bar of the lowercase is the one the a's and the e's hooks hang
+    from, and every bar of the capitals and the figures the one the 5 keeps
+    (draw._start; the owner, 2026-11-12: "o needs to open up a little bit
+    more. Let's make sure that we're extremely consistent like this across
+    everything", then "fix the 3 and put the overshoot on one value"). Each
+    letter thinned for itself, and at Black the O and the E stood on 170
+    units, the S on 154, the 5 on 147, the 3 and the Q on 119; each took
+    the overshoot its own outline asked, the C 3.3 units at Regular by the
+    O's 1.3 and the J's foot 10.8."""
+    from arris.glyphs.lower import hook_ref
+    p = params(w)
+    bar = hook_ref(p)[0]
+    assert {round(draw(ch, p).sh0, 6) for ch in 'obdpqgnhmucrz'} == {round(bar, 6)}
+    # the a, the e and the s are one set of bars: the two outer ones that bar, the inner one theirs alike (the
+    # owner, 2026-11-12, of the a's foot and the e's top at nine tenths of it: "it's not divvied up correctly
+    # between its top and the bottom ... everything needs to be rebalanced")
+    a, e, s = (draw(ch, p) for ch in 'aes')
+    assert a.sh == pytest.approx(bar) and e.sh == pytest.approx(bar)    # (their own bar is the closed end's)
+    assert a.hook == pytest.approx(e.hook)
+    assert [n.w for n in s.strokes[0].nodes if n.w] == pytest.approx([bar, a.hook[3], bar])
+    cap = draw('five', p).sh
+    assert {round(draw(CMAP[ch], p).sh0, 6) for ch in 'OCGQSEBDPRZT02378'} == {round(cap, 6)}
+    assert draw('S', p).sh == pytest.approx(cap) and draw('Q', p).sh == pytest.approx(cap)
+    # the 3's top and foot are that bar, and its waist alone gives
+    three = _ink('3', p)
+    x0, y0, x1, y1 = three.bounds
+    cut = three.intersection(LineString([((x0 + x1) / 2, y0 - 5), ((x0 + x1) / 2, y1 + 5)]))
+    runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+    assert len(runs) == 3 and all(b - a == pytest.approx(cap, abs=0.01) for a, b in (runs[0], runs[-1]))
+    assert runs[1][1] - runs[1][0] <= cap + 0.01
+    # and a beak hangs from the bar it is drawn on, so the beaks of the height end on one line: C's, G's, Э's,
+    # Є's and the euro's were still measured from the weight's own bar, 170 units at Black where the letters
+    # stand on 147, and ended 23 units under the S's and the 2's (4 at ExtraBold)
+    def beak(name, right):                                  # the top beak's lower end, on its side of the letter
+        ink = rings_to_shapely(draw(name, p).rings())
+        x0, y0, x1, y1 = ink.bounds
+        x = x1 - p.sv / 2 if right else x0 + p.sv / 2
+        col = ink.intersection(LineString([(x, y0 - 10), (x, y1 + 10)]))
+        return max(s.bounds[1] for s in getattr(col, 'geoms', [col]) if s.length > 1)
+    latin = [beak(n, r) for n, r in (('C', True), ('G', True), ('S', True), ('two', False), ('Euro', True))]
+    cyrillic = [beak(n, r) for n, r in (('uni042D', False), ('uni0404', True), ('uni0417', False))]
+    assert max(latin) - min(latin) < 0.01 and max(cyrillic) - min(cyrillic) < 0.01, (latin, cyrillic)
+    # (the Cyrillic capitals take no overshoot yet, draw.OPTICAL's names being the Latin letters and the
+    # figures: their beaks end the O's overshoot's share lower, under a unit)
+    assert abs(latin[0] - cyrillic[0]) < 1.0
+    # one overshoot: what stands over the line stands over it by the O's (the o's)
+    over = lambda ch, H: draw(CMAP[ch], p).rings() and max(y for r in draw(CMAP[ch], p).rings() for _, y in r) - H
+    assert {round(over(ch, p.cap), 3) for ch in 'OCGQS0289'} == {round(over('O', p.cap), 3)}
+    assert {round(over(ch, p.xh), 3) for ch in 'oceas'} == {round(over('o', p.xh), 3)}
+
+
+def test_at_black_the_q_is_the_o_with_its_tail():
+    """Its corner is cut as the O's are, more from Bold and all the way at
+    Black (the owner, 2026-11-12: "it looks like the O aside from the
+    little bit in the middle. Keep that as it is, but you're going to need
+    to clip on the corners a little bit more as it reaches black"); to Bold
+    it is square, where the tail runs into it."""
+    outside = lambda ch, p: max(draw(ch, p).rings(), key=lambda r: max(x for x, _ in r) - min(x for x, _ in r))
+    p = params(900)
+    o, q = outside('O', p), outside('Q', p)
+    assert sorted((round(x, 2), round(y, 2)) for x, y in o) == sorted((round(x, 2), round(y, 2)) for x, y in q)
+    assert len(draw('Q', p).rings()) >= 2                                # its counter, and its tail in it
+    corner = lambda p: max(x for x, y in outside('Q', p) if y < 1.0)     # where the foot's flat ends, on the right
+    widths = [max(x for x, _ in outside('Q', params(w))) - corner(params(w)) for w in (700, 800, 900)]
+    assert widths[0] == pytest.approx(params(700).c, abs=0.5) and widths[0] < widths[1] < widths[2]
+
+
+def test_at_black_the_a_is_the_e_turned_half_round():
+    """All but the notch at the foot of its stem (the owner, 2026-11-12:
+    "at black, the e and the lowercase a should practically be identical
+    flipped, aside from the smallest little notch on a at the bottom";
+    "maybe bold and extra bold can use a little bit of adjustment too ...
+    it shouldn't mess up any of ... the lighter weights"). The foot of the
+    a's stem takes the cut of the e's back and its bowl's shoulder the edge
+    break of the e's bar's end, from Bold to Black (lower.a_like_e); to
+    Bold the a is what it was."""
+    from arris.glyphs.lower import a_like_e
+    p = params(900)
+    a = max(draw('a', p).rings(), key=len)
+    e = max(draw('e', p).rings(), key=len)
+    xs, ys = [x for x, _ in e], [y for _, y in e]
+    top = max(y for _, y in a)
+    turned = [(min(xs) + max(xs) - x, min(ys) + top - y) for x, y in e]
+    near = lambda q, ring: min(abs(q[0] - r[0]) + abs(q[1] - r[1]) for r in ring)
+    assert all(near(q, a) < 0.5 for q in turned)                        # every corner of the e is one of the a's
+    notch = [q for q in a if near(q, turned) >= 0.5]
+    assert len(notch) == 3 and max(y for _, y in notch) < p.sv / 4, notch   # and the a has its notch besides, on the baseline
+    assert [a_like_e(params(w)) for w in (100, 400, 700)] == [0.0, 0.0, 0.0] and a_like_e(p) == 1.0
+    assert 0.4 < a_like_e(params(800)) < 0.6
+
+
+@pytest.mark.parametrize('w,watch', [(700, 0.0), (800, 0.0), (900, 0.0), (900, 1.0)])
+def test_a_beak_keeps_its_bay_open(w, watch):
+    """The beak of the a, the e and the s turns into a bay, the white
+    between its bar and the next, and keeps BAY_WHITE of the least white
+    off the bar it turns toward (lower.beak_in): 0.36 of a stem from Bold.
+    It was the c's beak at every weight, and the bay ran out under it as
+    the bars grew, to 37 units at Black, 0.23 of a stem: a slit between the
+    beak's flat end and the bar's flat top (the owner, 2026-11-11: "a weird
+    optical effect ... with the hooks ... the a's upper storey, the way it
+    meets it ... at the bolder weights ... where it meets the bottom storey
+    or where it does not meet"). The families of Arris's boldness keep
+    0.36 of a stem there at its Black, and none under 0.24. What is built
+    on the three letters takes the rule with them."""
+    from arris.glyphs.letterframe import least_white
+    from arris.glyphs.lower import BAY_WHITE
+    p = params(w, watch=watch)
+    least = BAY_WHITE * least_white(p)
+    # (0.36 of a stem, in Arris of no more stem than the least white grows with: 57 units from ExtraBold)
+    assert least == pytest.approx(0.36 * (p.sv if watch else min(p.sv, 158.0)))
+    for name in ('a', 's', 'e', 'ae', 'oe', 'uni04D9', 'scaron', 'aogonek'):
+        t = _throat(_ink_of(name, p), p.sv)
+        assert t is None or t >= least - 3.0, (name, t, round(least, 1))
+    # and it is still a beak: most of the c's reach, which has all its mouth for room
+    def reach(ch, top, right):
+        ink = _ink(ch, p)
+        x0, y0, x1, y1 = ink.bounds
+        x = x1 - 1 if right else x0 + 1
+        cut = ink.intersection(LineString([(x, y0 - 10), (x, y1 + 10)]))
+        runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(cut, 'geoms', [cut]) if s.length > 1)
+        lo, hi = runs[-1] if top else runs[0]
+        return hi - lo
+    c = reach('c', True, True)
+    for ch, top, right in (('a', True, False), ('e', False, True), ('s', True, True), ('s', False, False)):
+        assert 0.75 * c <= reach(ch, top, right) <= c + 1.0, (ch, top)
+
+
+@pytest.mark.parametrize('w', [800, 900])
+def test_the_italics_hooks_keep_their_white(w):
+    """In the italic a capital's beak keeps a flank a break and a quarter
+    longer than the upright's, which its corners need to be curved, and at
+    the heavy weights it closed on what it turns toward: the S's stood 29
+    units off its spine at Black, 0.18 of a stem, for the upright's 78; the
+    Ze's, the reversed E's and the Ukrainian E's came down beside their
+    bar's end; the epsilon, a letter of the x-height with a capital's
+    beaks, held 12 units between its two; the schwa and the Abkhasian che
+    0.19 of a stem (the owner, 2026-11-11, of the a's and the s's: "where
+    it meets the bottom storey or where it does not meet. That gap ...";
+    of these: "let's go ahead and fix all those things"). Shortened to
+    what the white wanted, the beaks lost their curves at ExtraBold and
+    Black. So the beak stays and what it turns toward gives: the S's bars
+    thin as the 3's do (figures.bay_stack), a bar's end steps back from the
+    beak beside it (figures.off_the_beak), and the epsilon takes the small
+    capital's beak in the italic (beak_depth, ``low``). Upright Arris is as
+    it was."""
+    from arris.glyphs.letterframe import least_white
+    from arris.glyphs.lower import BAY_WHITE
+    from arris.italic import italic
+    p = italic(params(w))
+    least = BAY_WHITE * least_white(p)
+    for name in ('S', 'uni0417', 'uni042D', 'uni0404', 'uni03B5', 'uni0437', 'uni044D', 'uni0454', 'uni04D8', 'uni04BC', 'uni04A8',
+                 'question'):
+        t = _throat(rings_to_shapely(draw(name, p).rings()), p.sv)
+        assert t is None or t >= least - 3.0, (name, t, round(least, 1))
+    # (a mouth's own rule never draws its beak out: the Ә's and the Ҽ's stood 31 units open at Black, the beak
+    # 24 longer than the bars it hangs from make it; the Ҩ's, over a loop come down all it may, 5)
+    for name in ('uni04D8', 'uni04BC', 'uni04A8'):
+        assert draw(name, p).defaults_used['mouth'] >= least - 3.0, name
+
+    def curved(name, q):                                    # the points off the curve: a corner that is curved has them
+        return sum(1 for r in place(name, q)[0] for pt in r if len(pt) > 2 and not pt[2])
+    for name in ('S', 'uni0417', 'uni042D', 'uni0404'):
+        assert curved(name, p) == curved(name, italic(params(700))), name
+    # The Ze stands on the height's bar, as the Э and the Є (it was thinned to seven tenths of it from Bold,
+    # and its waist's end, the two breaks using its whole height, was a point from a stem of 189: the owner,
+    # 2026-11-12, "The middle thing just looks so crappy here. It's super thin"), and its waist ends square
+    # to its own line: the top keeps a flat between the upper bowl's corner and the end's break (thinned, at
+    # Black, it had 31 units there for the 34 an outline holds, and the waist ended in a wedge, 30 units
+    # longer under its line than over it).
+    ze = draw('uni0417', p)
+    assert ze.sh == pytest.approx(draw('uni042D', p).sh) and ze.sh == pytest.approx(draw('E', p).sh)
+    ink = rings_to_shapely(ze.rings())
+    ends = []
+    for y in (p.cap / 2 + ze.sh / 2 - 2, p.cap / 2 - ze.sh / 2 + 2):
+        row = ink.intersection(LineString([(p.sv + 1, y), (ze.W - p.sv - 1, y)]))
+        ends.append(min(s.bounds[0] for s in getattr(row, 'geoms', [row]) if s.length > 1))
+    assert abs(ends[0] - ends[1]) < 3.0, ends
+    assert draw('S', p).sh_k < 1.0 and draw('S', params(w)).sh_k == 1.0  # the italic's bars give; the upright's need not
+    for name in ('S', 'uni0417', 'uni042D', 'uni0404', 'uni03B5'):         # and upright Arris keeps the white on the bars it has
+        t = _throat(rings_to_shapely(draw(name, params(w)).rings()), params(w).sv)
+        assert t is None or t >= BAY_WHITE * least_white(params(w)) - 3.0, (name, t)
+
+
+@pytest.mark.parametrize('w', [500, 600, 700, 800, 900])
+def test_the_italics_lowercase_stands_on_the_uprights_bar(w):
+    """The italic's lowercase kept the weight's own horizontal (it is not
+    thinned for the x-height as the upright's is), and from SemiBold a
+    line of it was the darker of the two: by 2.6% at Black, on bars of 170
+    units beside the upright's 118, with every counter of the cursive the
+    tighter for it. It stands on the upright's bar (draw._start)."""
+    from arris.glyphs.lower import hook_ref
+    from arris.italic import italic
+    p = params(w)
+    bar = hook_ref(p)[0]
+    assert {round(draw(ch, italic(p)).sh0, 6) for ch in 'obdpqgnhmucz'} == {round(bar, 6)}
+    assert bar < p.sh                                        # (the weight's own, which it had)
+
+
+@pytest.mark.parametrize('w', [400, 700])
+def test_the_cyrillics_widths_stand_in_other_families_range(w):
+    """Each letter's advance as a share of the Н's, in eighteen families
+    that have Cyrillic (tools/script_shares.py), is a range, and six of
+    Arris's capitals stood under it at Regular with their small letters:
+    the Л 0.91 of the Н for 0.92 to 1.11, the Д 0.93 for their middle's
+    1.03, the Ж 1.16 for 1.18 to 1.50, the Ф 1.02 for 1.04 to 1.36, the Ш
+    1.23 for 1.29 to 1.50, the Щ 1.25 for 1.31 to 1.56. The three-stem
+    letters had the m's fault before it was widened, counters three
+    modules wide beside the Н's five. Each keeps its drawing in a wider
+    body (cyrillic.EL_BODY and the rest)."""
+    p = params(w)
+    adv = lambda name: place(name, p)[1]
+    share = lambda name: adv(name) / adv('H')
+    # (the families' least and most at Regular and Bold, the wider of the two ranges)
+    for name, lo, hi in (('uni041B', 0.92, 1.11), ('uni0414', 0.90, 1.23), ('uni0416', 1.18, 1.50), ('uni0424', 1.02, 1.36),
+                         ('uni0428', 1.29, 1.54), ('uni0429', 1.31, 1.58)):
+        assert lo <= share(name) <= hi, (name, round(share(name), 3))
+    small = lambda name: adv(name) / adv('uni043D')                         # (against the н)
+    for name, lo, hi in (('uni043B', 0.94, 1.06), ('uni0434', 0.94, 1.16), ('uni0436', 1.18, 1.53), ('uni0448', 1.27, 1.50),
+                         ('uni0449', 1.25, 1.59)):
+        assert lo <= small(name) <= hi, (name, round(small(name), 3))
+
+
+@pytest.mark.parametrize('w', [700, 800, 900])
+def test_the_ezhs_wedge_keeps_a_bays_white(w):
+    """The ezh and the Abkhasian dze are a top bar, a diagonal back to the
+    middle and the 3's lower bowl, and the white under the diagonal is a
+    wedge between the two bars: the diagonal's run less a bar. Nothing
+    kept it. In the italic, whose bars in the x-height are the weight's
+    own, the small ezh's two bars met at Black (170 units thick on a run
+    of 167) and what was left of the diagonal's end stood out of the join
+    in teeth; upright it had 49 units for the 57 a bay keeps. The bars
+    give for it (figures.wedge_bars). And the small Ҙ's bays are its
+    small Ze's (the owner, 2026-11-12, of the letters built on the 3:
+    "Some of these look awful", and of the figure itself, which is as it
+    was: "these threes as they get thicker look pretty good")."""
+    from arris.glyphs.letterframe import least_white
+    from arris.glyphs.lower import BAY_WHITE
+    from arris.italic import italic
+    for p in (params(w), italic(params(w))):
+        least = BAY_WHITE * least_white(p)
+        for name in ('uni0292', 'uni04E1', 'uni01B7', 'uni04E0'):
+            g = draw(name, p)
+            ys = sorted({round(n.y, 3) for s in g.strokes for n in s.nodes}, reverse=True)
+            top, waist = ys[0], ys[1]                       # the top bar's line and the bar the diagonal lands on
+            assert top - waist - g.sh >= least - 0.5, (name, round(top - waist - g.sh, 1), round(least, 1))
+        assert draw('uni0499', p).sh == pytest.approx(draw('uni0437', p).sh)
+
+
+@pytest.mark.parametrize('w', [700, 800, 900])
+def test_the_capital_sharp_ss_foot_keeps_off_its_stem(w):
+    """Its lower bowl's foot ended on the third module, and the stem grew
+    toward it: 39 units between them at Black, a quarter of a stem, a slit
+    the height of the foot. The foot's end keeps a beak's white off the
+    stem (figures.BAY_WHITE)."""
+    from arris.glyphs.letterframe import least_white
+    from arris.glyphs.lower import BAY_WHITE
+    from arris.italic import italic
+    for p in (params(w), italic(params(w)), params(w, watch=1.0)):
+        g = draw('uni1E9E', p)
+        row = rings_to_shapely(g.rings()).intersection(LineString([(-100, g.sh / 2), (2000, g.sh / 2)]))
+        runs = sorted((s.bounds[0], s.bounds[2]) for s in getattr(row, 'geoms', [row]) if s.length > 1)
+        assert runs[1][0] - runs[0][1] >= BAY_WHITE * least_white(p) - 0.5
+
+
+@pytest.mark.parametrize('w', [400, 700, 900])
+def test_the_ds_corners_are_the_os(w):
+    p = params(w)
+
+    def cut(ch):                              # how far in from its right side the letter's top edge starts
+        ink = _ink(ch, p)
+        x0, _, x1, y1 = ink.bounds
+        top = ink.intersection(LineString([(x0 - 10, y1 - 2), (x1 + 10, y1 - 2)]))
+        return x1 - max(s.bounds[2] for s in getattr(top, 'geoms', [top]))
+
+    assert cut('D') == pytest.approx(cut('O'), abs=3)
+
+
+@pytest.mark.parametrize('w', [400, 700])
+def test_dock_is_one_word(w):
+    """The white between O and C, and between C and K: until 1.017 the C
+    stood 79 units from the K and 141 from the O at Regular, and the word
+    read DO CK."""
+    p = params(w)
+
+    def gap(a, b):
+        ra, adv = place(CMAP[a], p)
+        rb, _ = place(CMAP[b], p)
+        return adv - max(x for r in ra for x, _ in r) + min(x for r in rb for x, _ in r)
+
+    assert gap('C', 'K') >= 0.75 * gap('O', 'C')
+    assert gap('D', 'O') == pytest.approx(gap('O', 'C'), rel=0.1)
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_the_1_stands_on_its_stem(w):
+    """A stem and a flag: at the baseline the 1 is as wide as its stem. In
+    Arris Mono it keeps a foot."""
+    p = params(w)
+    foot = lambda q: rings_to_shapely(draw('one', q).rings()).intersection(
+        LineString([(-500, q.sh / 2), (1500, q.sh / 2)])).length
+    assert foot(p) == pytest.approx(p.sv, abs=1)
+    assert foot(p.with_(mono=True)) > 2 * p.sv or w > 700
+
+
+@pytest.mark.parametrize('w', [300, 400])
+def test_the_x_steps_as_the_capital_does(w):
+    """One drawing for X and x: at the light weights both step at the
+    crossing (the 2's notch), and both lose the step as they grow."""
+    p = params(w)
+    points = lambda ch: sum(len(r) for r in draw(CMAP[ch], p).rings())
+    assert points('x') == points('X')
+
+
+@pytest.mark.parametrize('w', [400, 700, 900])
+def test_no_join_is_thicker_than_a_crossing(w):
+    """The largest disk that fits a letter's ink, in its heaviest strokes
+    (tools/stroke_audit.py): a T is 1.45 with its corners broken, a bar
+    across a stem 1.7 (t f 4), and no join a diagonal makes with a stem is
+    over a T's (K k M R Q 1: 1.5 to 1.6 until 1.017, the crotch filled two
+    breaks deep)."""
+    from shapely import maximum_inscribed_circle
+
+    from arris.draw import _heaviest_stroke
+    p = params(w)
+
+    def bloat(ch):
+        g = draw(CMAP[ch], p)
+        ink = rings_to_shapely(g.rings())
+        d = 0.0
+        for part in getattr(ink, 'geoms', [ink]):
+            r = maximum_inscribed_circle(part, tolerance=0.5)
+            (cx, cy), (ex, ey) = r.coords[0], r.coords[-1]
+            d = max(d, 2 * ((cx - ex) ** 2 + (cy - ey) ** 2) ** 0.5)
+        return d / _heaviest_stroke(g, p)
+
+    for ch in 'KkMRQNY1':
+        assert bloat(ch) <= 1.53, (ch, round(bloat(ch), 2))             # (the K at a stem of 200: 1.527)
+    for ch in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789':
+        assert bloat(ch) <= 1.75, (ch, round(bloat(ch), 2))
+
+
+@pytest.mark.parametrize('w', [800, 900])
+def test_the_arch_of_n_is_its_bar(w):
+    """The n's counter ends under the arch's own bar, flat from corner to
+    corner: until 1.017 the shoulder's cut hung under it (the arch a third
+    thicker over half the counter) and the counter came to a point beside
+    it."""
+    p = params(w)
+    g = draw('n', p)
+    ink = rings_to_shapely(g.rings())
+    x0, x1 = p.sv + 1.6 * p.c, g.W - p.sv - 1.6 * p.c      # the counter, inside its corners' breaks
+    for at in (0.0, 0.25, 0.5, 0.75, 1.0):
+        x = x0 + at * (x1 - x0)
+        cut = ink.intersection(LineString([(x, -10), (x, p.xh + 10)]))
+        assert cut.bounds[1] == pytest.approx(p.xh - g.sh, abs=1.5), (w, at)
+
+
+@pytest.mark.parametrize('w', [400, 600, 700, 900])
+def test_the_m_stands_on_three_whole_stems(w):
+    """Each of the m's counters is broken alike at its two top corners:
+    the second's, on the middle stem, was a 9-unit facet at Black."""
+    p = params(w)
+    ink = rings_to_shapely(draw('m', p).rings())
+    x0, _, x1, _ = ink.bounds
+    stems = sorted({round(s.bounds[0]) for s in ink.intersection(LineString([(x0 - 5, p.xh / 3), (x1 + 5, p.xh / 3)])).geoms})
+    whites = []
+    for xs in stems[:2]:                                    # just inside each counter's left corner
+        x = xs + p.sv + 0.5 * p.c
+        whites.append(ink.intersection(LineString([(x, 1), (x, p.xh + 10)])).bounds[1])
+    assert whites[0] == pytest.approx(whites[1], abs=1.5)
+
+
+@pytest.mark.parametrize('w', [100, 400, 700, 900])
+def test_the_j_is_an_arm_a_stem_and_a_hook(w):
+    """One stroke: nothing right of the stem, an arm left of it at the cap
+    height at least a stem long from SemiBold, and between arm and hook the
+    bare stem."""
+    p = params(w)
+    ink = rings_to_shapely(draw('J', p).rings())
+    x0, _, x1, _ = ink.bounds
+    across = lambda y: ink.intersection(LineString([(x0 - 10, y), (x1 + 10, y)]))
+    assert across(p.cap / 2).length == pytest.approx(p.sv, abs=1)
+    assert across(p.cap / 2).bounds[2] == pytest.approx(x1, abs=1)        # the stem is the letter's right side
+    arm = across(p.cap - p.sh / 2)
+    assert arm.bounds[2] == pytest.approx(x1, abs=1)
+    assert arm.length - p.sv >= min(p.sv, 0.3 * (x1 - x0)) - 1
+
+
+def test_a_crotch_with_a_step_in_it_keeps_its_leg():
+    """A diagonal that lands on a short edge square to the bar it runs
+    into: the chord keeps a break's leg on the bar and runs square to the
+    diagonal (until 1.017 it was no longer than the step: the Z's foot at
+    Black, 9 units for 44). With a step a break long it is the right
+    angle's own chord; the watch's rule (crotch 2) is as it was."""
+    from arris.geom import _ring_rule
+
+    def ring(v):                                            # a bar, a step v tall at x = 120, a diagonal off it
+        pts = [(0, 0), (400, 0), (400, 100), (120, 100), (120, 100 + v), (400, 380 + v), (400, 460 + v), (0, 460 + v)]
+        return pts + pts[:1]
+
+    def near(pts, q):
+        return any(abs(x - q[0]) < 1e-6 and abs(y - q[1]) < 1e-6 for x, y in pts)
+
+    out = _ring_rule(ring(10), 40, +1, crotch=1.0)
+    assert near(out, (160, 100)) and near(out, (135, 125))
+    assert not near(out, (120, 100)) and not near(out, (120, 110))
+    out = _ring_rule(ring(0.5), 40, +1, crotch=1.0)          # all but no step: the crotch's own chord
+    assert near(out, (160, 100)) and near(out, (120 + 39.5 / 2, 100.5 + 39.5 / 2))
+    out = _ring_rule(ring(40), 40, +1, crotch=1.0)           # a full step: the right angle's
+    assert near(out, (160, 100)) and near(out, (120, 140))
+    out = _ring_rule(ring(10), 40, +1, crotch=2.0)           # the pixel rule
+    assert near(out, (130, 100)) and near(out, (120, 110))
+
+
+@pytest.mark.parametrize('w', [700, 800, 900])
+def test_the_zs_foot_is_broken_the_fills_whole_leg(w):
+    from arris.draw import fill_leg
+    p = params(w)
+    g = draw('Z', p)
+    ring = max(g.rings(), key=len)
+    on_bar = [x for x, y, *_ in ring if abs(y - g.sh) < 1 and x < g.W / 2]     # where the foot's inner corner starts on the bar
+    assert max(on_bar) - p.sv == pytest.approx(fill_leg(p), abs=1.5)           # a fill's leg from the foot's own side, step or none
+
+
+def test_inside_corners_stop_growing_at_the_regular():
+    """draw.fill_leg, geom._ring_rule: the chord that fills a concave
+    corner has the weight's own leg up to the Regular and the Regular's
+    from there to Black; the chord that cuts a convex one grows with the
+    stem. The italic's crotches are filled one leg, as the upright's. The
+    watch's own drawing keeps the pixel rule (one leg, crotches two)."""
+    from arris.draw import crotch_fill, fill_leg
+    from arris.geom import _ring_rule
+    from arris.italic import italic
+    reg = params(400).c
+    assert fill_leg(params(300)) == pytest.approx(params(300).c)
+    for w in (400, 600, 900):
+        for p in (params(w), italic(params(w))):
+            assert fill_leg(p) == pytest.approx(reg)
+            assert crotch_fill(p) == pytest.approx(1.0)
+    watch = params(900, watch=1.0)
+    assert fill_leg(watch) == pytest.approx(watch.c) and crotch_fill(watch) == pytest.approx(2.0)
+
+    def near(pts, q):
+        return any(abs(x - q[0]) < 1e-6 and abs(y - q[1]) < 1e-6 for x, y in pts)
+    ell = [(0, 0), (300, 0), (300, 100), (100, 100), (100, 300), (0, 300), (0, 0)]    # ink on the left
+    out = _ring_rule(ell, 40, +1, fill=20)
+    assert near(out, (120, 100)) and near(out, (100, 120))              # the inside corner, filled 20
+    assert near(out, (40, 0)) and near(out, (0, 40))                    # an outside corner, cut 40
+    assert near(out, (300, 100 / 3)) and near(out, (300, 200 / 3))      # (the arm's end, 100 thick: a third each, _share)
+    assert near(_ring_rule(ell, 40, +1), (140, 100))                    # one leg where no fill is given
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_a_shoulder_keeps_its_neck(w):
+    """lower.shoulder_enter: a shoulder's diagonal starts deeper in its
+    stem by what its crotch's fill is short of the fill it was drawn for
+    (one leg of the weight's own in the upright, two in the italic), so
+    the notch over it stands on the stem where it did and the join keeps
+    its ink. To the Regular the upright's starts an edge break in, as
+    ever."""
+    from arris.draw import crotch_fill, fill_leg
+    from arris.glyphs.lower import shoulder_enter
+    from arris.italic import italic
+    for p, was in ((params(w), 1.0), (italic(params(w)), 2.0)):
+        assert shoulder_enter(p) + crotch_fill(p) * fill_leg(p) == pytest.approx((1 + was) * p.c)
+    if w <= 400:
+        assert shoulder_enter(params(w)) == pytest.approx(params(w).c)
+    watch = params(w, watch=1.0)
+    assert shoulder_enter(watch) == pytest.approx(watch.c)              # the watch's own drawing: the pixel rule
+
+
+@pytest.mark.parametrize('w', [850, 900])
+def test_a_bowls_inside_corner_is_what_its_strokes_make_of_it(w):
+    """geom._stroke_polygon: from the watch's ExtraBold (Arris's Black) a
+    bowl's inside chamfer was held at an edge break, more than its strokes
+    leave it (the O's 44 units for 32 at the watch's Black); it follows
+    them down to the fill's leg."""
+    from arris.draw import fill_leg
+    from arris.instances import drawn
+    p = drawn(w)                                                        # (the watch's weights: stems of 166 and 175)
+    g = draw('O', p)
+    hole = min(g.rings(), key=lambda r: max(q[0] for q in r) - min(q[0] for q in r))
+    legs = sorted(abs(b[0] - a[0]) for a, b in zip(hole, hole[1:] + hole[:1])           # (across: the optical centre moves heights)
+                  if abs(b[0] - a[0]) > 1 and abs(b[1] - a[1]) > 1)
+    want = max(fill_leg(p), p.leg - (p.sv + g.sh) / 2 + p.sd / 2 ** 0.5)
+    assert legs and legs[0] == pytest.approx(want, abs=1.0) and legs[0] < p.c - 0.5
+
+
+@pytest.mark.parametrize('w', [300, 400, 700, 900])
+def test_wide_and_narrow_letters_stand_where_such_faces_put_them(w):
+    """Advances against the n's and the H's, inside what chamfered and
+    squared faces give them (Chakra Petch, Oxanium, Rajdhani, Exo 2,
+    Tomorrow, Share Tech at Regular and at their heaviest): the m 1.44 to
+    1.59 of the n (it was 1.36, the darkest arch letter), the w 1.23 to
+    1.54 (1.46 at Regular, wider than any), the M 1.14 to 1.33 and the W
+    1.07 to 1.42 of the H, the T 0.79 to 0.84 (0.98)."""
+    p = params(w)
+    adv = lambda ch: place(CMAP[ch], p)[1]
+    assert 1.42 <= adv('m') / adv('n') <= 1.59
+    assert 1.23 <= adv('w') / adv('n') <= 1.44                       # (with its walls it stands 1.37 to 1.43: the owner's build)
+    assert (1.12 if w < 900 else 1.09) <= adv('M') / adv('H') <= 1.33    # (at Black 1.115: the families' Blacks 1.09 to 1.60)
+    assert 1.07 <= adv('W') / adv('H') <= 1.42
+    assert 0.76 <= adv('T') / adv('H') <= 0.86
+
+
+LATIN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+
+
+def test_the_l_ends_in_one_cut_at_every_weight():
+    """One outline from Thin to Black: the stem turns through the corner a
+    foot would take and runs on to the baseline, where it lands as the k's
+    leg does: a flat on the line as long as the leg's, and one break up to
+    a point where the cut's upper edge leaves (the owner: "only one single
+    notch", and "the l stays without a hook"; and of its end, which stood
+    upright a break tall over its own break: "The L should follow the form
+    that K sets")."""
+    import math
+    counts = set()
+    for w in range(100, 901, 50):
+        p = params(w)
+        ring = max(draw('l', p).rings(), key=len)
+        counts.add(len(ring))
+        short = min(math.dist(a, b) for a, b in zip(ring, ring[1:] + ring[:1]) if math.dist(a, b) > 1e-6)
+        assert short >= 0.95 * p.c, w
+        x1 = max(x for x, _ in ring)
+        tip = [y for x, y in ring if x > x1 - 0.5]
+        assert len(tip) == 1 and tip[0] == pytest.approx(p.c, abs=0.5), w      # a point, a break over the line: no face
+        on_line = [x for x, y in ring if abs(y) < 0.5]
+        leg = [x for x, y in max(draw('k', p).rings(), key=len) if abs(y) < 0.5 and x > p.sv + 1]
+        assert max(on_line) - min(on_line) == pytest.approx(max(leg) - min(leg), abs=0.5), w   # the k's leg's flat
+        assert max(on_line) - min(on_line) < p.sv, w                        # no foot
+    assert len(counts) == 1
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 500, 600, 700, 800, 900])
+def test_f_and_t_keep_their_hooks_at_every_weight(w):
+    """The corner and its arm, the t the f turned over (the owner,
+    2026-11-10: "keep the hooks for the f and the t, and the l stays
+    without a hook"; one cut with no arm, the l's end, was tried on them to
+    SemiBold). To SemiBold the arm runs half a stem past the crossbar's
+    end; from 650 the two end level, at every weight (the owner, of the
+    two at ExtraBold and Black: "they don't keep track of the same
+    length"; and at Black with the crossbar an edge break short: "they
+    don't seem to be sticking out in level with either the foot or the
+    ascender, respectively, with the cross"). The 650 was the watch's, a
+    stem of 130: Arris's SemiBold is past it."""
+    p = params(w)
+    bar_y = p.xh - 0.5 * draw('t', p).sh                   # (the lowercase's bar as it is drawn: draw._start)
+    for ch, y_line in (('t', 0.5), ('f', p.asc - 0.5)):
+        ink = _ink(ch, p)
+        flat = ink.intersection(LineString([(-1e4, y_line), (1e4, y_line)]))
+        assert flat.length >= 0.9 * p.sv, ch                                # a foot, an arm (a cut's flat is half a stem)
+        bar = ink.intersection(LineString([(-1e4, bar_y), (1e4, bar_y)])).bounds
+        if p.sv <= 120:
+            assert ink.bounds[2] >= bar[2] + 0.3 * p.sv, ch                 # past the crossbar's end, half a stem
+        else:
+            assert ink.bounds[2] == pytest.approx(bar[2], abs=0.5), ch      # from a stem of 130 level with it
+    assert REGISTRY['t'].width(p) == pytest.approx(REGISTRY['f'].width(p))
+
+
+def test_f_and_t_hold_their_650():
+    """The crossing of the f and of the t is one shape from SemiBold to
+    Black: from a stem 40 units past the Regular's, which was the watch's
+    650 when the owner chose it and is just under SemiBold on Arris's
+    weights (instances.STEMS), to Black
+    (the owner, 2026-11-10, of the two at ExtraBold and Black: "it just
+    turns into this gnarled, ugly thing when it comes to the way that
+    everything joins ... a big old knot"; shown the stub going into the
+    stem between SemiBold and Bold: "Look at how it is currently at weight
+    650 and make it the exact same shape throughout all the way to 900. It
+    needs to not move one bit. It needs to be exactly the same for both
+    the stems"). Left of the stem the crossbar's stub is a bump of a break
+    and a seventeenth, and no deeper than two legs of its fill, 45 units,
+    which it comes to at ExtraBold and keeps (nine tenths of a break at
+    Black): a face between two cuts that take its whole depth, the same
+    points on both letters; right
+    of it the crossbar ends level with the arm and the foot ("they don't
+    seem to be sticking out in level with either the foot or the ascender,
+    respectively, with the cross": it stood an edge break short of them)."""
+    from arris.draw import fill_leg
+    from arris.glyphs.lower import stub
+    from arris.instances import drawn
+    held = None
+    for p in [params(w) for w in (600, 650, 700, 750, 800, 850, 900)] + [drawn(w) for w in (850, 900)]:
+        w = p.sv
+        d = stub(p)
+        assert d == pytest.approx(min(55 / 52 * p.c, 2 * fill_leg(p))), w
+        bumps = []
+        for ch in 'ft':
+            ring = max(draw(CMAP[ch], p).rings(), key=len)
+            bumps.append(sorted((round(x, 2), round(y, 2)) for x, y in ring if x < d + 0.5 and p.xh / 2 < y < p.xh + p.m))
+        assert bumps[0] == bumps[1], w                                      # the f's and the t's, point for point
+        xs = sorted({x for x, _ in bumps[0]})
+        assert xs == pytest.approx([0.0, d], abs=0.01), w                   # a face on the body's edge, and the stem's side
+        face = sorted(y for x, y in bumps[0] if x < 0.5)
+        side = sorted(y for x, y in bumps[0] if x > 0.5)
+        assert len(face) == 2 and len(side) == 2, w                         # two cuts, each one line from face to stem
+        for cut in (face[0] - side[0], side[1] - face[1]):
+            assert cut == pytest.approx(d, rel=0.08), w                     # (45 degrees, as the optical warp leaves them)
+        for ch in 'ft':                                                     # the crossbar's end, the arm's and the foot's
+            ink = _ink(ch, p)
+            bar_y = p.xh - 0.5 * draw(ch, p).sh             # (the lowercase's bar as it is drawn: draw._start)
+            bar = ink.intersection(LineString([(-1e4, bar_y), (1e4, bar_y)])).bounds
+            assert bar[2] == pytest.approx(ink.bounds[2], abs=0.5), (ch, w)
+        shape = (round(d / p.c, 2), len(max(draw('t', p).rings(), key=len)))
+        held = held or shape
+        assert shape[1] == held[1] and 0.9 - 0.005 <= shape[0] <= held[0] + 0.005, w    # (0.90 at Black: two legs of its fill)
+    # to Medium the stub is whole (a quarter of the white of the body that gave nothing), its end's two cuts apart
+    from arris.glyphs.letterframe import heft, own_width
+    p = params(500)
+    assert stub(p) == pytest.approx((own_width(6, 1)(p) + heft(p) - p.sv) / 4) and stub(p) > 2 * p.c
+
+
+def _pieces(ch, p, y):
+    cut = _ink(ch, p).intersection(LineString([(-1e4, y), (1e4, y)]))
+    return len([s for s in getattr(cut, 'geoms', [cut]) if s.length > 1])
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 750, 800, 850, 900])
+def test_every_bowl_meets_its_stem_through_a_notch(w):
+    """One notch a bowl, at every weight of Arris: under the ascender on b
+    and d (where the h has its own), over the descender on p, q and g, at
+    the foot on a, u and y; the other join square. (The owner: "if we're
+    going to do it on the a and the u, then we need to do it on all the
+    bowls", flipped to where the stem runs on.) To Black: by the room
+    alone the notch was gone from a stem of 160, and Arris's ExtraBold and
+    Black, heavier than any weight the rule was made on, left every stem
+    square (lower.NOTCH_KEPT)."""
+    p = params(w)
+    top, foot = p.xh - 0.4 * p.c, 0.4 * p.c
+    notched = 2
+    assert _pieces('n', p, top) == notched
+    for ch in 'bd':
+        assert (_pieces(ch, p, top), _pieces(ch, p, foot)) == (notched, 1), ch
+    for ch in 'pqg':
+        assert (_pieces(ch, p, foot), _pieces(ch, p, top)) == (notched, 1), ch
+    for ch in 'auy':
+        assert _pieces(ch, p, foot) == notched, ch
+
+
+@pytest.mark.parametrize('w', [300, 400, 600, 700, 800, 900])
+def test_the_italics_q_g_and_y_take_the_bowls_notch_and_keep_their_tails_flat(w):
+    """The italic's bowls on a descending stem join it through the little
+    notch too, at the foot; its hooks end flat, without the upright's
+    terminal (the owner: "the descender should remain flat but ... a little
+    bit of a crook in the bowls ... little teeny weeny notch", and of the
+    y: "this should be on the y as well"). The notch is kept to Black
+    (lower.BOWL_NOTCH_ITAL): the italic's join goes two breaks deeper into
+    its stem than the upright's, and the notch lost 11 units with every
+    hundred of weight, 12 deep at Bold and gone from ExtraBold. And the
+    join does not cut the bar it joins: from SemiBold its stroke began
+    inside the foot, its level end cut the foot's top, and the q's foot was
+    124 units for its top's 131 at Bold, 137 for 168 at Black, with a kink
+    in the counter's far corner where the cut ran out."""
+    from arris.italic import italic, polylines
+    p = italic(params(w))
+    q = rings_to_shapely(draw('q', p).rings())              # (as drawn, before the slant: the bars are level)
+    x = (q.bounds[0] + q.bounds[2]) / 2 - 20
+    col = q.intersection(LineString([(x, -5), (x, p.xh + 20)]))
+    runs = sorted((s.bounds[1], s.bounds[3]) for s in getattr(col, 'geoms', [col]) if s.length > 1)
+    assert runs[0][1] - runs[0][0] == pytest.approx(runs[-1][1] - runs[-1][0], abs=1.5)     # the foot, the top
+    if w >= 600:                                            # (lighter, the join's step shows under the bar, as it is meant to)
+        assert len(draw('q', p).rings()[1]) == 8            # the counter: four walls and their four corners
+
+    def slanted(ch):                                    # the italic's outline as the font has it, its curves in chords
+        return rings_to_shapely(polylines(place(CMAP[ch], p)[0]))
+    for ch in 'qgy':
+        ink = slanted(ch)
+        foot = ink.intersection(LineString([(-1e4, 0.4 * p.c), (1e4, 0.4 * p.c)]))
+        assert len([s for s in getattr(foot, 'geoms', [foot]) if s.length > 1]) == 2, ch       # the bowl's foot, the notch, the stem
+    for ch in 'gy':                                     # the hook's end: nothing of it rises over the hook's bar
+        ink = slanted(ch)
+        x0, y0 = ink.bounds[0], ink.bounds[1]
+        left = ink.intersection(box(x0 - 1, y0 - 1, x0 + 0.6 * p.sv, 0.0 - p.c))
+        bar = ink.intersection(LineString([((ink.bounds[0] + ink.bounds[2]) / 2, y0 - 10), ((ink.bounds[0] + ink.bounds[2]) / 2, -p.c)]))
+        assert left.bounds[3] <= bar.bounds[3] + 1.0, ch
+
+
+def test_the_cursive_e_gives_only_its_top_and_bar_for_its_eye():
+    """italic_forms._e_strokes: the foot is the alphabet's horizontal at
+    every weight (the o's own), the exit stands over it, and the top and
+    the bar give way together, for the eye alone: by less than a fifth to
+    Black (a tenth, before the letters gave white past the Regular: the eye
+    stands in a counter a quarter narrower there, and is held to as much
+    less, Opening.across), and never thinner than at the weight before. Until 1.017 every
+    horizontal of the letter thinned for the eye, the foot too (0.70 of the
+    o's from SemiBold), the top fell by a quarter between Medium and
+    SemiBold and the bar by a quarter from Bold to Black."""
+    from arris.glyphs.italic_forms import EXIT_OVER
+    from arris.italic import italic
+
+    def run(ink, x):                                    # the ink's first run up the upright line at x, from under the baseline
+        cut = ink.intersection(LineString([(x, -50), (x, 250)]))
+        part = min((s for s in getattr(cut, 'geoms', [cut]) if s.length > 1), key=lambda s: s.bounds[1])
+        return part.bounds[1], part.bounds[3]
+    last = 0.0
+    for w in (400, 500, 600, 700, 800, 900):
+        p = italic(params(w))
+        g, o = draw('e', p), draw('o', p)
+        k = g.free('eye', 1.0)
+        # (the bar alone gives, to four fifths of the diagonal's own at a stem of 200: the top is the
+        # height's bar, which the italic's lowercase stands on as the upright's does, and the thinner of the
+        # two to begin with)
+        assert 0.75 <= k <= 1.0 and g.sh_auto == pytest.approx(1.0), (w, k)
+        assert p.sd * k >= last - 0.5, w                # the bar never loses weight
+        last = p.sd * k
+        assert p.sh * k >= g.sh0 - 1.5, w               # and has not come down to the top, which is whole (to a unit)
+        x_exit = p.sv / 2 + (g.W - p.sv) * 5 / 6        # where the exit leaves the foot (the frame's sixth module)
+        y0, y1 = run(rings_to_shapely(g.rings()), x_exit - 1.5 * p.c)       # the foot, under the opening
+        b0, b1 = run(rings_to_shapely(o.rings()), o.W / 2)
+        assert y1 - y0 == pytest.approx(g.sh0, abs=1.5), w                  # the height's bar, whole
+        assert y1 - y0 == pytest.approx(b1 - b0, rel=0.03), w               # and the o's (which thins its own a little for its counter)
+        end = max(q[1] for r in g.rings() for q in r if q[0] > x_exit + p.c and q[1] < p.xh / 2)
+        assert end >= y1 + EXIT_OVER * p.c - 1.5, w
+
+
+def test_the_cursive_es_eye_is_the_upright_es_in_little():
+    """italic_forms._eye_of_upright: from the Regular to Black the cursive
+    e's eye is 0.55 of the upright e's by area, its share at the Regular
+    (the owner: "There's gotta be a way to make the italic e black have a
+    bigger hole"). The head reaches to the right for it and the bar leaves
+    the back as much lower (_e_strokes): no stroke is thinner than it was.
+    Until 2.0 the eye fell to 0.39 of the upright's at Bold and 0.24 at
+    Black, 3,000 square units; and the æ's, which shut at Black where its
+    rule read the a's bowl for it, came back at 1,650 by the whole letter
+    lightening."""
+    from arris.glyphs.italic_forms import EYE_OF_UPRIGHT, _eye_area, _upright_eye
+    from arris.instances import mono_weight
+    from arris.italic import italic
+    last = 0.0
+    for w in (300, 400, 500, 600, 700, 800, 900):
+        p = italic(params(w))
+        e, ae = draw('e', p), draw('ae', p)
+        share = _eye_area(e) / _upright_eye(p)
+        assert share >= EYE_OF_UPRIGHT - 0.002, (w, share)
+        reach = e.free('reach', 0.0)
+        if w <= 400:
+            assert reach == 0.0 and share < 0.6, (w, reach, share)         # as it stood: the Regular's share is the rule's
+        else:
+            assert share == pytest.approx(EYE_OF_UPRIGHT, abs=0.002), (w, share)    # no more than it asks
+            assert reach >= last - 2.0, (w, reach, last)                    # (a unit back where the bar starts to thin)
+        last = reach
+        # the æ's eye is the e's, and the æ its own weight
+        assert _eye_area(ae, 2) == pytest.approx(_eye_area(e), rel=0.01), w
+        assert getattr(ae, 'lightened', None) is None and ae.free('reach', 0.0) == pytest.approx(reach, abs=0.5), w
+        # the eye's inscribed circle is no wider than the mouth it took the white from: the channel between
+        # the bar's underside and the exit, read where the exit's top begins
+        ink = rings_to_shapely(e.rings())
+        x = max(q[0] for r in e.rings() for q in r if q[1] < p.xh / 2) - 2 * p.c
+        col = ink.intersection(LineString([(x, -50), (x, p.xh + 50)]))
+        runs = sorted(s.bounds[1::2] for s in getattr(col, 'geoms', [col]) if s.length > 1)
+        if len(runs) >= 2:
+            mouth = (runs[1][0] - runs[0][1]) / 2 ** 0.5                    # across the channel, which runs at 45 degrees
+            assert min(e.counters()) <= mouth + 1.0, (w, min(e.counters()), mouth)
+    assert draw('e', italic(params(900))).free('reach', 0.0) == pytest.approx(37.0, abs=3.0)
+    # Arris Mono's italic e, in its cell, has an eye the upright's size: the rule stands by
+    for w in (400, 700):
+        p = italic(params(mono_weight(w)).with_(mono=True)).with_(cursive=True)
+        assert draw('e', p).free('reach', 0.0) == 0.0, w
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_b_and_d_and_p_and_q_are_mirrors(w):
+    from shapely import affinity
+    p = params(w).with_(optical=0.0)                    # the drawings themselves, before the optical centre is raised
+    for a, b in ('bd', 'pq'):
+        ga, gb = draw(a, p), draw(b, p)
+        assert ga.W == pytest.approx(gb.W)
+        mirrored = affinity.scale(rings_to_shapely(gb.rings()), xfact=-1, origin=(gb.W / 2, 0))
+        assert rings_to_shapely(ga.rings()).symmetric_difference(mirrored).area < 1.0, a + b
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 500])
+def test_arches_and_bowls_each_have_their_own_depth_of_notch(w):
+    """Two rule sets (the owner: "you shouldn't be changing the m's and the
+    n's and the r's ... it's just a different rule set"): the arches leave
+    their stems two modules under the arch, as they always have; a bowl's
+    join is one module, half as deep, the same on every bowl."""
+    from arris.glyphs.lower import BOWL_DROP, SHOULDER_DROP
+    assert (SHOULDER_DROP, BOWL_DROP) == (2.0, 1.0)
+    p = params(w).with_(optical=0.0)
+
+    def reach(ch, right=False, foot=False):             # from the stem's centre to where the notch ends, along the line it opens on
+        g = draw(ch, p)
+        y = 0.5 if foot else p.xh - 0.5
+        cut = _ink(ch, p).intersection(LineString([(-1e4, y), (1e4, y)]))
+        xs = sorted((s.bounds[0], s.bounds[2]) for s in cut.geoms if s.length > 1)
+        return (g.W - p.sv / 2) - xs[-2][1] if right else xs[1][0] - p.sv / 2
+    arch = reach('n')                                   # (each arch's own, as far as it has room: unchanged, and tested where it was)
+    assert reach('h') == pytest.approx(arch, abs=1.0)
+    bowl = reach('b')
+    for ch, kw in (('d', {'right': True}), ('p', {'foot': True}), ('q', {'right': True, 'foot': True}),
+                   ('g', {'right': True, 'foot': True}), ('u', {'right': True, 'foot': True}), ('y', {'right': True, 'foot': True})):
+        assert reach(ch, **kw) == pytest.approx(bowl, abs=1.0), ch
+    assert bowl < arch - 0.4 * p.m                      # shallower than the n's by most of a module
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_the_v_has_high_walls_over_45_degrees(w):
+    """The capital's drawing in the x-height (the owner: "it needs to have
+    the 45 degrees with the high walls"): two upright walls more than half
+    the x-height tall, a 45-degree point under them, no other slope
+    (within the few degrees the raised optical centre turns a diagonal)."""
+    import math
+    p = params(w)
+    g = draw('v', p)
+    for ring in g.rings():
+        for a, b in zip(ring, ring[1:] + ring[:1]):
+            if math.dist(a, b) > 1.0:
+                turn = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])) % 45
+                assert min(turn, 45 - turn) < 3.0, (a, b)
+    cut = _ink('v', p).intersection(LineString([(-1e4, 0.7 * p.xh), (1e4, 0.7 * p.xh)]))
+    walls = sorted(s.bounds for s in cut.geoms)
+    assert len(walls) == 2 and all(b[2] - b[0] == pytest.approx(p.sv, abs=0.5) for b in walls)
+    assert walls[0][0] == pytest.approx(0.0, abs=0.5) and walls[1][2] == pytest.approx(g.W, abs=0.5)
+    foot = min(y for r in g.rings() for x, y in r if x < 0.5)          # where the left wall ends
+    assert foot <= 0.45 * p.xh
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_the_w_is_the_capitals_build(w):
+    """High walls, 45-degree valleys, and its middle stroke a stem standing
+    on the peak (the owner: "if we're going to modify the v and the y then
+    we should definitely do the w"; until 1.017 its arms were at 2:1, and
+    the italic's still are)."""
+    import math
+
+    from arris.glyphs.lower import W_POST
+    p = params(w).with_(optical=0.0)
+    g = draw('w', p)
+    for ring in g.rings():
+        for a, b in zip(ring, ring[1:] + ring[:1]):
+            if math.dist(a, b) > 1.0:
+                turn = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])) % 45
+                assert min(turn, 45 - turn) < 0.5, (a, b)
+    sh = p.sh * p.low
+    post = sh / 2 + (W_POST - 1) * (p.xh - sh) / 7                     # the height of module W_POST
+    cut = _ink('w', p).intersection(LineString([(-1e4, post - p.c - 1), (1e4, post - p.c - 1)]))
+    runs = sorted((s.bounds[0], s.bounds[2]) for s in cut.geoms if s.length > 1)
+    assert len(runs) == 3                                               # two walls and the middle stroke
+    assert runs[1][1] - runs[1][0] == pytest.approx(p.sv, abs=0.5)
+    assert (runs[1][0] + runs[1][1]) / 2 == pytest.approx(g.W / 2, abs=0.5)
+    assert _pieces('w', p, post + 1.0) == 2                             # and nothing of it over that
+
+
+@pytest.mark.parametrize('w', [100, 300, 400, 600, 700, 900])
+def test_v_w_and_y_bend_at_one_height(w):
+    """Their walls turn into their 45-degree arms at one height (the owner:
+    "where the crook occurs needs to be consistent"); the v, still pointed,
+    is as wide as its two arms, narrower than the n."""
+    from arris.glyphs.lower import gable_run
+    p = params(w).with_(optical=0.0)
+    bend = {ch: min(y for r in draw(ch, p).rings() for x, y in r if x < 0.5 and y > 0) for ch in 'vwy'}
+    assert bend['v'] == pytest.approx(bend['w'], abs=0.5)
+    if w <= 700:                                                        # (heavier, the y's arm lands where its foot has room)
+        assert bend['y'] == pytest.approx(bend['v'] + (p.sh * p.low / 2 - (-(1.75) * p.c + p.sd / 2 ** 0.5)), abs=1.0) or \
+            bend['y'] == pytest.approx(bend['v'], abs=1.0)
+    assert REGISTRY['v'].width(p) == pytest.approx(p.sv + 2 * gable_run(p))
+    assert REGISTRY['v'].width(p) < REGISTRY['n'].width(p)
+
+
+@pytest.mark.parametrize('w', [300, 400, 500, 600, 700, 800, 900])
+def test_no_letter_keeps_a_crumb(w):
+    """No edge of a letter or figure is shorter than half an edge break, at
+    any named weight (0.45 of one: the v's flank at Black is 0.48; of the
+    fill's own leg, for an edge inside a corner: draw.fill_leg). Until
+    1.017 twenty-two of the sixty-two kept one at some weight: the wall of
+    a counter between its corners' cuts (a e s B G 3 5 6 8 9), the flat
+    under a bar's stub between its two cuts (f t l 4), the flat the X's
+    step left in its crotches at Regular (6 units)."""
+    import math
+
+    from arris.draw import fill_leg
+    from arris.geom import JOG_FILLS
+    p = params(w)
+    cross = lambda u, v: u[0] * v[1] - u[1] * v[0]
+    for ch in LATIN:
+        for ring in draw(CMAP[ch], p).rings():
+            pts = [(q[0], q[1]) for q in ring]
+            n = len(pts)
+            short = []
+            for i in range(n):
+                h, a, b, k = pts[i - 1], pts[i], pts[(i + 1) % n], pts[(i + 2) % n]
+                e_in, e, e_out = (a[0] - h[0], a[1] - h[1]), (b[0] - a[0], b[1] - a[1]), (k[0] - b[0], k[1] - b[1])
+                # an edge the ring turns into the white at both ends of (ink on its left) is a fill's chord or
+                # stands between two: those are measured on the fill's leg, the Regular's from there to Black
+                # (a crotch's chord may run straight on into the cut beside it: a turn into the white at one
+                # end and next to none at the other)
+                turn = lambda u, v: math.degrees(math.atan2(cross(u, v), u[0] * v[0] + u[1] * v[1]))
+                t_in, t_out = turn(e_in, e), turn(e, e_out)
+                inside = min(t_in, t_out) < -20 and max(t_in, t_out) < 5
+                if ch == 'r' and a[0] == b[0] == max(q[0] for q in pts):
+                    # the end of the r's arm, as its owner has it: past SemiBold the shoulder's underside runs
+                    # to the body's edge and leaves a face of 0.3 to 0.55 of a break (2026-11-10, shown the arm
+                    # with a flat kept under it instead: "It looks great ... don't fix the R")
+                    continue
+                # (an edge on the outside by the break, and past the Regular by what the outline's finish takes
+                # for a drawn step, a fill and a half: geom.JOG_FILLS. What keeps the Regular's scale is not
+                # a crumb for the weight's break having outgrown it: the face of a lowercase bar's end at
+                # Black was 18 units between two cuts of 50 on a bar of 118, until a flat end kept a third of
+                # itself for its face: geom._share)
+                if 0.5 < math.hypot(*e) < 0.45 * (fill_leg(p) if inside else min(p.c, JOG_FILLS * fill_leg(p))):
+                    short.append(round(math.hypot(*e), 1))
+            assert not short, (ch, w, short)
+
+
+def test_a_wall_between_two_cuts_closes_to_a_point():
+    """geom._polish: a facet under half a break between two cuts that turn
+    into the ink is closed where the cuts meet; one as long stays, and so
+    does a short flat on an outside corner (the outline's reach is kept)."""
+    from arris.geom import _polish
+
+    def pocket(wall):                                       # ink on the left: a notch into a block's right side,
+        y0, y1 = 200 - wall / 2, 200 + wall / 2             # cut top and bottom at 45 degrees, a wall between
+        return [(0, 0), (300, 0), (300, y0 - 60), (240, y0), (240, y1), (300, y1 + 60), (300, 400), (0, 400)]
+
+    out = _polish(pocket(12), 10, {}, 20)
+    assert (240, 194) not in out and any(abs(x - 234) < 1e-6 and abs(y - 200) < 1e-6 for x, y in out)
+    assert _polish(pocket(24), 10, {}, 20) == pocket(24)
+    assert _polish(pocket(12), 10, {}) == pocket(12)        # the watch's finish: slivers only
+    bump = [(0, 0), (300, 0), (300, 140), (360, 194), (360, 206), (300, 260), (300, 400), (0, 400)]
+    assert _polish(bump, 10, {}, 20) == bump
+    doubled = pocket(12)[:4] + [(240, 194)] + pocket(12)[4:]   # a point twice beside the wall: it goes, then the wall
+    assert _polish(doubled, 10, {}, 20) == out
+
+
+def test_a_step_between_two_equal_cuts_closes_evenly():
+    """geom._close_jogs: under a bar's stub the end's break and the fill
+    into the stem are chords of one length with a flat between; in Arris's
+    own finish they become one plane through the flat's middle."""
+    from arris.geom import _close_jogs
+    stub = [(0, 100), (40, 60), (52, 60), (92, 20), (92, -200), (300, -200), (300, 300), (0, 300)]
+    out = _close_jogs(stub, 40, {}, even=20)
+    assert (40, 60) not in out and (52, 60) not in out
+    assert any(abs(x) < 1e-6 and abs(y - 106) < 1e-6 for x, y in out) and any(abs(x - 92) < 1e-6 and abs(y - 14) < 1e-6 for x, y in out)
+    assert _close_jogs(stub, 40, {}) == stub
+    assert _close_jogs(stub, 40, {}, even=10) == stub      # a flat of half a break or more is a flat
+
+
+def test_a_strokes_flat_end_keeps_a_face_between_its_cuts():
+    """geom._ring_rule (_share): the two cuts of a stroke's flat end take a
+    third of it each at most, so its face is never shorter than either; a
+    cut and a fill either side of a short step still take half each and lie
+    on one line; and a drawing may ask for the halves (Glyph.end_cut: the
+    l's foot, two cuts and the point between them)."""
+    from arris.geom import _ring_rule
+
+    def bar(w):                                             # a bar 600 long and w thick, ink on the left
+        return [(0, 0), (600, 0), (600, w), (0, w), (0, 0)]
+    for w, cut in ((200, 50), (150, 50), (120, 40), (104, 104 / 3), (30, 10)):
+        out = _ring_rule(bar(w), 50, +1)
+        assert len(out) == 8, (w, out)
+        for x in (0, 600):
+            assert sorted(q[1] for q in out if abs(q[0] - x) < 1e-6) == pytest.approx([cut, w - cut]), w
+    pointed = _ring_rule(bar(100), 50, +1, end=0.5)
+    assert len(pointed) == 6 and any(q == pytest.approx((600, 50)) for q in pointed)
+    step = [(0, 0), (300, 0), (300, 30), (400, 30), (400, 300), (0, 300), (0, 0)]
+    out = _ring_rule(step, 50, +1)
+    for q in ((285, 0), (300, 15), (315, 30)):
+        assert any(o == pytest.approx(q) for o in out), (q, out)
+
+
+@pytest.mark.parametrize('style', ['upright', 'italic'])
+def test_no_bar_ends_in_an_arrowhead(style):
+    """The owner, of the 3's top bar in the italic at Black, its two cuts
+    meeting in a point: "I never want to see this shape in our typefaces".
+    No stroke's flat end comes to a point, nor keeps a face under half its
+    cuts' leg, which reads as one (topology.stroke_ends): the 3, the bars
+    of z t f E F 2 5 7 at Black, the number sign's eight ends, the question
+    mark's hook, the ze's middle arm, the double-struck letters' hairlines
+    and an ogonek's tab, the ҏ's tick (cyrillic_ext.TICK_END). Until 2.0, at Black, 56 glyphs of the upright and
+    86 of the italic had the point and 138 and 308 the short face
+    (tools/end_scan.py reads every glyph of every cut)."""
+    from arris.italic import italic
+    from arris.topology import stroke_ends
+    for w in (100, 400, 700, 850, 900):
+        p = italic(params(w)) if style == 'italic' else params(w)
+        for ch in '3ztfEF257#?*{зҏҎ\u2119\u2148\u0119':
+            ends = [(k, round(x), round(y), round(s, 2)) for k, x, y, s in stroke_ends(draw(CMAP[ch], p).rings(), p.c)
+                    if k != 'beak']
+            assert not ends, (ch, w, ends)
+    # the 3's top bar at Black: cut, face and cut, a third of the bar each
+    p = italic(params(900)) if style == 'italic' else params(900)
+    ring = max(draw('three', p).rings(), key=len)
+    x0 = min(x for x, y in ring if y > 0.75 * p.cap)
+    face = sorted(y for x, y in ring if abs(x - x0) < 0.5 and y > 0.75 * p.cap)
+    assert len(face) == 2, face
+    bar = (p.cap - face[0]) + (p.cap - face[1])             # the bar's thickness: the cuts are alike
+    assert face[1] - face[0] >= 0.3 * bar and face[1] - face[0] >= 0.9 * (p.cap - face[1])
+
+
+def test_the_ls_foot_and_the_rs_arm_end_as_their_owner_has_them():
+    """What the rule for flat ends leaves alone, each on its owner's word:
+    the l's foot and the j's are two cuts and the point between them, the
+    k's leg's landing ("The L should follow the form that K sets"), and
+    the r's arm ends in a short face over the shoulder's underside ("It
+    looks great ... don't fix the R"). Their drawings ask for it
+    (lower.POINTED)."""
+    from arris.glyphs.lower import POINTED
+    for name in ('l', 'j', 'r'):
+        for w in (400, 900):
+            assert draw(name, params(w)).end_cut == POINTED, (name, w)
+    for w in (400, 700, 900):
+        p = params(w)
+        ring = max(draw('l', p).rings(), key=len)
+        x1 = max(x for x, _ in ring)
+        assert len([y for x, y in ring if x > x1 - 0.5]) == 1, w
+
+
+def _under_the_arches(name, p):
+    """The whites between a letter's stems under their arches, as drawn
+    (before the curves and the slant); its stems at a third of the
+    x-height; the arches' underside."""
+    from arris.draw import _thickness
+    g = draw(name, p)
+    ink = rings_to_shapely(g.rings())
+    q = g.p                                                 # (as it is drawn: a Mono letter past where its counters shut is held there)
+    under = q.xh - _thickness(q, g.sh)((1.0, 0.0))
+    row = ink.intersection(LineString([(-1e4, p.xh / 3), (1e4, p.xh / 3)]))
+    stems = sorted((s.bounds[0], s.bounds[2]) for s in getattr(row, 'geoms', [row]) if s.length > 1)
+    counters = []
+    for a, b in pairwise(stems):
+        white = box(a[1] - p.m, p.xh / 2, b[0] + p.m, p.xh + 1).difference(ink)
+        inside = Point((a[1] + b[0]) / 2, p.xh / 2 + 1)
+        counters += [part for part in getattr(white, 'geoms', [white]) if part.buffer(0.01).contains(inside)]
+    return ink, counters, stems, under
+
+
+@pytest.mark.parametrize('w', [400, 500, 600, 700, 800, 900])
+def test_the_cursive_ms_two_counters_are_one_shape(w):
+    """Under each arch of the cursive m the counter has one top, at every
+    weight, and nothing of the white runs up into the arch. The italic's
+    branch was drawn whole however little of it showed: under a tenth of an
+    edge break below the arch at Bold, and from ExtraBold inside it, the
+    white beside it a pocket up into the arch; and the first arch's corner,
+    cut deeper than the bar is thick, took a wedge out of the middle stem
+    under the second, so the two counters differed (the owner, 2026-11-11:
+    "some funky stuff going on under the loops ... if we have some
+    consistency there that'd be really good"). A branch that would show
+    under a break is cut along the arch's underside, as the upright's is
+    (lower.shoulder), and the middle stem stands up to its own arch, as the
+    upright m's does."""
+    from shapely.affinity import translate
+
+    from arris.italic import italic
+    p = italic(params(w))
+    for name in ('m', 'uni0442', 'n', 'h', 'uni043F'):
+        _, counters, stems, under = _under_the_arches(name, p)
+        assert len(counters) == (2 if name in ('m', 'uni0442') else 1), name
+        for c in counters:
+            assert c.area > 0 and c.bounds[3] <= under + 0.05, (name, round(c.bounds[3] - under, 2))    # no white in the arch
+        if len(counters) == 2:
+            a, b = counters
+            assert translate(a, stems[1][1] - stems[0][1]).symmetric_difference(b).area < 2.0, name
+
+
+@pytest.mark.parametrize('cut', ['mono', 'mono italic', 'narrow', 'narrow italic'])
+@pytest.mark.parametrize('w', [300, 400, 450, 500, 600, 700])
+def test_arris_monos_m_is_joined_one_way_at_every_weight(w, cut):
+    """In Arris Mono's cell the m's arches run out of room to rise: from
+    SemiBold upright, from Medium in the italic, which draws the upright's
+    m in a narrower body so that its slanted ink fits the cell. Its two
+    counters are one shape, and the notch its arches meet in is one V,
+    both sides at 45 degrees and never under an edge break deep, at every
+    weight of every Mono cut. They were not. With no room the second arch
+    began square on the stem's centre, and the notch was what the corner
+    rule made of that: it shrank with the weight to 36 units at Medium and
+    stood at 48 again from SemiBold (Mono Narrow: 27 at SemiBold, 48 at
+    Bold), with an upright step in one side where the italic first ran out
+    of room (Mono Italic's Medium, Mono Narrow Italic's SemiBold). In the
+    italic a pocket of white ran up into the second arch at Regular and
+    Retina, and at Bold the middle stem stopped 0.9 of a unit under its
+    arch (drawn to the arch's underside by its name; the italic's
+    horizontals are cos(slant) thinner), its corner was broken as a
+    stroke's end is, and the second counter bit into the stem where the
+    first came to a point. An arch that joins another keeps its cut at
+    every weight (lower.shoulder, ``joined``), set where the V it leaves
+    is a break deep (lower.notch_meet), and the stem stands to the
+    underside as it is drawn (lower.bar_half)."""
+    from shapely.affinity import translate
+
+    from arris.instances import mono_weight, narrow_weight
+    from arris.italic import italic
+    p = params(narrow_weight(w) if 'narrow' in cut else mono_weight(w)).with_(mono=True, narrow='narrow' in cut)
+    p = italic(p) if 'italic' in cut else p
+    ink, counters, stems, under = _under_the_arches('m', p)
+    assert len(counters) == 2
+    a, b = counters
+    # one shape: no pocket of white up into one arch, no bite into the stem under one
+    assert translate(a, stems[1][1] - stems[0][1]).symmetric_difference(b).area < 2.0
+    # the notch over the middle stem: one white, a V hanging from the arches' top
+    x0, x1 = ((l[1] + r[0]) / 2 for l, r in pairwise(stems))              # (between the counters' middles: the V is wider than its stem)
+    top = ink.intersection(LineString([(x1, 0), (x1, p.xh + 1)])).bounds[3]    # the arch's top
+    row = LineString([(x0, top - 0.5), (x1, top - 0.5)]).difference(ink)
+    mouth = max(getattr(row, 'geoms', [row]), key=lambda s: s.length)      # the V's mouth, just under the top
+    whites = box(x0, p.xh / 2, x1, top).difference(ink)
+    v = next(part for part in getattr(whites, 'geoms', [whites]) if part.buffer(0.01).contains(mouth.centroid))
+    low = min(v.exterior.coords, key=lambda q: q[1])
+    assert top - low[1] >= draw('m', p).p.c - 0.5                         # never under an edge break deep
+    sides = [(q, r) for q, r in pairwise(v.exterior.coords) if abs(q[1] - r[1]) > 1.0]
+    if top - low[1] <= top - under:                                       # (a light weight's notch runs on down its stem's side)
+        assert len(sides) == 2                                            # one V, no step in either side
+        for q, r in sides:                                                # and both at 45 degrees
+            assert abs(q[0] - r[0]) == pytest.approx(abs(q[1] - r[1]), abs=0.5)
