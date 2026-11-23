@@ -49,6 +49,21 @@ Reserved Font Name. Every font carries the copyright
 0). The vendor ID is `NONE` (unregistered): register one with Microsoft
 before a commercial distribution if wanted.
 
+## 2.002
+
+A focused correction for Arris Mono's optional `cv27` bracket ligature
+([issue #34](https://github.com/huntrontrakkr/arris-type/issues/34)).
+
+- Consecutive empty-bracket pairs such as `[][]` and `[][][]` now each form
+  their own box ligature with `cv27` enabled. The previous context guards
+  treated neighboring `[` and `]` from another pair as operators that
+  blocked both substitutions.
+- Keep the guards against nested or unmatched brackets (`[[]]`, `[[]`,
+  and `[]]`), and preserve the optional feature's default-off behavior.
+- Add HarfBuzz regressions for adjacent pairs with `calt` on and off,
+  plus checks that all monospace advances remain 600 font units.
+- No unrelated ligature geometry or metrics change.
+
 ## 2.001
 
 Version 2: how the letters stand together. A true Bold and a true Black,

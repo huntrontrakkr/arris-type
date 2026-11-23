@@ -4,6 +4,7 @@ pieces meet flush however long, and a sample of the drawings clean."""
 from __future__ import annotations
 
 import io
+from typing import TYPE_CHECKING
 
 import pytest
 from shapely import affinity, union_all
@@ -18,6 +19,9 @@ from arris.italic import italic
 from arris.topology import faults
 
 hb = pytest.importorskip('uharfbuzz')
+
+if TYPE_CHECKING:
+    from uharfbuzz import Font
 
 
 @pytest.fixture(scope='module')
@@ -95,6 +99,33 @@ def test_a_run_is_pieces_start_middle_end(font):
 def test_the_optional_sets_are_off_until_asked(font, feat, text, want):
     assert shape(font, text, **{feat: True}) == want
     assert shape(font, text) != want
+
+
+
+@pytest.mark.parametrize('pairs', [2, 3, 5])
+@pytest.mark.parametrize('calt', [False, True], ids=['calt-off', 'calt-on'])
+def test_cv27_joins_adjacent_box_pairs(font: Font, pairs: int, calt: bool) -> None:
+    """Adjacent [] groups are separate boxes, not one guarded operator run."""
+    text = '[]' * pairs
+    assert shape(font, text, cv27=True, calt=calt) == ['LIG', 'bracketleft_bracketright.cv27'] * pairs
+    assert shape(font, text, cv27=False, calt=calt) == ['bracketleft', 'bracketright'] * pairs
+
+
+@pytest.mark.parametrize('text', ['[[]]', '[[]', '[]]'])
+def test_cv27_still_guards_nested_or_unmatched_brackets(font: Font, text: str) -> None:
+    assert shape(font, text, cv27=True) == [
+        'bracketleft' if c == '[' else 'bracketright' for c in text
+    ]
+
+
+@pytest.mark.parametrize('pairs', [2, 3, 5])
+def test_cv27_keeps_one_monospace_advance_per_bracket(font: Font, pairs: int) -> None:
+    text = '[]' * pairs
+    buf = hb.Buffer()
+    buf.add_str(text)
+    buf.guess_segment_properties()
+    hb.shape(font, buf, {'cv27': True})
+    assert [pos.x_advance for pos in buf.glyph_positions] == [600] * len(text)
 
 
 def _line(names, p):

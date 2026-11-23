@@ -1350,7 +1350,9 @@ _alt(':-', 'cv26', lambda g: _dot_then(g, 'hyphen', colon=True), 'cv26', ':- joi
 _alt('.=', 'cv32', lambda g: _dot_then(g, 'equal'), 'cv32', '.= joined')
 
 
-@lambda fn: _alt('[]', 'cv27', fn, 'cv27', '[] as a box', before=OPERATORS + '[]', after=OPERATORS + '[]')
+# Guard an extra opening bracket on the left or closing bracket on the right,
+# but allow a closing/opening bracket between consecutive independent [] pairs.
+@lambda fn: _alt('[]', 'cv27', fn, 'cv27', '[] as a box', before=OPERATORS + '[', after=OPERATORS + ']')
 def _box(g):
     """`[]` (cv27): the brackets as themselves, their arms run on until they
     meet: a box."""
