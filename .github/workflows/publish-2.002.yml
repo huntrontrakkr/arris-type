@@ -1,0 +1,40 @@
+# One-shot launcher for 2.002. This lets the existing Release workflow
+# build/check/publish the font, rather than tagging an unbuilt source tree.
+# Remove this launcher after the release completes.
+name: Publish Arris 2.002 once
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-2.002.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dispatch the existing full release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(python3 -c "import sys; sys.path.insert(0, 'src'); from arris.version import VERSION; print(VERSION)")
+          if [ "$version" != '2.002' ]; then
+            echo "::error::Expected Arris 2.002, got $version"
+            exit 1
+          fi
+          if gh release view v2.002 --repo "$GITHUB_REPOSITORY" --json tagName >/dev/null 2>&1; then
+            echo "v2.002 is already published; no dispatch needed"
+            exit 0
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v2.002" >/dev/null 2>&1; then
+            echo "::error::v2.002 tag already exists; refusing to dispatch twice"
+            exit 1
+          fi
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref main --field publish=true
+          echo "Dispatched standard Release with publish=true for Arris 2.002"
